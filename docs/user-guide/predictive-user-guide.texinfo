@@ -309,6 +309,9 @@ Finally, to get rid of a provisional completion and just leave the
 characters you've typed, use @kbd{M-SPACE}.
 @findex completion-reject
 
+The many and various predictive completion mode customization options
+can be found in the @env{predictive} and @env{completion-ui}
+customization groups.
 
 
 
@@ -1004,7 +1007,7 @@ prefix argument is supplied, the weights of @emph{all} prefixes longer
 than that value are increased. Otherwise, a prefix is read from the
 minibuffer (defaults to the word at the point).
 
-@item dict-size
+@item dictree-size
 Display the number of words in a dictionary.
 @end ftable
 
@@ -1068,7 +1071,7 @@ Dictionaries}.
 @cindex dictionaries, saving
 
 @ftable @command
-@item dict-load
+@item dictree-load
 Load a dictionary from file. The name given to the loaded dictionary is
 the same as the file name, with the extension removed. This will not add
 it to the list of dictionaries used by the current buffer (see
@@ -1080,38 +1083,38 @@ current buffer. The dictionary file must be in your @env{load-path}. The
 dictionary will be included when learning from the buffer, see
 @ref{Learning from Buffers and Files}.
 
-@item dict-unload
+@item dictree-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
 also save it (@pxref{Creating Dictionaries}), unless overridden by
 supplying a prefix argument.
 
-@item dict-save
+@item dictree-save
 Save a dictionary to its associated file. Prompt for a file name if
 there is none associated with the dictionary.
 
-@item dict-write
+@item dictree-write
 Write a dictionary to a file specified via the mini-buffer. This also
 associates the dictionary with that file. If a prefix argument is
 supplied, you will @emph{not} be asked to confirm if over-writing an
 existing file.
 
-@item dict-save-modified
+@item dictree-save-modified
 Save all modified dictionaries. If a prefix argument is supplied,
 confirm each dictionary before saving.
 
-@item dict-dump-words-to-buffer
+@item dictree-dump-words-to-buffer
 Dumps all words and weights in the dictionary to a buffer, in the
 same format as that used to populate dictionaries (@pxref{Creating
 Dictionaries}).
 
-@item dict-dump-words-to-file
+@item dictree-dump-words-to-file
 Dumps words and weights to a text file rather than a buffer. If a prefix
 argument is supplied, you will @emph{not} be asked to confirm if
 over-writing an existing file.
 @end ftable
 
 To use a dictionary, it must be loaded into memory. This can be done
-manually, using the @command{dict-load} or
+manually, using the @command{dictree-load} or
 @command{predictive-load-dict} commands. Alternatively, if you want the
 dictionary to be loaded every time you run Emacs, you can add the
 following line to your @file{.emacs} file:
@@ -1127,15 +1130,15 @@ automatically. @xref{Working with Major Modes}.
 A buffer is usually associated with a file, and saving the buffer with
 the Emacs @command{save-buffer} command writes any changes back to that
 file. Similarly, dictionaries are usually associated with a dictionary
-file. The @command{dict-save} command saves any changes back to that
-file. The @command{dict-write} command is analogous to the Emacs
+file. The @command{dictree-save} command saves any changes back to that
+file. The @command{dictree-write} command is analogous to the Emacs
 @command{write-file} command.
 
 Dictionaries can be modified by adding words to them with the
 @command{predictive-add-to-dict} command (@pxref{Creating
 Dictionaries}). If the auto-learn features are used, dictionaries are
 modified whenever a completion is accepted (@pxref{Automatic
-Learning}). The @command{dict-save-modified} saves all modified
+Learning}). The @command{dictree-save-modified} saves all modified
 dictionaries.
 
 
@@ -1149,7 +1152,7 @@ dictionaries.
 
 The name of the main dictionary used by a buffer is stored in the
 buffer-local @env{predictive-main-dict} variable. Note that the variable
-contains the @emph{name} of the dictionary (a symbol), not the
+usually contains the @emph{name} of the dictionary (a symbol), not the
 dictionary itself. This is the dictionary predictive mode will normally
 search for words in.
 
@@ -1160,6 +1163,15 @@ words are always added to the first dictionary in the
 list. @xref{Automatic Learning}.
 @vindex predictive-auto-learn
 @vindex predictive-auto-add-to-dict
+
+@ftable @command
+@item predictive-set-main-dict
+This function can be used as a convenience to set the main dictionary
+for the current buffer. You will only be able to select dictionaries
+that are already loaded (@pxref{Loading and Saving Dictionaries}). If
+you want to set the default main dictionary permanently, customize
+@env{predictive-main-dict} instead.
+@end ftable
 
 
 

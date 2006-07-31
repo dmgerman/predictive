@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,11 +28,60 @@
 ;; MA 02110-1301, USA.
 
 
+;;; Commentary:
+;;
+;; This package provides user-interface functions for in-buffer
+;; text completion. It doesn't find completions itself. Instead, a
+;; completion program can simply call the `complete' function, passing
+;; it the completion prefix and a list of completion candidates, and
+;; this package does the rest!
+;;
+;; Typically, a lot of code in packages providing some kind of text
+;; completion deals with the user interface. The goal is that all
+;; packages providing in-buffer (and possibly also mini-buffer)
+;; completion should use this package to provide a common user
+;; interface, freeing them to concentrate on finding the completions
+;; in the first place. The Emacs user can then customise the interface
+;; once-and-for-all to suit their tastes, rather than separately
+;; customising each package.
+;;
+;; Various completion mechanisms are provided, all of which can be
+;; individually enabled, disabled and extensively tweaked via
+;; customization variables:
+;;
+;; * Dynamic completion: inserts the best completion candidate in the
+;;   buffer, highlighting the completed portion.
+;;
+;; * Completion hotkeys: single-key selection of a completion.
+;;
+;; * Cycling: cycle through completion candidates.
+;;
+;; * Tab-completion: "traditional" expansion to longest common
+;;   substring.
+;;
+;; * Help-echo: display a list of completion candidates in the
+;;   echo-area.
+;;
+;; * Tooltip: display a list of completion candidates in a tool-tip
+;;   located below the point.
+;;
+;; * Completion menu: allow completion candidates to be selected from
+;;   a drop-down menu located below the point.
+;;
+;; This package uses part of the automatic overlays package,
+;; auto-overlay-common.el.
+
+
 ;;; Change Log:
+;;
+;; Version 0.2.1
+;; * added commentary
+;; * prevented any attempt to display tooltips and menus when not running X
 ;;
 ;; Version 0.2
 ;; * bug fixes (thanks to Mark Zonzon for patch)
-;; * added `completion-min-chars' and `completion-delay' options
+;; * added `completion-min-chars' and `completion-delay' options (thanks to
+;;   Jin Tong for suggestions)
 ;; * renamed to `completion-ui.el'
 ;; 
 ;; Version 0.1
@@ -64,7 +113,7 @@
   :type 'boolean)
 
 
-(defcustom completion-use-tooltip nil
+(defcustom completion-use-tooltip t
   "Display completions in a tooltip."
   :group 'completion-ui
   :type 'boolean)
@@ -105,7 +154,7 @@
   :group 'completion-ui)
 
 
-(defcustom completion-tooltip-delay 2
+(defcustom completion-tooltip-delay 3
   "Number of seconds to wait after activating completion
 mechanisms before displaying completions in a tooltip."
   :group 'completion-ui
@@ -525,72 +574,75 @@ an overlay overrides it. Defaults to the \"overlay local\"
 binding of 'completion-menu, or `completion-menu' if there is
 none."
   (interactive)
-  (when (null menu)
-    (setq menu (auto-overlay-local-binding 'completion-menu)))
-  ;; if we haven't been passed one, get completion overlay at point or create
-  ;; new one if none exists
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  (let (keymap result)
-    (cond
-     ;; if `menu' is a function, evaluate it to get menu
-     ((functionp menu)
-      (setq keymap (funcall menu (overlay-get overlay 'prefix)
-			    (overlay-get overlay 'completions)))
-      ;; throw error if return value has wrong type
-      (unless (or (null keymap) (keymapp keymap))
-	(error "`completion-menu' returned wrong type: null or keymapp, %s"
-	       (prin1-to-string keymap))))
-     
-     ;; if `menu' is a keymap, use that
-     ((keymapp menu) (setq keymap menu))
-     
-     ;; if `menu' is null, evaluate `completion-construct-menu'
-     ((null menu)
-      (setq keymap (completion-construct-menu
-		    (overlay-get overlay 'prefix)
-		    (overlay-get overlay 'completions))))
-     
-     ;; otherwise, throw an error
-     (t (error "Wrong type in `completion-menu': functionp or keymapp, %s"
-	       (prin1-to-string menu))))
+
+  ;; menus only word under X windows at the moment
+  (when (string= window-system "x")
+    (when (null menu)
+      (setq menu (auto-overlay-local-binding 'completion-menu)))
+    ;; if we haven't been passed one, get completion overlay at point or create
+    ;; new one if none exists
+    (unless overlay (setq overlay (completion-overlay-at-point)))
     
-    
-    ;; if we've constructed a menu, display it
-    (when keymap
-      (tooltip-hide)
-      (setq result
-	    (x-popup-menu (completion-posn-at-point-as-event
-			   nil nil nil (+ (frame-char-height) 3))
-			  keymap))
+    (let (keymap result)
+      (cond
+       ;; if `menu' is a function, evaluate it to get menu
+       ((functionp menu)
+	(setq keymap (funcall menu (overlay-get overlay 'prefix)
+			      (overlay-get overlay 'completions)))
+	;; throw error if return value has wrong type
+	(unless (or (null keymap) (keymapp keymap))
+	  (error "`completion-menu' returned wrong type: null or keymapp, %s"
+		 (prin1-to-string keymap))))
+       
+       ;; if `menu' is a keymap, use that
+       ((keymapp menu) (setq keymap menu))
+       
+       ;; if `menu' is null, evaluate `completion-construct-menu'
+       ((null menu)
+	(setq keymap (completion-construct-menu
+		      (overlay-get overlay 'prefix)
+		      (overlay-get overlay 'completions))))
+       
+       ;; otherwise, throw an error
+       (t (error "Wrong type in `completion-menu': functionp or keymapp, %s"
+		 (prin1-to-string menu))))
       
       
-      ;; if they ain't selected nuffin', don't do nuffin'!
-      (when result
-	;; convert result to a vector for key lookup
-	(setq result (apply 'vector result))
+      ;; if we've constructed a menu, display it
+      (when keymap
+	(tooltip-hide)
+	(setq result
+	      (x-popup-menu (completion-posn-at-point-as-event
+			     nil nil nil (+ (frame-char-height) 3))
+			    keymap))
 	
-	(cond
-	 ;; if they selected a completion from the menu...
-	 ((string-match "^completion-insert"
-			(symbol-name (aref result (1- (length result)))))
-	  ;; run accept hooks
-	  (run-hook-with-args
-	   'completion-accept-functions
-	   (concat (overlay-get overlay 'prefix)
-		   (buffer-substring (overlay-start overlay)
-				     (overlay-end overlay))))
-	  ;; insert selected completion
-	  (setq completion-overlay-list
-		(delq overlay completion-overlay-list))
-	  (delete-region (overlay-start overlay) (overlay-end overlay))
-	  (delete-overlay overlay)
-	  (funcall (lookup-key keymap result))
-	  (tooltip-hide))
-	 
-	 ;; otherwise, run whatever they did select
-	 (t (funcall (lookup-key keymap result))))
-	)))
+	
+	;; if they ain't selected nuffin', don't do nuffin'!
+	(when result
+	  ;; convert result to a vector for key lookup
+	  (setq result (apply 'vector result))
+	  
+	  (cond
+	   ;; if they selected a completion from the menu...
+	   ((string-match "^completion-insert"
+			  (symbol-name (aref result (1- (length result)))))
+	    ;; run accept hooks
+	    (run-hook-with-args
+	     'completion-accept-functions
+	     (concat (overlay-get overlay 'prefix)
+		     (buffer-substring (overlay-start overlay)
+				       (overlay-end overlay))))
+	    ;; insert selected completion
+	    (setq completion-overlay-list
+		  (delq overlay completion-overlay-list))
+	    (delete-region (overlay-start overlay) (overlay-end overlay))
+	    (delete-overlay overlay)
+	    (funcall (lookup-key keymap result))
+	    (tooltip-hide))
+	   
+	   ;; otherwise, run whatever they did select
+	   (t (funcall (lookup-key keymap result))))
+	  ))))
 )
 
 
@@ -603,7 +655,8 @@ If OVERLAY is supplied, use that instead of finding one at point. If POSITION
 is supplied, a tooltip will only be displayed if point is at position."
   (interactive)
 
-  (when (or (null position) (= (point) position))
+  (when (and (string= window-system "x")
+	     (or (null position) (= (point) position)))
     (unless overlay (setq overlay (completion-overlay-at-point)))
     
     ;; if point is in a completion overlay...
@@ -959,13 +1012,19 @@ completion."
 		 (< i (length completion-hotkey-list)))
 	(setq str
 	      (concat str " "
-		      (format "(%c)" (nth i completion-hotkey-list)))))
+		      (format "(%s)" (key-description
+				      (nth i completion-hotkey-list))))))
       ;; if current completion is the inserted dynamic completion, use
       ;; `completion-dynamic-face' to highlight it
-      (setq str (propertize str 'face 'menu))
-      (when (and num (= i num))
-	(put-text-property 0 (length str)
-			   'face 'completion-dynamic-face str))
+      (if (and num (= i num))
+	  ;; setting 'face attribute to 'completion-dynamic-face doesn't seem
+	  ;; to work with defface using display classes
+	  (put-text-property 0 (length str) 'face
+			     (cons 'background-color
+				   (face-attribute 'completion-dynamic-face
+						   :background))
+			     str)
+	(put-text-property 0 (length str) 'face 'menu str))
       (setq text (concat text str "\n")))
       
     ;; return constructed text
@@ -1051,7 +1110,7 @@ completion."
 	      ;; if a hotkeys is associated with completion, show it in menu
 	      :keys (when (and completion-use-hotkeys
 			       (< n (length completion-hotkey-list)))
-		      (string (nth n completion-hotkey-list))))))
+		      (key-description (nth n completion-hotkey-list))))))
     
     ;; return the menu keymap
     menu)

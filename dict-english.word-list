@@ -78,11 +78,11 @@
 "Algernon" 83
 "Algiers" 218
 "Algy" 50
-"Ali" 2465
-"Alice" 2465 ("Ali")
-"Alicia" 114 ("Ali")
-"Alison" 1357 ("Ali")
-"Alistair" 343 ("Ali")
+"Ali" 1357
+"Alice" 2465
+"Alicia" 114
+"Alison" 1357
+"Alistair" 343
 "Allah" 111
 "Allan" 1036
 "Allen" 1790
@@ -4317,6 +4317,8 @@
 "aspect" 7291
 "aspects" 7291 ("aspect")
 "aspen" 65
+"aspersion" 60
+"aspersions" 60 ("aspersion")
 "asphalt" 94
 "aspirated" 64
 "aspiration" 977
@@ -11325,7 +11327,7 @@
 "domino" 159
 "dominoes" 81 ("domino")
 "don" 1811
-"don't" 118591
+"don't" 118591 ("do")
 "donate" 720
 "donated" 720 ("donate")
 "donating" 94
@@ -12717,7 +12719,7 @@
 "evaporation" 181
 "evasion" 255
 "evasive" 161
-"eve" 72074
+"eve" 1593
 "even" 72074
 "even if" 8757 ("even")
 "even so" 1462 ("even")

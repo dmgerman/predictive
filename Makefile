@@ -27,32 +27,34 @@ f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 core: $(core_files)
 
 
-# overrides implicit rule for dictionaries
+
 dict-english: dict-english.elc
 
+# overrides implicit rule for dictionaries
 dict-english.elc: dict-english.el
 	$(EMACS) --batch -L ./ -f batch-byte-compile $<
 
-dict-english.el: dict-english.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dict-write dict-english \"dict-english\" t t))"
+dict-english.el: dict-english.word-list dict-tree.el
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t t))"
+
 
 
 # dictionary targets
 dicts: latex_dicts html_dicts f90_dicts
 
-latex_dicts: $(latex_dicts) 
+latex_dicts: $(latex_dicts)
 
-#ams_latex_dicts: $(ams_latex_dicts) 
+#ams_latex_dicts: $(ams_latex_dicts)
 
-html_dicts: $(html_dicts) 
+html_dicts: $(html_dicts)
 
 f90_dicts: $(f90_dicts)
 
 
 
 # implicit rule for creating dictionaries
-dict-%.elc: dict-%.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dict-save-modified))"
+dict-%.elc: dict-%.word-list dict-tree.el
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-save-modified))"
 
 
 # implicit rule for byte-compiling elisp files
@@ -62,4 +64,4 @@ dict-%.elc: dict-%.word-list
 
 
 test:
-	echo $(dicts)
+	echo $(core_files) $(dicts)
