@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.10.3
+;; Version: 0.11
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+; Version 0.11
+;; * moved a lot of functions to completion-ui
 ;;
 ;; Version 0.10.3
 ;; * bug fixes to `predictive-load-dict'
@@ -298,25 +301,6 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   :type 'boolean)
 
 
-(defcustom predictive-completion-browser-max-items 25
-  "*Maximum number of completions to display
-in a completion browser submenu."
-  :group 'predictive
-  :type 'integer)
-
-
-(defcustom predictive-completion-browser-buckets 'balance
-  "*Policy for choosing number of buckets in completion browser:
-
-balance:  balance number of buckets and size of content
-maximize: maximize number of buckets, minimize size of contents
-mininize: minimize number of buckets, maximize size of contents"
-  :group 'predictive
-  :type '(choice (const :tag "balance" balance)
-		 (const :tag "maximize" max)
-		 (const :tag "minimize" min)))
-
-
 
 
 ;;; ==================================================================
@@ -344,45 +328,6 @@ The alist is checked whenever predictive mode is turned on in a
 buffer, and if the buffer's major made matches one in the alist,
 the associated function is called. This makes it easier to
 customize predictive mode for different major modes.")
-
-
-;; FIXME: should this be a customization option?
-(defvar predictive-syntax-alist nil
-  "Alist associating character syntax with completion functions.
-Used by the predictive mode `predictive-self-insert' function to
-decide what to do based on a typed character's syntax.
-
-By default, all printable characters are bound to
-`predictive-self-insert' in predictive mode. Therefore, unless
-you know what you are doing, it is a wise plan to ensure that all
-functions in the alist insert the last input event, in addition
-to any completion-related action. All predictive mode functions
-that do this have \"insert\" in their names.")
-
-
-;; FIXME: should this be a customization option?
-(defvar predictive-override-syntax-alist nil
-  "Alist associating characters with completion functions.
-Overrides the default function based on a typed character's
-syntax. Used by `predictive-self-insert'.")
-
-
-(defvar predictive-word-thing 'word
-  "Symbol used to determine what is considered a word.
-
-Used by `predictive-complete-word-at-point' and
-`predictive-backward-delete' in calls to `thing-at-point'.
-See `thing-at-point' for more details.")
-(make-variable-buffer-local 'predictive-word-thing)
-
-
-(defvar predictive-completion-browser-menu
-  'predictive-completion-generate-browser-menu
-  "Menu keymap for the completion browser, or a function to run
-to get a menu keymap.
-
-Note: this can be overridden by an \"overlay local\" binding (see
-`auto-overlay-local-binding').")
 
 
 (defvar predictive-completion-filter nil
@@ -450,139 +395,6 @@ dictionaries.")
 ;; Stores idle-timer that updates the current dictionary name
 (defvar predictive-which-dict-timer nil)
 (make-variable-buffer-local 'predictive-which-dict-timer)
-
-
-
-
-;;; ==============================================================
-;;;                 Predictive mode keymap
-
-;; Set the default keymap if it hasn't been defined already (most likely in an
-;; init file or setup function)
-(unless predictive-map
-  (let (map)
-    ;; if we can remap keys, do that
-    (if (fboundp 'command-remapping)
-	(progn
-	  (setq map (make-sparse-keymap))
-	  ;; remap printable characters to run predictive-self-insert
-	  (define-key map [remap self-insert-command]
-	    'predictive-self-insert))
-
-      ;; otherwise, create a great big keymap where all printable characters
-      ;; run predictive-self-insert, which decides what to do based on the
-      ;; character's syntax
-      (setq map (make-keymap))
-      (define-key map "A" 'predictive-self-insert)
-      (define-key map "a" 'predictive-self-insert)
-      (define-key map "B" 'predictive-self-insert)
-      (define-key map "b" 'predictive-self-insert)
-      (define-key map "C" 'predictive-self-insert)
-      (define-key map "c" 'predictive-self-insert)
-      (define-key map "D" 'predictive-self-insert)
-      (define-key map "d" 'predictive-self-insert)
-      (define-key map "E" 'predictive-self-insert)
-      (define-key map "e" 'predictive-self-insert)
-      (define-key map "F" 'predictive-self-insert)
-      (define-key map "f" 'predictive-self-insert)
-      (define-key map "G" 'predictive-self-insert)
-      (define-key map "g" 'predictive-self-insert)
-      (define-key map "H" 'predictive-self-insert)
-      (define-key map "h" 'predictive-self-insert)
-      (define-key map "I" 'predictive-self-insert)
-      (define-key map "i" 'predictive-self-insert)
-      (define-key map "J" 'predictive-self-insert)
-      (define-key map "j" 'predictive-self-insert)
-      (define-key map "K" 'predictive-self-insert)
-      (define-key map "k" 'predictive-self-insert)
-      (define-key map "L" 'predictive-self-insert)
-      (define-key map "l" 'predictive-self-insert)
-      (define-key map "M" 'predictive-self-insert)
-      (define-key map "m" 'predictive-self-insert)
-      (define-key map "N" 'predictive-self-insert)
-      (define-key map "n" 'predictive-self-insert)
-      (define-key map "O" 'predictive-self-insert)
-      (define-key map "o" 'predictive-self-insert)
-      (define-key map "P" 'predictive-self-insert)
-      (define-key map "p" 'predictive-self-insert)
-      (define-key map "Q" 'predictive-self-insert)
-      (define-key map "q" 'predictive-self-insert)
-      (define-key map "R" 'predictive-self-insert)
-      (define-key map "r" 'predictive-self-insert)
-      (define-key map "S" 'predictive-self-insert)
-      (define-key map "s" 'predictive-self-insert)
-      (define-key map "T" 'predictive-self-insert)
-      (define-key map "t" 'predictive-self-insert)
-      (define-key map "U" 'predictive-self-insert)
-      (define-key map "u" 'predictive-self-insert)
-      (define-key map "V" 'predictive-self-insert)
-      (define-key map "v" 'predictive-self-insert)
-      (define-key map "W" 'predictive-self-insert)
-      (define-key map "w" 'predictive-self-insert)
-      (define-key map "X" 'predictive-self-insert)
-      (define-key map "x" 'predictive-self-insert)
-      (define-key map "Y" 'predictive-self-insert)
-      (define-key map "y" 'predictive-self-insert)
-      (define-key map "Z" 'predictive-self-insert)
-      (define-key map "z" 'predictive-self-insert)
-      (define-key map "'" 'predictive-self-insert)
-      (define-key map "-" 'predictive-self-insert)
-      (define-key map "<" 'predictive-self-insert)
-      (define-key map ">" 'predictive-self-insert)
-      (define-key map " " 'predictive-self-insert)
-      (define-key map "." 'predictive-self-insert)
-      (define-key map "," 'predictive-self-insert)
-      (define-key map ":" 'predictive-self-insert)
-      (define-key map ";" 'predictive-self-insert)
-      (define-key map "?" 'predictive-self-insert)
-      (define-key map "!" 'predictive-self-insert)
-      (define-key map "\"" 'predictive-self-insert)
-      (define-key map "0" 'predictive-self-insert)
-      (define-key map "1" 'predictive-self-insert)
-      (define-key map "2" 'predictive-self-insert)
-      (define-key map "3" 'predictive-self-insert)
-      (define-key map "4" 'predictive-self-insert)
-      (define-key map "5" 'predictive-self-insert)
-      (define-key map "6" 'predictive-self-insert)
-      (define-key map "7" 'predictive-self-insert)
-      (define-key map "8" 'predictive-self-insert)
-      (define-key map "9" 'predictive-self-insert)
-      (define-key map "~" 'predictive-self-insert)
-      (define-key map "`" 'predictive-self-insert)
-      (define-key map "@" 'predictive-self-insert)
-      (define-key map "#" 'predictive-self-insert)
-      (define-key map "$" 'predictive-self-insert)
-      (define-key map "%" 'predictive-self-insert)
-      (define-key map "^" 'predictive-self-insert)
-      (define-key map "&" 'predictive-self-insert)
-      (define-key map "*" 'predictive-self-insert)
-      (define-key map "_" 'predictive-self-insert)
-      (define-key map "+" 'predictive-self-insert)
-      (define-key map "=" 'predictive-self-insert)
-      (define-key map "(" 'predictive-self-insert)
-      (define-key map ")" 'predictive-self-insert)
-      (define-key map "{" 'predictive-self-insert)
-      (define-key map "}" 'predictive-self-insert)
-      (define-key map "[" 'predictive-self-insert)
-      (define-key map "]" 'predictive-self-insert)
-      (define-key map "|" 'predictive-self-insert)
-      (define-key map "\\" 'predictive-self-insert)
-      (define-key map "/" 'predictive-self-insert)
-      )
-    
-    ;; DEL deletes backwards and removes characters from the current
-    ;; completion, if any
-    (define-key map "\d" 'predictive-backward-delete)
-    
-    ;; M-<tab> completes word at or next to point
-    (define-key map [?\M-\t] 'predictive-complete-word-at-point)
-    
-    ;; RET inserts a newline and updates
-    (define-key map "\r" 'predictive-accept-and-newline)
-    
-    (setq predictive-map map)
-  )
-)
 
 
 
@@ -691,6 +503,8 @@ emails, academic research articles, letters...)"
    
    ;; if we're enabling predictive mode...
    ((not predictive-mode)
+    ;; set the completion function
+    (setq completion-function 'predictive-complete)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)
@@ -704,12 +518,6 @@ emails, academic research articles, letters...)"
     
     ;; add functions to completion hooks
     (add-hook 'completion-accept-functions 'predictive-auto-learn nil 'local)
-    (add-hook 'completion-tab-complete-functions 'predictive-complete
-	      nil 'local)
-    ;; use our own completion menu rather than the default
-    (unless completion-menu
-      (make-local-variable 'completion-menu)
-      (setq completion-menu 'predictive-completion-basic-menu))
     
     ;; look up major mode in major-mode-alist and run any matching function
     (let ((modefunc (assq major-mode predictive-major-mode-alist)))
@@ -733,6 +541,8 @@ emails, academic research articles, letters...)"
    
    ;; if disabling predictive mode...
    (predictive-mode
+    ;; unset the completion function
+    (setq completion-function nil)
     ;; turn off which-dict mode
     (predictive-which-dict-mode -1)
     ;; cancel the auto-learn cache flush timer and hook, and flush the caches
@@ -743,8 +553,6 @@ emails, academic research articles, letters...)"
     (setq predictive-used-dict-list nil)
     ;; remove functions from completion hooks
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
-    (remove-hook 'completion-tab-complete-functions 'predictive-complete
-		 'local)
     ;; remove local completion-menu binding
     (kill-local-variable 'completion-menu)
     ;; reset the mode variable and run the hook
@@ -778,320 +586,6 @@ emails, academic research articles, letters...)"
   "Turn on predictive mode. Useful for adding to hooks."
   (unless predictive-mode (predictive-mode))
 )
-
-
-
-(defun predictive-self-insert ()
-  "Execute a predictive mode function based on syntax.
-
-Decide what predictive mode completion function to execute by
-looking up the character's syntax in
-`predictive-syntax-alist'. The syntax-derived function can be
-overridden for individual characters by
-`predictive-override-syntax-alist'.
-
-The default functions in `predictive-syntax-alist' all insert the
-last input event, in addition to taking any completion related
-action \(hence the name, `predictive-self-insert'\). Therefore,
-unless you know what you are doing, it is best to only bind
-`predictive-self-insert' to printable characters."
-  (interactive)
-  
-  (let ((override (assq last-input-event predictive-override-syntax-alist))
-	syntax)
-    
-    ;; if typed character is in override-syntax-alist, execute associated
-    ;; function if there is one
-    (if override
-	(if (functionp (cdr override))
-	    (funcall (cdr override))
-	  (error "Wrong type in `predictive-override-syntax-alist':\
- functionp %s" (prin1-to-string (cdr override))))
-      
-      
-      ;; if override-syntax-alist contains a character, use it as the syntax
-      (if override
-	(if (char-valid-p (cdr override))
-	    (setq syntax (cdr override))
-	  (error "Wrong type in `predictive-override-syntax-alist':\
- functionp or char-valid-p %s" (prin1-to-string (cdr override))))
-	;; otherwise use typed character's syntax
-	(setq syntax (char-syntax last-input-event)))
-      
-      ;; decide what to do based on syntax
-      (setq syntax (assq syntax predictive-syntax-alist))
-      ;; if syntax isn't explicitly defined, use default
-      (unless syntax (setq syntax (assq t predictive-syntax-alist)))
-      (if (functionp (cdr syntax))
-	  (funcall (cdr syntax))
-	(error "Wrong type in `predictive-override-syntax-alist':\
- functionp, %s" (prin1-to-string (cdr syntax))))))
-)
-
-
-
-(defun predictive-complete-word-at-point (&optional overlay)
-  "In predictive mode, complete the word at or next to the point."
-  (interactive)
-
-  (unless overlay
-    (setq overlay (completion-overlay-at-point))
-    (when (and (null overlay) (predictive-within-word-p))
-      (let ((pos (point)))
-	(save-excursion
-	  (forward-thing predictive-word-thing)
-	  (setq overlay
-		(car (sort (auto-overlays-in
-			    pos (point) '(identity completion-overlay))
-			   (lambda (o1 o2)
-			     (< (overlay-start o1) (overlay-start o2))))))
-	  ))))
-  
-  (let (pos str)
-    ;; delete current completion if we're within one
-    (when overlay
-      (delete-region (overlay-start overlay) (overlay-end overlay)))
-    
-    (cond
-     ;; if adding to existing prefix, complete new prefix
-     ((and overlay (= (point) (overlay-start overlay)))
-      (predictive-complete (overlay-get overlay 'prefix) overlay))
-
-     ;; if point is at end of a word, complete it
-     ((predictive-end-of-word-p)
-      (let ((pos (point))
-	    str)
-	(save-excursion
-	  (forward-thing predictive-word-thing -1)
-	  (setq str (buffer-substring-no-properties (point) pos)))
-	(predictive-complete str overlay)))
-     
-     ;; if point is within a word, delete part of word after point (up to
-     ;; overlay, if there is one) and complete remainding prefix
-     ((predictive-within-word-p)
-      (save-excursion
-	(setq pos (point))
-	(forward-thing predictive-word-thing)
-	(delete-region pos (if overlay (overlay-start overlay) (point)))
-	(forward-thing predictive-word-thing -1)
-	(setq str (buffer-substring-no-properties (point) pos)))
-      (predictive-complete str overlay))
-     ))
-)
-
-
-
-(defun predictive-insert-and-complete (&optional overlay)
-  "Insert the last input event and complete the resulting string.
-
-The last input event should be a printable character. This function is
-intended to be bound to printable characters in a keymap."
-  (interactive)
-
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-
-  (let (prefix)
-    ;; delete the current dynamic completion, if any
-    ;; note: we could use `completion-reject' here to clear the dynamic
-    ;; completion, but this way we avoid deleting and recreating a completion
-    ;; overlay
-    (combine-after-change-calls
-      (when overlay
-	(delete-region (overlay-start overlay) (overlay-end overlay)))
-      ;; insert the typed character
-      (insert (string last-input-event))
-      (setq prefix (string last-input-event))
-      ;; if there was already a completion overlay, move it to point and add
-      ;; typed character to the previous prefix
-      (when overlay
-	(move-overlay overlay (point) (point))
-	(setq prefix (concat (overlay-get overlay 'prefix) prefix)))
-      
-      ;; try to complete the new string
-      (predictive-complete prefix overlay)))
-)
-
-
-
-(defun predictive-insert-and-complete-word-at-point (&optional overlay)
-  "Insert the last input event and complete the resulting string.
-If the point is within or at the end of a word, delete the part
-of the word after point and complete the remainder.
-
-The last input event should be a printable character. This function is
-intended to be bound to printable characters in a keymap."
-  (interactive)
-  
-  ;; Note: we could use `completion-reject' here to clear the dynamic
-  ;; completion, but this way we avoid deleting and recreating a completion
-  ;; overlay
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-
-  (if (or overlay (predictive-beginning-of-word-p))
-      (predictive-insert-and-complete)
-    (combine-after-change-calls
-      (insert (string last-input-event))
-      (predictive-complete-word-at-point)))
-)
-
-
-
-(defun predictive-accept-and-insert (&optional overlay)
-  "Accept current completion and insert the last input event.
-
-The last input event should be a printable character. This
-function is intended to be bound to printable characters in a
-keymap."
-  (interactive)
-
-  ;; accept completion if there is one
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  (when overlay (completion-accept overlay))
-  ;; insert typed character
-  (self-insert-command 1)
-)
-
-  
-
-(defun predictive-reject-and-insert (&optional overlay)
-  "Reject current completion and insert the last input event.
-
-The last input event should be a printable character. This
-function is intended to be bound to printable characters in a
-keymap."
-  (interactive)
-
-  ;; reject completion if there is one
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  (combine-after-change-calls
-    (when overlay (completion-reject overlay))
-    ;; insert typed character
-    (self-insert-command 1))
-)
-
-
-
-(defun predictive-scoot-ahead (&optional overlay)
-  "Accept the characters from the current completion, and recomplete
-the resulting string.
-
-If OVERLAY is supplied, use that instead of finding or creating one."
-  (interactive)
-
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  ;; if within a completion overlay, accept characters and recomplete
-  (when (and overlay (/= (point) (overlay-end overlay)))
-    (goto-char (overlay-end overlay))
-    (move-overlay overlay (point) (point))
-    (predictive-complete
-     (concat (overlay-get overlay 'prefix)
-	     (nth (overlay-get overlay 'completion-num)
-		  (overlay-get overlay 'completions)))
-     overlay))
-)
-
-  
-
-(defun predictive-accept-and-newline (&optional n overlay)
-  "In predictive mode, insert a newline. Accepts the current completion if
-there is one. If N is specified, insert that many newlines. Interactively, N
-is the prefix argument."
-  (interactive "p")
-
-  (unless n (setq n 1))
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  (if (null overlay)
-      (newline n)
-    (completion-accept overlay)
-    (newline n))
-)
-
-
-
-(defun predictive-reject-and-newline (&optional n overlay)
-  "In predictive mode, insert a newline. Abandons the current completion if
-there is one. If N is specified, insert that many newlines. Interactively, N
-is the prefix argument."
-  (interactive "p")
-
-  (unless n (setq n 1))
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  (if (null overlay)
-      (newline n)
-    (completion-reject overlay)
-    (newline n))
-)
-
-
-
-(defvar predictive-backward-delete-timer nil
-  "Timer used to postpone completion until finished deleting.")
-
-
-(defun predictive-backward-delete (&optional n)
-  "Delete backwards N characters \(default 1\).
-If this deletes into a word, complete what remains of that word."
-  (interactive "p")
-  (when (null n) (setq n 1))
-
-  (let ((overlay (completion-overlay-at-point))
-	(wordstart (predictive-beginning-of-word-p))
-	pos)
-    
-    (combine-after-change-calls
-      ;; delete any existing completion
-      (when overlay
-	(delete-region (overlay-start overlay) (overlay-end overlay)))
-      
-      ;; delete backwards
-      (backward-delete-char-untabify n)
-      
-      ;; if point was at start of word before deleting, and we've deleted into
-      ;; a word, setup overlay to prevent word after point being deleted
-      (let ((pos (point)) prefix)
-	(save-excursion
-	  (forward-thing predictive-word-thing -1)
-	  (setq prefix (buffer-substring-no-properties (point) pos)))
-	
-	;; if we're not in or at the end of a word, reject any completion and
-	;; cancel any timer that's been set up
-	(if (string= prefix "")
-	    (progn
-	      (completion-reject)
-	      (when (timerp predictive-backward-delete-timer)
-		(cancel-timer predictive-backward-delete-timer))
-	      (setq predictive-backward-delete-timer nil))
-	  
-	  ;; otherwise...
-	  (completion-setup-overlay prefix nil nil overlay)
-	  (cond
-	   ;; if we've deleted into a word and there's no existing timer,
-	   ;; setup a timer to complete remainder of word after some idle time
-	   ((and (or (predictive-within-word-p) (predictive-end-of-word-p))
-		 (not (timerp predictive-backward-delete-timer)))
-	    (setq predictive-backward-delete-timer
-		  (run-with-idle-timer
-		   0.1 nil
-		   (lambda ()
-		     ;; FIXME: disabling tooltips since tooltip doesn't seem
-		     ;; to be displayed, and completion then doesn't always
-		     ;; work - why?
-		     (let ((completion-use-tooltip nil))
-		       (predictive-complete-word-at-point))
-		     (setq predictive-backward-delete-timer nil)))))
-	   
-	   ;; we should always fall into one of the above cases, but if we
-	   ;; don't we'd better cancel the timer to avoid future problems
-	   (t
-	    (when (timerp predictive-backward-delete-timer)
-	      (cancel-timer predictive-backward-delete-timer))
-	    (setq predictive-backward-delete-timer nil)))
-	  ))))
-)
-
 
 
 
@@ -1184,15 +678,13 @@ If this deletes into a word, complete what remains of that word."
 ;;;           Internal functions to do with completion
 
 
-(defun predictive-complete (prefix &optional overlay)
-  "Try to complete string STRING, usually the string before the point.
+(defun predictive-complete (prefix &optional maxnum)
+  "Try to complete string PREFIX, usually the string before the point,
+returning at most MAXNUM completion candidates.
   
 If `predictive-ignore-initial-caps' is enabled and first
 character of string is capitalized, also search for completions
-for uncapitalized version.
-
-A completion OVERLAY can be passed in to avoid re-finding the current
-completion overlay."
+for uncapitalized version."
   
   (let ((str prefix)
 	(dict (predictive-current-dict))
@@ -1215,267 +707,14 @@ completion overlay."
 	(setq str (list prefix (downcase prefix))))
       ;; complete the prefix using the current dictionary
       (setq completions
-	    (dictree-complete-ordered dict str predictive-max-completions
-				   nil filter))
+	    (if (null maxnum)
+		(dictree-complete dict str)
+	      (dictree-complete-ordered dict str maxnum nil filter)))
       (when completions (setq completions (mapcar 'car completions)))
-      (complete prefix completions overlay)))
-)
-
-
-
-(defun predictive-beginning-of-word-p (&optional point)
-  "Return non-nil if POINT is at beginning of a word
-\(POINT defaults to the point\)."
-  (unless point (setq point (point)))
-  (save-excursion
-    (goto-char point)
-    (let (bounds)
-      (and (setq bounds (bounds-of-thing-at-point predictive-word-thing))
-	   (= point (car bounds)))))
-)    
-  
-
-
-(defun predictive-within-word-p (&optional point)
-  "Return non-nil if POINT is within or at end of a word
-\(POINT defaults to the point\)."
-  (unless point (setq point (point)))
-  (save-excursion
-    (goto-char point)
-    (let (bounds)
-      (and (setq bounds (bounds-of-thing-at-point predictive-word-thing))
-	   (> point (car bounds))
-	   (< point (cdr bounds)))))
-)
-
-
-
-(defun predictive-end-of-word-p (&optional point)
-  "Return non-nil if POINT is at end of a word
-\(POINT defaults to the point\)"
-  (unless point (setq point (point)))
-  (save-excursion
-    (goto-char point)
-    (let (bounds)
-      (and (setq bounds (bounds-of-thing-at-point predictive-word-thing))
-	   (= point (cdr bounds)))))
-)
-
-
-
-(defun predictive-completion-basic-menu (prefix completions)
-  "Construct the predictive completion menu keymap
-from the available completions."
-
-  ;; just add advanced menu toggle to default completion menu
-  (let ((menu (completion-construct-menu prefix completions)))
-    (define-key-after menu [separator-advanced] '(menu-item "--"))
-    (define-key-after menu [advanced]
-      (list 'menu-item "Browser..."
-	    (lambda ()
-	      (let ((completion-menu predictive-completion-browser-menu))
-		    (completion-show-menu)))))
-    menu)
-)
-
-
-
-(defun predictive-completion-generate-browser-menu
-  (prefix completions &optional menu-item-func sub-menu-func)
-  "Construct the predictive completion browser menu keymap
-from the supplied PREFIX (COMPLETIONS is ignored and replaced by all
-  completions of PREFIX in the current dictionary).
-
-MENU-ITEM-FUNC and SUB-MENU-FUNC override the default functions
-for creating the sub-menus and menu items. Both functions are
-passed a 4-item list containing PREFIX, a list of completions of
-PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
-
-  (let ((dict (predictive-current-dict)))
-    ;; if no dictionary is active at point (indicated by t), display error
-    ;; message
-    (if (eq dict t)
-	(progn
-	  (beep)
-	  (message "No active dictionary"))
       
-      ;; inform user it's in progress (note: can't display "done" message
-      ;; since this function returns as soon as main menu is constructed,
-      ;; before all submenus have been constructed by :filter functions)
-      (message "Creating predictive completion browser\
- (C-g to cancel if taking too long)...")
-      
-      ;; default menu creation functions
-      (unless menu-item-func
-	(setq menu-item-func 'predictive-completion-browser-menu-item))
-      (unless sub-menu-func
-	(setq sub-menu-func  'predictive-completion-browser-sub-menu))
-      
-      ;; find all completions of prefix
-      (setq completions
-	    (dictree-complete dict prefix))
-      (setq completions (mapcar 'car completions))
-      ;; if ignoring initial capitals, find completions for lower-case prefix
-      ;; too
-      (when (and predictive-ignore-initial-caps
-		 (predictive-capitalized-p prefix))
-	(let ((str (downcase prefix)) case-completions)
-	  (setq case-completions (dictree-complete dict str))
-	  (setq case-completions (mapcar 'car case-completions))
-	  (setq completions (append completions case-completions))))
-      
-      ;; main browser menu is just a browser submenu...
-      (let ((menu (funcall sub-menu-func
-			   prefix completions menu-item-func sub-menu-func)))
-	;; ... with an item added for switching to the basic completion menu
-	(define-key-after menu [separator-basic] '(menu-item "--"))
-	(define-key-after menu [basic]
-	  (list 'menu-item "Basic..."
-		(lambda ()
-		  (let ((completion-menu 'predictive-completion-basic-menu))
-		    (completion-show-menu)))))
-	
-	;; return keymap
-	menu)
-      ))
+      ;; return the completions
+      completions))
 )
-
-
-
-
-;; Note:
-;;
-;; We should probably use some `imenu' function to create the menu, since
-;; `imenu' already deals with "bucketising" menus (an ugly necessity which
-;; should anyway be replaced with menu scrollbars, preferably with
-;; just-in-time calculation of menu entries -- heads-up Emacs devs!).
-;;
-;; My excuses are that `imenu--mouse-menu' etc. are undocumented, rolling my
-;; own was easier, and anyway I think my buckets are better (they're optimal
-;; in the information-theoretic sense that you need to make the least number
-;; of choices to get to the entry you want).
-;;
-;; One day I might patch the `imenu' "bucketising" code, and use `imenu' here
-;; instead. Don't hold your breath.
-
-(defun predictive-completion-browser-sub-menu
-  (prefix completions menu-item-func sub-menu-func)
-  "Construct a predictive completion browser sub-menu keymap."
-
-  (let* ((menu (make-sparse-keymap))
-	 (num-completions (length completions)))
-    
-    ;; if menu does not need to be divided into buckets, just add the
-    ;; completions themselves to the keymap
-    (if (< num-completions predictive-completion-browser-max-items)
-	(dotimes (i num-completions)
-	  (define-key-after menu
-	    (vector (intern (concat "completion-insert-"
-				    (number-to-string i))))
-	    (list 'menu-item (concat prefix (nth i completions))
-		  ;; call function to generate menu item
-		  (funcall menu-item-func
-			   prefix (nth i completions)
-			   menu-item-func sub-menu-func))))
-      
-      
-      ;; if menu needs to be divided into buckets, construct a menu keymap
-      ;; containing the bucket menus
-      (let* ((num-buckets
-	      (cond
-	       ;; maximize number of buckets, minimize size of contents
-	       ((eq predictive-completion-browser-buckets 'max)
-		predictive-completion-browser-max-items)
-	       ;; minimuze number of buckets, maximize size of contents
-	       ((eq predictive-completion-browser-buckets 'min)
-		(1+ (/ (1- num-completions)
-		       predictive-completion-browser-max-items)))
-	       ;; balance number of buckets and size of contents
-	       (t
-		(min predictive-completion-browser-max-items
-		     (round (sqrt num-completions))))))
-	     (num-per-bucket (/ num-completions num-buckets))
-	     (num-large-buckets (% num-completions num-buckets))
-	     (num-small-buckets (- num-buckets num-large-buckets))
-	    i j)
-	(dotimes (b num-buckets)
-	  
-	  ;; if bucket has only 1 entry, don't bother with bucket menu, just
-	  ;; add completion itself to keymap
-	  (if (and (= 1 num-per-bucket) (< b num-small-buckets))
-	      (define-key-after menu
-		(vector (intern (concat "completion-insert-"
-					(number-to-string b))))
-		(list 'menu-item (concat prefix (nth b completions))
-		      ;; call function to generate menu item
-		      (funcall menu-item-func
-			       prefix (nth b completions)
-			       menu-item-func sub-menu-func)))
-	    
-	    ;; if bucket has more than 1 entry...
-	    ;; index of first completion in bucket
-	    (setq i (+ (* (min b num-small-buckets) num-per-bucket)
-		       (* (max 0 (- b num-small-buckets))
-			  (1+ num-per-bucket))))
-	    ;; index of last completion in bucket
-	    (setq j (+ i num-per-bucket
-		       (if (< b num-small-buckets) 0 1)))
-	    ;; add bucket menu to keymap
-	    (define-key-after menu
-	      (vector (intern (concat "bucket-" (number-to-string b))))
-	      (list 'menu-item (concat "From: " prefix (nth i completions))
-		    ;; call function to generate sub-menu
-		    (funcall sub-menu-func
-			     prefix (subseq completions i j)
-			     menu-item-func sub-menu-func))))
-	)))
-    
-    
-    ;; return constructed menu
-    menu)
-)
-
-
-
-
-(defun predictive-completion-browser-menu-item
-  (prefix cmpl menu-item-func sub-menu-func)
-  "Construct predictive completion browser menu item."
-  
-  (let (completions)
-    ;; get completions for entry, dropping the empty string which corresponds
-    ;; to the same entry again (which would lead to infinite recursion)
-    (setq completions
-	  (dictree-complete (predictive-current-dict) (concat prefix cmpl)))
-    (setq completions
-	  (mapcar (lambda (c) (concat cmpl (car c))) completions))
-    (setq completions (cdr completions))
-    ;; if ignoring initial capitals, get completions for lower-case prefix too
-    (when (and predictive-ignore-initial-caps
-	       (predictive-capitalized-p prefix))
-      (let ((str (concat (downcase prefix) cmpl)) case-completions)
-	(setq case-completions
-	      (dictree-complete (predictive-current-dict) str))
-	(setq case-completions
-	      (mapcar (lambda (c) (concat cmpl (car c))) case-completions))
-	(setq case-completions (cdr case-completions))
-	(setq completions (append completions case-completions))))
-	
-
-    ;; if there are no completions (other than the entry itself), create a
-    ;; selectable completion item
-    (if (null completions)
-	`(lambda () (insert ,cmpl))
-      (let ((menu (funcall sub-menu-func
-			   prefix completions menu-item-func sub-menu-func)))
-	;; otherwise, create a sub-menu containing them
-	(define-key menu [separator-item-sub-menu] '(menu-item "--"))
-	(define-key menu [completion-insert-root]
-	  (list 'menu-item (concat prefix cmpl) `(lambda () (insert ,cmpl))))
-	;; return the menu keymap
-	menu)))
-)
-
 
 
 
@@ -2356,104 +1595,6 @@ predictive mode."
 	(setq predictive-which-dict-name name)
 	(force-mode-line-update))))
 )
-
-
-
-
-;;; ================================================================
-;;;              Setup function for normal English text
-
-(defun predictive-setup-english ()
-  "Sets up predictive mode for typing normal english text."
-  (interactive)
-  
-  ;; use english dictionary
-  (predictive-load-dict 'dict-english)
-  (set (make-local-variable 'predictive-main-dict) 'dict-english)
-  
-  ;; set the syntax-derived funtions
-  (set (make-local-variable 'predictive-syntax-alist) (list 
-    ;; word constituents add to current completion
-    (cons ?w 'predictive-insert-and-complete)
-    ;; whitespace and punctuation chars accept current completion
-    (cons ?  'predictive-accept-and-insert)
-    (cons ?. 'predictive-accept-and-insert)
-    ;; anything else abandons the current completion
-    (cons t  'predictive-abandon-and-insert)))
-  
-  ;; - and & are symbols in text mode but we override them to make them
-  ;; behave like word constituents
-  (set (make-local-variable 'predictive-override-syntax-alist)
-       (list (cons ?- 'predictive-insert-and-complete)
-	     (cons ?& 'predictive-insert-and-complete)))
-)
-
-
-
-;; (defun predictive-setup-english-alt ()
-;;   "Sets up predictive mode for typing normal english text."
-;;   (interactive)
-  
-;;   ;; use english dictionary
-;;   (predictive-load-dict 'dict-english)
-;;   (set (make-local-variable 'predictive-main-dict) 'dict-english)
-  
-;;   ;; set the syntax-derived funtions
-;;   (set (make-local-variable 'predictive-syntax-alist) (list 
-;;     ;; word constituents add to current completion
-;;     (cons ?w 'predictive-insert-and-complete)
-;;     ;; whitespace and punctuation chars abandon current completion
-;;     (cons ?  'predictive-abandon-and-insert)
-;;     (cons ?. 'predictive-abandon-and-insert)
-;;     ;; anything else abandons the current completion
-;;     (cons t  'predictive-abandon-and-insert)))
-  
-;;   ;; - and & are symbols in text mode but we override them to make them
-;;   ;; behave like word constituents
-;;   (set (make-local-variable 'predictive-override-syntax-alist) (list
-;;     (cons ?- 'predictive-insert-and-complete)
-;;     (cons ?& 'predictive-insert-and-complete)))
-;; )
-  
-
-
-
-
-;;; ================================================================
-;;;                     Initialise variables etc.
-
-;; Set the default dictionary if it hasn't already been set (most likely in an
-;; init file or setup function)
-(unless predictive-main-dict (setq predictive-main-dict 'dict-english))
-
-
-
-;; Set the syntax-alist that associates syntax with completion function,
-;; unless it's been set already (most likely in an init file)
-(unless predictive-syntax-alist
-  (setq predictive-syntax-alist (list
-    ;; word constituents add to current completion
-    (cons ?w 'predictive-insert-and-complete-word-at-point)
-    (cons ?_ 'predictive-insert-and-complete-word-at-point)
-    ;; whitespace and punctuation chars accept current completion
-    (cons ?  'predictive-accept-and-insert)
-    (cons ?. 'predictive-accept-and-insert)
-    ;; anything else rejects the current completion
-    (cons t  'predictive-reject-and-insert)))
-)
-
-
-
-;; Set the major-mode-alist so that things are set up sensibly in various
-;; major modes, if it hasn't been set already (most likely in an init file)
-;;(unless predictive-major-mode-alist
-;;  (setq predictive-major-mode-alist
-;;	'((text-mode . predictive-setup-english)
-;;	  (latex-mode . predictive-setup-latex)
-;;	  (LaTeX-mode . predictive-setup-latex)
-;;	  (c-mode . predictive-setup-c)
-;;	  ))
-;;)
 
 
 ;;; predictive.el ends here
