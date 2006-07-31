@@ -4,7 +4,7 @@ all: core dicts
 clean:
 	rm dict-english.el *.elc latex/*.elc ams-latex/*.elc html/*.elc f90/*.elc
 
-EMACS = /usr/bin/emacs
+EMACS = emacs
 
 
 

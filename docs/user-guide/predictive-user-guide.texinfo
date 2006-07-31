@@ -48,22 +48,9 @@ Documentation License".
 The package adds a new predictive completion minor-mode, called
 @dfn{predictive} mode, to the GNU Emacs editor. Although there are many
 options and customisations, the easiest way to start using it is to
-simply install the package (@pxref{Obtaining and Installing}), and
-insert the following in your @file{.emacs} file:
-
-@lisp
-(require 'predictive)
-@end lisp
-
-Alternatively, you can use
-
-@lisp
-(autoload 'predictive-mode "@var{/path/to/predictive.elc}")
-@end lisp
-
-@noindent
-Turn on the minor-mode by running the @command{predictive-mode} command,
-and start typing. Then come back and read up on how to tailor it to your
+simply install the package (@pxref{Obtaining and Installing}), turn on
+the minor-mode by running the @command{predictive-mode} command, and
+start typing. Then come back and read up on how to tailor it to your
 liking.
 @cindex .emacs file
 @cindex startup file
@@ -221,33 +208,19 @@ sentences preceding it.)
 @cindex obtaining
 
 The current version of the predictive completion package can be obtained
-from @uref{http://www.dr-qubit.org/emacs.php}. You will also need the
-Emacs Lisp Library (Elib), available from @uref{http://jdee.sunsite.dk}.
+from @uref{http://www.dr-qubit.org/emacs.php}.
 
-To install the package, the files should be extracted to a directory in
-the Emacs @env{load-path} (@pxref{Lisp Libraries, , , emacs, GNU Emacs
-Manual}). You can view the current @env{load-path} using @kbd{C-h v
-load-path} in Emacs, assuming default keybindings. All subdirectories
-created by unpacking the package should also be in the @env{load-path}.
+To install the package, extract the files using @kbd{tar -xvzf
+predictive.tar.gz}. This will put the files in a new subdirectory called
+@file{predictive/}. You're strongly encouraged to byte-compile all the
+Lisp files by running @kbd{make} in the @file{predictive/} directory.
 
-For performance reasons, it is important to byte-compile the lisp code,
-at least for the core lisp files. You can do this by running
-@command{make core} in the directory you extracted the files
-to@footnote{For some unknown reason, byte-compiling the core lisp files
-from the command line causes strange errors for me when running
-predictive completion mode. If anyone knows why, let me know! Creating
-the dictionaries works fine.}. Or you can do it manually using
-@command{byte-compile-file} or one of the other Emacs byte-compilation
-commands (@pxref{The Compilation Functions, , , elisp, GNU Emacs Lisp
-Reference Manual}) for each of the following lisp files: @file{heap.el},
-@file{tstree.el}, @file{dict.el}, @file{predictive-completion},
-@file{predictive.el}, @file{auto-overlays.el},
-@file{auto-overlay-common}, @file{auto-overlay-word.el},
-@file{auto-overlay-line.el}, @file{auto-overlay-self.el},
-@file{auto-overlay-stack.el} and
-@file{dict-english.el}@footnote{Personally, I like to use @dfn{dired}
-when byte-compiling multiple files. @xref{Operating on Files, , , emacs,
-GNU Emacs manual}, in the GNU Emacs manual.}.
+Finally, move the Lisp files (files with extension @file{.el} or
+@file{.elc}) to a directory in your Emacs load-path (@pxref{Lisp
+Libraries, , , emacs, GNU Emacs Manual}). You can view the current
+@env{load-path} using @kbd{C-h v load-path} in Emacs, assuming default
+keybindings. See the @file{INSTALL} file for more installation
+instructions.
 
 If you want the predictive completion minor-mode to be available
 whenever you start Emacs, put the following line in your @file{.emacs}
@@ -267,29 +240,6 @@ command), by putting the following in your @file{.emacs} instead:
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
-
-The only pre-prepared dictionary included in the main package is the
-English dictionary (so that predictive completion mode works ``out of
-the box'', albeit slowly if you don't byte-compile). However, you will
-get better results if you roll your own English dictionary and tailor it
-to your writing style by teaching it the word frequencies from samples
-of your writing (@pxref{Dictionaries})@footnote{You can get a word list
-to use to create your own dictionary for instance by deleting the word
-weights from the plain text @file{dict-english.word-list} file, or from
-the @command{ispell} program or one of its substitutes.}.
-
-Extra dictionaries for other languages (e.g. LaTeX) are supplied as
-plain text word lists. Running @command{make dicts} creates these
-dictionaries. You can, if you prefer, create them manually using the
-@command{predictive-create-dict} command. If you do this, you should
-give the dictionary the same file name as the word list file, minus the
-final @file{-word-list}, and make sure this file is somewhere in your
-@env{load-path}. @xref{Creating Dictionaries}.
-@cindex dictionaries
-@cindex dictionary packages
-
-Running @command{make} will byte-compile the core lisp files as well as
-creating the dictionaries.
 
 
 

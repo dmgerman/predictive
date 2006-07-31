@@ -12,26 +12,33 @@ http://www.dr-qubit.org/emacs.php
 Installing
 ----------
 
-To install the package, extract the files to a directory in the Emacs
-load-path (see Lisp Libraries, GNU Emacs Manual):
+To install the package, extract the files using
 
-cd /some/directory/in/load-path
-tar -xvzf predictive.tar.gz
+  tar -xvzf predictive.tar.gz
 
-You can view the current load-path using `C-h v load-path' in Emacs, assuming
-default keybindings. All subdirectories created by unpacking the package
-should also be added to the load-path.
+This will put the files in a new subdirectory called predictive/. You're
+strongly encouraged to byte-compile all the Lisp files by running
+
+  make
+
+in the predictive/ directory (see also below).
+
+Finally, move the Lisp files (files with extension .el or .elc) to a directory
+in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual). You can view
+the current load-path using `C-h v load-path' in Emacs, assuming default
+keybindings.
+
 
 If you want the predictive completion minor-mode to be available whenever you
 start Emacs, put the following line in your .emacs file:
 
-(require 'predictive)
+  (require 'predictive)
 
 Alternatively, you can save memory and only load the lisp libraries when
 they're needed (i.e. when you first run the `predictive-mode' command), by
 putting the following in your .emacs instead:
 
-(autoload 'predictive-mode "/path/to/predictive.elc")
+  (autoload 'predictive-mode "/path/to/predictive.elc")
 
 
 
@@ -39,29 +46,17 @@ Byte-Compiling
 --------------
 
 For performance reasons, it is important to byte-compile the lisp code, at
-least for the core lisp files. You can do this by running
+least for the core Lisp files. If you want to do this, but don't want to
+create the dictionaries (see below), run
 
-make core
+  make core
 
-in the directory you extracted the files to. (For some unknown reason,
-byte-compiling the core lisp files from the command line causes strange errors
-for me when running predictive completion mode. If anyone knows why, let me
-know! Creating the dictionaries works fine.)
+in the predictive/ directory created by extracting the files.
 
 Alternatively, you can do it manually using `byte-compile-file' or one of the
 other Emacs byte-compilation commands (see The Compilation Functions, GNU
-Emacs Lisp Reference Manual) for each of the following lisp files:
-
-heap.el
-tstree.el
-dict.el
-predictive.el
-auto-overlays.el
-auto-overlay-word.el
-auto-overlay-line.el
-auto-overlay-self.el
-auto-overlay-stack.el
-dict-english.el
+Emacs Lisp Reference Manual) for all of the Lisp files contained in the
+package.
 
 Personally, I like to use `dired' when byte-compiling multiple files. (See
 Operating on Files, GNU Emacs manual.)
@@ -80,11 +75,11 @@ Dictionaries, Predictive Completion Manual.)
 Extra dictionaries for other languages (e.g. LaTeX) are supplied as plain text
 word lists. Running
 
-make dicts
+  make dicts
 
 creates these dictionaries. Simply running
 
-make
+  make
 
 will byte-compile the core lisp files as well as creating the dictionaries.
 

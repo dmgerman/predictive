@@ -3,7 +3,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.4
+;; Version: 0.4.1
 ;; Keywords: automatic, overlays
 
 ;; This file is part of the Emacs Automatic Overlays package.
@@ -26,6 +26,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4.1
+;; * moved defmacros before their first use so byte-compilation works
 ;;
 ;; Version 0.4
 ;; * (a lot of) bug fixes
@@ -70,6 +73,136 @@
 
 
 
+
+;;;========================================================
+;;;                 Code-tidying macros
+
+(defmacro auto-o-entry (set type &optional sequence)
+  ;; Return regexp entry corresponding to SET, TYPE and SEQUENCE.
+  `(if ,sequence
+       (nth (1+ ,sequence) (nth ,type (nth ,set auto-overlay-regexps)))
+     (nth ,type (nth ,set auto-overlay-regexps))))
+
+
+(defmacro auto-o-class (o-match)
+  ;; Return class of match overlay O-MATCH.
+  `(car (nth (overlay-get ,o-match 'type)
+	     (nth (overlay-get ,o-match 'set) auto-overlay-regexps))))
+
+
+(defmacro auto-o-seq-regexp (set type &optional sequence)
+  ;; Return regexp corresponsing to SET, TYPE and SEQUENCE.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
+     (if (atom regexp) regexp (car regexp))))
+
+
+(defmacro auto-o-regexp (o-match)
+  ;; Return match overlay O-MATCH's regexp.
+  `(auto-o-seq-regexp (overlay-get ,o-match 'set)
+		      (overlay-get ,o-match 'type)
+		      (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-seq-regexp-group (set type &optional sequence)
+  ;; Return regexp group corresponsing to SET, TYPE and SEQUENCE, or 0 if none
+  ;; is specified.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
+     (cond
+      ((atom regexp) 0)
+      ((atom (cdr regexp)) (cdr regexp))
+      (t (cadr regexp)))))
+
+
+(defmacro auto-o-regexp-group (o-match)
+  ;; Return match overlay O-MATCH's regexp group.
+  `(auto-o-seq-regexp-group (overlay-get ,o-match 'set)
+			    (overlay-get ,o-match 'type)
+			    (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-seq-regexp-group-nth (n set type &optional sequence)
+  ;; Return Nth regexp group entry corresponsing to SET, TYPE and SEQUENCE, or
+  ;; 0 if there is no Nth entry.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
+     (cond
+      ((atom regexp) 0)
+      ((> (1+ ,n) (length (cdr regexp))) 0)
+      (t (nth ,n (cdr regexp))))))
+
+
+(defmacro auto-o-regexp-group-nth (n o-match)
+  ;; Return match overlay O-MATCH's Nth regexp group entry, or 0 if there is
+  ;; no Nth entry.
+  `(auto-o-seq-regexp-group-nth ,n
+				(overlay-get ,o-match 'set)
+				(overlay-get ,o-match 'type)
+				(overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-type-props (set type &optional sequence)
+  ;; Return properties of regexp with SET, TYPE and SEQUENCE
+  `(if (auto-o-type-is-list-p ,set ,type)
+       (nthcdr 2 (auto-o-entry ,set ,type ,sequence))
+     (nthcdr 2 (auto-o-entry ,set ,type))))
+
+
+(defmacro auto-o-props (o-match)
+  ;; Return properties associated with match overlay O-MATCH.
+  `(auto-o-type-props (overlay-get ,o-match 'set)
+		      (overlay-get ,o-match 'type)
+		      (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-seq-edge (set type sequence)
+  ;; Return edge ('start or 'end) of regexp with SET, TYPE and SEQEUNCE
+  ;; (assumes that TYPE contains a list of regexps)
+  `(car (auto-o-entry ,set ,type ,sequence)))
+
+
+(defmacro auto-o-edge (o-match)
+  ;; Return edge ('start or 'end) of match overlay O-MATCH (assumes that
+  ;; O-MATCH's type contains a list of regexps).
+  `(auto-o-seq-edge (overlay-get ,o-match 'set)
+		    (overlay-get ,o-match 'type)
+		    (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-parse-function (o-match)
+  ;; Return appropriate parse function for match overlay O-MATCH.
+  `(nth 1 (assq (auto-o-class ,o-match) auto-overlay-functions)))
+
+
+(defmacro auto-o-suicide-function (o-match)
+  ;; Return appropriate suicide function for match overlay O-MATCH.
+  `(nth 2 (assq (auto-o-class ,o-match) auto-overlay-functions)))
+
+
+(defmacro auto-o-match-function (o-match)
+  `(let ((funcs (assq (auto-o-class ,o-match) auto-overlay-functions)))
+     (when (>= (length funcs) 4) (nth 3 funcs))))
+
+
+(defmacro auto-o-start-matched-p (overlay)
+  ;; test if OVERLAY is start-matched
+  `(overlay-get ,overlay 'start))
+
+
+(defmacro auto-o-end-matched-p (overlay)
+  ;; test if OVERLAY is end-matched
+  `(overlay-get ,overlay 'end))
+
+
+(defmacro auto-o-type-is-list-p (set type)
+  ;; Return non-nil if regexp type TYPE contains a list of regexp entries
+  ;; rather than a single entry.
+  `(let ((entry (auto-o-entry ,set ,type 0)))
+    (and (listp entry) (symbolp (car entry)))))
+
+
+
+
+;;;=========================================================
+;;;                auto-overlay functions
 
 (defun auto-overlay-init (regexp-list &optional buffer)
   "Initialise a set of auto-overlays in BUFFER, or the current
@@ -786,131 +919,6 @@ properties)."
     o-overlap)
 )
 
-
-
-
-;; --- code-tidying macros ---
-
-(defmacro auto-o-entry (set type &optional sequence)
-  ;; Return regexp entry corresponding to SET, TYPE and SEQUENCE.
-  `(if ,sequence
-       (nth (1+ ,sequence) (nth ,type (nth ,set auto-overlay-regexps)))
-     (nth ,type (nth ,set auto-overlay-regexps))))
-
-
-(defmacro auto-o-class (o-match)
-  ;; Return class of match overlay O-MATCH.
-  `(car (nth (overlay-get ,o-match 'type)
-	     (nth (overlay-get ,o-match 'set) auto-overlay-regexps))))
-
-
-(defmacro auto-o-seq-regexp (set type &optional sequence)
-  ;; Return regexp corresponsing to SET, TYPE and SEQUENCE.
-  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
-     (if (atom regexp) regexp (car regexp))))
-
-
-(defmacro auto-o-regexp (o-match)
-  ;; Return match overlay O-MATCH's regexp.
-  `(auto-o-seq-regexp (overlay-get ,o-match 'set)
-		      (overlay-get ,o-match 'type)
-		      (overlay-get ,o-match 'sequence)))
-
-
-(defmacro auto-o-seq-regexp-group (set type &optional sequence)
-  ;; Return regexp group corresponsing to SET, TYPE and SEQUENCE, or 0 if none
-  ;; is specified.
-  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
-     (cond
-      ((atom regexp) 0)
-      ((atom (cdr regexp)) (cdr regexp))
-      (t (cadr regexp)))))
-
-
-(defmacro auto-o-regexp-group (o-match)
-  ;; Return match overlay O-MATCH's regexp group.
-  `(auto-o-seq-regexp-group (overlay-get ,o-match 'set)
-			    (overlay-get ,o-match 'type)
-			    (overlay-get ,o-match 'sequence)))
-
-
-(defmacro auto-o-seq-regexp-group-nth (n set type &optional sequence)
-  ;; Return Nth regexp group entry corresponsing to SET, TYPE and SEQUENCE, or
-  ;; 0 if there is no Nth entry.
-  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
-     (cond
-      ((atom regexp) 0)
-      ((> (1+ ,n) (length (cdr regexp))) 0)
-      (t (nth ,n (cdr regexp))))))
-
-
-(defmacro auto-o-regexp-group-nth (n o-match)
-  ;; Return match overlay O-MATCH's Nth regexp group entry, or 0 if there is
-  ;; no Nth entry.
-  `(auto-o-seq-regexp-group-nth ,n
-				(overlay-get ,o-match 'set)
-				(overlay-get ,o-match 'type)
-				(overlay-get ,o-match 'sequence)))
-
-
-(defmacro auto-o-type-props (set type &optional sequence)
-  ;; Return properties of regexp with SET, TYPE and SEQUENCE
-  `(if (auto-o-type-is-list-p ,set ,type)
-       (nthcdr 2 (auto-o-entry ,set ,type ,sequence))
-     (nthcdr 2 (auto-o-entry ,set ,type))))
-
-
-(defmacro auto-o-props (o-match)
-  ;; Return properties associated with match overlay O-MATCH.
-  `(auto-o-type-props (overlay-get ,o-match 'set)
-		      (overlay-get ,o-match 'type)
-		      (overlay-get ,o-match 'sequence)))
-
-
-(defmacro auto-o-seq-edge (set type sequence)
-  ;; Return edge ('start or 'end) of regexp with SET, TYPE and SEQEUNCE
-  ;; (assumes that TYPE contains a list of regexps)
-  `(car (auto-o-entry ,set ,type ,sequence)))
-
-
-(defmacro auto-o-edge (o-match)
-  ;; Return edge ('start or 'end) of match overlay O-MATCH (assumes that
-  ;; O-MATCH's type contains a list of regexps).
-  `(auto-o-seq-edge (overlay-get ,o-match 'set)
-		    (overlay-get ,o-match 'type)
-		    (overlay-get ,o-match 'sequence)))
-
-
-(defmacro auto-o-parse-function (o-match)
-  ;; Return appropriate parse function for match overlay O-MATCH.
-  `(nth 1 (assq (auto-o-class ,o-match) auto-overlay-functions)))
-
-
-(defmacro auto-o-suicide-function (o-match)
-  ;; Return appropriate suicide function for match overlay O-MATCH.
-  `(nth 2 (assq (auto-o-class ,o-match) auto-overlay-functions)))
-
-
-(defmacro auto-o-match-function (o-match)
-  `(let ((funcs (assq (auto-o-class ,o-match) auto-overlay-functions)))
-     (when (>= (length funcs) 4) (nth 3 funcs))))
-
-
-(defmacro auto-o-start-matched-p (overlay)
-  ;; test if OVERLAY is start-matched
-  `(overlay-get ,overlay 'start))
-
-
-(defmacro auto-o-end-matched-p (overlay)
-  ;; test if OVERLAY is end-matched
-  `(overlay-get ,overlay 'end))
-
-
-(defmacro auto-o-type-is-list-p (set type)
-  ;; Return non-nil if regexp type TYPE contains a list of regexp entries
-  ;; rather than a single entry.
-  `(let ((entry (auto-o-entry ,set ,type 0)))
-    (and (listp entry) (symbolp (car entry)))))
 
 
 

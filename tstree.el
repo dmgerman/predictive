@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.3
+;; Version: 0.4
 ;; Keywords: ternary search tree, tstree
 
 ;; This file is part of the Emacs Predictive Completion package.

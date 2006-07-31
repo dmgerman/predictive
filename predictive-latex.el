@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5
+;; Version: 0.5.1
 ;; Keywords: predictive, setup function, latex
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.1
+;; * minor bug fix
 ;;
 ;; Version 0.5
 ;; * modified to work with new auto-overlays package

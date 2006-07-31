@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.9
+;; Version: 0.9.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -40,6 +40,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.1
+;; * moved defmacros before their first use so byte-compilation works (thanks
+;;   to Dan Nicolaescu for pointing out this problem)
 ;;
 ;; Version 0.9
 ;; * modified to use new completion package
@@ -680,6 +684,21 @@ for fuller information."
 
 
 
+;;; ================================================================
+;;;                       Convenience macros
+
+(defmacro predictive-capitalized-p (string)
+  ;; Return t if string is capitalized (only first letter upper case), nil
+  ;; otherwise.
+  `(and (> (length ,string) 0)
+	(= (aref ,string 0) (upcase (aref ,string 0)))
+	(not (= (aref ,string 0) (downcase (aref ,string 0))))
+	(or (= 1 (length ,string))
+	    (string= (substring ,string 1) (downcase (substring ,string 1)))))
+)
+
+
+
 
 ;;; ================================================================
 ;;;       Public functions for completion in predictive mode
@@ -1076,18 +1095,6 @@ completion overlay."
 				   filter))
       (when completions (setq completions (mapcar 'car completions)))
       (complete prefix completions overlay)))
-)
-
-
-
-(defmacro predictive-capitalized-p (string)
-  ;; Return t if string is capitalized (only first letter upper case), nil
-  ;; otherwise.
-  `(and (> (length ,string) 0)
-	(= (aref ,string 0) (upcase (aref ,string 0)))
-	(not (= (aref ,string 0) (downcase (aref ,string 0))))
-	(or (= 1 (length ,string))
-	    (string= (substring ,string 1) (downcase (substring ,string 1)))))
 )
 
 
