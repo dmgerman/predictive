@@ -108,7 +108,7 @@
   (make-local-variable 'predictive-main-dict)
   (when (atom predictive-main-dict)
     (setq predictive-main-dict (list predictive-main-dict)))
-  (add-to-list 'predictive-main-dict 'dict-latex predictive-main-dict)
+  (add-to-list 'predictive-main-dict 'dict-latex)
 
   ;; use latex browser menu if first character of prefix is "\"
   (make-local-variable 'completion-browser-menu)
@@ -130,13 +130,13 @@
 	   ;; %'s start comments that last till end of line
 	   (line "%" (dict . predictive-main-dict) (priority . 4)
 		 (exclusive . t)
-		 (completion-menu
+		 (completion-browser-menu
 		  . predictive-latex-construct-browser-menu)
 		 (face . (background-color . ,predictive-latex-debug-color)))
 	   
 	   ;; $'s delimit the start and end of inline maths regions
 	   (self "\\$" (dict . dict-latex-math) (priority . 3)
-		 (completion-menu .
+		 (completion-browser-menu .
 				  predictive-latex-construct-browser-menu)
 		 (face . (background-color
 			  . ,predictive-latex-debug-color)))
@@ -148,31 +148,31 @@
 	   ;; all { and } match, but \{ is excluded.
 	   (stack
 	    (start "\\\\begin{" (dict . dict-latex-env) (priority . 2)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\end{" (dict . dict-latex-env) (priority . 2)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\text{"
 		   (dict . predictive-main-dict)
 		   (priority . 2)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\documentclass\\(\\[.*\\]\\)?{"
 		   (dict . dict-latex-docclass) (priority . 2)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 		   (dict . dict-latex-bibstyle) (priority . 2)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
@@ -195,14 +195,14 @@
 	    (start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 		    0 1)
 		   (dict . dict-latex-math) (priority . 1)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (end ("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 		    0 1)
 		   (dict . dict-latex-math) (priority . 1)
-		   (completion-menu
+		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
@@ -232,10 +232,10 @@
 			    nil '(eq dict dict-latex-env))
 		       (complete "") nil))))
 	  
-	  (?} . (accept . word))
+	  (?}  . (accept . word))
 	  (?\( . (accept . word))
 	  (?\) . (accept . word))
-	  (?$ . (accept . word))
+	  (?$  . (accept . word))
 	  (?\" . (accept . (lambda () (TeX-insert-quote nil) nil)))
 	  ))
 

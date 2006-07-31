@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -89,6 +89,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.3.2
+;; * bug fixes
+;; * incorporated compatability code
+;;
 ;; Version 0.3.1
 ;; * bug fixes
 ;;
@@ -171,6 +175,25 @@
   "Display completion menu automatically."
   :group 'completion-ui
   :type 'boolean)
+
+
+(defcustom completion-browser-max-items 25
+  "*Maximum number of completions to display
+in a completion browser submenu."
+  :group 'predictive
+  :type 'integer)
+
+
+(defcustom completion-browser-buckets 'balance
+  "*Policy for choosing number of buckets in completion browser:
+
+balance:  balance number of buckets and size of content
+maximize: maximize number of buckets, minimize size of contents
+mininize: minimize number of buckets, maximize size of contents"
+  :group 'predictive
+  :type '(choice (const :tag "balance" balance)
+		 (const :tag "maximize" max)
+		 (const :tag "minimize" min)))
 
 
 (defcustom completion-max-candidates 10
@@ -314,7 +337,7 @@ characters rather than syntax descriptors."
 
 
 ;;; ============================================================
-;;;                      Other variables
+;;;                 Other configuration variables
 
 (defvar completion-function nil
   "The entire completion UI interface is enabled by setting this
@@ -341,25 +364,6 @@ to get a menu keymap.
 
 Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
-
-
-(defcustom completion-browser-max-items 25
-  "*Maximum number of completions to display
-in a completion browser submenu."
-  :group 'predictive
-  :type 'integer)
-
-
-(defcustom completion-browser-buckets 'balance
-  "*Policy for choosing number of buckets in completion browser:
-
-balance:  balance number of buckets and size of content
-maximize: maximize number of buckets, minimize size of contents
-mininize: minimize number of buckets, maximize size of contents"
-  :group 'predictive
-  :type '(choice (const :tag "balance" balance)
-		 (const :tag "maximize" max)
-		 (const :tag "minimize" min)))
 
 
 (defvar completion-accept-functions nil
@@ -579,7 +583,7 @@ otherwise complete the word at point."
 	(if (completion-overlay-at-point)
 	    (completion-cycle)
 	  (complete-word-at-point -1))))
-    
+
     ;; M-<space> rejects
     (define-key map "\M- " 'completion-reject)
     
@@ -831,72 +835,71 @@ of 'completion-menu, or `completion-menu' if there is none."
   (interactive)
   (completion-cancel-tooltip)
   
-  ;; menus only work under X windows at the moment
-  (when (string= window-system "x")
-    (setq menu (or menu
-		   (and (fboundp 'auto-overlay-local-binding)
-			(auto-overlay-local-binding 'completion-menu))
-		   'completion-construct-menu))
-    ;; if we haven't been passed one, get completion overlay at point
-    ;; or create new one if none exists
-    (unless overlay (setq overlay (completion-overlay-at-point)))
+  (setq menu (or menu
+		 (and (fboundp 'auto-overlay-local-binding)
+		      (auto-overlay-local-binding 'completion-menu))
+		 completion-menu
+		 'completion-construct-menu))
+  ;; if we haven't been passed one, get completion overlay at point
+  ;; or create new one if none exists
+  (unless overlay (setq overlay (completion-overlay-at-point)))
     
-    (let (keymap result)
-      (cond
-       ;; if `menu' is a function, evaluate it to get menu
-       ((functionp menu)
-	(setq keymap (funcall menu (overlay-get overlay 'prefix)
-			      (overlay-get overlay 'completions)))
-	;; throw error if return value has wrong type
-	(unless (or (null keymap) (keymapp keymap))
-	  (error "`completion-menu' returned wrong type:null or\
+  (let (keymap result)
+    (cond
+     ;; if `menu' is a function, evaluate it to get menu
+     ((functionp menu)
+      (setq keymap (funcall menu (overlay-get overlay 'prefix)
+			    (overlay-get overlay 'completions)))
+      ;; throw error if return value has wrong type
+      (unless (or (null keymap) (keymapp keymap))
+	(error "`completion-menu' returned wrong type:null or\
  keymapp, %s"
-		 (prin1-to-string keymap))))
+	       (prin1-to-string keymap))))
        
-       ;; if `menu' is a keymap, use that
-       ((keymapp menu) (setq keymap menu))
+     ;; if `menu' is a keymap, use that
+     ((keymapp menu) (setq keymap menu))
        
-       ;; otherwise, throw an error
-       (t (error "Wrong type in `completion-menu': functionp or\
+     ;; otherwise, throw an error
+     (t (error "Wrong type in `completion-menu': functionp or\
  keymapp, %s"
-		 (prin1-to-string menu))))
+	       (prin1-to-string menu))))
       
       
-      ;; if we've constructed a menu, display it
-      (when keymap
-	(setq result
-	      (x-popup-menu (completion-posn-at-point-as-event
-			     nil nil nil (+ (frame-char-height) 3))
-			    keymap))
+    ;; if we've constructed a menu, display it
+    (when keymap
+      (setq result
+	    (x-popup-menu (completion-posn-at-point-as-event
+			   nil nil nil (+ (frame-char-height) 3))
+			  keymap))
 	
 	
-	;; if they ain't selected nuffin', don't do nuffin'!
-	(when result
-	  ;; convert result to a vector for key lookup
-	  (setq result (apply 'vector result))
+      ;; if they ain't selected nuffin', don't do nuffin'!
+      (when result
+	;; convert result to a vector for key lookup
+	(setq result (apply 'vector result))
 	  
-	  (cond
-	   ;; if they selected a completion from the menu...
-	   ((string-match "^completion-insert"
-			  (symbol-name (aref result
-					     (1- (length result)))))
-	    ;; run accept hooks
-	    (run-hook-with-args
-	     'completion-accept-functions
-	     (concat (overlay-get overlay 'prefix)
-		     (buffer-substring (overlay-start overlay)
-				       (overlay-end overlay))))
-	    ;; insert selected completion
-	    (setq completion-overlay-list
-		  (delq overlay completion-overlay-list))
-	    (delete-region (overlay-start overlay)
-			   (overlay-end overlay))
-	    (delete-overlay overlay)
-	    (funcall (lookup-key keymap result)))
+	(cond
+	 ;; if they selected a completion from the menu...
+	 ((string-match "^completion-insert"
+			(symbol-name (aref result
+					   (1- (length result)))))
+	  ;; run accept hooks
+	  (run-hook-with-args
+	   'completion-accept-functions
+	   (concat (overlay-get overlay 'prefix)
+		   (buffer-substring (overlay-start overlay)
+				     (overlay-end overlay))))
+	  ;; insert selected completion
+	  (setq completion-overlay-list
+		(delq overlay completion-overlay-list))
+	  (delete-region (overlay-start overlay)
+			 (overlay-end overlay))
+	  (delete-overlay overlay)
+	  (funcall (lookup-key keymap result)))
 	   
-	   ;; otherwise, run whatever they did select
-	   (t (funcall (lookup-key keymap result))))
-	  ))))
+	 ;; otherwise, run whatever they did select
+	 (t (funcall (lookup-key keymap result))))
+	)))
 )
 
 
@@ -972,65 +975,9 @@ point is at position."
 
 
 
-(defun completion-select (&optional n overlay)
-  "Select completion corresponding to the last input event
-when hotkey completion is active.
-
-If integer N is supplied, insert completion corresponding to that
-instead. If OVERLAY is supplied, use that instead of finding one.
-
-Intended to be bound to keys in `completion-hotkey-map'."
-  (interactive)
-  (completion-cancel-tooltip)
-  
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  ;; find completion index corresponding to last input event
-  (unless n
-    (setq n (position (this-command-keys-vector)
-		      completion-hotkey-list
-		      :test 'equal)))
-  
-  ;; if within a completion overlay...
-  (when overlay
-    (let ((completions (overlay-get overlay 'completions)))
-      (cond
-       ;; if there are no completions, run whatever would otherwise be
-       ;; bound to the key
-       ((null completions)
-	(when (and (boundp 'trap-recursion) trap-recursion)
-	  (error "Recursive call to `completion-select'"))
-	(setq completion-use-hotkeys nil)
-	(let ((trap-recursion t))
-	  (unwind-protect
-	      (command-execute
-	       (key-binding (this-command-keys) 'accept-default))
-	    (setq completion-use-hotkeys t))))
-       
-       ;; if there are too few completions, display message
-       ((>= n (length completions))
-	(beep)
-	(message "Only %d completions available"
-		 (length (overlay-get overlay 'completions))))
-       
-       ;; otherwise, replace dynamic completion with selected one
-       (t
-	(setq completion-overlay-list
-	      (delq overlay completion-overlay-list))
-	(delete-region (overlay-start overlay) (overlay-end overlay))
-	(insert (nth n completions))
-	;; run accept hooks
-	(run-hook-with-args 'completion-accept-functions
-			    (concat (overlay-get overlay 'prefix)
-				    (nth n completions)))
-	(delete-overlay overlay))
-       )))
-)
-
-
-
 
 ;;; ===============================================================
-;;;                   Completion functions
+;;;           Completion commands for binding to keys
 
 
 (defun completion-self-insert ()
@@ -1104,7 +1051,7 @@ unless you know what you are doing, it only bind
       
       
       ;; insert typed character and move overlay
-      (insert (string last-input-event))
+      (self-insert-command 1)
       (when overlay (move-overlay overlay (point) (point)))
       
       
@@ -1184,6 +1131,62 @@ carrots will start growing out your ears."
 	(setq prefix (buffer-substring-no-properties (point) pos)))
       (complete prefix overlay))
      ))
+)
+
+
+
+(defun completion-select (&optional n overlay)
+  "Select completion corresponding to the last input event
+when hotkey completion is active.
+
+If integer N is supplied, insert completion corresponding to that
+instead. If OVERLAY is supplied, use that instead of finding one.
+
+Intended to be bound to keys in `completion-hotkey-map'."
+  (interactive)
+  (completion-cancel-tooltip)
+  
+  (unless overlay (setq overlay (completion-overlay-at-point)))
+  ;; find completion index corresponding to last input event
+  (unless n
+    (setq n (position (this-command-keys-vector)
+		      completion-hotkey-list
+		      :test 'equal)))
+  
+  ;; if within a completion overlay...
+  (when overlay
+    (let ((completions (overlay-get overlay 'completions)))
+      (cond
+       ;; if there are no completions, run whatever would otherwise be
+       ;; bound to the key
+       ((null completions)
+	(when (and (boundp 'trap-recursion) trap-recursion)
+	  (error "Recursive call to `completion-select'"))
+	(setq completion-use-hotkeys nil)
+	(let ((trap-recursion t))
+	  (unwind-protect
+	      (command-execute
+	       (key-binding (this-command-keys) 'accept-default))
+	    (setq completion-use-hotkeys t))))
+       
+       ;; if there are too few completions, display message
+       ((>= n (length completions))
+	(beep)
+	(message "Only %d completions available"
+		 (length (overlay-get overlay 'completions))))
+       
+       ;; otherwise, replace dynamic completion with selected one
+       (t
+	(setq completion-overlay-list
+	      (delq overlay completion-overlay-list))
+	(delete-region (overlay-start overlay) (overlay-end overlay))
+	(insert (nth n completions))
+	;; run accept hooks
+	(run-hook-with-args 'completion-accept-functions
+			    (concat (overlay-get overlay 'prefix)
+				    (nth n completions)))
+	(delete-overlay overlay))
+       )))
 )
 
 
@@ -1276,7 +1279,7 @@ better be within OVERLAY or else your teeth will turn green."
   (let ((o (or overlay (completion-overlay-at-point))))
     
     ;; resolve any other old provisional completions
-    (completion-resolve-old overlay)
+    (completion-resolve-old o)
     (completion-cancel-tooltip)
     
     ;; if point is in a completion overlay...
@@ -1393,7 +1396,7 @@ lightening."
       ;; display echo text and tooltip if using them
       (when completion-use-echo	(complete-echo overlay))
       (when completion-use-tooltip
-	(tooltip-hide)
+	(completion-cancel-tooltip)
 	(complete-tooltip overlay 'no-delay))))
 )
 
@@ -1753,9 +1756,11 @@ inserted dynamic completion."
 (defun completion-cancel-tooltip ()
   "Hide any displayed tooltip and cancel any tooltip timer."
   (interactive)
-  (tooltip-hide)
-  (when (timerp completion-tooltip-timer)
-    (cancel-timer completion-tooltip-timer)))
+  (when (string= window-system "x")
+    (tooltip-hide)
+    (when (timerp completion-tooltip-timer)
+      (cancel-timer completion-tooltip-timer)))
+)
 
 
 
@@ -1847,15 +1852,14 @@ of completion overlay."
 		       (nth n completion-hotkey-list))))))
     
     ;; add entry to switch to completion browser
-    (define-key-after menu [separator-advanced] '(menu-item "--"))
+    (define-key-after menu [separator-browser] '(menu-item "--"))
     (define-key-after menu [completion-browser]
       (list 'menu-item "Browser..."
 	    (lambda ()
 	      (completion-show-menu
-	       nil (or completion-browser-menu
-		       (and (fboundp 'auto-overlay-local-binding)
+	       nil (or (and (fboundp 'auto-overlay-local-binding)
 			    (auto-overlay-local-binding
-			     'completion-menu))
+			     'completion-browser-menu))
 		       'completion-construct-browser-menu))
 	      )))
     
@@ -2130,11 +2134,161 @@ See also `completion-window-posn-at-point' and
 ;;;                       Compatibility Stuff
 
 (unless (fboundp 'posn-at-point)
-  (require 'predictive-compat)
+;;  (require 'completion-ui-compat)
+  
+  
+  (defun completion-compat-frame-posn-at-point
+    (&optional position window)
+    "Return pixel position of top left corner of glyph at POSITION,
+relative to top left corner of frame containing WINDOW. Defaults
+to the position of point in the selected window."
+    
+    (unless window (setq window (selected-window)))
+    (unless position (setq position (window-point window)))
+    
+    ;; get window-relative position in units of characters
+    (let* ((x-y (compute-motion (window-start) '(0 . 0)
+				position
+				(cons (window-width) (window-height))
+				(window-width)
+				; prob. shouldn't be 0
+				(cons (window-hscroll) 0)
+				window))
+	   (x (nth 1 x-y))
+	   (y (nth 2 x-y))
+	   (offset (completion-compat-window-offsets window))
+	   (restore (mouse-pixel-position))
+	   pixel-pos)
+      
+      ;; move and restore mouse position using position in units of
+      ;; characters to get position in pixels
+      (set-mouse-position (window-frame window)
+			  (+ x (car offset)) (+ y (cdr offset)))
+      (setq pixel-pos (cdr (mouse-pixel-position)))
+      (set-mouse-pixel-position (car restore) (cadr restore)
+				(cddr restore))
+      
+      ;; return pixel position
+      (setcdr pixel-pos
+	      (- (cdr pixel-pos)
+		 (/ (frame-char-height (window-frame window)) 2)))
+      pixel-pos))
+  
+  
+  
+  (defun completion-compat-posn-at-point-as-event
+    (&optional position window dx dy)
+    "Return pixel position of top left corner of glyph at POSITION,
+relative to top left corner of WINDOW, as a mouse-1 click
+event (identical to the event that would be triggered by clicking
+mouse button 1 at the top left corner of the glyph).
+
+POSITION and WINDOW default to the position of point in the
+selected window.
+
+DX and DY specify optional offsets from the top left of the
+glyph."
+  
+    (unless window (setq window (selected-window)))
+    (unless position (setq position (window-point window)))
+    (unless dx (setq dx 0))
+    (unless dy (setq dy 0))
+    
+    ;; get window-relative position in units of characters
+  (let* ((x-y (compute-motion (window-start) '(0 . 0)
+			      position
+			      (cons (window-width) (window-height))
+			      (window-width)
+			      ; prob. shouldn't be 0
+			      (cons (window-hscroll) 0)
+			      window))
+	 (x (nth 1 x-y))
+	 (y (nth 2 x-y))
+	 (offset (completion-compat-window-offsets window))
+	 (restore (mouse-pixel-position))
+	 (frame (window-frame window))
+	 (edges (window-edges window))
+	 pixel-pos)
+    
+    ;; move and restore mouse position using position in units of
+    ;; characters to get position in pixels
+    (set-mouse-position (window-frame window)
+			(+ x (car offset)) (+ y (cdr offset)))
+    (setq pixel-pos (cdr (mouse-pixel-position)))
+    (set-mouse-pixel-position (car restore) (cadr restore)
+			      (cddr restore))
+    
+    ;; convert pixel position from frame-relative to window-relative
+    ;; (this is crude and will fail e.g. if using different sized
+    ;; fonts)
+    (setcar pixel-pos (- (car pixel-pos) 1
+			 (* (frame-char-width frame) (car edges))))
+    (setcdr pixel-pos (- (cdr pixel-pos) 1
+			 (* (frame-char-height frame) (nth 1 edges))
+			 (/ (frame-char-height frame) 2)))
+    
+    ;; return a fake event containing the position
+    (setcar pixel-pos (+ (car pixel-pos) dx))
+    (setcdr pixel-pos (+ (cdr pixel-pos) dy))
+    (list 'mouse-1 (list window position pixel-pos))))
+  
+  
+    
+;;; Borrowed from senator.el:
+  
+  (defun completion-compat-window-offsets (&optional window)
+    "Return offsets of WINDOW relative to WINDOW's frame.
+Return a cons cell (XOFFSET . YOFFSET) so the position (X . Y) in
+WINDOW is equal to the position ((+ X XOFFSET) .  (+ Y YOFFSET))
+in WINDOW'S frame."
+    (let* ((window  (or window (selected-window)))
+	   (e       (window-edges window))
+	   (left    (nth 0 e))
+	   (top     (nth 1 e))
+	   (right   (nth 2 e))
+	   (bottom  (nth 3 e))
+	   (x       (+ left (/ (- right left) 2)))
+	   (y       (+ top  (/ (- bottom top) 2)))
+	   (wpos    (coordinates-in-window-p (cons x y) window))
+	   (xoffset 0)
+	   (yoffset 0))
+      (if (consp wpos)
+	  (let* ((f  (window-frame window))
+		 (cy (/ 1.0 (float (frame-char-height f)))))
+	    (setq xoffset (- x (car wpos))
+		  yoffset (float (- y (cdr wpos))))
+	    ;; If Emacs 21 add to:
+	    ;; - XOFFSET the WINDOW left margin width.
+	    ;; - YOFFSET the height of header lines above WINDOW.
+	    (if (> emacs-major-version 20)
+		(progn
+		  (setq wpos    (cons (+ left xoffset) 0.0)
+			bottom  (float bottom))
+		  (while (< (cdr wpos) bottom)
+		    (if (eq (coordinates-in-window-p wpos window)
+			    'header-line)
+			(setq yoffset (+ yoffset cy)))
+		    (setcdr wpos (+ (cdr wpos) cy)))
+		  (setq xoffset
+			(floor (+ xoffset
+				  (or (car (window-margins window))
+				      0))))))
+	    (setq yoffset (floor yoffset))))
+      (cons xoffset yoffset)))
+  
+  
+  
+  (defun completion-compat-line-number-at-pos (pos)
+    "Return (narrowed) buffer line number at position POS.
+\(Defaults to the point.\)"
+    (1+ (count-lines (point-min) pos)))
+  
+  
+  
   (defalias 'completion-posn-at-point-as-event
-            'predictive-compat-posn-at-point-as-event)
+    'completion-compat-posn-at-point-as-event)
   (defalias 'completion-frame-posn-at-point
-            'predictive-compat-frame-posn-at-point)
+    'completion-compat-frame-posn-at-point)
 )
 
 

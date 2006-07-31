@@ -934,9 +934,9 @@ properties)."
 ;;;                       Compatibility Stuff
 
 (unless (fboundp 'line-number-at-pos)
-  (require 'predictive-compat)
+  (require 'auto-overlays-compat)
   (defalias 'line-number-at-pos
-            'predictive-compat-line-number-at-pos)
+            'auto-overlays-compat-line-number-at-pos)
 )
 
 
