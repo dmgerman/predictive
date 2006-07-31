@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.8.1
+;; Version: 0.8.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -40,6 +40,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.2
+;; * minor bug fixes
 ;;
 ;; Version 0.8.1
 ;; * minor bug fixes
@@ -127,37 +130,59 @@
   :group 'convenience)
 
 
+(defcustom predictive-main-dict 'dict-english
+  "*Main dictionary to use in a predictive mode buffer.
+
+It should be the symbol of a loaded dictionary. It can also be a
+list of such symbols, in which case predictive mode searches for
+completions in all of them, as though they were one large
+dictionary.
+
+Note that using lists of dictionaries can lead to unexpected effets when
+auto-learn or auto-add-to-dict are used. If auto-learn is enabled, weights
+will be updated in the first dictionary in the list that contains the word
+being updated \(see `predictive-auto-learn'\). Similarly, if auto-add-to-dict
+is set to t, words will be added to the first dictionary in the list \(see
+`predictive-auto-add-to-dict'\)."
+  :group 'predictive
+  :type 'symbol)
+
+
 (defcustom predictive-dynamic-completion t
-  "*In predictive mode, enables the dynamic completion facility.
-When non-nil, the most likely ompletion is provisionally inserted after every
-character is typed. It can be accepted using `predictive-accept-completion' or
+  "*Enables predictive mode's dynamic completion facility.
+When non-nil, the most likely ompletion is provisionally inserted
+after every character is typed. It can be accepted using
+`predictive-accept-completion' or
 `predictive-accept-and-insert'."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-offer-completions t
-  "*In predictive mode, enables the offer-completions facility.
-When non-nil, predictive mode offers a list of possible completions which can
-be inserted by typing the appropriate number"
+  "*Enables predictive mode's offer-completions facility.
+When non-nil, predictive mode offers a list of possible
+completions which can be inserted by typing the appropriate
+character (a number by default)."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-accept-on-select t
-  "*In predictive mode, controls the behaviour when a completion is selected
-from the list offered when `predictive-offer-completions' is enabled. When
-non-nil, the selected completion is inserted and accepted. When nil, the
-selected completion is inserted, and the resulting string is completed anew."
+  "*Controls behaviour when completion is selected from the list
+offered when `predictive-offer-completions' is enabled. When
+non-nil, the selected completion is inserted and accepted. When
+nil, the selected completion is inserted, and the resulting
+string is completed anew."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-always-complete nil
-  "*In predictive mode, try to complete words when nothing has been typed yet!
-This has the effect of making the most likely words in whole the dictionary
-available. How to insert these words depends on the settings of
-`predictive-dynamic-completion' and `predictive-offer-completions'.
+  "*Complete words when nothing has been typed yet!
+This has the effect of making the most likely words in whole the
+dictionary available. How to insert these words depends on the
+settings of `predictive-dynamic-completion' and
+`predictive-offer-completions'.
 
 Warning: could drive you mad! Disabled by default to protect your sanity."
   :group 'predictive
@@ -165,9 +190,9 @@ Warning: could drive you mad! Disabled by default to protect your sanity."
 
 
 (defcustom predictive-accept-if-point-moved t
-  "*In predictive mode, how to resolve a completion if point has moved
-away from it. If non-nil, the completion is accepted. If nil, it is abandoned
-instead."
+  "*What to do with a completion if the point has moved away
+from it and text is typed. If non-nil, the completion is
+accepted. If nil, it is abandoned instead."
   :group 'predictive
   :type 'boolean)
 
@@ -179,86 +204,94 @@ instead."
 
 
 (defcustom predictive-completion-speed 0.1
-  "*In predictive mode, sets the default completion speed for new dictionaries.
-The completion speed is a desired upper limit on the time it takes to find
-completions, in seconds. However, there is no guarantee it will be achieved!
-Lower values result in faster completion, at the expense of dictionaries
-taking up more memory."
+  "*Default completion speed for new predictive mode dictionaries
+created using `predictive-create-dict'.
+
+The completion speed is a desired upper limit on the time it
+takes to find completions, in seconds. However, there is no
+guarantee it will be achieved!  Lower values result in faster
+completion, at the expense of dictionaries taking up more
+memory."
   :group 'predictive
   :type 'number)
 
 
 (defcustom predictive-dict-autosave t
-  "*In predictive mode, sets the default autosave flag for new dictionaries.
-A value of t means modified dictionaries will be saved automatically when
-unloaded. The symbol 'ask' means you will be prompted to save modified
-dictionaries. A value of nil means dictionaries will not be saved
-automatically, and unless you save the dictionary manually all changes will be
-lost when the dictionary is unloaded. See also `dict-save'."
+  "*Default autosave flag for new predictive mode dictionaries.
+A value of t means modified dictionaries will be saved
+automatically when unloaded. The symbol 'ask' means you will be
+prompted to save modified dictionaries. A value of nil means
+dictionaries will not be saved automatically, and unless you save
+the dictionary manually all changes will be lost when the
+dictionary is unloaded. See also `dict-save'."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-ignore-initial-caps t
-  "*In predictive mode, controls whether to ignore initial capital letters
-when searching for completions. If non-nil, completions for the uncapitalized
-string are also found.
+  "*Whether to ignore initial capital letters when completing
+words. If non-nil, completions for the uncapitalized string are
+also found.
 
-Note that only the *first* capital letter of a string is ignored. Thus typing
-\"A\" would find \"and\", \"Alaska\" and \"ANSI\", but typing \"AN\" would
-only find \"ANSI\", whilst typing \"a\" would only find \"and\"."
+Note that only the *first* capital letter of a string is
+ignored. Thus typing \"A\" would find \"and\", \"Alaska\" and
+\"ANSI\", but typing \"AN\" would only find \"ANSI\", whilst
+typing \"a\" would only find \"and\"."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-auto-learn nil
-  "*In predictive mode, controls automatic word frequency learning.
-When non-nil, the frequency count for that word is incremented each time a
-completion is accepted, making the word more likely to be offered higher up
-the list of completions in the future."
+  "*Enables predictive mode's automatic word frequency learning.
+When non-nil, the frequency count for that word is incremented
+each time a completion is accepted, making the word more likely
+to be offered higher up the list of completions in the future."
   :group 'predictive
   :type 'boolean)
 
 
 ;; this variable should be set in a setup function, so not a defcustom
 (defvar predictive-auto-add-to-dict nil
-  "*In predictive mode, controls automatic adding of new words to dictionaries.
-If nil, words are never automatically added to a dictionary. If t, new words
-\(i.e. words that are not in the dictionary\) are automatically added to the
-active dictionary.
+  "*Controls automatic adding of new words to dictionaries.
+If nil, words are never automatically added to a dictionary. If
+t, new words \(i.e. words that are not in the dictionary\) are
+automatically added to the active dictionary.
 
-If set to a dictionary name (a symbol), new words are automatically added to
-that dictionary instead of the active one. If set to the special symbol
-'buffer', new words are automatically added to a word list at the end of the
-buffer. If `predctive-add-to-dict-ask' is enabled, predictive mode will ask
+If set to a dictionary name (a symbol), new words are
+automatically added to that dictionary instead of the active
+one. If set to the special symbol 'buffer', new words are
+automatically added to a word list at the end of the buffer. If
+`predctive-add-to-dict-ask' is enabled, predictive mode will ask
 before adding any word.")
 ;;(make-variable-buffer-local 'predictive-auto-add-to-dict)
 
 
 (defcustom predictive-add-to-dict-ask t
-  "*If non-nil, predictive mode will ask before automatically adding a word
+  "*If non-nil, predictive mode will ask before auto-adding a word
 to a dictionary. Enabled by default. This has no effect unless
-`predictive-auto-add-to-dict' is enabled."
+`predictive-auto-add-to-dict' is also enabled."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-use-auto-learn-cache t
-  "*If non-nil, predictive mode will cache auto-learned and auto-added words,
-and only add them to the dictionary when Emacs is idle. This makes predictive
-mode more responsive, since adding words can otherwise cause a small but
-noticeable delay when typing.
+  "*If non-nil, auto-learned and auto-added words will be cached
+and only added to the dictionary when Emacs is idle. This makes
+predictive mode more responsive, since learning or adding words
+can otherwise cause a small but noticeable delay when typing.
 
-See also `predictive-flush-auto-learn-delay'."
+This has no effect unless `predictive-auto-learn' or
+`predictive-auto-add' are enabled. See also
+`predictive-flush-auto-learn-delay'."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-flush-auto-learn-delay 0.5
-  "*In predictive mode, time to wait before flushing auto-learn/add caches.
-The caches will only be flushed after Emacs has been idle for this many
-seconds. To take effect, this variable must be set before predictive mode is
-enabled.
+  "*Time to wait before flushing auto-learn/add caches.
+The caches will only be flushed after Emacs has been idle for
+this many seconds. To take effect, this variable must be set
+before predictive mode is enabled.
 
 This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   :group 'predictive
@@ -266,7 +299,7 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 
 
 (defcustom predictive-which-dict nil
-  "*If non-nil, the predictive mode dictionary is shown in the mode line."
+  "*If non-nil, display the predictive mode dictionary in the mode line."
   :group 'predictive
   :type 'boolean)
 
@@ -283,59 +316,44 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   "Hook run after predictive mode is disabled.")
 
 
-(defcustom predictive-main-dict nil
-  "*Main dictionary to use in a predictive mode buffer.
-It should be the symbol of a loaded dictionary. It can also be a list of such
-symbols, in which case predictive mode searches for completions in all of
-them, as though they were one large dictionary.
-
-Note that using lists of dictionaries can lead to unexpected effets when
-auto-learn or auto-add-to-dict are used. If auto-learn is enabled, weights
-will be updated in the first dictionary in the list that contains the word
-being updated \(see `predictive-auto-learn'\). Similarly, if auto-add-to-dict
-is set to t, words will be added to the first dictionary in the list \(see
-`predictive-auto-add-to-dict'\)."
-  :group 'predictive
-  :type 'symbol)
-
-
-
 (defvar predictive-buffer-dict nil
   "Buffer-local dictionary used in a predictive mode buffer,
-constructed from a word list the end of the buffer.
+constructed from a word list at the end of the buffer.
 
-Note that when using auto-learn, the buffer dictionary has lowest priority:
-weights will only be updated in the buffer dictionary if the word does not
-exist in the active dictionary \(see `predictive-auto-learn'\). It is better
-to ensure that the buffer word list does not duplicate words already in other
+Note that when using auto-learn, the buffer dictionary has lowest
+priority: weights will only be updated in the buffer dictionary
+if the word does not exist in the active dictionary \(see
+`predictive-auto-learn'\). It is better to ensure that the buffer
+word list does not duplicate words already in other
 dictionaries.")
 (make-variable-buffer-local 'predictive-buffer-dict)
 
 
 (defvar predictive-syntax-alist nil
-  "Alist associating character syntax descriptors with completion functions.
-Used by the predictive mode `predictive-self-insert' function to decide what
-to do based on a typed character's syntax.
+  "Alist associating character syntax with completion functions.
+Used by the predictive mode `predictive-self-insert' function to
+decide what to do based on a typed character's syntax.
 
-By default, all printable characters are bound to `predictive-self-insert' in
-predictive mode. Therefore, unless you know what you are doing, it is a wise
-plan to ensure that all functions in the alist insert the last input event, in
-addition to any completion-related action. All predictive mode functions that
-do this have \"insert\" in their names.")
+By default, all printable characters are bound to
+`predictive-self-insert' in predictive mode. Therefore, unless
+you know what you are doing, it is a wise plan to ensure that all
+functions in the alist insert the last input event, in addition
+to any completion-related action. All predictive mode functions
+that do this have \"insert\" in their names.")
 
 
 (defvar predictive-override-syntax-alist nil
-  "Alist associating characters with completion functions in predictive mode.
-Overrides the default function based on a typed character's syntax. Used by
-`predictive-self-insert'.")
+  "Alist associating characters with completion functions.
+Overrides the default function based on a typed character's
+syntax. Used by `predictive-self-insert'.")
 
 
 (defvar predictive-major-mode-alist nil
-  "Alist associating a major mode symbol with a function in predictive mode.
-The alist is checked whenever predictive mode is turned on in a buffer, and if
-the buffer's major made matches one in the alist, the associated function is
-called. This makes it easier to customize predictive mode for different major
-modes.")
+  "Alist associating major mode symols with functions.
+The alist is checked whenever predictive mode is turned on in a
+buffer, and if the buffer's major made matches one in the alist,
+the associated function is called. This makes it easier to
+customize predictive mode for different major modes.")
 
 
 (defvar predictive-map nil
@@ -343,22 +361,24 @@ modes.")
 
 
 (defvar predictive-completing-map nil
-  "Keymap used when in the process of completing a word in predictive mode.")
+  "Keymap used when completing a word in predictive mode.")
 
 
 (defvar predictive-offer-completions-keylist nil
-  "In predictive mode, list of characters to use for selecting completions
-from the list offered when `predictive-offer-completions' is enabled. Default
-is numerical characters 0 to 9.")
+  "List of characters to use for selecting completions
+from the list offered when `predictive-offer-completions' is
+enabled. Default is numerical characters 0 to 9.")
 
 
 (defvar predictive-offer-completions-map nil
-  "Keymap used when there are completions on offer in predictive mode
-\(only used if `predictive-offer-completions' is enabled). Constructed from
+  "Keymap used when there are completions on offer
+\(only used if `predictive-offer-completions' is
+enabled). Constructed from
 `predictive-offer-completions-keylist'.
 
-Setting this directly will have no effect. Instead, set
-`predictive-offer-completions-keylist'")
+You should set `predictive-offer-completions-keylist' before
+enabling predictive mode, rather than setting this keymap
+directly.")
 
 
 
@@ -1616,6 +1636,8 @@ fFile to populate from \(leave blank to create an empty dictionary\): ")
     ;; create the new dictionary
     (set dict (dict-create dict file autosave
 			   nil nil complete-speed nil insfun rankfun))
+    (provide dict)
+    
     ;; populate it
     (if (null populate)
 	(message "Created dictionary %s" dict)
@@ -1724,7 +1746,7 @@ See also `predictive-fast-learn-from-buffer'."
 		   dictname dictsize))
 	
 	;; map over all words in dictionary
-	(dict-map
+	(tstree-map
 	 (lambda (word weight)   ; (value passed to weight is ignored)
 	   ;; construct regexp for word
 	   (setq regexp (regexp-quote word))
@@ -1753,7 +1775,7 @@ See also `predictive-fast-learn-from-buffer'."
  word %d of %d)..." dictname d numdicts i dictsize)
 	       (message "Learning words for dictionary %s...(word %d of %d)"
 			dictname i dictsize))))
-	 dict)   ; map over all words in dictionary
+	 (dic-tstree dict) t)   ; map over all words in dictionary
 	
 	(message "Learning words for dictionary %s...done" dictname))
       
@@ -2209,9 +2231,9 @@ predictive mode."
   
   ;; - and & are symbols in text mode but we override them to make them
   ;; behave like word constituents
-  (set (make-local-variable 'predictive-override-syntax-alist) (list
-    (cons ?- 'predictive-insert-and-complete)
-    (cons ?& 'predictive-insert-and-complete)))
+  (set (make-local-variable 'predictive-override-syntax-alist)
+       (list (cons ?- 'predictive-insert-and-complete)
+	     (cons ?& 'predictive-insert-and-complete)))
 )
 
 
@@ -2248,12 +2270,11 @@ predictive mode."
 ;;; ================================================================
 ;;;                     Initialise variables etc.
 
-;; ;; Set the default dictionary if it hasn't already been set (most likely in an
-;; ;; init file or setup function)
-;; (unless predictive-main-dict
-;;   (predictive-load-dict 'dict-english)
-;;   (setq predictive-main-dict 'dict-english)
-;; )
+;; Set the default dictionary if it hasn't already been set (most likely in an
+;; init file or setup function)
+(unless predictive-main-dict
+  (setq predictive-main-dict 'dict-english)
+)
 
 
 
@@ -2332,14 +2353,14 @@ through completions." (interactive) (predictive-cycle -1)))
 
 ;; Set the major-mode-alist so that things are set up sensibly in various
 ;; major modes, if it hasn't been set already (most likely in an init file)
-(unless predictive-major-mode-alist
-  (setq predictive-major-mode-alist
-	'((text-mode  predictive-setup-english)
-;;	  (latex-mode predictive-setup-latex)
-;;	  (LaTeX-mode predictive-setup-latex)
-;;	  (c-mode     predictive-setup-c)
-	  ))
-)
+;;(unless predictive-major-mode-alist
+;;  (setq predictive-major-mode-alist
+;;	'((text-mode . predictive-setup-english)
+;;	  (latex-mode . predictive-setup-latex)
+;;	  (LaTeX-mode . predictive-setup-latex)
+;;	  (c-mode . predictive-setup-c)
+;;	  ))
+;;)
 
 
 

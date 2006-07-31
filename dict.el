@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,6 +43,9 @@
 
 
 ;;; Change log:
+;;
+;; Version 0.6.2
+;; * minor bug fixes
 ;;
 ;; Version 0.6.1
 ;; * minor bug fixes
@@ -474,7 +477,8 @@ data to insert."
   ;; make sure WORD is a string
   (when (not (stringp word))
     (error "Wrong argument type stringp, %s" (prin1-to-string word)))
-  
+  (when (not (dict-p dict))
+    (error "Wrong argument type dict-p"))
   
   (let ((insfun (if insert-function insert-function (dic-insfun dict))))
     ;; set the dictionary's modified flag
@@ -1053,15 +1057,17 @@ is the prefix argument."
       ;; write lisp code that generates the dictionary object
       (insert "(provide '" dictname ")\n")
       (insert "(require 'dict)\n")
+      (insert "(defvar " dictname " nil \"Dictionary " dictname ".\")\n")
       (insert "(setq " dictname " '" (prin1-to-string tmpdict) ")\n")
       (insert hashcode)
       (insert "(dic-set-name " dictname " \"" dictname "\")\n")
       (insert "(dic-set-filename " dictname
 	      " (locate-library \"" dictname "\"))\n")
-      (insert "(push " dictname " dict-loaded-list)\n")
+      (insert "(unless (memq " dictname " dict-loaded-list)"
+	      " (push " dictname " dict-loaded-list))\n")
       (save-buffer)
       (kill-buffer buff)
-      
+	
       ;; byte-compile the code (unless uncompiled option is set) and move the
       ;; file to its final destination
       (if (or uncompiled (save-window-excursion (byte-compile-file tmpfile)))

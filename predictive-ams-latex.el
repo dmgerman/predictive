@@ -98,7 +98,7 @@
 	    (start "\\\\text{"
 		   (dict . (list predictive-main-dict predictive-buffer-dict))
 		   (priority . 2))
-	    (start "\\\\documentclass[.*?]{"
+	    (start "\\\\documentclass\\(\\[.*\\]\\)?{"
 		   (dict . dict-latex-docclass) (priority . 2))
 	    (start ("\\([^\\]\\|^\\)\\({\\)" . 2) (priority . 2))
 	    (end ("\\([^\\]\\|^\\)\\(}\\)" . 2) (priority . 2)))
