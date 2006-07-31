@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.4.1
+;; Version: 0.4.2
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4.2
+;; * moved compatability code to auto-overlays-compat.el
 ;;
 ;; Version 0.4.1
 ;; * moved defmacros before their first use so byte-compilation works
@@ -940,4 +943,4 @@ properties)."
 )
 
 
-;; auto-overlays.el ends here
+;;; auto-overlays.el ends here

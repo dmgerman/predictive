@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.2
+;; Version: 0.3.3
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -42,6 +42,11 @@
 ;; is very similar to the built-in `define-minor-mode' macro, but
 ;; takes an additional function argument which should have the
 ;; behaviour described above.
+;;
+;; That's it! Completion-UI and user customizations take care of the
+;; rest. (Avoid the temptation to set completion-UI customization
+;; variables from Elisp code to alter its behaviour. The user knows
+;; what they want better than you do.)
 ;;
 ;; Typically, a lot of code in packages providing some kind of text
 ;; completion deals with the user interface.  The ultimate goal is
@@ -89,6 +94,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.3.3
+;; * minor bug-fix to `completion-self-insert'
+;; * removed cl dependency
+;;
 ;; Version 0.3.2
 ;; * bug fixes
 ;; * incorporated compatability code
@@ -120,10 +129,47 @@
 ;;; Code:
 
 (provide 'completion-ui)
-(require 'cl)
 (require 'auto-overlay-common nil t)
 
 
+
+
+;;; ================================================================
+;;;                Replacements for CL functions
+
+(defun completion--sublist (list start &optional end)
+  "Return the sub-list of LIST from START to END.
+If END is omitted, it defaults to the length of the list
+If START or END is negative, it counts from the end."
+  (let (len)
+    ;; sort out arguments
+    (if end
+	(when (< end 0) (setq end (+ end (setq len (length list)))))
+      (setq end (or len (setq len (length list)))))
+    (when (< start 0)
+      (setq start (+ start (or len (length list)))))
+    
+    ;; construct sub-list
+    (let (res)
+      (while (< start end)
+	(push (nth start list) res)
+	(setq start (1+ start)))
+      (nreverse res)))
+)
+
+
+
+(defun completion--position (item list)
+  "Find the first occurrence of ITEM in LIST.
+Return the index of the matching item, or nil of not found.
+Comparison is done with 'equal."
+  (let (el (i 0))
+    (catch 'found
+      (while (setq el (nth i list))
+	(when (equal item el) (throw 'found i))
+	(setq i (1+ i))
+	nil)))
+)
 
 
 
@@ -136,43 +182,43 @@
 
 
 (defcustom completion-auto-complete t
-  "Enable automatic completion whilst typing."
+  "*Enable automatic completion whilst typing."
   :group 'completion-ui
   :type 'boolean)
   
 
 (defcustom completion-use-dynamic t
-  "Enable dynamic completion."
+  "*Enable dynamic completion."
   :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-echo t
-  "Display completions in echo area."
+  "*Display completions in echo area."
   :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-tooltip t
-  "Display completions in a tooltip."
+  "*Display completions in a tooltip."
   :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-hotkeys t
-  "Enable completion hotkeys (single-key selection of completions)."
+  "*Enable completion hotkeys (single-key selection of completions)."
   :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-menu t
-  "Enable completion menu."
+  "*Enable completion menu."
   :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-auto-show-menu nil
-  "Display completion menu automatically."
+  "*Display completion menu automatically."
   :group 'completion-ui
   :type 'boolean)
 
@@ -197,27 +243,27 @@ mininize: minimize number of buckets, maximize size of contents"
 
 
 (defcustom completion-max-candidates 10
-  "Maximum number of completion candidates to offer."
+  "*Maximum number of completion candidates to offer."
   :group 'completion-ui
   :type 'integer)
 
 
 (defcustom completion-min-chars nil
-  "Minimum number of characters before completions are offered."
+  "*Minimum number of characters before completions are offered."
   :group 'completion-ui
   :type '(choice (const :tag "Off" nil)
 		 (integer :tag "On")))
 
 
 (defcustom completion-delay nil
-  "Number of seconds to wait before activating completion mechanisms."
+  "*Number of seconds to wait before activating completion mechanisms."
   :group 'completion-ui
   :type '(choice (const :tag "Off" nil)
 		 (float :tag "On")))
 
 
 (defcustom completion-tooltip-delay 3
-  "Number of seconds to wait after activating completion
+  "*Number of seconds to wait after activating completion
 mechanisms before displaying completions in a tooltip."
   :group 'completion-ui
   :type '(choice (const :tag "Off" nil)
@@ -225,7 +271,7 @@ mechanisms before displaying completions in a tooltip."
 
 
 (defcustom completion-tooltip-timeout 15
-  "Number of seconds to display completions in a tooltip
+  "*Number of seconds to display completions in a tooltip
 \(not relevant if help-echo text is displayed in echo area\)."
   :group 'completion-ui
   :type '(choice (const :tag "Off" nil)
@@ -233,7 +279,7 @@ mechanisms before displaying completions in a tooltip."
 
 
 (defcustom completion-resolve-old-method 'leave
-  "Determines what to do if there's already a completion in
+  "*Determines what to do if there's already a completion in
 progress elsewhere in the buffer:
 
   'leave:   leave the old completion pending
@@ -251,13 +297,13 @@ progress elsewhere in the buffer:
   '(
     ;; word constituents add to current completion
     (?w . (add . word))
-    (?_ . (add . word))
+    (?_ . (accept . none))
     ;; whitespace and punctuation chars accept current completion
-    (?  . (accept . nil))
-    (?. . (accept . nil))
+    (?  . (accept . none))
+    (?. . (accept . none))
     ;; anything else rejects the current completion
-    (t  . (reject . nil)))
-  "Alist associating character syntax with completion behaviour.
+    (t  . (reject . none)))
+  "*Alist associating character syntax with completion behaviour.
 Used by the `completion-self-insert' function to decide what to
 do based on a typed character's syntax. The car should be a
 syntax descriptor, the cdr a cons cell, BEHAVIOUR, whose car
@@ -281,12 +327,12 @@ take place."
 					  (const :tag "add" add))
 				  (choice (const :tag "basic" basic)
 					  (const :tag "word" word)
-					  (const :tag "none" nil))))
+					  (const :tag "none" none))))
 )
 
 
 (defcustom completion-override-syntax-alist nil
-  "Alist associating characters with completion behaviour.
+  "*Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
 in `completion-syntax-alist'. The format is the same as for
 `completion-synax-alist', except that the alist keys are
@@ -304,7 +350,7 @@ characters rather than syntax descriptors."
 
 (defcustom completion-hotkey-list
   '([?0] [?1] [?2] [?3] [?4] [?5] [?6] [?7] [?8] [?9])
-  "List of keys (vectors) to use for selecting completions when
+  "*List of keys (vectors) to use for selecting completions when
 `completion-use-hotkeys' is enabled."
   :group 'completion-ui
   :type '(repeat (vector character)))
@@ -315,7 +361,7 @@ characters rather than syntax descriptors."
      (:background "blue"))
     (((class color) (background light))
      (:background "orange1")))
-  "Face used for provisional completions during dynamic completion."
+  "*Face used for provisional completions during dynamic completion."
   :group 'completion-ui)
 
 
@@ -1026,7 +1072,7 @@ unless you know what you are doing, it only bind
 
       ;; do whatever is specified in alists
       (cond
-       ;; noop
+       ;; no-op
        ((null before-insert))
        ;; accept
        ((or (eq before-insert 'accept))
@@ -1060,9 +1106,12 @@ unless you know what you are doing, it only bind
 	(setq complete-after (funcall complete-after)))
       
       (cond
+       ;; no-op
+       ((null complete-after))
+       
        ;; if not using automatic completion or not completing after
        ;; inserting, resolve any overlay
-       ((or (not completion-auto-complete) (not complete-after))
+       ((or (not completion-auto-complete) (eq complete-after 'none))
 	(when overlay
 	  (delete-overlay overlay)
 	  (setq completion-overlay-list
@@ -1149,9 +1198,8 @@ Intended to be bound to keys in `completion-hotkey-map'."
   (unless overlay (setq overlay (completion-overlay-at-point)))
   ;; find completion index corresponding to last input event
   (unless n
-    (setq n (position (this-command-keys-vector)
-		      completion-hotkey-list
-		      :test 'equal)))
+    (setq n (completion--position (this-command-keys-vector)
+				  completion-hotkey-list)))
   
   ;; if within a completion overlay...
   (when overlay
@@ -1999,7 +2047,7 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 				       (nth i completions))
 		    ;; call function to generate sub-menu
 		    (funcall sub-menu-func
-			     prefix (subseq completions i j)
+			     prefix (completion--sublist completions i j)
 			     menu-item-func sub-menu-func))))
 	)))
     
@@ -2234,7 +2282,8 @@ glyph."
   
   
     
-;;; Borrowed from senator.el:
+;;; Borrowed from senator.el (I promise I'll give it back when I'm
+;;; finished...)
   
   (defun completion-compat-window-offsets (&optional window)
     "Return offsets of WINDOW relative to WINDOW's frame.

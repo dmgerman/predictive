@@ -217,6 +217,10 @@
 		 ))
 	   )))
   
+  ;; remove AUCTeX bindings so completion ones work
+  (local-unset-key [$?])
+  (local-unset-key [$\"])
+  
   ;; make "\", "$", "{" and "}" do the right thing
   (setq completion-override-syntax-alist
 	'((?\\ . ((lambda ()
@@ -235,7 +239,7 @@
 	  (?}  . (accept . word))
 	  (?\( . (accept . word))
 	  (?\) . (accept . word))
-	  (?$  . (accept . word))
+	  (?$  . (accept . none))
 	  (?\" . (accept . (lambda () (TeX-insert-quote nil) nil)))
 	  ))
 

@@ -1,5 +1,5 @@
 
-;;; auto-overlays-compat.el --- compatability functions for predictive package
+;;; auto-overlays-compat.el --- compatability functions for auto-overlays package
 
 
 ;; Copyright (C) 2006 Toby Cubitt
@@ -45,4 +45,4 @@
   (1+ (count-lines (point-min) pos))
 )
 
-;;; completion-ui-compat.el ends here
+;;; auto-overlays-compat.el ends here

@@ -9,7 +9,7 @@ EMACS = emacs
 
 
 # list of core elisp files
-core_files := $(shell ls *.el | sed 's:\.el:\.elc:g')
+core_files := $(shell ls *.el | grep -v 'dict-english.el' | sed 's:\.el:\.elc:g')
 
 # list of libraries to load
 #elisp_libs = heap.el tstree.el dict.el predictive.el auto-overlays.el auto-overlay-word.el auto-overlay-line.el auto-overlay-self.el auto-overlay-stack.el

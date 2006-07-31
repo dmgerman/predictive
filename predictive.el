@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.1
+;; Version: 0.12
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -42,8 +42,13 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.12
+;; * changed buffer-local dictionary functionality to use new meta-dictionary
+;;   features of `dict-tree.el'
+;;
 ;; Version 0.11.1
 ;; * bug fixes in completion-ui and predictive-latex.el
+;; * fixed bug in `predictive-define-prefix'
 ;;
 ;; Version 0.11
 ;; * moved a lot of functions to completion-ui
@@ -151,11 +156,6 @@
 (require 'dict-tree)
 (require 'auto-overlays)
 (require 'timerfunctions)
-(require 'easy-mmode)
-
-;; the only required common-lisp functions are `position' and `subseq', so
-;; this dependency should really be removed
-(require 'cl)
 
 
 ;; use dynamic byte compilation to save memory
@@ -250,18 +250,15 @@ to be offered higher up the list of completions in the future."
 
 If nil, words are never automatically added to a dictionary. If
 t, new words \(i.e. words that are not in the dictionary\) are
-automatically added to the active dictionary.
+automatically added to the active dictionary. If set to a
+dictionary name (a symbol), new words are automatically added to
+that dictionary instead of the active one.
 
-If set to a dictionary name (a symbol), new words are
-automatically added to that dictionary instead of the active
-one. If set to the special symbol 'buffer', new words are
-automatically added to a word list at the end of the buffer. If
-`predctive-add-to-dict-ask' is enabled, predictive mode will ask
-before adding any word."
+If `predctive-add-to-dict-ask' is enabled, predictive mode will
+ask before adding any word."
   :group 'predictive
   :type '(choice (const :tag "off" nil)
 		 (const :tag "active" t)
-		 (const :tag "buffer" buffer)
 		 (symbol :tag "dictionary")))
 (make-variable-buffer-local 'predictive-auto-add-to-dict)
 
@@ -272,6 +269,40 @@ to a dictionary. Enabled by default. This has no effect unless
 `predictive-auto-add-to-dict' is also enabled."
   :group 'predictive
   :type 'boolean)
+
+
+(defcustom predictive-use-buffer-local-dict nil
+  "*If non-nil, a buffer-local dictionary will be used in
+conjunction with `predictive-main-dict'. Results from both
+dictionaries are combined, as though they were one large
+dictionary.
+
+The buffer-local dictionary is saved to a file in the same
+directory as the buffer's associated file, and is loaded from
+there the next time predictive mode is enabled in the same
+buffer.
+
+The dictionary is initially empty, but if `predictive-auto-learn'
+or `predictive-auto-add-to-dict' are enabled, words will be added
+to it as you type. The learning rate for the word weights is
+`predictive-local-learn-multiplier' times higher than that for
+`predictive-main-dict', so the buffer-local dictionary will
+quickly adapt to the vocabulary used in specific buffers.
+
+Note that all the words from `predictive-main-dict' will still be
+available as completions, but their weights will be modified by
+the buffer-local dictionary."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-buffer-local-learn-multiplier 50
+  "*Multiplier for buffer-local learning rate.
+When words are learnt or added to a buffer-local dictionary, the
+weight increment is multiplied by this number. See also
+`predictive-use-buffer-local-dict'."
+  :group 'predictive
+  :type 'integer)
 
 
 (defcustom predictive-use-auto-learn-cache t
@@ -344,19 +375,6 @@ Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
-(defvar predictive-buffer-dict nil
-  "Buffer-local dictionary used in a predictive mode buffer,
-constructed from a word list at the end of the buffer.
-
-Note that when using auto-learn, the buffer dictionary has lowest
-priority: weights will only be updated in the buffer dictionary
-if the word does not exist in the active dictionary \(see
-`predictive-auto-learn'\). It is better to ensure that the buffer
-word list does not duplicate words already in other
-dictionaries.")
-(make-variable-buffer-local 'predictive-buffer-dict)
-
-
 (defvar predictive-map nil "Keymap used in predictive mode.")
 
 
@@ -381,6 +399,11 @@ dictionaries.")
 ;;; ==============================================================
 ;;;          Internal variables to do with dictionaries
 
+;; when set, overrides predictive-main-dict in a buffer
+(defvar predictive-buffer-dict nil)
+(make-variable-buffer-local 'predictive-buffer-dict)
+
+
 ;; stores list of dictionaries used by buffer
 (defvar predictive-used-dict-list nil)
 (make-variable-buffer-local 'predictive-used-dict-list)
@@ -398,6 +421,40 @@ dictionaries.")
 ;; Stores idle-timer that updates the current dictionary name
 (defvar predictive-which-dict-timer nil)
 (make-variable-buffer-local 'predictive-which-dict-timer)
+
+
+
+
+;;; ================================================================
+;;;                       Convenience macros
+
+(defun predictive-capitalized-p (string)
+  ;; Return t if string is capitalized (only first letter upper case), nil
+  ;; otherwise.
+  (and (> (length string) 0)
+       (= (aref string 0) (upcase (aref string 0)))
+       (not (= (aref string 0) (downcase (aref string 0))))
+       (or (= 1 (length string))
+	   (string= (substring string 1) (downcase (substring string 1)))))
+)
+
+
+;; FIXME: `replace-regexp-in-string' not defined in Emacs 21.x
+;;
+(defmacro predictive-buffer-local-dict-name ()
+  ;; Return the buffer-local dictionary name
+  '(intern
+    (concat "dict-" (replace-regexp-in-string
+		     "\\." "-" (file-name-nondirectory (buffer-file-name))))))
+
+
+;; FIXME: `replace-regexp-in-string' not defined in Emacs 21.x
+;;
+(defmacro predictive-buffer-local-meta-dict-name ()
+  ;; Return the buffer-local meta-dictionary name
+  '(intern
+    (concat "dict-meta-" (replace-regexp-in-string
+			  "\\." "-" (file-name-nondirectory (buffer-file-name))))))
 
 
 
@@ -492,9 +549,9 @@ cause completions to be displayed in a tooltip below the point.
 Although the English dictionary supplied with the Predictive
 Completion Mode package gives quite good results \"out of the
 box\", for best results you're strongly encouraged to create your
-own dictionaries and train them on your own text (the best setup
-is to create one dictionary for each type of writing you do:
-emails, academic research articles, letters...)"
+own dictionaries and train them on your own text (the recommended
+setup is to create one dictionary for each type of writing you
+do: emails, academic research articles, letters...)"
   
   (interactive "P")
   
@@ -504,7 +561,7 @@ emails, academic research articles, letters...)"
    ((and arg (eq predictive-mode (> (prefix-numeric-value arg) 0))))
 
    
-   ;; if we're enabling predictive mode...
+   ;; ----- enabling predictive mode -----
    ((not predictive-mode)
     ;; set the completion function
     (setq completion-function 'predictive-complete)
@@ -513,13 +570,21 @@ emails, academic research articles, letters...)"
       (if (atom predictive-main-dict)
 	  (predictive-load-dict predictive-main-dict)
 	(mapc 'predictive-load-dict predictive-main-dict)))
-    ;; create the buffer-local dictionary
-    (predictive-create-buffer-dict)
-    ;; make sure auto-learn/add caches are flushed if buffer is killed
+    ;; make sure modified dictionaries used in the buffer are saved when the
+    ;; bufer is killed
+    (add-hook 'kill-buffer-hook
+	      (lambda () (dictree-save-modified predictive-used-dict-list))
+	      nil 'local)
+    ;; load/create the buffer-local dictionary if using it, and make sure it's
+    ;; saved and unloaded when buffer is killed
+    (when predictive-use-buffer-local-dict
+      (predictive-load-buffer-local-dict)
+      (add-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict
+		nil 'local))
+    ;; make sure auto-learn/add caches are flushed if buffer is killed, and
+    ;; add auto-learn function to completion hook
     (add-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches
 	      nil 'local)
-    
-    ;; add functions to completion hooks
     (add-hook 'completion-accept-functions 'predictive-auto-learn nil 'local)
     
     ;; look up major mode in major-mode-alist and run any matching function
@@ -542,41 +607,33 @@ emails, academic research articles, letters...)"
     (run-hooks 'predictive-mode-hook))
    
    
-   ;; if disabling predictive mode...
+   ;; ----- disabling predictive mode -----
    (predictive-mode
     ;; unset the completion function
     (setq completion-function nil)
     ;; turn off which-dict mode
     (predictive-which-dict-mode -1)
-    ;; cancel the auto-learn cache flush timer and hook, and flush the caches
+    ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)
     (predictive-flush-auto-learn-caches)
+    ;; save the dictionaries
+    (dictree-save-modified predictive-used-dict-list)
+    (when predictive-use-buffer-local-dict
+      (predictive-unload-buffer-local-dict))
+    ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
-    ;; clear the used-dictionary list
-    (setq predictive-used-dict-list nil)
-    ;; remove functions from completion hooks
+    (remove-hook 'kill-buffer-hook
+		 (lambda () (dictree-save-modified predictive-used-dict-list))
+		 'local)
+    (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
-    ;; remove local completion-menu binding
+    ;; delete local variable bindings
+    (kill-local-variable 'predictive-used-dict-list)
     (kill-local-variable 'completion-menu)
     ;; reset the mode variable and run the hook
     (setq predictive-mode nil)
     (run-hooks 'predictive-mode-disable-hook))
    )
-)
-
-
-
-;;; ================================================================
-;;;                       Convenience macros
-
-(defmacro predictive-capitalized-p (string)
-  ;; Return t if string is capitalized (only first letter upper case), nil
-  ;; otherwise.
-  `(and (> (length ,string) 0)
-	(= (aref ,string 0) (upcase (aref ,string 0)))
-	(not (= (aref ,string 0) (downcase (aref ,string 0))))
-	(or (= 1 (length ,string))
-	    (string= (substring ,string 1) (downcase (substring ,string 1)))))
 )
 
 
@@ -625,29 +682,17 @@ emails, academic research articles, letters...)"
 		     (or (not predictive-add-to-dict-ask)
 			 (y-or-n-p
 			  (format "Add word \"%s\" to dictionary? " word))))
-	    (cond
-	     ;; if adding to the currently active dictionary, then do just that,
-	     ;; adding to the first in the list if there are a list of
-	     ;; dictionaries
-	     ((eq predictive-auto-add-to-dict t)
-	      ;; if caching auto-added words, do so
-	      (if predictive-use-auto-learn-cache
-		  (push (cons word (car dict)) predictive-auto-add-cache)
-		;; otherwise, add it to the dictionary
-		(predictive-add-to-dict (car dict) word)))
-	   
-	     ;; if adding to the buffer dictionary, add to the word list in
-	     ;; the buffer, as well as to the buffer dictionary
-	     ((eq predictive-auto-add-to-dict 'buffer)
-	      ;; if caching auto-added words, do so
-	      (if predictive-use-auto-learn-cache
-		  (push (cons word predictive-buffer-dict)
-			predictive-auto-add-cache)
-		;; otherwise, add it to the dictionary
-		(predictive-add-to-buffer-dict word)))
-	   
-	     ;; anything else specifies an explicit dictionary to add to
-	     (t
+	    ;; if adding to the currently active dictionary, then do just that,
+	    ;; adding to the first in the list if there are a list of
+	    ;; dictionaries
+	    (if (eq predictive-auto-add-to-dict t)
+		;; if caching auto-added words, do so
+		(if predictive-use-auto-learn-cache
+		    (push (cons word (car dict)) predictive-auto-add-cache)
+		  ;; otherwise, add it to the dictionary
+		  (predictive-add-to-dict (car dict) word))
+	      
+	      ;; anything else specifies an explicit dictionary to add to
 	      (setq dict (eval predictive-auto-add-to-dict))
 	      ;; check `predictive-auto-add-to-dict' is a dictionary
 	      (if (dictree-p dict)
@@ -658,10 +703,10 @@ emails, academic research articles, letters...)"
 		    (push (cons word dict) predictive-auto-add-cache))
 		;; display error message if not a dictionary
 		(beep)
-		(message "Wrong type in `predictive-auto-add-to-dict': dictp")))
-	     ))
-      
-      
+		(message
+		 "Wrong type in `predictive-auto-add-to-dict': dictp"))))
+	
+	
 	;; if the completion was in the dictionary and auto-learn is set...
 	(when predictive-auto-learn
 	  ;; if caching auto-learned words, do so
@@ -750,7 +795,7 @@ for uncapitalized version."
       (catch 'learned
 	(dolist (dic dict)
 	  (when (dictree-member-p dic word)
-	    (predictive-add-to-dict dic word)
+	    (predictive-add-to-dict dic word 1)
 	    (throw 'learned t)))))
     
     ;; flush words from auto-add cache
@@ -895,7 +940,7 @@ respectively."
   
   (interactive (list
 		(read-string "Dictionary name: ")
-		(read-file-name "Associated filename \(optional): " nil "")
+		(read-file-name "File to save to \(optional): " nil "")
 		(read-file-name
 		 "File to populate from \(leave blank for empty dictionary\): "
 		 nil "")))
@@ -945,10 +990,6 @@ respectively."
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave
 				 nil nil complete-speed nil insfun rankfun))
-      (when (interactive-p)
-	(set dictname dict)
-	(provide dictname))
-    
       ;; populate it
       (if (null populate)
 	  (when (interactive-p) (message "Created dictionary %s" dictname))
@@ -963,39 +1004,72 @@ respectively."
 
 
 
+(defun predictive-create-meta-dict
+  (dictname dictlist &optional file autosave speed)
+  "Create a new predictive mode meta-dictionary called DICTNAME,
+based on the dictionaries in DICTLIST.
 
-(defun predictive-add-to-buffer-dict (string &optional weight)
-  "Add STRING to the predictive mode buffer-local dictionary,
-and to the word list at the end of the current buffer. Interactively, STRING
-is read from the mini-buffer and weight is specified by the prefix argument."
-  (interactive "sString to add: \nP")
+The other arguments are as for `predictive-create-dict'."
   
-  ;; add string and weight to dictionary
-  (predictive-add-to-dict predictive-buffer-dict string weight)
+  (interactive
+   (list (read-string "Dictionary name: ")
+	 (let ((dic (read-dict
+		     "Constituent dictionary (blank to end): " nil))
+	       diclist)
+	   (while dic
+	     (setq diclist (append diclist (list dic)))
+	     (setq dic
+		   (read-dict "Constituent dictionary (blank to end): " nil)))
+	   diclist)
+	 (read-file-name "File to save to \(optional): " nil "")))
   
-  (save-excursion
-    ;; look for comment marking location of buffer word list, and create it if
-    ;; none already exists
-    (goto-char (point-min))
-    (if (re-search-forward "predictive-mode local words:" nil t)
-	(forward-line 1)
-      (goto-char (point-max))
-      (insert "\n\n" comment-start " predictive-mode local words:\n"))
+  ;; sort out arguments
+  (when (< (length dictlist) 2)
+    (error "Can't see the point in creating a meta-dictionary based on less\
+ than two dictionaries"))
+  (when (symbolp dictname) (setq dictname (symbol-name dictname)))
+  
+  ;; confirm if overwriting existing dict, then unload existing one
+  ;; (Note: we need the condition-case to work around bug in intern-soft. It
+  ;;        should return nil when the symbol isn't interned, but seems to
+  ;;        return the symbol instead)
+  (when (or (and (null (dictree-p (condition-case
+				      error (eval (intern-soft dictname))
+				    (void-variable nil))))
+		 (setq dictname (intern dictname)))
+	    (or (null (interactive-p))
+		(and (y-or-n-p
+		      (format "Dictionary %s already exists. Replace it? "
+			      dictname))
+		     (dictree-unload (eval (intern-soft dictname)))
+		     (setq dictname (intern dictname)))))
     
-    ;; find correct position to insert string in buffer word list
-    (let (entry (w (if (numberp weight) weight 0)))
-      (while (and (setq entry (dictree-read-line))
-		  (string< (car entry) string))
-	(forward-line 1))
-      ;; if string is already in word list, increment its weight
-      (when (string= (car entry) string)
-	(if weight (setq w (+ weight (cdr entry))) (setq w (1+ (cdr entry))))
-	(kill-line 1))
-      (insert comment-start " \"" string "\" ")
-      (insert (number-to-string w))
-      (insert "\n")))
+    (let (dict
+	  (complete-speed (if speed speed predictive-completion-speed))
+	  (autosave (if autosave autosave predictive-dict-autosave))
+	  ;; the combine function sums word weights and takes the union of any
+	  ;; lists of prefices
+	  (combfun '(lambda (a b)
+		      ;; (need nil at end of append so both cdr's are copied)
+		      (cons (cond ((null a) b) ((null b) a) (+ a b))
+			    (delete-dups (append (cdr a) (cdr b) nil)))))
+	  ;; the rank function compares by weight (larger is "better"), failing
+	  ;; that by string length (smaller is "better"), and failing that it
+	  ;; compares the strings alphabetically
+	  (rankfun '(lambda (a b)
+		      (if (= (cdr a) (cdr b))
+			  (if (= (length (car a)) (length (car b)))
+			      (string< (car a) (car b))
+			    (< (length (car a)) (length (car b))))
+			(> (cdr a) (cdr b))))))
+    
+      ;; create the new dictionary
+      (setq dict (dictree-create-meta-dict dictname dictlist file autosave
+					   nil nil complete-speed nil
+					   combfun rankfun))
+      ;; return the new dictionary
+      dict))
 )
-
 
 
 
@@ -1090,7 +1164,7 @@ See also `predictive-fast-learn-from-buffer'."
  word %d of %d)..." dictname d numdicts i dictsize)
 	       (message "Learning words for dictionary %s...(word %d of %d)"
 			dictname i dictsize))))
-	 dict)   ; map over all words in dictionary
+	 dict 'string)   ; map over all words in dictionary
 	
 	(message "Learning words for dictionary %s...done" dictname))
       
@@ -1286,8 +1360,14 @@ as the weight of WORD."
     (when (null word) (setq word (thing-at-point 'word))))
   
   (let ((prefices (dictree-lookup-meta-data dict word)))
-    (unless (member prefix prefices)
-      (dictree-set-meta-data dict word (cons prefix prefices))))
+    (cond
+     ;; word not in dict
+     ((null prefices)
+      (message "\"%s\" not found in dictionary %s" word (dictree-name dict)))
+     ;; prefix already defined
+     ((member prefix prefices))
+     ;; otherwise, add prefix
+     (t (dictree-set-meta-data dict word (cons prefix prefices)))))
 )
 
 
@@ -1409,7 +1489,7 @@ supplied."
 	     (message "Boosting prefix weights...(word %d of %d)" i count))
 	   ;; ignore word if it's too short
 	   (unless (< (length word) prefix) (funcall boost-fun word weight)))
-	 dict)
+	 dict 'string)
 	(message "Boosting prefix weights...done")))
     )
 )
@@ -1435,7 +1515,7 @@ there's only one."
 		  point '(identity dict)))
 	dict generate)
     (if (null overlay)
-	(setq dict predictive-main-dict)
+	(setq dict (or predictive-buffer-dict predictive-main-dict))
       (setq dict (overlay-get overlay 'dict))
       (when (symbolp dict) (setq dict (eval dict))))
     
@@ -1474,7 +1554,8 @@ there's only one."
 	  
 	  ;; throw error on anything else
 	  (t (error "Wrong type in element of dictionary list: functionp,\
- symbolp, dict-p, plist (with :generate) or t at %d %s" point (prin1-to-string dic)))
+ symbolp, dict-p, plist (with :generate) or t at %d %s"
+		    point (prin1-to-string dic)))
 	  ))
        
        dict)  ; map over dict
@@ -1483,43 +1564,109 @@ there's only one."
 
 
 
-(defun predictive-create-buffer-dict ()
-  ;; Create the buffer-local predictive mode dictionary, and fill it with
-  ;; words from the word list at the end of the current buffer (if it exists).
-  
-  ;; The insertion function inserts a weight if none already exists, otherwise
-  ;; it adds the new weight to the existing one, or if supplied weight is nil,
-  ;; incremenets existing weight
-  (let ((insfun '(lambda (weight data)
-		   (cond ((not (or weight data)) 0)
-			 ((null weight) (1+ data))
-			 ((null data) weight)
-			 (t (+ weight data)))))
-	;; the rank function compares by weight (larger is "better"), failing
-	;; that by string length (smaller is "better"), and failing that it
-	;; compares the strings alphabetically
-	(rankfun '(lambda (a b)
-		    (if (= (cdr a) (cdr b))
-			(if (= (length (car a)) (length (car b)))
-			    (string< (car a) (car b))
-			  (< (length (car a)) (length (car b))))
-		      (> (cdr a) (cdr b))))))
+(defun predictive-load-buffer-local-dict ()
+  "Load/create the buffer-local dictionary."
+
+  (let (filename buffer-dict meta-dict insfun rankfun combfun)
+    ;; The rank function compares by weight (larger is "better"), failing that
+    ;; by string length (smaller is "better"), and failing that it compares
+    ;; the strings alphabetically.
+    (setq rankfun
+	  (lambda (a b)
+	    (if (= (cdr a) (cdr b))
+		(if (= (length (car a)) (length (car b)))
+		    (string< (car a) (car b))
+		  (< (length (car a)) (length (car b))))
+	      (> (cdr a) (cdr b)))))
+
+
+    ;; ----- buffer-local dictionary -----
+    (when (buffer-file-name)
+      (setq filename
+	    (concat (file-name-directory (buffer-file-name))
+		    (symbol-name (predictive-buffer-local-dict-name))
+		    ".elc")))
+    ;; if the buffer-local dictionary exists, load it, otherwise create it
+    (if (file-exists-p filename) (load filename)
+      ;; The insertion function inserts a weight multiplied by the multiplier
+      ;; if none already exists, otherwise it adds the new weight times the
+      ;; multiplier to the existing one, or if supplied weight is nil,
+      ;; incremenets existing weight by the multiplier.
+      (setq insfun
+	    (lambda (weight data)
+	      (cond
+	       ((not (or weight data)) 0)
+	       ((null weight)
+		(+ data predictive-buffer-local-learn-multiplier))
+	       ((null data)
+		(* weight predictive-buffer-local-learn-multiplier))
+	       (t (+ data (* weight
+			     predictive-buffer-local-learn-multiplier))))))
+      ;; create the buffer-local dictionary
+      (setq buffer-dict
+	    (dictree-create (predictive-buffer-local-dict-name)
+			    filename (when filename t) nil nil
+			    predictive-completion-speed nil insfun rankfun)))
     
-    ;; initialise the buffer dictionary
-    (setq predictive-buffer-dict
-	  (dictree-create '*buffer* "" nil
-		       nil nil predictive-completion-speed
-		       nil insfun rankfun 'unlisted)))
-  
-  ;; look for buffer-local word list in current buffer
-  (save-excursion
-    (goto-char (point-min))
-    (when (re-search-forward "predictive-mode local words:" nil t)
-      (forward-line)
-      (let (entry)
-	(while (setq entry (dictree-read-line))
-	  (predictive-add-to-dict predictive-buffer-dict (car entry) (cdr entry))
-	  (forward-line)))))
+    
+    ;; ----- meta-dictionary -----
+    (when (buffer-file-name)
+      (setq filename
+	    (concat (file-name-directory (buffer-file-name))
+		    (symbol-name (predictive-buffer-local-meta-dict-name))
+		    ".elc")))
+    ;; if the buffer meta-dictionary exists, load it
+    (when (file-exists-p filename)
+      (load filename)
+      ;; if the meta-dictionary is not based on the current main dictionary,
+      ;; prompt user to update it
+      (when (and
+	     (not (memq (eval predictive-main-dict)
+			(dictree--dict-list
+			 (eval (predictive-buffer-local-meta-dict-name)))))
+	     (y-or-n-p "Existing buffer-local dictionary is not based on the\
+ current main dictionary. Update it? "))
+	(unintern (predictive-buffer-local-meta-dict-name))))
+
+    ;; if the buffer meta-dictionary doesn't exist or is being updated...
+    (unless (boundp (predictive-buffer-local-meta-dict-name))
+      ;; the combine function adds the weights from the two constituent
+      ;; dictionaries
+      (setq combfun
+	    (lambda (a b)
+	      (cond ((null b) a)
+		    ((null a) b)
+		    (t (cons (+ (car a) (car b)) (cdr b))))))
+      ;; create the buffer-local meta-dictionary
+      (setq meta-dict
+	    (dictree-create-meta-dict
+	     (predictive-buffer-local-meta-dict-name)
+	     (list buffer-dict (eval predictive-main-dict)) filename
+	     (when filename t) nil nil predictive-completion-speed
+	     nil combfun rankfun)))
+    
+    ;; set buffer's dictionary to the meta-dictionary
+    (setq predictive-buffer-dict (predictive-buffer-local-meta-dict-name))
+    ;; add meta-dictionary to the list of dictionaries used by buffer
+    (unless (memq meta-dict predictive-used-dict-list)
+      (setq predictive-used-dict-list
+	    (cons meta-dict predictive-used-dict-list))))
+)
+
+
+
+(defun predictive-unload-buffer-local-dict ()
+  "Unload the buffer-local dictionary."
+    (let ((buffer-dict (predictive-buffer-local-dict-name))
+	  (meta-dict (predictive-buffer-local-meta-dict-name)))
+      (when (boundp buffer-dict)
+	(if (dictree-p (eval (predictive-buffer-local-dict-name)))
+	    (dictree-unload (eval (predictive-buffer-local-dict-name)))
+	  (unintern buffer-dict)))
+      (when (boundp meta-dict)
+	(if (dictree-p (eval (predictive-buffer-local-meta-dict-name)))
+	    (dictree-unload (eval (predictive-buffer-local-meta-dict-name)))
+	  (unintern meta-dict))))
 )
 
 
@@ -1581,12 +1728,23 @@ predictive mode."
        ;; no active dictionary
        ((null dict) (setq name ""))
        ;; single dictionary
-       ((dictree-p dict) (setq name (dictree-name dict)))
+       ((dictree-p dict)
+	;; if dict is the buffer-local meta-dictioary, display name of main
+	;; dictionary it's based on instead
+	(if (and (string= (substring (dictree-name dict) 0 10) "dict-meta-")
+		 (dictree--meta-dict-p dict))
+	    (setq name (dictree-name (nth 1 (dictree--dict-list dict))))
+	  (setq name (dictree-name dict))))
        ;; list of dictionaries
        (t
 	(setq name (mapconcat
-		    (lambda (d) (if (stringp (dictree-name d)) (dictree-name d)
-				  (symbol-name (dictree-name d))))
+		    (lambda (dic)
+		      (if (and (string=
+				(substring (dictree-name dic) 0 10)
+				"dict-meta-")
+			       (dictree--meta-dict-p dic))
+			  (dictree-name (nth 1 (dictree--dict-list dic)))
+			(dictree-name dic)))
 		    dict ","))))
       
       ;; filter string to remove "-dict-" and "-predictive-"
@@ -1597,6 +1755,18 @@ predictive mode."
       (unless (string= name predictive-which-dict-name)
 	(setq predictive-which-dict-name name)
 	(force-mode-line-update))))
+)
+
+
+
+
+;;; ===============================================================
+;;;                       Compatibility Stuff
+
+(unless (fboundp 'replace-regexp-in-string)
+  (require 'predictive-compat)
+  (defalias 'replace-regexp-in-string
+            'predictive-compat-replace-regexp-in-string)
 )
 
 
