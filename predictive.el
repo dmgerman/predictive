@@ -4,8 +4,9 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.7
+;; Version: 0.8
 ;; Keywords: predictive, completion
+;; URL: http://www.dr-qubit.org/emacs.php
 
 ;; This file is part of the Emacs Predictive Completion package.
 ;;
@@ -26,7 +27,25 @@
 ;; Boston, MA 02111-1307 USA
 
 
+;;; Install
+;;
+;; Put the Predictive Completion package files in your load-path, and add the
+;; following to your .emacs:
+;;
+;;     (require 'predictive)
+;;
+;; Alternatively, you use autoload instead to save memory:
+;;
+;;     (autoload 'predictive-mode "/path/to/predictive.elc")
+
+
 ;;; Change Log:
+;;
+;; Version 0.8
+;; * bug fixes
+;; * performance tweaks to auto-learn and auto-add caching
+;; * added `predictive-boost-prefix-weights' function
+;; * interactive commands that read a dictionary name now provide completion
 ;;
 ;; Version 0.7
 ;; * switch-dictionary code moved to separate, more general, more efficient,
@@ -89,6 +108,10 @@
 ;; the only required common-lisp function is `position', so this dependency
 ;; should really be removed
 (require 'cl)
+
+
+;; use dynamic byte compilation to save memory
+(eval-when-compile (setq byte-compile-dynamic t))
 
 
 
@@ -228,7 +251,7 @@ See also `predictive-flush-auto-learn-delay'."
   :type 'boolean)
 
 
-(defcustom predictive-flush-auto-learn-delay 60.
+(defcustom predictive-flush-auto-learn-delay 0.5
   "*In predictive mode, time to wait before flushing auto-learn/add caches.
 The caches will only be flushed after Emacs has been idle for this many
 seconds. To take effect, this variable must be set before predictive mode is
@@ -257,8 +280,8 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   "Hook run after predictive mode is disabled.")
 
 
-(defvar predictive-main-dict nil
-  "Main dictionary to use in a predictive mode buffer.
+(defcustom predictive-main-dict nil
+  "*Main dictionary to use in a predictive mode buffer.
 It should be the symbol of a loaded dictionary. It can also be a list of such
 symbols, in which case predictive mode searches for completions in all of
 them, as though they were one large dictionary.
@@ -268,7 +291,10 @@ auto-learn or auto-add-to-dict are used. If auto-learn is enabled, weights
 will be updated in the first dictionary in the list that contains the word
 being updated \(see `predictive-auto-learn'\). Similarly, if auto-add-to-dict
 is set to t, words will be added to the first dictionary in the list \(see
-`predictive-auto-add-to-dict'\).")
+`predictive-auto-add-to-dict'\)."
+  :group 'predictive
+  :type 'symbol)
+
 
 
 (defvar predictive-buffer-dict nil
@@ -526,11 +552,19 @@ Setting this directly will have no effect. Instead, set
 ;;; ===============================================================
 ;;;                   The minor mode definition
 
+;; records previous state of predictive-mode variable, to avoid running things
+;; twice if `predictive-mode' is called in a buffer where it was already
+;; enabled
+(defvar predictive-mode-prev nil)
+(make-variable-buffer-local 'predictive-mode-prev)
+
+
+
 (define-minor-mode predictive-mode
   "Toggle predictive mode.
 With no argument, this command toggles the mode.
-A non-null prefix argument turns the mode on.
-A null prefix argument turns it off.
+A positive prefix argument turns the mode on.
+A negative prefix argument turns it off.
 
 Note that simply setting the minor-mode variable `predictive-mode' is
 not sufficient to enable predictive mode. Use the command
@@ -551,22 +585,26 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
   predictive-map
   
   ;; if predictive mode has been disabled...
-  (if (not predictive-mode)
-      (progn
-	;; turn off which-dict mode
-	(predictive-which-dict-mode 0)
-	;; cancel the auto-learn/cache timer and flush the caches
-	(cancel-timer predictive-flush-auto-learn-timer)
-	(predictive-flush-auto-learn-caches)
-	(remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches t)
-	;; clear the used-dictionary list
-	(setq predictive-used-dict-list nil)
-	;; run the hook
-	(run-hooks 'predictive-mode-disable-hook))
-
-    
-    ;; if predictive  mode has been enabled...
-
+  (cond
+   ((and predictive-mode-prev (not predictive-mode))
+    ;; turn off which-dict mode
+    (predictive-which-dict-mode 0)
+    ;; cancel the auto-learn/cache timer and flush the caches
+    (cancel-timer predictive-flush-auto-learn-timer)
+    (predictive-flush-auto-learn-caches)
+    (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches t)
+    ;; clear the used-dictionary list
+    (setq predictive-used-dict-list nil)
+    ;; run the hook
+    (run-hooks 'predictive-mode-disable-hook)
+    ;; record predictive mode state
+    (setq predictive-mode-prev nil))
+   
+   
+   ;; if predictive mode has been enabled...
+   ((and (not predictive-mode-prev) predictive-mode)
+    ;; make sure main dictionary is loaded
+    (when predictive-main-dict (predictive-load-dict predictive-main-dict))
     ;; create the buffer-local dictionary
     (predictive-create-buffer-dict)
     ;; create hash tables for auto-learn and auto-add caching
@@ -583,20 +621,22 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
 	  (error "Wrong type argument: functionp, %s"
 		 (prin1-to-string (cdr modefunc))))))
     
-    ;; turn on which-dict mode
+    ;; turn on which-dict mode if necessary
     (when predictive-which-dict (predictive-which-dict-mode t))
     
     ;; setup idle-timer to flush auto-learn and auto-add caches
     (setq predictive-flush-auto-learn-timer
-	  (run-with-idle-timer predictive-flush-auto-learn-delay
-			       t 'predictive-flush-auto-learn-caches))
+	  (run-with-idle-timer predictive-flush-auto-learn-delay t
+			       (lambda ()
+				 (predictive-flush-auto-learn-caches 1 t))))
     
     ;; initialise internal variables
     (predictive-reset-state)
     ;; run hook
-    (run-hooks 'predictive-mode-hook))
+    (run-hooks 'predictive-mode-hook)
+    ;; record predictive mode state
+    (setq predictive-mode-prev t)))
 )
-
 
 
 
@@ -1249,9 +1289,9 @@ that was automatically accepted or abandoned because the had point moved."
      (predictive-delete-completion)
      
      (let ((str string))
-       ;; if `predictive-ignore-initial-caps' is enabled and first character of
-       ;; string is capitalized, also search for completions for uncapitalized
-       ;; version
+       ;; if `predictive-ignore-initial-caps' is enabled and first character
+       ;; of string is capitalized, also search for completions for
+       ;; uncapitalized version
        (when (and predictive-ignore-initial-caps
 		  (predictive-capitalized-p str))
 	 (setq str (list str (downcase str))))
@@ -1414,38 +1454,67 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
-(defun predictive-flush-auto-learn-caches ()
-  ;; Flush all entries in the auto-learn and auto-add hash tables, adding them
-  ;; to the appropriate dictionary
+(defun predictive-flush-auto-learn-caches (&optional num no-msg)
+  ;; Flush entries from the auto-learn and auto-add hash tables, adding them
+  ;; to the appropriate dictionary. If optional integer NUM is supplied, that
+  ;; many entries are flushed. Default is to flush all entries. If NO-MSG is
+  ;; non-nil, don't display any informative messages.
 
   (when predictive-mode
-    ;; map over all words in auto-learn cache
-    (maphash
-     (lambda (key weight)
-       (let ((word (car key))
-	     (dict (cdr key)))
-	 ;; add word to whichever dictionary it is found in
-	 (when (dict-p dict) (setq dict (list dict)))
-	 (catch 'learned
-	   (dotimes (i (length dict))
-	     (when (dict-member-p (nth i dict) word)
-	       (dict-insert (nth i dict) word weight)
-	       (throw 'learned t))))))
-     predictive-auto-learn-cache)
-    (clrhash predictive-auto-learn-cache)
-    
-    ;; map over all words in auto-add cache
-    (maphash
-     (lambda (key weight)
-       (let ((word (car key))
-	     (dict (cdr key)))
-	 ;; if word should be added to buffer dictionary, do so
-	 (if (eq dict 'buffer)
-	     (predictive-add-to-buffer-dict word weight)
-	   ;; otherwise add it to whichever dictionary is stored in the cache
-	   (dict-insert dict word weight))))
-     predictive-auto-add-cache)
-    (clrhash predictive-auto-add-cache))
+    (let (word dict count (i 0))
+      (unless no-msg
+	(setq count
+	      (+ (hash-table-count predictive-auto-learn-cache)
+		 (hash-table-count predictive-auto-add-cache)))
+	(message "Flushing predictive mode auto-learn caches...(word 1 of %d)"
+		 count))
+      
+      ;; map over words in auto-learn cache
+      (catch 'stop-mapping
+	(maphash
+	 (lambda (key weight)
+	   (setq word (car key))
+	   (setq dict (cdr key))
+	   (setq i (1+ i))
+	   (unless no-msg
+	     (message "Flushing predictive mode auto-learn caches...(word\
+ %d of %d)" i count))
+	   ;; add word to whichever dictionary it is found in
+	   (when (dict-p dict) (setq dict (list dict)))
+	   (catch 'learned
+	     (dotimes (i (length dict))
+	       (when (dict-member-p (nth i dict) word)
+		 (dict-insert (nth i dict) word weight)
+		 (throw 'learned t))))
+	   ;; remove word from cache
+	   (remhash key predictive-auto-learn-cache)
+	   ;; stop after NUM words
+	   (when (and num (>= i num)) (throw 'stop-mapping t)))
+	 predictive-auto-learn-cache))
+      
+      ;; map over words in auto-add cache
+      (catch 'stop-mapping
+	(maphash
+	 (lambda (key weight)
+	   (setq word (car key))
+	   (setq dict (cdr key))
+	   (setq i (1+ i))
+	   (unless no-msg
+	     (message "Flushing predictive mode auto-learn caches...(word\
+ %d of %d)" i count))
+	   ;; if word should be added to buffer dictionary, do so
+	   (if (eq dict 'buffer)
+	       (predictive-add-to-buffer-dict word weight)
+	     ;; otherwise add it to whichever dictionary is in the cache
+	     (dict-insert dict word weight))
+	   ;; remove word from cache
+	   (remhash key predictive-auto-add-cache)
+	   ;; stop after NUM words
+	   (when (and num (>= i num)) (throw 'stop-mapping t)))
+	 predictive-auto-add-cache)))
+
+    (unless no-msg
+      (message "Flushing predictive mode auto-learn caches...done")))
 )
 
 
@@ -1464,8 +1533,9 @@ path. Interactively, it is read from the mini-buffer."
   (when (stringp dict) (setq dict (intern dict)))
   
   (if (require dict nil t)
-      (setq predictive-used-dict-list
-	    (cons (eval dict) predictive-used-dict-list))
+      (unless (memq (eval dict) predictive-used-dict-list)
+	(setq predictive-used-dict-list
+	      (cons (eval dict) predictive-used-dict-list)))
     (error "Dictionary %s not found" (prin1-to-string dict)))
 )
 
@@ -1482,8 +1552,9 @@ will be incremented by WEIGHT \(or by 1 if WEIGHT is not supplied).
 
 Interactively, WORD and DICT are read from the minibuffer, and WEIGHT is
 specified by the prefix argument."
-  (interactive "SDictionary to add to: \nsWord to add \(can include\
- spaces and other punctuation characters\): \nP")
+  (interactive (list (read-dict "Dictionary to add to: ")
+		     (read-from-minibuffer "Word to add: ")
+		     current-prefix-arg))
   
   (dict-insert dict word weight)
 )
@@ -1494,13 +1565,13 @@ specified by the prefix argument."
 (defun predictive-create-dict (dict &optional file populate autosave speed)
   "Create a new predictive mode dictionary called DICT.
 
-If POPULATE is not specified, create an empty dictionary. If POPULATE is
-specified, populate the dictionary from that file \(see
-`dict-populate-from-file').
-
 The optional argument FILE specifies a file to associate with the
 dictionary. The dictionary will be saved to this file by default \(similar to
 the way a file is associated with a buffer).
+
+If POPULATE is not specified, create an empty dictionary. If POPULATE is
+specified, populate the dictionary from that file \(see
+`dict-populate-from-file').
 
 If the optional argument AUTOSAVE is t, the dictionary will automatically be
 saved when it is unloaded. If nil, all unsaved changes are lost when it is
@@ -1522,8 +1593,8 @@ fFile to populate from \(leave blank to create an empty dictionary\): ")
   (let ((complete-speed (if speed speed predictive-completion-speed))
 	(autosave (if autosave autosave predictive-dict-autosave))
 	;; the insertion function inserts a weight if none already exists,
-	;; otherwise it adds the new weight to the existing one, or if supplied
-	;; weight is nil, incremenets existing weight
+	;; otherwise it adds the new weight to the existing one, or if
+	;; supplied weight is nil, incremenets existing weight
 	(insfun '(lambda (weight data)
 		   (cond ((not (or weight data)) 0)
 			 ((null weight) (1+ data))
@@ -1607,73 +1678,83 @@ specified by the presence of a prefix argument.
 
 See also `predictive-fast-learn-from-buffer'."
 
-  (interactive "bBuffer to learn from: \nsDictionary to update (defaults to\
- all in use): \nP")
+  (interactive (list (read-buffer "Buffer to learn from: "
+				  (buffer-name (current-buffer)) t)
+		     (read-dict
+		      "Dictionary to update (defaults to all in use): "
+		      nil)
+		     current-prefix-arg))
+
+  ;; sanity check arguments
+  (when (and all (null dict))
+    (error "Argument ALL supplied but no dictionary specified"))
   
-  (let ((i 0) (d 0) numdicts dictname restore-mode regexp currdict)
-    (save-excursion
-      
+
+  (let ((d 0) i dict-list numdicts dictsize dictname
+	restore-mode regexp currdict)
+    (save-excursion      
       ;; switch on predictive mode in the buffer if necessary
       (when buffer (set-buffer buffer))
       (unless all
-	(if predictive-mode (setq restore-mode t) (predictive-mode t)))
+	(if predictive-mode (setq restore-mode t) (predictive-mode 1)))
       
-      ;; default to all dictionaries used by the buffer
-      (if (or (null dict) (string= dict ""))
-	  (if all
-	      (error "Argument ALL supplied but no dictionary specified")
-	    (setq dict predictive-used-dict-list))
-	(unless (setq dict (intern-soft dict))
-	  (error "Dictionary %s could not be found" dict)))
-      (when (dict-p dict) (setq dict (list dict)))
-      (setq numdicts (length dict))
+      ;; either use list of dictionaries used in buffer, or bundle single
+      ;; dictionary inside list so dolist can handle it
+      (if (null dict)
+	  (setq dict-list predictive-used-dict-list)
+	(setq dict-list (list dict)))
+      (setq numdicts (length dict-list))
       
-      ;; map over all dictionaries in dictionary list
-      (mapc
-       (lambda (dic)
-	 ;;initialise counters etc.for messages
-	 (setq dictname (dic-name dic))
-	 (setq d (1+ d))
-	 (setq i 0)
-	 (message "Learning words for dictionary %s\
- (dict %d of %d, word 1)..." dictname d numdicts) 
-	 
-	 ;; map over all words in dictionary
-	 (dict-map
-	  (lambda (word weight)   ; (value passed to weight is ignored)
-	    ;; construct regexp for word
-	    (setq regexp (regexp-quote word))
-	    (when (= ?w (char-syntax (aref word 0)))
-	      (setq regexp (concat "\\b" regexp)))
-	    (when (= ?w (char-syntax (aref word (1- (length word)))))
-	      (setq regexp (concat regexp "\\b")))
-	    ;; count occurences of current word
-	    (setq weight 0)
-	    (goto-char (point-min))
-	    (while (re-search-forward regexp nil t)
-	      (if all
-		  (setq weight (1+ weight))
-		;; if ALL is nil, only count occurence if the active
-		;; dictionary at that location matches the dictionary we're
-		;; working on
-		(setq currdict (predictive-current-dict))
-		(when (or (and (listp currdict) (memq dic currdict))
-			  (eq dic currdict))
-		  (setq weight (1+ weight)))))
-	    ;; increment word's weight
-	    (dict-insert dic word weight)
-	    (when (= 0 (mod (setq i (1+ i)) 10))
-	      (message "Learning words for dictionary %s\
- (dict %d of %d, word %d)..." dictname d numdicts i)))
-	  dic)   ; map over all words in dic
-	 
-	 (message "Learning words for dictionary %s\
- (dict %d of %d)...done" dictname d numdicts))
-       dict)     ; map over dictionaries in dict list
+      ;; loop over all dictionaries in dictionary list
+      (dolist (dict dict-list)
+	;;initialise counters etc. for messages
+	(setq dictname (dic-name dict))
+	(setq dictsize (dict-size dict))
+	(setq d (1+ d))  ; counts dictionaries
+	(setq i 0)       ; counts words
+	(if (> numdicts 1)
+	    (message "Learning words for dictionary %s...(dict %d of %d,\
+ word 1 of %d)" dictname d numdicts dictsize)
+	  (message "Learning words for dictionary %s...(word 1 of %d)"
+		   dictname dictsize))
+	
+	;; map over all words in dictionary
+	(dict-map
+	 (lambda (word weight)   ; (value passed to weight is ignored)
+	   ;; construct regexp for word
+	   (setq regexp (regexp-quote word))
+	   (when (= ?w (char-syntax (aref word 0)))
+	     (setq regexp (concat "\\b" regexp)))
+	   (when (= ?w (char-syntax (aref word (1- (length word)))))
+	     (setq regexp (concat regexp "\\b")))
+	   ;; count occurences of current word
+	   (setq weight 0)
+	   (goto-char (point-min))
+	   (while (re-search-forward regexp nil t)
+	     (if all
+		 (setq weight (1+ weight))
+	       ;; if ALL is nil, only count occurence if the active
+	       ;; dictionary at that location matches the dictionary we're
+	       ;; working on
+	       (setq currdict (predictive-current-dict))
+	       (when (or (and (listp currdict) (memq dict currdict))
+			 (eq dict currdict))
+		 (setq weight (1+ weight)))))
+	   ;; increment word's weight
+	   (dict-insert dict word weight)
+	   (when (= 0 (mod (setq i (1+ i)) 10))
+	     (if (> numdicts 1)
+		 (message "Learning words for dictionary %s...(dict %d of %d,\
+ word %d of %d)..." dictname d numdicts i dictsize)
+	       (message "Learning words for dictionary %s...(word %d of %d)"
+			dictname i dictsize))))
+	 dict)   ; map over all words in dictionary
+	
+	(message "Learning words for dictionary %s...done" dictname))
       
       ;; restore predictive-mode state
-      (unless (or all restore-mode) (predictive-mode nil))
-    ))
+      (unless (or all restore-mode) (predictive-mode -1))
+      ))
 )
 
 
@@ -1695,8 +1776,11 @@ must be specified.
 Interactively, FILE and DICT are read from the mini-buffer, and ALL is
 specified by the presence of a prefix argument."
 
-  (interactive "fFile to learn from: \nsDictionary to update (required if
- prefix argument supplied): \nP")
+  (interactive (list (read-file-name "File to learn from: " nil nil t)
+		     (read-dict
+		      "Dictionary to update (defaults to all in use): "
+		      nil)
+		     current-prefix-arg))
   
   (save-excursion
     ;; open file in a buffer
@@ -1733,29 +1817,29 @@ This function is faster then `predictive-learn-from-buffer' for large
 dictionaries, but will miss any words not consisting entirely of word- or
 symbol-constituent characters according to the buffer's syntax table."
   
-  (interactive "bBuffer to learn from: \nsDictionary to update (defaults to\
- all in use): \nP")
+  (interactive (list (read-buffer "Buffer to learn from: "
+				  (buffer-name (current-buffer)) t)
+		     (read-dict
+		      "Dictionary to update (defaults to all in use): "
+		      nil)
+		     current-prefix-arg))
+  
+  ;; sanity check arguments
+  (when (and all (null dict))
+    (error "Argument ALL supplied but no dictionary specified"))
+  
   
   (let (restore-mode currdict word percent)
     (save-excursion
       ;; switch on predictive mode in the buffer if necessary
       (when buffer (set-buffer buffer))
       (unless all
-	(if predictive-mode (setq restore-mode t) (predictive-mode t)))
-      
-      ;; default to all dictionaries used by buffer
-      (if (or (string= dict "") (null dict))
-	  (if all
-	      (error "Argument ALL supplied but no dictionary specified")
-	    (setq dict nil))
-	(unless (setq dict (intern-soft dict))
-	  (error "Dictionary %s could not be found" dict)))
-      
+	(if predictive-mode (setq restore-mode t) (predictive-mode 1)))
       
       ;; step through each word in buffer...
       (goto-char (point-min))
       (setq percent 0)
-      (message "Learning words (0%%)...")
+      (message "Learning words for dictionary %s...(0%%)" (dic-name dict))
       (while (re-search-forward "\\b\\(\\sw\\|\\s_\\)+\\b" nil t)
 	(setq word (match-string 0))
 	(when (and predictive-ignore-initial-caps
@@ -1785,39 +1869,50 @@ symbol-constituent characters according to the buffer's syntax table."
 		(dict-insert (nth i currdict) word)
 		(throw 'learned t))))))
 	
-	(when (/= (/ (* (point) 100) (point-max)) percent)
-	  (setq percent (/ (* (point) 100) (point-max)))
-	  (message "Learning words (%d%%)..." percent))
+	(when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
+	  (setq percent (/ (float (point)) (point-max)))
+	  (message "Learning words for dictionary %s...(%s%%)"
+		   (dic-name dict)
+		   (progn
+		     (string-match ".*\\..."
+				   (prin1-to-string (* 100 percent)))
+		     (match-string 0 (prin1-to-string (* 100 percent))))
+		   ))
       )  ; end while loop
       
-      (unless (or all restore-mode) (predictive-mode nil))
-      (message "Learning words...done")))
+      (unless (or all restore-mode) (predictive-mode -1))
+      (message "Learning words for dictionary %s...done" (dic-name dict))))
 )
+
 
 
 
 (defun predictive-fast-learn-from-file (file &optional dict all)
   "Learn word weights from FILE.
 
-The word weight of each word in dictionary DICT is incremented by the number
-of occurences of that word in the file. DICT can either be a dictionary, or a
-list of dictionaries. If DICT is not supplied, it defaults to all dictionaries
-used by FILE. However, DICT must be supplied if ALL is specified, see below.
+The word weight of each word in dictionary DICT is incremented by
+the number of occurences of that word in the file. DICT can
+either be a dictionary, or a list of dictionaries. If DICT is not
+supplied, it defaults to all dictionaries used by FILE. However,
+DICT must be supplied if ALL is specified, see below.
 
-By default, only occurences of a word that occur in a region where the
-dictionary is active are taken into account. If optional argument ALL is
-non-nil, all occurences are taken into account. In this case, a dictionary
-must be specified.
+By default, only occurences of a word that occur in a region
+where the dictionary is active are taken into account. If
+optional argument ALL is non-nil, all occurences are taken into
+account. In this case, a dictionary must be specified.
 
-Interactively, FILE and DICT are read from the mini-buffer, and ALL is
-specified by the presence of a prefix argument.
+Interactively, FILE and DICT are read from the mini-buffer, and
+ALL is specified by the presence of a prefix argument.
 
-This function is faster then `predictive-learn-from-file' for large
-dictionaries, but will miss any words not consisting entirely of word- or
-symbol-constituent characters."
+This function is faster then `predictive-learn-from-file' for
+large dictionaries, but will miss any words not consisting
+entirely of word- or symbol-constituent characters."
 
-  (interactive "fFile to learn from: \nsDictionary to update (required if
- prefix argument supplied): \nP")
+  (interactive (list (read-file-name "File to learn from: " nil nil t)
+		     (read-dict
+		      "Dictionary to update (defaults to all in use): "
+		      nil)
+		     current-prefix-arg))
   
   (save-excursion
     ;; open file in a buffer
@@ -1830,6 +1925,81 @@ symbol-constituent characters."
       (unless visiting (kill-buffer buff))))
 )
 
+
+
+
+(defun predictive-boost-prefix-weights (dict &optional prefix length)
+  "Increase the weight of any word in dictionary DICT that is
+also a prefix for other words. The weight of the prefix will be
+increased so that it is equal to or greater than the weight of
+any word it is a prefix for.
+
+If optional argument PREFIX is supplied, only that prefix will
+have its weight increased (LENGTH is ignored).
+
+Optional argument LENGTH specifies a minimum length for a
+prefix. Prefices shorter than this minimum will be ignored.
+
+Interactively, DICT and PREFIX are read from the minibuffer and
+LENGTH is the prefix argument."
+  
+  (interactive (list (read-dict "Dictionary: ")
+		     (read-from-minibuffer
+		      "Prefix to boost (leave blank for all): ")
+		     current-prefix-arg))
+  (if (and prefix (not (string= prefix "")))
+      (setq length nil)
+    (setq prefix nil))
+  (let (boost-fun)
+    
+    ;; create function for boosting weights
+    (setq boost-fun
+	  (lambda (word weight)
+	    (let (max-weight completion-weights string)
+	      ;; find completions, dropping first which is always the word
+	      ;; itself
+	      (if (and predictive-ignore-initial-caps
+		       (predictive-capitalized-p word))
+		  (setq string (list word (downcase word)))
+		(setq string word))
+	      
+	      (setq completion-weights
+		    (mapcar 'cdr (append (dict-complete dict string) nil)))
+	      (setq completion-weights
+		    (last completion-weights
+			  (1- (length completion-weights))))
+	      
+	      ;; if word has completions (is a prefix), make sure its weight
+	      ;; is greater than weight of any of its completions
+	      (when completion-weights
+		(setq max-weight (apply 'max completion-weights))
+		(when (< weight max-weight)
+		  (dict-insert dict word max-weight (lambda (a b) a)))))
+	    ))
+    
+    
+    ;; if there's a single prefix, boost its weight
+    (if prefix
+	(when (dict-member-p dict prefix)
+	  (funcall boost-fun prefix (dict-lookup dict prefix)))
+      
+      ;; otherwise, boost weights of all prefices
+      (let ((i 0) (count (dict-size dict)))
+	(message "Boosting prefix weights...(word 1 of %d)" count)
+	;; Note: relies on dict-map traversing in alphabetical order, so that
+	;; prefices that themselves have a prefix are processed later
+	(dict-map
+	 (lambda (word weight)
+	   (setq i (1+ i))
+	   (when (= 0 (mod i 50))
+	     (message "Boosting prefix weights...(word %d of %d)" i count))
+	   ;; ignore word if it's too short
+	   (unless (and length (< (length word) length))
+	     (funcall boost-fun word weight)))
+	 dict)
+	(message "Boosting prefix weights...done")))
+    )
+)
 
 
 
@@ -1904,7 +2074,7 @@ symbol-constituent characters."
     (setq predictive-buffer-dict
 	  (dict-create '*buffer* "" nil
 		       nil nil predictive-completion-speed
-		       nil insfun rankfun))
+		       nil insfun rankfun 'unlisted))
   )
   
   ;; look for buffer-local word list in current buffer
@@ -1955,8 +2125,11 @@ predictive mode."
     ;; if which-dict mode has been turned on, setup the timer to update the
     ;; mode-line indicator
     (if predictive-which-dict-mode
-	(setq predictive-which-dict-timer
-	      (run-with-idle-timer 0.1 t 'predictive-update-which-dict))
+	(progn
+	  (when (timerp predictive-which-dict-timer)
+	    (cancel-timer predictive-which-dict-timer))
+	  (setq predictive-which-dict-timer
+		(run-with-idle-timer 0.1 t 'predictive-update-which-dict)))
       
       ;; if which-dict mode has been turned off, cancel the timer and reset
       ;; variables
@@ -2067,12 +2240,12 @@ predictive mode."
 ;;; ================================================================
 ;;;                     Initialise variables etc.
 
-;; Set the default dictionary if it hasn't already been set (most likely in an
-;; init file or setup function)
-(unless predictive-main-dict
-  (predictive-load-dict 'dict-english)
-  (setq predictive-main-dict 'dict-english)
-)
+;; ;; Set the default dictionary if it hasn't already been set (most likely in an
+;; ;; init file or setup function)
+;; (unless predictive-main-dict
+;;   (predictive-load-dict 'dict-english)
+;;   (setq predictive-main-dict 'dict-english)
+;; )
 
 
 

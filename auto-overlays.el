@@ -141,12 +141,12 @@ appropriate identifier."
     (let ((lines (count-lines (point-min) (point-max)))
 	  (set (1- (length auto-overlay-regexps))))
       (goto-char (point-min))
-      (message "Scanning for auto-overlays (line 1 of %d)..."
+      (message "Scanning for auto-overlays...(line 1 of %d)"
 	       lines)
       (dotimes (i lines)
 	(when (= 9 (mod i 10))
 	  (message
-	   "Scanning for auto-overlays (line %d of %d)..."
+	   "Scanning for auto-overlays...(line %d of %d)"
 	   (+ i 1) lines))
 	(auto-overlay-update nil nil nil set)
 	(forward-line 1))

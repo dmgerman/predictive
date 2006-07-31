@@ -1,8 +1,8 @@
 
-all: core dicts
+all: core dict-english dicts
 
 clean:
-	rm *.elc latex/*.elc ams-latex/*.elc html/*.elc f90/*.elc
+	rm dict-english.el *.elc latex/*.elc ams-latex/*.elc html/*.elc f90/*.elc
 
 EMACS = emacs
 
@@ -28,7 +28,7 @@ core: $(core_files)
 
 
 # dictionary targets
-dicts: latex_dicts ams_latex_dicts html_dicts f90_dicts
+dicts: dict-english.el dict-english.elc latex_dicts ams_latex_dicts html_dicts f90_dicts
 
 latex_dicts: $(latex_dicts) 
 
@@ -38,6 +38,8 @@ html_dicts: $(html_dicts)
 
 f90_dicts: $(f90_dicts)
 
+dict-english.el: dict-english.word-list
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict 'dict-english \"dict-english\" \"dict-english.word-list\") (dict-write dict-english \"dict-english\" t t))"
 
 
 

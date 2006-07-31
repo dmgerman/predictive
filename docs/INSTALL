@@ -5,7 +5,7 @@ Obtaining
 The current version of the predictive completion package can be obtained
 from:
 
-http://www.dr-qubit.org/predictive.php
+http://www.dr-qubit.org/emacs.php
 
 You will also need the Emacs Lisp Library (Elib), obtainable from:
 
@@ -16,15 +16,26 @@ http://jdee.sunsite.dk
 Installing
 ----------
 
-To install the package, extracted the files to a directory in the Emacs
+To install the package, extract the files to a directory in the Emacs
 load-path (see Lisp Libraries, GNU Emacs Manual):
 
-cd some/directory/in/load/path
+cd /some/directory/in/load-path
 tar -xvzf predictive.tar.gz
 
 You can view the current load-path using `C-h v load-path' in Emacs, assuming
 default keybindings. All subdirectories creating by unpacking the package
-should also be in the load-path.
+should also be added to the load-path.
+
+If you want the predictive completion minor-mode to be available whenever you
+start Emacs, put the following line in your .emacs file:
+
+(require 'predictive)
+
+Alternatively, you can save memory and only load the lisp libraries when
+they're needed (i.e. when you first run the `predictive-mode' command), by
+putting the following in your .emacs instead:
+
+(autoload 'predictive-mode "/path/to/predictive.elc")
 
 
 
@@ -56,14 +67,8 @@ auto-overlay-self.el
 auto-overlay-stack.el
 dict-english.el
 
-Personally, I like to use `dired' when byte-compiling multiple files. See
-Operating on Files, GNU Emacs manual.
-
-If you want the predictive completion minor-mode to be available whenever you
-start Emacs, put the following line in your .emacs file:
-
-(require 'predictive)
-
+Personally, I like to use `dired' when byte-compiling multiple files. (See
+Operating on Files, GNU Emacs manual.)
 
 
 
@@ -72,8 +77,12 @@ Creating the Dictionaries
 
 The only pre-prepared dictionary included in the main package is the English
 dictionary (so that predictive completion mode works "out of the box", albeit
-slowly if you don't byte-compile). Extra dictionaries for other languages
-(e.g. LaTeX) are supplied as plain text word lists. Running
+slowly if you don't byte-compile). However, you will get better results if you
+roll your own English dictionary and tailor it to your writing style. (See
+Dictionaries, Predictive Completion Manual.)
+
+Extra dictionaries for other languages (e.g. LaTeX) are supplied as plain text
+word lists. Running
 
 make dicts
 
@@ -86,4 +95,4 @@ will byte-compile the core lisp files as well as creating the dictionaries.
 You can, if you prefer, create the dictionaries manually using the
 `predictive-create-dict' command from the predictive package. You should give
 the dictionary the same file name as the word list file, minus the final
-"-word-list". See Creating Dictionaries, Emacs Predictive Completion Manual.
+"-word-list". (See Creating Dictionaries, Emacs Predictive Completion Manual.)

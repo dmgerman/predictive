@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.7.
+0.8.
 @c --version--
 
 Copyright @copyright{} 2005 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.7
+@subtitle Version 0.8
 @c --version--
 @author Toby Cubitt
 
@@ -48,11 +48,17 @@ Documentation License".
 The package adds a new predictive completion minor-mode, called
 @dfn{predictive} mode, to the GNU Emacs editor. Although there are many
 options and customizations, the easiest way to start using it is to
-simply install the package (@pxref{Obtaining and Installing}), insert
-the following in your @file{.emacs} file:
+simply install the package (@pxref{Obtaining and Installing}), and
+insert the following in your @file{.emacs} file:
 
 @lisp
 (require 'predictive)
+@end lisp
+
+Alternatively, you can use
+
+@lisp
+(autoload 'predictive-mode "@var{/path/to/predictive.elc}")
 @end lisp
 
 @noindent
@@ -229,9 +235,8 @@ sentences preceding it.)
 @cindex obtaining
 
 The current version of the predictive completion package can be obtained
-from @uref{http://www.dr-qubit.org/predictive.php}. You will also need
-the Emacs Lisp Library (Elib), obtainable from
-@uref{http://jdee.sunsite.dk}.
+from @uref{http://www.dr-qubit.org/emacs.php}. You will also need the
+Emacs Lisp Library (Elib), available from @uref{http://jdee.sunsite.dk}.
 
 To install the package, the files should be extracted to a directory in
 the Emacs @env{load-path} (@pxref{Lisp Libraries, , , emacs, GNU Emacs
@@ -264,23 +269,39 @@ file:
 @example
 (require 'predictive)
 @end example
+
+Alternatively, you can save memory and only load the lisp libraries when
+they're needed (i.e. when you first run the @command{predictive-mode}
+command), by putting the following in your @file{.emacs} instead:
+
+@lisp
+(autoload 'predictive-mode "@var{/path/to/predictive.elc}")
+@end lisp
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
 
 The only pre-prepared dictionary included in the main package is the
 English dictionary (so that predictive completion mode works ``out of
-the box'', albeit slowly if you don't byte-compile). Extra dictionaries
-for other languages (e.g. LaTeX) are supplied as plain text word
-lists. Running @command{make dicts} creates these dictionaries. Running
-@command{make} will byte-compile the core lisp files as well as creating
-the dictionaries. You can, if you prefer, create them manually using the
-@command{predictive-create-dict} command. You should give the dictionary
-the same file name as the word list file, minus the final
-@file{-word-list}. @xref{Creating Dictionaries}.
+the box'', albeit slowly if you don't byte-compile). However, you will
+get better results if you roll your own English dictionary and tailor it
+to your writing style by teaching it the word frequencies from samples
+of your writing (@pxref{Dictionaries})@footnote{You can get a word list
+to use to create your own dictionary for instance by deleting the word
+weights from the plain text @file{dict-english.word-list} file, or from
+the @command{ispell} program or one of its substitutes.}.
+
+Extra dictionaries for other languages (e.g. LaTeX) are supplied as
+plain text word lists. Running @command{make dicts} creates these
+dictionaries. You can, if you prefer, create them manually using the
+@command{predictive-create-dict} command. If you do this, you should
+give the dictionary the same file name as the word list file, minus the
+final @file{-word-list}. @xref{Creating Dictionaries}.
 @cindex dictionaries
 @cindex dictionary packages
 
+Running @command{make} will byte-compile the core lisp files as well as
+creating the dictionaries.
 
 
 
@@ -482,6 +503,7 @@ to complete whatever word is then next to the point (like using
 @command{predictive-complete-word-at-point} after deleting,
 @pxref{Inserting Completions})).
 @findex predictive-complete-word-at-point
+
 
 
 @node Jumping to Completions
@@ -744,6 +766,20 @@ weight. If the word is not already in the dictionary, it will be added
 to it with that initial weight (or 0 if none is supplied). If the word
 is already in the dictionary, its weight will be incremented by the
 weight value (or by 1 if none is supplied).
+
+@item predictive-boost-prefix-weights
+Inrease the weight of a word that is also a prefix for other words
+(e.g. @samp{boost} is a prefix for @samp{boosting}, so @samp{boosting}
+is a completion of @samp{boost}). Specifically, if the weight of the
+prefix is lower than any of its completions, its weight will be set to
+the maximum weight of its completions. Otherwise, it will be left
+unchanged. The dictionary name and prefix word are read from the
+minibuffer. Leaving the prefix word blank will boost all prefices in the
+dictionary that are longer than a minimum length specified by the prefix
+argument.
+
+@item dict-size
+Display the number of words in a dictionary.
 @end ftable
 
 Note that there is currently no @command{predictive-remove-from-dict}
@@ -765,6 +801,12 @@ create a dictionary from a list of words using
 and add the words using @command{predictive-add-to-dict}. For small
 dictionaries it won't make much difference, but for larger ones it can
 be significant.
+
+It is often more useful for words that are prefices for others to have
+higher weights, especially when using dynamic completion and the
+@command{predictive-scoot-ahead} command (@pxref{Dynamic
+Completion}). The @command{predictive-boost-prefix-weights} command
+manipulates word weights to ensure that this is the case.
 
 @noindent
 The following variables set other dictionary properties:
@@ -807,11 +849,10 @@ it to the list of dictionaries used by the current buffer (see
 @command{predictive-load-dict}, below).
 
 @item predictive-load-dict
-Load a dictionary from file, and add it to the list of dictionaries used
-by the current buffer. The name given to the loaded dictionary is
-the same as the file name, with the extension removed. The dictionary
-will be included when learning from the buffer, see @ref{Learning from
-Buffers and Files}.
+Load a dictionary, and add it to the list of dictionaries used by the
+current buffer. The dictionary file must be in your @env{load-path}. The
+dictionary will be included when learning from the buffer, see
+@ref{Learning from Buffers and Files}.
 
 @item dict-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
@@ -831,16 +872,20 @@ existing file.
 Save all modified dictionaries. If a prefix argument is supplied,
 confirm each dictionary before saving.
 
-@item dict-dump-words-to-file
-Dumps all words and weights in the dictionary to a text file, in the
+@item dict-dump-words-to-buffer
+Dumps all words and weights in the dictionary to a buffer, in the
 same format as that used to populate dictionaries (@pxref{Creating
-Dictionaries}). If a prefix argument is supplied, you will @emph{not} be
-asked to confirm if over-writing an existing file.
+Dictionaries}).
+
+@item dict-dump-words-to-file
+Dumps words and weights to a text file rather than a buffer. If a prefix
+argument is supplied, you will @emph{not} be asked to confirm if
+over-writing an existing file.
 @end ftable
 
 To use a dictionary, it must be loaded into memory. This can be done
-manually, using the @command{dict-load} command, and supplying the name
-of the dictionary to be loaded. Alternatively, if you want the
+manually, using the @command{dict-load} or
+@command{predictive-load-dict} commands. Alternatively, if you want the
 dictionary to be loaded every time you run Emacs, you can add the
 following line to your @file{.emacs} file:
 
@@ -1662,7 +1707,7 @@ and only actually added to the dictionary when Emacs has been idle for
 at least one of @env{predictive-auto-learn} or
 @env{predictive-auto-add-to-dict} is also set). This avoids small but
 sometimes noticeable delays when typing. New words or word weights will
-not be taken into account until the cache is flushed.
+not be taken into account until the cache is fully flushed.
 @end vtable
 
 Note that if @env{predictive-main-dict} contains a list of dictionary
@@ -2108,7 +2153,7 @@ places. The article can be found via
 @uref{http://www.ddj.com/articles/1998/9804/}.
 
 Finally, the English dictionary supplied with the predictive completion
-package was produced from the British National Corpus frequency tables,
+package was based on the British National Corpus frequency tables,
 available from
 @uref{http://www.itri.brighton.ac.uk/~Adam.Kilgarriff/bnc-readme.html}.
 

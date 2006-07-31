@@ -44,8 +44,16 @@
 
 ;;; Change log:
 ;;
+;; Version 0.6
+;; * added dict-size function
+;; * added dict-dump-words-to-buffer function
+;; * dictionaries now set their names and filenames by doing a library search
+;;   for themselves when loaded using require
+;; * added `read-dict' minibuffer completion function
+;; * interactive commands that read a dictionary name now provide completion
+;;
 ;; Version 0.5
-;; * added dict-dump-word-to-file function
+;; * added dict-dump-words-to-file function
 ;;
 ;; Version 0.4
 ;; * fixed bug in dict-read-line
@@ -256,7 +264,8 @@
 (defun dict-create (name &optional filename autosave
 			      lookup-speed complete-speed
 			      ordered-speed lookup-only
-			      insert-function rank-function)
+			      insert-function rank-function
+			      unlisted)
   "Create an empty dictionary stored in variable NAME, and return it.
 
 Optional argument FILENAME supplies a directory and file name to use when
@@ -299,7 +308,10 @@ associated with that word. It should return non-nil if the first argument is
 the words, ignoring the data \(which is not very useful, since the
 `dict-complete' function already returns completions in alphabetical order
 much more efficiently, but at least will never cause any errors, whatever data
-is stored!\)"
+is stored!\)
+
+If optional argument UNLISTED is non-nil, the dictionary will not be added to
+the list of loaded dictionaries."
 
   ;; a dictionary is a list containing:
   ;; ('DICT
@@ -318,9 +330,10 @@ is stored!\)"
   ;;  ordered-speed)
   (let ((dict
 	 (if lookup-only
-	     (list 'DICT name filename autosave t insert-function t
+	     (list 'DICT (symbol-name name) filename
+		   autosave t insert-function t
 		   (make-hash-table :test 'equal))
-	   (list 'DICT name filename autosave t
+	   (list 'DICT (symbol-name name) filename autosave t
 		 (tstree-create '- insert-function rank-function) nil
 		 (if lookup-speed (make-hash-table :test 'equal) nil)
 		 lookup-speed
@@ -329,7 +342,7 @@ is stored!\)"
 		 (if ordered-speed (make-hash-table :test 'equal) nil)
 		 ordered-speed))
 	 ))
-    (push dict dict-loaded-list)
+    (unless unlisted (push dict dict-loaded-list))
     dict)
 )
 
@@ -555,8 +568,8 @@ Use `dict-member-p' to distinguish non-existant words from nil data."
   ;; if dictionary is lookup-only, look in lookup hash and use dummy variable
   ;; to distinguish non-existant words from those with nil data
   (if (dic-lookup-only dict)
-      (let (not-in-here)
-	(if (eq (gethash word (dic-lookup-hash dict)) 'not-in-here) nil t))
+      (if (eq (gethash word (dic-lookup-hash dict) 'not-int-here)
+	      'not-in-here) nil t)
     ;; otherwise look in the ternary search tree
     (tstree-member-p (dic-tstree dict) word))
 )
@@ -576,6 +589,19 @@ FUNCTION will be passed two arguments: a word from the dictionary, and the
 data associated with that word. It is safe to assume the dictionary entries
 will be traversed in alphabetical order."
   `(tstree-map ,function (dic-tstree ,dict) t)
+)
+
+
+
+(defun dict-size (dict)
+  "Return the number of entries in dictionary DICT."
+  (interactive (list (read-dict "Dictionary: ")))
+  
+  (let ((count 0))
+    (dict-map (lambda (&rest dummy) (setq count (1+ count))) dict)
+    (when (interactive-p)
+      (message "Dictionary %s contains %d entries" (dic-name dict) count))
+    count)
 )
 
 
@@ -838,7 +864,7 @@ that has side-effects."
 	(when (setq entry (dict-read-line))
 	  (dict-insert dict (car entry) (cdr entry))
 	  (dic-set-modified dict t))
-	(message "Inserting word 1 of %d..." lines)
+	(message "Inserting words in %s...(1 of %d)" (dic-name dict) lines)
         ;; insert words successively further away from the median in both
         ;; directions
 	(dotimes (i (1- midpt))
@@ -846,7 +872,8 @@ that has side-effects."
 	  (when (setq entry (dict-read-line))
 	    (dict-insert dict (car entry) (cdr entry)))
 	  (when (= 49 (mod i 50))
-	    (message "Inserting word %d of %d..." (+ (* 2 i) 2) lines))
+	    (message "Inserting words in %s...(%d of %d)"
+		     (dic-name dict) (+ (* 2 i) 2) lines))
 	  (goto-line (- midpt i 1))
 	  (when (setq entry (dict-read-line))
 	    (dict-insert dict (car entry) (cdr entry))))
@@ -857,7 +884,7 @@ that has side-effects."
 	  (goto-line lines)
 	  (when (setq entry (dict-read-line))
 	    (dict-insert dict (car entry) (cdr entry))))
-	(message "Inserting word %d of %d...done" lines lines))
+	(message "Inserting words in %s...done" (dic-name dict)))
       
       (kill-buffer buff)))
 )
@@ -887,20 +914,22 @@ that has side-effects."
 
 
 (defun dict-save (dict)
-  "Save dictionary DICT to it's associated file. Use `dict-write' to save to a
-different file."
-  (interactive "SDictionary to save: ")
-  (when (interactive-p) (setq dict (eval dict)))
+  "Save dictionary DICT to it's associated file.
+Use `dict-write' to save to a different file."
+  (interactive (list (read-dict "Dictionary to save: ")))
   
   (let* ((filename (dic-filename dict)))
     
     ;; if dictionary has no associated file, prompt for one
     (unless (and filename (> (length filename) 0))
-      (setq filename (read-file-name (format "No file associated with \
-dictionary %s. Write to file: " (dic-name dict)))))
+      (setq filename
+	    (read-file-name (format "Save %s to file: " (dic-name dict)))))
     
-    ;; save dictionary without requiring confirmation
-    (dict-write dict filename t))
+    ;; if filename is blank, don't save
+    (if (string= filename "")
+	(message "Dictionary %s NOT saved" (dic-name dict))
+      ;; otherwise write dictionary to file without requiring confirmation
+      (dict-write dict filename t)))
 )
 
 
@@ -910,9 +939,13 @@ dictionary %s. Write to file: " (dic-name dict)))))
   "Write dictionary DICT to file FILENAME.
 If optional argument OVERWRITE is non-nil, no confirmation will be asked for
 before overwriting an existing file. If optional argument UNCOMPILED is set,
-an uncompiled copy of the dictionary will be created."
-  (interactive "SDictionary to write: \nFFile to write to: \nP")
-  (when (interactive-p) (setq dict (eval dict)))
+an uncompiled copy of the dictionary will be created.
+
+Interactivley, DICT and FILENAME are read from the minibuffer, and OVERWRITE
+is the prefix argument."
+  (interactive (list (read-dict "Dictionary to write: ")
+		     (read-file-name "File to write to: ")
+		     current-prefix-arg))
 
   (let* (dictname  ; saved dictionary name is constructed from the filename
 	 (autosave (dic-autosave dict))
@@ -935,7 +968,7 @@ an uncompiled copy of the dictionary will be created."
     (save-excursion
       ;; create a temporary file
       (setq buff (find-file-noselect
-		  (setq tmpfile (make-temp-file "dict-save"))))
+		  (setq tmpfile (make-temp-file dictname))))
       (set-buffer buff)
       
       ;; if the dictionary is lookup only, dump the lookup cache to an alist
@@ -946,11 +979,11 @@ an uncompiled copy of the dictionary will be created."
 	    ;; generate code to reconstruct the lookup hash table
 	    (setq hashcode
 		  (concat
-		   "(let ((lookup-hash (make-hash-table :test 'equal)))"
-		   "  (mapcar (lambda (entry)"
-		   "    (puthash (car entry) (cdr entry) lookup-hash))"
-                   "    (dic-lookup-hash " dictname "))"
-		   "  (dic-set-lookup-hash " dictname " lookup-hash)"))
+		   "(let ((lookup-hash (make-hash-table :test 'equal)))\n"
+		   "  (mapcar (lambda (entry)\n"
+		   "    (puthash (car entry) (cdr entry) lookup-hash))\n"
+                   "    (dic-lookup-hash " dictname "))\n"
+		   "  (dic-set-lookup-hash " dictname " lookup-hash)\n"))
 	    ;; generate the structure to save
 	    (setq tmpdict (list 'DICT dictname filename autosave
 				(dic-insfun dict) lookup-only lookup-alist)))
@@ -970,12 +1003,11 @@ an uncompiled copy of the dictionary will be created."
 	  (setq hashcode
 		(concat
 		 hashcode
-		 "(let ((lookup-hash (make-hash-table :test 'equal)))"
-		 "  (mapcar (lambda (entry)"
-		 "    (puthash (car entry) (cdr entry) lookup-hash)"
-	         "    (dic-lookup-hash " dictname ")))"
-		 "  (dic-set-lookup-hash " dictname " lookup-hash))"
-		 "\n")))
+		 "(let ((lookup-hash (make-hash-table :test 'equal)))\n"
+		 "  (mapcar (lambda (entry)\n"
+		 "    (puthash (car entry) (cdr entry) lookup-hash)\n"
+	         "    (dic-lookup-hash " dictname ")))\n"
+		 "  (dic-set-lookup-hash " dictname " lookup-hash))\n")))
 	
 	;; create the completion alist, if necessary
 	(when completion-speed
@@ -985,10 +1017,10 @@ an uncompiled copy of the dictionary will be created."
 	  (setq hashcode
 		(concat
 		 hashcode
-		 "(let ((completion-hash (make-hash-table :test 'equal)))"
-		 "  (mapcar (lambda (entry)"
-		 "    (puthash (car entry) (cdr entry) completion-hash)"
-	         "    (dic-completion-hash " dictname ")))"
+		 "(let ((completion-hash (make-hash-table :test 'equal)))\n"
+		 "  (mapcar (lambda (entry)\n"
+		 "    (puthash (car entry) (cdr entry) completion-hash)\n"
+	         "    (dic-completion-hash " dictname ")))\n"
 		 "  (dic-set-completion-hash " dictname " completion-hash))"
 		 "\n")))
 	
@@ -1000,15 +1032,14 @@ an uncompiled copy of the dictionary will be created."
 	  (setq hashcode
 		(concat
 		 hashcode
-		 "(let ((ordered-hash (make-hash-table :test 'equal)))"
-		 "  (mapcar (lambda (entry)"
-		 "    (puthash (car entry) (cdr entry) ordered-hash))"
-	         "    (dic-ordered-hash " dictname "))"
-		 "  (dic-set-ordered-hash " dictname " ordered-hash))"
-		 "\n")))
+		 "(let ((ordered-hash (make-hash-table :test 'equal)))\n"
+		 "  (mapcar (lambda (entry)\n"
+		 "    (puthash (car entry) (cdr entry) ordered-hash))\n"
+	         "    (dic-ordered-hash " dictname "))\n"
+		 "  (dic-set-ordered-hash " dictname " ordered-hash))\n")))
 	
 	;; generate the structure to save
-	(setq tmpdict (list 'DICT dictname filename autosave nil
+	(setq tmpdict (list 'DICT nil nil autosave nil
 			    (dic-tstree dict) lookup-only
 			    lookup-alist lookup-speed
 			    completion-alist completion-speed
@@ -1020,7 +1051,10 @@ an uncompiled copy of the dictionary will be created."
       (insert "(provide '" dictname ")\n")
       (insert "(require 'dict)\n")
       (insert "(setq " dictname " '" (prin1-to-string tmpdict) ")\n")
-      (insert hashcode)      
+      (insert hashcode)
+      (insert "(dic-set-name " dictname " \"" dictname "\")\n")
+      (insert "(dic-set-filename " dictname
+	      " (locate-library \"" dictname "\"))\n")
       (insert "(push " dictname " dict-loaded-list)\n")
       (save-buffer)
       (kill-buffer buff)
@@ -1041,7 +1075,8 @@ an uncompiled copy of the dictionary will be created."
 		(rename-file (concat tmpfile ".elc") filename t)
 		(dic-set-filename dict filename)
 		(dic-set-modified dict nil)
-		(delete-file tmpfile))
+		(delete-file tmpfile)
+		)
 	      (message "Dictionary %s saved to %s" dictname filename)
 	      t))  ; return t if dictionary was successfully saved
 	;; if there were errors compiling, throw error
@@ -1052,15 +1087,17 @@ an uncompiled copy of the dictionary will be created."
 
 
 
-(defun dict-save-modified (&optional ask)
-  "Save all modified dictionaries. If optional argument ASK is non-nil, ask
-for confirmation before saving."
+(defun dict-save-modified (&optional ask all)
+  "Save all modified dictionaries that have their autosave flag set. If
+optional argument ASK is non-nil, ask for confirmation before
+saving. Interactively, ASK is the prefix argument. If optional argument ALL is
+non-nil, save all dictionaries, even those without the autosave flag."
   (interactive "P")
   ;; For each loaded dictionary, check if dictionary has been modified. If so,
   ;; save it if autosave is on
   (dolist (dict dict-loaded-list)
     (when (and (dic-modified dict)
-	       (dic-autosave dict)
+	       (or all (dic-autosave dict))
 	       (or (not ask) (y-or-n-p (format "Save modified dictionary %s? "
 					       (dic-filename dict)))))
       (dict-save dict)
@@ -1089,7 +1126,7 @@ otherwise."
       (error "Error loading dictionary from %s" file))
     
     ;; ensure the dictionary name and file name associated with the dictionary
-    ;; matche the file it was loaded from
+    ;; match the file it was loaded from
     (dic-set-filename dict (expand-file-name file))
     (dic-set-name dict dictname)
     
@@ -1104,49 +1141,113 @@ otherwise."
 
 (defun dict-unload (dict)
   "Unload dictionary DICT."
-  (interactive "SDictionary to unload: ")
-  (when (interactive-p) (setq dict (eval dict)))
+  (interactive (list (read-dict "Dictionary to unload: ")))
   
   ;; if dictionary has been modified and autosave is set, save it first
   (when (and (dic-modified dict)
 	     (or (eq (dic-autosave dict) t)
-	       (and (eq (dic-autosave dict) 'ask)
-	         (y-or-n-p (format
-			    "Dictionary %s modified. Save before unloading? "
-			    dict)))))
+		 (and (eq (dic-autosave dict) 'ask)
+		      (y-or-n-p
+		       (format
+			"Dictionary %s modified. Save before unloading? "
+			(dic-name dict))))))
     (dict-save dict)
     (dic-set-modified dict nil))
   
   ;; remove dictionary from list of loaded dictionaries and unload it
   (setq dict-loaded-list (delq dict dict-loaded-list))
   (unintern (dic-name dict))
+  (message "Dictionary %s unloaded" (dic-name dict))
+)
+
+
+
+
+(defun dict-dump-words-to-buffer (dict &optional buffer)
+  "Dump words and their associated data from dictionary DICT to BUFFER, in the
+same format as that used by `dict-populate-from-file'. If BUFFER exists, words
+will be appended to the end of it. Otherwise, a new buffer will be created. If
+BUFFER is omitted, the current buffer is used.
+
+Note that if the data does not have a read syntax, the dumped data can not be
+used to recreate the dictionary using `dict-populate-from-file'."
+  (interactive (list (read-dict "Dictionary to dump: ")
+		     (read-buffer "Buffer to dump to: "
+				  (buffer-name (current-buffer)))))
+  
+  ;; select the buffer, creating it if necessary
+  (if buffer
+      (setq buffer (get-buffer-create buffer))
+    (setq buffer (current-buffer)))
+  (set-buffer buffer)
+  
+  ;; move point to end of buffer and make sure it's at start of new line
+  (goto-char (point-max))
+  (unless (= (point) (line-beginning-position))
+    (insert "\n"))
+  
+  ;; dump words
+  (let ((count 0) (dictsize (dict-size dict)))
+    (message "Dumping words from %s to %s...(word 1 of %d)"
+	     (dic-name dict) (buffer-name buffer) dictsize)
+    (tstree-map (lambda (word data)
+		  (when (= 99 (mod count 100))
+		    (message "Dumping words from %s to %s...(word %d of %d)"
+			     (dic-name dict) (buffer-name buffer)
+			     (1+ count) dictsize))
+		  (insert "\"" word "\" " (prin1-to-string data) "\n")
+		  (setq count (1+ count)))
+		(dic-tstree dict) t)
+    (message "Dumping words from %s to %s...done"
+	     (dic-name dict) (buffer-name buffer)))
+  (switch-to-buffer buffer)
 )
 
 
 
 
 (defun dict-dump-words-to-file (dict filename &optional overwrite)
-  "Dump words and word weights from dictionary DICT to a text file FILENAME,
-in the same format as that used by `dict-populate-from-file'."
-  (interactive "SDictionary to dump to file: \nFFile to dump to: \nP")
-  (when (interactive-p) (setq dict (eval dict)))
+  "Dump words and their associated data from dictionary DICT to a text file
+FILENAME, in the same format as that used by `dict-populate-from-file'.
 
-  (let (buff tmpfile)
-    ;; create a temporary file
-    (setq buff (find-file-noselect
-		(setq tmpfile (make-temp-file "dict-dump"))))
-    (set-buffer buff)
-    
-    (tstree-map (lambda (word weight)
-		  (insert "\"" word "\" " (number-to-string weight) "\n"))
-		(dic-tstree dict) t)
-    (save-buffer buff)
-    
-    (when (or (not (file-exists-p filename))
-	      overwrite
-	      (yes-or-no-p
-	       (format "File %s already exists. Overwrite? " filename)))
-      (rename-file tmpfile filename t)))
+Note that if the data does not have a read syntax, the dumped data can not be
+used to recreate the dictionary using `dict-populate-from-file'."
+  (interactive (list (read-dict "Dictionary to dump: ")
+		     (read-file-name "File to dump to: ")
+		     current-prefix-arg))
+
+  (let (buff)
+    ;; create temporary buffer and dump words to it
+    (setq buff (generate-new-buffer filename))
+    (save-window-excursion (dict-dump-words-to-buffer dict buff))
+
+    ;; save file, prompting to overwrite if necessary
+    (if (and (file-exists-p filename)
+	     (not overwrite)
+	     (not (yes-or-no-p
+		   (format "File %s already exists. Overwrite? " filename))))
+	(message "Word dump cancelled")
+      (write-file filename t)))
+)
+
+
+(defvar dict-history nil
+  "History list for commands that read an existing ditionary name.")
+
+
+
+(defun read-dict (prompt &optional default)
+  "Read the name of a dictionary with completion, and return it.
+Prompt with PROMPT. By default, return DEFAULT."
+  (let (dictlist)
+    (mapc (lambda (dict)
+	    (unless (or (null (dic-name dict))
+			(member (dic-name dict) dictlist))
+	      (push (dic-name dict) dictlist)))
+	  dict-loaded-list)
+    (eval (intern-soft
+	   (completing-read prompt dictlist
+			    nil t nil 'dict-history default))))
 )
 
 

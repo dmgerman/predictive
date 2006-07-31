@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: ternary search tree, tstree
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,8 +43,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2.1
+;; * fixed bug in `tstree-map' so it doesn't error on empty trees
+;;
 ;; Version 0.2
-;; * added tstree-map function
+;; * added `tstree-map' function
 ;;
 ;; Version 0.1
 ;; * initial release
@@ -431,34 +434,37 @@ STRING is non-nil, the array will be a real string (this will cause an error
 if the type used to reference the tree can not be converted to a string by the
 `string' function)."
 
-  (let ((stack (stack-create))
-	str node)
-    
-    ;; initialise the stack
-    (stack-push stack (tst-tree-root tree))
-    (if string (stack-push stack "") (stack-push stack []))
-    
-    ;; Keep going until we've traversed all nodes (node stack is empty)
-    (while (not (stack-empty stack))
-      (setq str (stack-pop stack))
-      (setq node (stack-pop stack))
-      ;; add the high child to the stack, if it exists
-      (when (tst-node-high node)
-	(stack-push stack (tst-node-high node))
-	(stack-push stack str))
-      ;; If we're at a data node call FUNCTION, otherwise add the equal
-      ;; child to the stack.
-      (if (null (tst-node-split node))
-	  (funcall function str (tst-node-equal node))
-	(stack-push stack (tst-node-equal node))
-	(stack-push stack
-		    (if (stringp str)
-			(concat str (string (tst-node-split node)))
-		      (vconcat str (vector (tst-node-split node))))))
-      ;; add the low child to the stack, if it exists
-      (when (tst-node-low node)
-	(stack-push stack (tst-node-low node))
-	(stack-push stack str))))
+  ;; only other doing something if tree is not empty
+  (when (tst-tree-root tree)
+    (let ((stack (stack-create))
+	  str node)
+      
+      ;; initialise the stack
+      (stack-push stack (tst-tree-root tree))
+      (if string (stack-push stack "") (stack-push stack []))
+      
+      ;; Keep going until we've traversed all nodes (node stack is empty)
+      (while (not (stack-empty stack))
+	(setq str (stack-pop stack))
+	(setq node (stack-pop stack))
+	;; add the high child to the stack, if it exists
+	(when (tst-node-high node)
+	  (stack-push stack (tst-node-high node))
+	  (stack-push stack str))
+	;; If we're at a data node call FUNCTION, otherwise add the equal
+	;; child to the stack.
+	(if (null (tst-node-split node))
+	    (funcall function str (tst-node-equal node))
+	  (stack-push stack (tst-node-equal node))
+	  (stack-push stack
+		      (if (stringp str)
+			  (concat str (string (tst-node-split node)))
+			(vconcat str (vector (tst-node-split node))))))
+	;; add the low child to the stack, if it exists
+	(when (tst-node-low node)
+	  (stack-push stack (tst-node-low node))
+	  (stack-push stack str))
+	)))
 )
 
 
