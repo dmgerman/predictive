@@ -1,0 +1,38 @@
+#!/bin/sh
+
+DIR="$HOME/programming/predictive/docs"
+WEB="$HOME/www.dr-qubit.org/htdocs/predictive/"
+
+
+# Clean up old versions
+rm -r $DIR/html
+rm $DIR/predictive.pdf
+rm $DIR/predictive.dvi
+rm $DIR/predictive.ps
+rm $DIR/predictive.ps.gz
+rm $DIR/predictive.info
+rm $DIR/predictive.info.gz
+rm $DIR/predictive.txt
+rm $DIR/predictive.txt.gz
+rm $DIR/predictive-html-docs.tar.gz
+
+
+# Make new versions
+texi2pdf -c predictive.texinfo -o predictive.pdf
+makeinfo predictive.texinfo
+gzip predictive.info 
+makeinfo --html predictive.texinfo -o html
+makeinfo --plaintext predictive.texinfo | gzip -c > predictive.txt.gz
+texi2dvi -c predictive.texinfo
+dvips -f predictive.dvi | gzip -c > predictive.ps.gz
+tar -cvzf predictive-html-docs.tar.gz html
+
+
+# Copy to web-site mirror
+cp -r html $WEB
+cp predictive-html-docs.tar.gz $WEB
+cp predictive.pdf $WEB
+cp predictive.info.gz $WEB
+cp predictive.ps.gz $WEB
+cp predictive.txt.gz $WEB
+cp predictive.texinfo $WEB
