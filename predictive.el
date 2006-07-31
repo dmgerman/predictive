@@ -96,8 +96,9 @@ Warning: could drive you mad! Disabled by default to protect your sanity."
 
 
 (defcustom predictive-accept-if-point-moved t
-  "*In predictive mode, determines how to resolve a completion if point has moved away from it.
-If non-nil, the completion is accepted. If nil, it is abandoned instead."
+  "*In predictive mode, determines how to resolve a completion if point has moved
+away from it. If non-nil, the completion is accepted. If nil, it is abandoned
+instead."
   :group 'predictive
   :type 'boolean)
 
@@ -164,9 +165,9 @@ any word.")
 
 
 (defcustom predictive-add-to-dict-ask t
-  "*If non-nil, predictive mode will ask before automatically adding any word to a dictionary.
-Enabled by default. This has no effect unless `predictive-auto-add-to-dict' is
-enabled."
+  "*If non-nil, predictive mode will ask before automatically adding a word
+to a dictionary. Enabled by default. This has no effect unless
+`predictive-auto-add-to-dict' is enabled."
   :group 'predictive
   :type 'boolean)
 
@@ -1287,40 +1288,6 @@ it exists)."
 
 
 
-(defun predictive-setup-latex ()
-  "Sets up predictive mode for use with latex major modes."
-  (interactive)
-  
-  ;; make "\" switch to latex dictionary
-  (require 'dict-latex)
-  (require 'dict-latex-math)
-  (set (make-local-variable 'predictive-dict-alist)
-	(list (cons ?\\ (list 'dict-latex 'dict-latex-math))))
-  
-  ;; make "\" abandon current completion and start a new one
-  (add-to-list 'predictive-override-syntax-alist
-	       (cons ?\\ '(lambda () (interactive)
-			   (predictive-abandon)
-			   (predictive-insert-and-complete))))
-)
-
-
-
-(defun predictive-setup-c ()
-  "Sets up predictive mode for use with c major modes."
-  (interactive)
-  
-  ;; use the c dictionary
-  (require 'dict-c)
-  (set (make-local-variable 'predictive-main-dict) 'dict-c)
-  
-  ;; add words to the buffer dictionary, since new words are probably
-  ;; variable or function names
-  (setq predictive-auto-add-to-dict 'buffer)
-)
-
-
-
 
 
 ;;; ================================================================
@@ -1518,9 +1485,9 @@ it exists)."
 (unless predictive-major-mode-alist
   (setq predictive-major-mode-alist (list
      (cons 'text-mode  'predictive-setup-english)
-     (cons 'latex-mode 'predictive-setup-latex)
-     (cons 'LaTeX-mode 'predictive-setup-latex)
-;;      (cons 'c-mode     'predictive-setup-c))
+;;     (cons 'latex-mode 'predictive-setup-latex)
+;;     (cons 'LaTeX-mode 'predictive-setup-latex)
+;;     (cons 'c-mode     'predictive-setup-c))
      ))
 )
 

@@ -889,10 +889,11 @@ dictionary %s. File to save in: " (dic-name dict)))))
 
 
 
-(defun dict-write (dict filename &optional overwrite)
+(defun dict-write (dict filename &optional overwrite uncompiled)
   "Write dictionary DICT to file FILENAME.
 If optional argument OVERWRITE is non-nil, no confirmation will be asked for
-before overwriting an existing file."
+before overwriting an existing file. If optional argument UNCOMPILED is set,
+an uncompiled copy of the dictionary will be created."
   (interactive "SDictionary to write: \nFFile to write to: \nP")
   (when (interactive-p) (setq dict (eval dict)))
 
@@ -903,11 +904,16 @@ before overwriting an existing file."
 	 tmpdict lookup-alist completion-alist ordered-alist
 	 hashcode buff tmpfile)
     
-    ;; add .elc extension to the filename if not already there
-    (unless (string= (substring filename -4) ".elc")
-      (setq filename (concat filename ".elc")))
-    ;; remove .elc extension from filename to create saved dictionary name
-    (setq dictname (substring (file-name-nondirectory filename) 0 -4))
+    ;; add .el(c) extension to the filename if not already there
+    (if uncompiled
+	(unless (string= (substring filename -3) ".el")
+	  (setq filename (concat filename ".el")))
+      (unless (string= (substring filename -4) ".elc")
+	(setq filename (concat filename ".elc"))))
+    ;; remove .el(c) extension from filename to create saved dictionary name
+    (setq dictname (if uncompiled
+		       (substring (file-name-nondirectory filename) 0 -3)
+		     (substring (file-name-nondirectory filename) 0 -4)))
     
     (save-excursion
       ;; create a temporary file
@@ -1001,21 +1007,26 @@ before overwriting an existing file."
       (insert "(push " dictname " dict-loaded-list)\n")
       (save-buffer)
       (kill-buffer buff)
-      ;; byte-compile the code and move the compiled file to its final
-      ;; destination
-      (if (save-window-excursion (byte-compile-file tmpfile))
+      
+      ;; byte-compile the code (unless uncompiled option is set) and move the
+      ;; file to its final destination
+      (if (or uncompiled (save-window-excursion (byte-compile-file tmpfile)))
 	  (progn
 	    (when (or (not (file-exists-p filename))
 		      overwrite
 		      (yes-or-no-p
 		       (format "File %s already exists. Overwrite? "
 			       filename)))
-	      (rename-file (concat tmpfile ".elc") filename t)
-	      (dic-set-filename dict filename)
-	      (dic-set-modified dict nil)
-	      (delete-file tmpfile)
+	      (if uncompiled
+		  (rename-file tmpfile filename t)
+		;; if writing a compiled version, associate dictionary with
+		;; the new file and mark it as unmodified
+		(rename-file (concat tmpfile ".elc") filename t)
+		(dic-set-filename dict filename)
+		(dic-set-modified dict nil)
+		(delete-file tmpfile))
 	      (message "Dictionary %s saved to %s" dictname filename)
-	      t))
+	      t))  ; return t if dictionary was successfully saved
 	;; if there were errors compiling, throw error
 	(error "Error saving %s. Dictionary not saved" dictname))
       ))
