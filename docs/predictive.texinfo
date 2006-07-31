@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.1.
+0.2.
 @c --version--
 
 Copyright @copyright{} 2005 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.1
+@subtitle Version 0.2
 @c --version--
 @author Toby Cubitt
 
@@ -74,7 +74,7 @@ liking.
 * Dictionaries::                
 * Character Syntax and Key Bindings::  
 * Working with Major Modes::    
-* Bugs and Feature Requests::   
+* Bugs and Future Improvements::   
 * Credits::                     
 * Command Index::               
 * Variable Index::              
@@ -115,7 +115,7 @@ Character Syntax and Key Bindings
 Bugs and Feature Requests
 
 * Known Bugs::                  
-* Feature Requests::            
+* Future Improvements::         
 
 Copying this Manual
 
@@ -210,11 +210,13 @@ sentences preceding it.)
 @cindex installation
 @cindex obtaining
 
-Currently, the predictive completion package can be obtained from
-@uref{http://www.dr-qubit.org/predictive.html}. You will also need the
-Emacs LISP Library, obtainable from @uref{http://jdee.sunsite.dk}.
+The current version of the predictive completion package can be obtained
+from @uref{http://www.dr-qubit.org/predictive.html}. You will need both
+the predictive package and the package containing the default
+dictionaries. You will also need the Emacs LISP Library, obtainable from
+@uref{http://jdee.sunsite.dk}.
 
-To install the package, the files should be extracted to a directory in
+To install the packages, the files should be extracted to a directory in
 the Emacs load-path (@pxref{Lisp Libraries, , , emacs, GNU Emacs
 Manual}). You can view the current load-path using @kbd{C-h v
 load-path}, assuming default keybindings. To make use of the predictive
@@ -665,11 +667,15 @@ dictionaries:
 @ftable @command
 @item predictive-create-dict
 Create a new dictionary. The dictionary name is read from the
-mini-buffer. You can also optionally supply a file containing a list of
-words with which to populate the new dictionary. The optional prefix
-argument supplies a desired completion speed, in tenths of a second
-(defaults to @env{predictive-completion-speed}).
+mini-buffer. You can optionally supply a filename to associate with the
+dictionary. The dictionary will be saved to this file by default (just
+as a buffer is saved to its associated file). You may also supply a file
+containing a list of words with which to populate the new
+dictionary. The @env{predictive-completion-speed} and
+@env{predictive-dict-autosave} variables set the new dictionary's
+completion speed and autosave flag (see below).
 @vindex predictive-completion-speed
+@vindex predictive-dict-autosave
 
 @item predictive-add-to-dict
 Insert a word into a dictionary. The dictionary name and word are read
@@ -700,14 +706,30 @@ and add the words using @command{predictive-add-to-dict}. For small
 dictionaries it won't make much difference, but for larger ones it can
 be significant.
 
-The @env{predictive-completion-speed} variable sets the upper limit on
-the time it takes to find completions. This is the desired speed; there
-is no guarantee it will be achieved! If it takes longer than this to
-find a particular completion, the results are cached so that they can be
-retrieved faster next time. Thus lower values result in faster
-completion, at the expense of dictionaries taking up more memory. Note
-that individual dictionaries can override this value, if a
-completion-speed is specified when they are created.
+@noindent
+The following variables set other dictionary properties:
+
+@vtable @env
+@item predictive-completion-speed
+Sets the completion speed of dictionaries created with
+@command{predictive-create-dict}. This is the desired upper limit on the
+time it takes to find completions; there is no guarantee it will be
+achieved! If it takes longer than this to find a particular completion,
+the results are cached so that they can be retrieved faster next
+time. Thus lower values result in faster completion, at the expense of
+dictionaries taking up more memory. Note that individual dictionaries
+can override this value, if a completion-speed is specified when they
+are created.
+
+@item predictive-dict-autosave
+Sets the autosave property for dictionaries created with
+@command{predictive-create-dict}. If non-nil, modified dictionaries will
+automatically be saved when it is unloaded (either with the
+@command{predictive-dict-unload} command, or when exiting emacs). If
+nil, any unsaved modifications will be lost.
+@xref{Loading and Saving Dictionaries}.
+@cindex predictive-dict-unload
+@end vtable
 
 
 
@@ -722,9 +744,23 @@ completion-speed is specified when they are created.
 Load a dictionary from file. The name given to the loaded dictionary is
 the same as the file name, with the extension removed.
 
+@item dict-unload
+Unload a dictionary. If the dictionary's autosave flag is set, this will
+also save it (@pxref{Creating Dictionaries}).
+
 @item dict-save
 Save a dictionary to its associated file. Prompt for a file name if
 there is none associated with the dictionary.
+
+@item dict-write
+Write a dictionary to a file specified via the mini-buffer. This also
+associates the dictionary with that file. If a prefix argument is
+supplied, you will @emph{not} be asked to confirm if over-writing an
+existing file.
+
+@item dict-save-modified
+Save all modified dictionaries. If a prefix argument is supplied,
+confirm each dictionary before saving.
 @end ftable
 
 To use a dictionary, it must be loaded into memory. This can be done
@@ -744,14 +780,16 @@ automatically. @xref{Working with Major Modes}.
 A buffer is usually associated with a file, and saving the buffer with
 the Emacs @command{save-buffer} command writes any changes back to that
 file. Similarly, dictionaries are usually associated with a dictionary
-file. The @command{dict-save} command saves any chages back to that
-file.
+file. The @command{dict-save} command saves any changes back to that
+file. The @command{dict-write} command is analogous to the Emacs
+@command{write-file} command.
 
-Currently, there is no @command{dict-write} command (analogous to the
-Emacs @command{write-file} command) for writing a dictionary to a
-different file. Also, you will not be prompted to save modified
-dictionaries, so all changes will be lost unless you explcitly save.
-@xref{Known Bugs}.
+Dictionaries can be modified by adding words to them with the
+@command{predictive-add-to-dict} command (@pxref{Creating
+Dictionaries}). If the auto-learn features are used, dictionaries are
+modified whenever a completion is accepted (@pxref{Automatic
+Learning}). The @command{dict-save-modified} saves all modified
+dictionaries.
 
 
 
@@ -1169,7 +1207,7 @@ provide examples to base your own setup functions on:
 
 @ftable @command
 @item predictive-setup-english
-Sets up predictive mode for typing normal english
+Sets up predictive mode for typing normal English
 text. @env{predictive-main-dict} is set to an English dictionary
 @code{dict-english}, and the @samp{-} and @samp{&} characters are set to
 behave like word-constituents.
@@ -1193,9 +1231,9 @@ buffer dictionary.
 
 
 
-@node Bugs and Feature Requests
+@node Bugs and Future Improvements
 @chapter Bugs and Feature Requests
-@cindex bugs and feature requests
+@cindex bugs and future improvements
 @cindex reporting bugs
 @cindex bugs, reporting
 @cindex feature requests
@@ -1213,7 +1251,7 @@ version is not already listed).
 
 @menu
 * Known Bugs::                  
-* Feature Requests::            
+* Future Improvements::         
 @end menu
 
 
@@ -1228,31 +1266,19 @@ Known bugs (in no particular order):
 
 @enumerate
 @item
-The escape character @samp{\} is not removed from words which use
-@samp{\"} to escape the quote character when populating a dictionary
-from a file.
-
-@item
 The @command{predictive-learn-from-buffer} and
 @command{predictive-learn-from-file} commands do not exist.
-
-@item
-The @command{predictive-remove-from-dict} command does not exist.
-
-@item
-The @command{dict-write} command does not exist, nor do options for
-automatically saving or prompting to save modified dictionaries.
 @end enumerate
 
 
 
-@node Feature Requests
-@section Feature Requests
+@node Future Improvements
+@section Future Improvements
 @cindex feature requests
 @cindex future improvements
 
 @noindent
-Feature Requests (in no particular order):
+Possible future improvements (in no particular order):
 
 @enumerate
 @item
@@ -1262,6 +1288,9 @@ well just wait until asked, instead of wasting processor cycles.
 
 @item
 More setup functions.
+
+@item
+More dictionaries.
 
 @item
 @env{predictive-dict-alist} only allows you to switch dictionaries on

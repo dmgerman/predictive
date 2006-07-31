@@ -1,30 +1,52 @@
 
-;;; Copyright (C) 2004 Toby Cubitt
-;;;
-;;; This file is part of the Emacs Predictive Completion package.
-;;;
-;;; The Emacs Predicive Completion package is free software; you can
-;;; redistribute it and/or modify it under the terms of the GNU
-;;; General Public License as published by the Free Software
-;;; Foundation; either version 2 of the License, or (at your option)
-;;; any later version.
-;;;
-;;; The Emacs Predicive Completion package is distributed in the hope
-;;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;;; PURPOSE.  See the GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with the Emacs Predicive Completion package; if not, write
-;;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;;; Boston, MA 02111-1307 USA
-
-
 ;;; predictive.el --- predictive completion minor mode for Emacs
+
+;; Copyright (C) 2004 Toby Cubitt
+
+;; Author: Toby Cubitt
+;; Version: 0.2
+;; Keywords: predictive, completion
+
+;; This file is part of the Emacs Predictive Completion package.
+;;
+;; The Emacs Predicive Completion package is free software; you can
+;; redistribute it and/or modify it under the terms of the GNU
+;; General Public License as published by the Free Software
+;; Foundation; either version 2 of the License, or (at your option)
+;; any later version.
+;;
+;; The Emacs Predicive Completion package is distributed in the hope
+;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
+;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with the Emacs Predicive Completion package; if not, write
+;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+;; Boston, MA 02111-1307 USA
+
+
+;;; Change Log:
+;;
+;; version 0.2: added options for dictionary autosaving;
+;;              other changes required for version 0.2 of dict.el package;
+;;              fixed bugs in auto-learn feature;
+;;              explicitly require cl.el
+;;
+;; version 0.1: initial release
+
+
+
+;;; Code:
 
 (provide 'predictive)
 (require 'dict)
-(require'easy-mmode)
+(require 'easy-mmode)
+
+;; the only required common-lisp function is `position', so this dependency
+;; should really be removed
+(require 'cl)
+
 
 
 
@@ -37,24 +59,24 @@
 
 
 (defcustom predictive-dynamic-completion t
-  "*Controls the dynamic completion facility. When non-nil, the most likely
-ompletion is provisionally inserted after every character is typed. It can be
-accepted using `predictive-accept-completion' or
+  "*In predictive mode, enables the dynamic completion facility.
+When non-nil, the most likely ompletion is provisionally inserted after every
+character is typed. It can be accepted using `predictive-accept-completion' or
 `predictive-accept-and-insert'."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-offer-completions t
-  "*Controls the offer-completions facility. When non-nil, predictive mode
-offers a list of possible completions which can be inserted by typing the
-appropriate number"
+  "*In predictive mode, enables the offer-completions facility.
+When non-nil, predictive mode offers a list of possible completions which can
+be inserted by typing the appropriate number"
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-accept-on-select t
-  "*Controls the behaviour produced by selecting a completion from the list
+  "*In predictive mode, controls the behaviour produced by selecting a completion from the list
 offered when `predictive-offer-completions' is enabled. When non-nil, the
 selected completion is inserted and accepted. When nil, the selected
 completion is inserted, and resulting string is completed anew."
@@ -63,9 +85,9 @@ completion is inserted, and resulting string is completed anew."
 
 
 (defcustom predictive-always-complete nil
-  "*Tries to complete words even when nothing has been typed yet! This has the
-effect of making the most likely words in whole the dictionary available. How
-to insert these words depends on the settings of
+  "*In predictive mode, try to complete words when nothing has been typed yet!
+This has the effect of making the most likely words in whole the dictionary
+available. How to insert these words depends on the settings of
 `predictive-dynamic-completion' and `predictive-offer-completions'.
 
 Warning: could drive you mad! Disabled by default to protect your sanity."
@@ -74,9 +96,8 @@ Warning: could drive you mad! Disabled by default to protect your sanity."
 
 
 (defcustom predictive-accept-if-point-moved t
-  "*Determines how to resolve a completion in predictive mode if the point has
-moved away from it. If non-nil, the completion is accepted. If nil, it is
-abandoned instead."
+  "*In predictive mode, determines how to resolve a completion if point has moved away from it.
+If non-nil, the completion is accepted. If nil, it is abandoned instead."
   :group 'predictive
   :type 'boolean)
 
@@ -88,17 +109,27 @@ abandoned instead."
 
 
 (defcustom predictive-completion-speed 0.1
-  "*Default upper limit on the time it takes to find completions, in
-seconds. Note: this is the desired speed; there is no guarantee it will
-be achieved! Lower values result in faster completion, at the expense of
-dictionaries taking up more memory. Individual dictionaries might override
-this value."
+  "*In predictive mode, sets the default completion speed for new dictionaries.
+The completion speed is a desired upper limit on the time it takes to find
+completions, in seconds. However, there is no guarantee it will be achieved!
+Lower values result in faster completion, at the expense of dictionaries
+taking up more memory."
   :group 'predictive
   :type 'number)
 
 
+(defcustom predictive-dict-autosave t
+  "*In predictive mode, sets the default autosave flag for new dictionaries.
+A value of t means modified dictionaries will be saved automatically when
+unloaded. The symbol 'ask' means you will be prompted to save modified
+dictionaries. A value of nil means dictionaries will not be saved
+automatically, and unless you save the dictionary manually all changes will be lost when the dictionary is unloaded. See also `dict-save'."
+  :group 'predictive
+  :type 'boolean)
+
+
 (defcustom predictive-ignore-initial-caps t
-  "*Controls whether predictive mode should ignore initial capital letters
+  "*In predictive mode, controls whether to initial capital letters
 when searching for completions. If non-nil, completions for the uncapitalized
 string are also found.
 
@@ -110,8 +141,8 @@ only find \"ANSI\", whilst typing \"a\" would only find \"and\"."
 
 
 (defcustom predictive-auto-learn nil
-  "*Controls automatic word frequency learning in predictive mode. When
-non-nil, the frequency count for that word is incremented each time a
+  "*In predictive mode, controls automatic word frequency learning.
+When non-nil, the frequency count for that word is incremented each time a
 completion is accepted, making the word more likely to be offered higher up
 the list of completions in the future."
   :group 'predictive
@@ -119,8 +150,7 @@ the list of completions in the future."
 
 
 (defvar predictive-auto-add-to-dict nil
-  "Controls automatic adding of new words to dictionaries in predictive mode.
-
+  "*In predictive mode, controls automatic adding of new words to dictionaries.
 If nil, words are never automatically added to a dictionary. If t, new words
 \(i.e. words that are not in the dictionary\) are automatically added to the
 active dictionary.
@@ -134,9 +164,9 @@ any word.")
 
 
 (defcustom predictive-add-to-dict-ask t
-  "If non-nil, predictive mode will ask before automatically adding any word
-to a dictionary. Enabled by default. This has no effect unless
-`predictive-auto-add-to-dict' is set."
+  "*If non-nil, predictive mode will ask before automatically adding any word to a dictionary.
+Enabled by default. This has no effect unless `predictive-auto-add-to-dict' is
+enabled."
   :group 'predictive
   :type 'boolean)
 
@@ -147,10 +177,10 @@ to a dictionary. Enabled by default. This has no effect unless
 ;; this file
 
 (defvar predictive-main-dict nil
-  "Main dictionary to use in a predictive mode buffer. It should be
-the symbol of a loaded dictionary. It can also be a list of such
-symbols, in which case predictive mode searches for completions in all
-of them, as though they were one large dictionary.
+  "Main dictionary to use in a predictive mode buffer.
+It should be the symbol of a loaded dictionary. It can also be a list of such
+symbols, in which case predictive mode searches for completions in all of
+them, as though they were one large dictionary.
 
 Note that using lists of dictionaries can lead to unexpected effets when
 auto-learn or auto-add-to-dict are used. If auto-learn is enabled, weights
@@ -173,9 +203,9 @@ dictionaries.")
 
 
 (defvar predictive-syntax-alist nil
-  "Alist associating character syntax descriptors with completion
-functions. Used by `predictive-self-insert' to decide what to do based on a
-typed character's syntax.
+  "Alist associating character syntax descriptors with completion functions.
+Used by the predictive mode `predictive-self-insert' function to decide what
+to do based on a typed character's syntax.
 
 By default, all printable characters are bound to `predictive-self-insert' in
 predictive mode. Therefore, unless you know what you are doing, it is a wise
@@ -185,21 +215,21 @@ do this have \"insert\" in their names.")
 
 
 (defvar predictive-override-syntax-alist nil
-  "Alist associating characters with completion functions. Overrides the
-default function based on a typed character's syntax. Used by
+  "Alist associating characters with completion functions in predictive mode.
+Overrides the default function based on a typed character's syntax. Used by
 `predictive-self-insert'.")
 
 
 (defvar predictive-dict-alist nil
-  "Alist associating a character and a dictionary to switch to in predictive
-mode.")
+  "Alist associating a character and a dictionary to switch to in predictive mode.")
 
 
 (defvar predictive-major-mode-alist nil
-  "Alist associating a major mode symbol with a function. The alist is checked
-whenever predictive mode is turned on in a buffer, and if the buffer's major
-made matches one in the alist, the associated function is called. This makes
-it easier to customize predictive mode for different major modes.")
+  "Alist associating a major mode symbol with a function in predictive mode.
+The alist is checked whenever predictive mode is turned on in a buffer, and if
+the buffer's major made matches one in the alist, the associated function is
+called. This makes it easier to customize predictive mode for different major
+modes.")
 
 
 (defvar predictive-map nil
@@ -207,18 +237,18 @@ it easier to customize predictive mode for different major modes.")
 
 
 (defvar predictive-completing-map nil
-  "Keymap used when in the process of completing a word.")
+  "Keymap used when in the process of completing a word in predictive mode.")
 
 
 (defvar predictive-offer-completions-keylist nil
-  "List of characters to use for selecting completions from the list offered
+  "List of characters to use for selecting completions from the list offered in predictive mode
 when `predictive-offer-completions' is enabled. Default is numerical
 characters 0 to 9.")
 
 
 (defvar predictive-offer-completions-map nil
-  "Keymap used when there are completions on offer in predictive mode (only
-used if `predictive-offer-completions' is enabled). Constructed from
+  "Keymap used when there are completions on offer in predictive mode
+\(only used if `predictive-offer-completions' is enabled). Constructed from
 `predictive-offer-completions-keylist'.
 
 Setting this directly will have no effect. Instead, set
@@ -240,8 +270,8 @@ Setting this directly will have no effect. Instead, set
 
 
 (defun predictive-complete-word-at-point ()
-  "Complete the word at or next to the point. How to select the resulting
-completions depends on the settings of variables
+  "In predictive mode, complete the word at or next to the point.
+How to select the resulting completions depends on the settings of variables
 `predictive-dynamic-completion' and `predictive-offer-completions'."
   (interactive)
   
@@ -263,19 +293,18 @@ completions depends on the settings of variables
        (set-text-properties 0 (length predictive-typed-string) nil
 			    predictive-typed-string)
        (move-overlay predictive-overlay (point) (point))
-       (predictive-complete predictive-typed-string)
-     )
-   )
-  )
+       (predictive-complete predictive-typed-string))
+     ))
 )
-  
+
 
 
 
 (defun predictive-self-insert ()
-  "Decide what completion function to execute by looking up the character's
-syntax in `predictive-syntax-alist'. The syntax-derived function can be
-overridden for individual characters by
+  "Execute a predictive mode function based on syntax.
+Decide what predictive mode completion function to execute by looking up the
+character's syntax in `predictive-syntax-alist'. The syntax-derived function
+can be overridden for individual characters by
 `predictive-override-syntax-alist'.
 
 The default functions in `predictive-syntax-alist' all insert the last input
@@ -290,10 +319,8 @@ is best to only bind `predictive-self-insert' to printable characters."
     (if override
 	(if (functionp (cdr override))
 	    (funcall (cdr override))
-	  (beep)
 	  (error "Wrong type argument: functionp, %s"
-		 (prin1-to-string (cdr override)))
-	)
+		 (prin1-to-string (cdr override))))
       
       ;; if syntax isn't overridden, decide what to do based on typed
       ;; character's syntax
@@ -303,22 +330,17 @@ is best to only bind `predictive-self-insert' to printable characters."
 	(unless syntax (setq syntax (assq t predictive-syntax-alist)))
 	(if (functionp (cdr syntax))
 	    (funcall (cdr syntax))
-	  (beep)
 	  (error "Wrong type argument: functionp, %s"
-		 (prin1-to-string (cdr syntax)))
-	)
-      )
-    )
-  )
+		 (prin1-to-string (cdr syntax)))))))
 )
 
 
 
 
 (defun predictive-insert-and-complete ()
-  "Insert the last input event, which should be a printable character, and
-complete the resulting string. This function is intended to be bound to
-printable characters in a keymap."
+  "Insert the last input event and complete the resulting string.
+The last input event should be a printable character. This function is
+intended to be bound to printable characters in a keymap."
   (interactive)
 
   ;; resolve any old completion that's hanging around
@@ -339,23 +361,21 @@ printable characters in a keymap."
        (setq predictive-current-dict
 	     (if (listp dict)
 		 (append (mapcar 'eval dict) (list predictive-buffer-dict) ())
-	       (list (eval dict) predictive-buffer-dict))))
-   )
+	       (list (eval dict) predictive-buffer-dict)))))
    ;; try to complete the new string
-   (predictive-complete predictive-typed-string)
-  )
+   (predictive-complete predictive-typed-string))
 )
 
 
 
 
 (defun predictive-backward-delete (&optional n)
-  "Remove N characters from the string currently being completed, and
-complete the resulting shorter string. If N is larger than or equal to
-the length of the string being completed, delete the entire string and
-abandon the completion. If no completion is in progress, just delete
-the previous N characters. Interactively, N is the prefix argument
-\(default 1\)."
+  "In predictive mode, delete backwards N characters.
+Remove N characters from the string currently being completed, and complete
+the resulting shorter string. If N is larger than or equal to the length of
+the string being completed, delete the entire string and abandon the
+completion. If no completion is in progress, just delete the previous N
+characters. Interactively, N is the prefix argument \(default 1\)."
   (interactive "p")
   
   ;; resolve any old completion that's still hanging around
@@ -382,19 +402,17 @@ the previous N characters. Interactively, N is the prefix argument
 	 (setq predictive-typed-string
 	       (substring predictive-typed-string 0 (- n)))
 	 (move-overlay predictive-overlay (point) (point))
-	 (predictive-complete predictive-typed-string))
-     )
-   )
-  )
+	 (predictive-complete predictive-typed-string)))
+     ))
 )
 
 
 
 
 (defun predictive-backward-delete-and-complete (&optional n)
-  "Delete backwards N characters \(default 1\), and complete whatever string
-is then in front of the point, if any. Interactively, N is the prefix
-argument."
+  "In predictive mode, delete backwards N characters \(default 1\),
+and complete whatever string is then in front of the point, if
+any. Interactively, N is the prefix argument."
   (interactive "p")
   
   ;; resolve any old completion that's hanging around
@@ -442,27 +460,23 @@ argument."
 	     (set-text-properties 0 (length predictive-typed-string) nil
 				  predictive-typed-string)
 	     (goto-char mark)
-	     (predictive-complete predictive-typed-string)
-	   )
+	     (predictive-complete predictive-typed-string))
 	 
 	 ;; if after deleting there won't be a string immediately before point,
 	 ;; just delete and reset the completion state
 	 (backward-delete-char-untabify 1)
-	 (predictive-reset-state)
-       )
-     )
-    )
-   )
-  )
+	 (predictive-reset-state)))
+      )))
 )
 
 
 
 
 (defun predictive-accept-and-insert ()
-  "Accept the current completion, and insert the last input invent,
-which should be a single printable character. This function is
-intended to be bound to printable characters in a keymap."
+  "In predictive mode, accept the current completion,
+and insert the last input invent, which should be a single printable
+character. This function is intended to be bound to printable characters
+in a keymap."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -479,16 +493,14 @@ intended to be bound to printable characters in a keymap."
        (setq predictive-current-dict
 	     (if (listp dict)
 		 (append (mapcar 'eval dict) (list predictive-buffer-dict) ())
-	       (list (eval dict) predictive-buffer-dict))))
-   )
-  )
+	       (list (eval dict) predictive-buffer-dict))))))
 )
 
 
 
 
 (defun predictive-accept ()
-  "Accept the current completion."
+  "In predictive mode, accept the current completion."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -524,45 +536,45 @@ intended to be bound to printable characters in a keymap."
 		;; anything else specifies an explicit dictionary to add to
 		(predictive-auto-add-to-dict
 		 (predictive-add-to-dict
-		  predictive-auto-add-to-dict predictive-typed-string)))
-	     )
+		  predictive-auto-add-to-dict predictive-typed-string))))
 	 
 	 
 	 ;; if the completion was in the dictionary and auto-learn is set...
 	 (when predictive-auto-learn
-	   ;; search for the first dictionary containing the completion
-	   (let ((dict predictive-current-dict)
-		 (i 0))
+	   (let ((dict predictive-current-dict) (i 0)
+		 (word (concat predictive-typed-string
+			       (car (aref predictive-completions
+					  predictive-completion-num)))))
+	     ;; when ignoring initial capitalization, convert to lower case
+	     (when (and predictive-ignore-initial-caps
+			(predictive-capitalized-p word))
+	       (setq word (downcase word)))
+	     ;; search for the first dictionary containing the completion
 	     (when (listp predictive-current-dict)
 	       (while (and (not (dict-member-p
 				 (nth i predictive-current-dict)
-				 predictive-typed-string))
+				 word))
 			   (< i (length predictive-current-dict)))
 		 (setq i (1+ i)))
 	       (setq dict (nth i predictive-current-dict)))
 	     ;; increment the weight in that dictionary
-	     (predictive-add-to-dict predictive-current-dict
-		(concat predictive-typed-string
-			(car (aref predictive-completions
-				   predictive-completion-num)))))
-	 )
+	     (predictive-add-to-dict dict word)
+	   ))
 	 
 	 ;; move point to the end of the completion
 	 (goto-char (overlay-end predictive-overlay))
-       )
-   )
+       ))
    
    ;; reset completion state
-   (predictive-reset-state)
-  )
+   (predictive-reset-state))
 )
 
 
 
 
 (defun predictive-abandon-and-insert ()
-  "Abandon the current completion, and insert the last input invent,
-which should be a single printable character. This function is
+  "In predictive mode, abandon the current completion, and insert the last
+input event, which should be a single printable character. This function is
 intended to be bound to printable characters in a keymap."
   (interactive)
   
@@ -578,15 +590,14 @@ intended to be bound to printable characters in a keymap."
       (setq predictive-current-dict
 	    (if (listp dict)
 		(append (mapcar 'eval dict) (list predictive-buffer-dict) ())
-	      (list (eval dict) predictive-buffer-dict))))
-  )
+	      (list (eval dict) predictive-buffer-dict)))))
 )
 
 
 
 
 (defun predictive-abandon ()
-  "Abandon the current completion."
+  "In predictive mode, abandon the current completion."
   (interactive)
   
   ;; resolve any old completion that's hanging around
@@ -601,7 +612,7 @@ intended to be bound to printable characters in a keymap."
 
 
 (defun predictive-cycle ()
-  "Cycle through available completions."
+  "In predictive mode, cycle through available completions."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -643,22 +654,20 @@ intended to be bound to printable characters in a keymap."
 			  (format "(%s) %s%s  "
 				  (nth i predictive-offer-completions-keylist)
 				  predictive-typed-string
-				  (car (aref predictive-completions i)))))
-	   )
+				  (car (aref predictive-completions i))))))
 	   (message msg)))
        (setq predictive-completions-on-offer t)
-     )
-   )
-  )
+       )))
 )
 
 
 
 
 (defun predictive-select-completion ()
-  "Select a completion to insert from the list of possible
-completions. Intended to be bound in `predictive-offer-completions-map'
-keymap, for use when `predictive-offer-completions' is enabled."
+  "In predictive mode, select a completion to insert from the list
+of possible completions. Intended to be bound in
+`predictive-offer-completions-map' keymap, for use when
+`predictive-offer-completions' is enabled."
   (interactive)
   
   ;; look up typed character to find associated completion number
@@ -669,7 +678,6 @@ keymap, for use when `predictive-offer-completions' is enabled."
      ;; if character was not found, key bindings are messed up
      ((null n)
       (setq predictive-completions-on-offer nil)
-      (beep)
       (error "Key bindings are inconsistent with\
  `predictive-offer-completions-keylist'"))
      
@@ -700,8 +708,7 @@ keymap, for use when `predictive-offer-completions' is enabled."
 		      (format "(%s) %s%s  "
 			      (nth i predictive-offer-completions-keylist)
 			      predictive-typed-string
-			      (car (aref predictive-completions i)))))
-	)
+			      (car (aref predictive-completions i))))))
 	(sit-for 2)
 	(message msg)))
      
@@ -721,15 +728,15 @@ keymap, for use when `predictive-offer-completions' is enabled."
       ;; otherwise scoot-ahead
       (if predictive-accept-on-select (predictive-accept)
 	(predictive-scoot-ahead))))
-  )
+    )
 )
 
 
 
 
 (defun predictive-scoot-ahead ()
-  "Insert the current completion, and look for completions of the resulting
-string."
+  "In predictive mode, insert the current completion,
+and look for completions of the resulting string."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -746,17 +753,17 @@ string."
        (concat predictive-typed-string
 	   (car (aref predictive-completions predictive-completion-num))))
     ;; re-complete on new string
-    (predictive-complete predictive-typed-string)
-  )
+    (predictive-complete predictive-typed-string))
 )
 
 
 
 
 (defun predictive-scoot-and-insert ()
-  "Insert the current completion, insert the last input event, which should be
-a printable character, and look for completions of the resulting
-string. Intended to be bound to printable characters in a keymap."
+  "In predictive mode, insert the current completion,
+insert the last input event, which should be a printable character, and look
+for completions of the resulting string. Intended to be bound to printable
+characters in a keymap."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -769,8 +776,7 @@ string. Intended to be bound to printable characters in a keymap."
     ;; completion becomes part of typed string
     (setq predictive-typed-string
        (concat predictive-typed-string
-	   (car (aref predictive-completions predictive-completion-num))))
-  )
+	   (car (aref predictive-completions predictive-completion-num)))))
   
   ;; insert the typed character and re-complete
   (predictive-insert-and-complete)
@@ -780,9 +786,10 @@ string. Intended to be bound to printable characters in a keymap."
 
 
 (defun predictive-scoot-or-accept ()
-  "If point is not already at the end of the current completion, insert the
-current completion and look for completions of the resulting string. If point
-is already at the end, accept the completion."
+  "In predictive mode, insert the current completion
+if point is not already at the end of the current completion, and look for
+completions of the resulting string. If point is already at the end, accept
+the completion."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -799,11 +806,11 @@ is already at the end, accept the completion."
 
 
 (defun predictive-scoot-or-accept-and-insert ()
-  "If point is not already at the end of the current completion, insert the
-current completion and look for completions of the resulting string. If point
-is already at the end, accept the completion and insert the last input event,
-which should be a printable character. Intended to be bound to printable
-characters in a keymap."
+  "In predictive mode, insert the current completion
+if point is not already at the end of the current completion, and look for
+completions of the resulting string. If point is already at the end, accept
+the completion and insert the last input event, which should be a printable
+character. Intended to be bound to printable characters in a keymap."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -819,9 +826,10 @@ characters in a keymap."
 
 
 (defun predictive-scoot-or-cycle ()
-  "If point is not at the end of the current completion, insert the current
-completion and look for completions of the resulting string. If point is
-already at the end, cycle the current completion."
+  "In predictive mode, insert the current completion
+if point is not at the end of the current completion, and look for completions
+of the resulting string. If point is already at the end, cycle the current
+completion."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -837,7 +845,7 @@ already at the end, cycle the current completion."
 
 
 (defun predictive-jump-to-current-completion ()
-  "Jump to the current completion."
+  "In predictive mode, jump to the current completion."
   (interactive)
   (if predictive-typed-string
       (goto-char (overlay-start predictive-overlay))
@@ -847,8 +855,8 @@ already at the end, cycle the current completion."
 
 
 (defun predictive-jump-to-old-completion ()
-  "Jump to the last completion that was automatically accepted or abandoned
-because the had point moved."
+  "In predictive mode, jump to the last completion
+that was automatically accepted or abandoned because the had point moved."
   (interactive)
   (if predictive-old-completion-marker
       (goto-char predictive-old-completion-marker)
@@ -878,7 +886,8 @@ because the had point moved."
        ;; if `predictive-ignore-initial-caps' is enabled and first character of
        ;; string is capitalized, also search for completions for uncapitalized
        ;; version
-       (when (and predictive-ignore-initial-caps (capitalized-p str))
+       (when (and predictive-ignore-initial-caps
+		  (predictive-capitalized-p str))
 	 (setq str (list str (downcase str))))
        
        ;; try to complete string, and store the ordered vector of completions
@@ -919,19 +928,16 @@ because the had point moved."
 			    (format "(%s) %s%s  "
 			       (nth i predictive-offer-completions-keylist)
 			       predictive-typed-string
-			       (car (aref predictive-completions i)))))
-	     )
+			       (car (aref predictive-completions i))))))
 	     (message msg)))
 	 (setq predictive-completions-on-offer t))
-     )
-   )
-  )
+       )))
 )
 
 
 
 
-(defmacro capitalized-p (string)
+(defmacro predictive-capitalized-p (string)
   ;; Return t if string is capitalized (only first letter upper case), nil
   ;; otherwise.
   `(and (> (length ,string) 0)
@@ -968,8 +974,7 @@ because the had point moved."
 	  (predictive-reset-state)
 	  (message (substitute-command-keys
 		    "Previous completion accepted because point has\
- moved. Use \"\\[predictive-jump-to-old-completion]\" to return to it."))
-	)
+ moved. Use \"\\[predictive-jump-to-old-completion]\" to return to it.")))
       
       ;; if point has moved elsewhere, a completion was inserted, and
       ;; `predictive-accept-if-point-moved' is NOT set, abandon the old
@@ -980,10 +985,9 @@ because the had point moved."
       (predictive-reset-state)
       (message (substitute-command-keys
 		"Previous completion abandoned because point has moved. Use\
- \"\\[predictive-jump-to-old-completion]\" to return to it."))
-    )    
-    t  ; return t to indicate an old completion was resolved
-  )
+ \"\\[predictive-jump-to-old-completion]\" to return to it.")))
+    
+    t)  ; return t to indicate an old completion was resolved
 )
 
 
@@ -1011,12 +1015,9 @@ because the had point moved."
  moved. Use \"\\[predictive-jump-to-old-completion]\" to return to it."))
 	 (message (substitute-command-keys
 		   "Previous completion abandoned because point has\
- moved. Use \"\\[predictive-jump-to-old-completion]\" to return to it."))
-       )
+ moved. Use \"\\[predictive-jump-to-old-completion]\" to return to it.")))
        (sit-for 2)
-       (message msg)
-     )
-   )
+       (message msg)))
 )
 
 
@@ -1098,43 +1099,51 @@ because the had point moved."
 ;;;       Public functions for predictive mode dictionaries
 
 (defun predictive-add-to-dict (dict word &optional weight)
-  "Insert WORD into dictionary DICT. Optional argument WEIGHT sets the
-weight. If the word is not in the dictionary, it will be added to the
-dictionary with initial weight WEIGHT \(or 0 if none is supplied\). If the
-word is already in the dictionary, its weight will be incremented by WEIGHT
-\(or by 1 if WEIGHT is not supplied\).
+  "Insert WORD into predictive mode dictionary DICT.
+Optional argument WEIGHT sets the weight. If the word is not in the
+dictionary, it will be added to the dictionary with initial weight WEIGHT \(or
+0 if none is supplied\). If the word is already in the dictionary, its weight
+will be incremented by WEIGHT \(or by 1 if WEIGHT is not supplied).
 
 Interactively, WORD and DICT are read from the minibuffer, and WEIGHT is
 specified by the prefix argument."
-
   (interactive "SDictionary to add to: \nsWord to add \(can include\
  spaces and other punctuation characters\): \nP")
+  
   (dict-insert dict word weight)
 )
 
 
 
 
-(defun predictive-create-dict (dict &optional file speed)
-  "Create a new dictionary called DICT. If FILE is not specified, create an
-empty dictionary. If FILE is specified, populate the dictionary from that file
-\(see `dict-populate-from-file'\).
+(defun predictive-create-dict (dict &optional file populate autosave speed)
+  "Create a new predictive mode dictionary called DICT.
+If POPULATE is not specified, create an empty dictionary. If POPULATE is
+specified, populate the dictionary from that file \(see
+`dict-populate-from-file').
+
+The optional argument FILE specifies a file to associate with the
+dictionary. The dictionary will be saved to this file by default \(similar to
+the way a file is associated with a buffer).
+
+If the optional argument AUTOSAVE is t, the dictionary will automatically be
+saved when it is unloaded. If nil, all unsaved changes are lost when it is
+unloaded. Defaults to `predictive-dict-autosave'.
 
 The optional argument SPEED sets the desired speed with which string should be
 completed using the dictionary, in seconds. It defaults to
 `predictive-completion-speed'.
 
-Interactively, DICT and FILE are read from the minibuffer, and the prefix
-arguments specifies SPEED in tenths of a second."
+Interactively, DICT and FILE are read from the minibuffer. SPEED and AUTOSAVE
+use the defaults provided by `predictive-completion-speed' and
+`predictive-dict-autosave' respectively."
   
-  (interactive "SDictionary name: \nfFile to populate from \(leave blank to\
- create an empty dictionary\): \nP")
+  (interactive "SDictionary name: \nFAssociated filename \(optional): \n\
+fFile to populate from \(leave blank to create an empty dictionary\): ")
+  (unless (file-regular-p populate) (setq populate nil))
   
-  (let ((complete-speed
-	 (if speed
-	     (if (interactive-p) (/ speed 10.) speed)
-	   predictive-completion-speed))
-	
+  (let ((complete-speed (if speed speed predictive-completion-speed))
+	(autosave (if autosave autosave predictive-dict-autosave))
 	;; the insertion function inserts a weight if none already exists,
 	;; otherwise it adds the new weight to the existing one, or if supplied
 	;; weight is nil, incremenets existing weight
@@ -1154,24 +1163,23 @@ arguments specifies SPEED in tenths of a second."
 		      (> (cdr a) (cdr b))))))
     
     ;; create the new dictionary
-    (set dict (dict-create "" nil nil complete-speed nil insfun rankfun))
+    (set dict (dict-create dict file autosave
+			   nil nil complete-speed nil insfun rankfun))
     ;; populate it
-    (if (null file)
+    (if (null populate)
 	(message "Created dictionary %s" dict)
-      (dict-populate-from-file (eval dict) file)
+      (dict-populate-from-file (eval dict) populate)
       (message "Created dictionary %s and populated it from file %s"
-	       dict file)
-    )
-  )
+	       dict populate)))
 )
 
 
 
 
 (defun predictive-add-to-buffer-dict (string &optional weight)
-  "Add STRING to the word list at the end of the current buffer, and
-to the buffer-local dictionary. Interactively, STRING is read from the
-mini-buffer and weight is specified by the prefix argument."
+  "Add STRING to the predictive mode buffer-local dictionary,
+and to the word list at the end of the current buffer. Interactively, STRING
+is read from the mini-buffer and weight is specified by the prefix argument."
   (interactive "sString to add: \nP")
   
   ;; add string and weight to dictionary
@@ -1197,8 +1205,7 @@ mini-buffer and weight is specified by the prefix argument."
 	(kill-line 1))
       (insert comment-start " \"" string "\" ")
       (insert (number-to-string w))
-      (insert "\n"))
-  )
+      (insert "\n")))
 )
 
 
@@ -1207,9 +1214,9 @@ mini-buffer and weight is specified by the prefix argument."
 ;;;    Internal functions to do with predictive mode dictionaries
 
 (defun predictive-create-buffer-dict ()
-  "Create the buffer-local dictionary, and fill it with words from the
-word list at the end of the current buffer (if it exists)."
-  
+  "Create the buffer-local predictive mode dictionary,
+and fill it with words from the word list at the end of the current buffer (if
+it exists)."
   ;; the insertion function inserts a weight if none already exists, otherwise
   ;; it adds the new weight to the existing one, or if supplied weight is nil,
   ;; incremenets existing weight
@@ -1226,13 +1233,13 @@ word list at the end of the current buffer (if it exists)."
 			(if (= (length (car a)) (length (car b)))
 			    (string< (car a) (car b))
 			  (< (length (car a)) (length (car b))))
-		      (> (cdr a) (cdr b)))))
-       )
+		      (> (cdr a) (cdr b))))))
     
     ;; initialise the buffer dictionary
     (setq predictive-buffer-dict
-	  (dict-create "" nil nil predictive-completion-speed nil
-		       insfun rankfun))
+	  (dict-create '*buffer-local* "" nil
+		       nil nil predictive-completion-speed
+		       nil insfun rankfun))
   )
   
   ;; look for buffer-local word list in current buffer
@@ -1243,10 +1250,7 @@ word list at the end of the current buffer (if it exists)."
       (let (entry)
 	(while (setq entry (dict-read-line))
 	  (dict-insert predictive-buffer-dict (car entry) (cdr entry))
-	  (forward-line))
-      )
-    )
-  )
+	  (forward-line)))))
 )
 
 
@@ -1272,8 +1276,7 @@ word list at the end of the current buffer (if it exists)."
     (cons ?  'predictive-accept-and-insert)
     (cons ?. 'predictive-accept-and-insert)
     ;; anything else abandons the current completion
-    (cons t  'predictive-abandon-and-insert))
-  )
+    (cons t  'predictive-abandon-and-insert)))
   
   ;; - and & are symbols in text mode but we override them to make them
   ;; behave like word constituents
@@ -1298,8 +1301,7 @@ word list at the end of the current buffer (if it exists)."
   (add-to-list 'predictive-override-syntax-alist
 	       (cons ?\\ '(lambda () (interactive)
 			   (predictive-abandon)
-			   (predictive-insert-and-complete)))
-  )
+			   (predictive-insert-and-complete))))
 )
 
 
@@ -1312,7 +1314,7 @@ word list at the end of the current buffer (if it exists)."
   (require 'dict-c)
   (set (make-local-variable 'predictive-main-dict) 'dict-c)
   
-  ;; add words to the buffer dictionary, since new words are probably be
+  ;; add words to the buffer dictionary, since new words are probably
   ;; variable or function names
   (setq predictive-auto-add-to-dict 'buffer)
 )
@@ -1328,8 +1330,6 @@ word list at the end of the current buffer (if it exists)."
 ;; init file)
 (unless predictive-main-dict
   (require 'dict-english)
-;;    (predictive-create-dict "dict-english" 'dict-english)
-;;    (predictive-save-dict 'dict-english))
   (setq predictive-main-dict 'dict-english)
 )
 
@@ -1464,8 +1464,7 @@ word list at the end of the current buffer (if it exists)."
 	(interactive)
 	(with-resolve-old-completion (predictive-accept) (newline))))
     
-    (setq predictive-completing-map map)
-  )
+    (setq predictive-completing-map map))
 )
 
 
@@ -1521,7 +1520,8 @@ word list at the end of the current buffer (if it exists)."
      (cons 'text-mode  'predictive-setup-english)
      (cons 'latex-mode 'predictive-setup-latex)
      (cons 'LaTeX-mode 'predictive-setup-latex)
-     (cons 'c-mode     'predictive-setup-c)))
+;;      (cons 'c-mode     'predictive-setup-c))
+     ))
 )
 
 
@@ -1555,16 +1555,11 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
       (when modefunc
 	(if (functionp (cdr modefunc))
 	    (funcall (cdr modefunc))
-	  (beep)
 	  (error "Wrong type argument: functionp, %s"
-		 (prin1-to-string (cdr modefunc)))
-	)
-      )
-    )
+		 (prin1-to-string (cdr modefunc))))))
     
     ;; initialise internal variables
-    (predictive-reset-state)
-  )
+    (predictive-reset-state))
 )
 
 
@@ -1575,8 +1570,7 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
       (setcdr existing predictive-completing-map)
     (add-to-list
      'minor-mode-map-alist
-     (cons 'predictive-completion-num predictive-completing-map))
-  )
+     (cons 'predictive-completion-num predictive-completing-map)))
 )
 
 
@@ -1588,6 +1582,9 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
       (setcdr existing predictive-offer-completions-map)
     (add-to-list
      'minor-mode-map-alist
-     (cons 'predictive-completions-on-offer predictive-offer-completions-map))
-  )
+     (cons 'predictive-completions-on-offer
+	   predictive-offer-completions-map)))
 )
+
+
+;;; predictive.el ends here

@@ -1,40 +1,50 @@
 
-;;; Copyright (C) 2004 Toby Cubitt
-;;;
-;;; This file is part of the Emacs Predictive Completion package.
-;;;
-;;; The Emacs Predicive Completion package is free software; you can
-;;; redistribute it and/or modify it under the terms of the GNU
-;;; General Public License as published by the Free Software
-;;; Foundation; either version 2 of the License, or (at your option)
-;;; any later version.
-;;;
-;;; The Emacs Predicive Completion package is distributed in the hope
-;;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;;; PURPOSE.  See the GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with the Emacs Predicive Completion package; if not, write
-;;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;;; Boston, MA 02111-1307 USA
+;;; tstree.el --- ternary search tree package
+
+;; Copyright (C) 2004 Toby Cubitt
+
+;; Author: Toby Cubitt
+;; Version: 0.1
+;; Keywords: ternary search tree, tstree
+
+;; This file is part of the Emacs Predictive Completion package.
+;;
+;; The Emacs Predicive Completion package is free software; you can
+;; redistribute it and/or modify it under the terms of the GNU
+;; General Public License as published by the Free Software
+;; Foundation; either version 2 of the License, or (at your option)
+;; any later version.
+;;
+;; The Emacs Predicive Completion package is distributed in the hope
+;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
+;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with the Emacs Predicive Completion package; if not, write
+;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+;; Boston, MA 02111-1307 USA
 
 
 ;;; Commentary:
-;;;
-;;; A ternary search tree consists of two cons cells, the first one
-;;; holding the tag 'TSTREE in the car cell and the second one having
-;;; the tree in the car and the compare function in the cdr cell. The
-;;; compare function must take two arguments of the type which is to
-;;; be stored in the tree and must return a negative value if the
-;;; first argument is "less than" the second, a positive value if the
-;;; first argument is "greater than" the second, and zero if the two
-;;; arguments are "equal".
-;;;
-;;;
-;;; This package uses the elib LIFO stack package, stack-m.el, and the
-;;; ternary heap package heap.el.
-;;;
+;;
+;; A ternary search tree consists of two cons cells, the first one
+;; holding the tag 'TSTREE in the car cell and the second one having
+;; the tree in the car and the compare function in the cdr cell. The
+;; compare function must take two arguments of the type which is to
+;; be stored in the tree and must return a negative value if the
+;; first argument is "less than" the second, a positive value if the
+;; first argument is "greater than" the second, and zero if the two
+;; arguments are "equal".
+;;
+;; This package uses the elib LIFO stack package, stack-m.el, and the
+;; ternary heap package heap.el.
+
+
+;;; Change Log:
+;;
+;; version 0.1: initial release
+
 
 
 ;;; Code:
@@ -584,3 +594,6 @@ rank-function, in descending order."
     ;; completions
     (if (= 0 (length completions)) nil completions))
 )
+
+
+;;; tstree.el ends here
