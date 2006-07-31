@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5.1
+;; Version: 0.6
 ;; Keywords: predictive, completion
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -27,6 +27,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6
+;; * predictive-auto-add-to-dict no longer buffer-local
+;; * minor bug fixes
+;; (major version bump since dict.el provides new function)
 ;;
 ;; Version 0.5.1
 ;; * fixed bugs in 'word, 'start and 'end regexp parsing code

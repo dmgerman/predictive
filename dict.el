@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.4
+;; Version: 0.5
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,6 +43,9 @@
 
 
 ;;; Change log:
+;;
+;; Version 0.5
+;; * added dict-dump-word-to-file function
 ;;
 ;; Version 0.4
 ;; * fixed bug in dict-read-line
@@ -868,7 +871,7 @@ that has side-effects."
   ;; format.
   
   (save-excursion
-    (let (data)
+    (let (data _word)
       ;; search for text between quotes "", ignoring escaped quotes \"
       (beginning-of-line)
       (setq _word (read (current-buffer)))
@@ -1119,6 +1122,32 @@ otherwise."
   (unintern (dic-name dict))
 )
 
+
+
+
+(defun dict-dump-words-to-file (dict filename &optional overwrite)
+  "Dump words and word weights from dictionary DICT to a text file FILENAME,
+in the same format as that used by `dict-populate-from-file'."
+  (interactive "SDictionary to dump to file: \nFFile to dump to: \nP")
+  (when (interactive-p) (setq dict (eval dict)))
+
+  (let (buff tmpfile)
+    ;; create a temporary file
+    (setq buff (find-file-noselect
+		(setq tmpfile (make-temp-file "dict-dump"))))
+    (set-buffer buff)
+    
+    (tstree-map (lambda (word weight)
+		  (insert "\"" word "\" " (number-to-string weight) "\n"))
+		(dic-tstree dict) t)
+    (save-buffer buff)
+    
+    (when (or (not (file-exists-p filename))
+	      overwrite
+	      (yes-or-no-p
+	       (format "File %s already exists. Overwrite? " filename)))
+      (rename-file tmpfile filename t)))
+)
 
 
 
