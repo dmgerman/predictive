@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5
+;; Version: 0.5.1
 ;; Keywords: predictive, completion
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -27,6 +27,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.1
+;; * fixed bugs in 'word, 'start and 'end regexp parsing code
+;; * fixed bug in predictive-overlay-suicide
 ;;
 ;; Version 0.5
 ;; * added auto-learn and auto-add caching
@@ -188,7 +192,7 @@ that dictionary instead of the active one. If set to the special symbol
 'buffer', new words are automatically added to a word list at the end of the
 buffer. If `predctive-add-to-dict-ask' is enabled, predictive mode will ask
 before adding any word.")
-(make-variable-buffer-local 'predictive-auto-add-to-dict)
+;;(make-variable-buffer-local 'predictive-auto-add-to-dict)
 
 
 (defcustom predictive-add-to-dict-ask t
@@ -253,9 +257,9 @@ constructed from a word list the end of the buffer.
 Note that when using auto-learn, the buffer dictionary has lowest priority:
 weights will only be updated in the buffer dictionary if the word does not
 exist in the active dictionary \(see `predictive-auto-learn'\). It is better
-to ensure that the buffer word list does not dupliate words already in other
+to ensure that the buffer word list does not duplicate words already in other
 dictionaries.")
-(make-variable-buffer-local 'preditive-buffer-dict)
+(make-variable-buffer-local 'predictive-buffer-dict)
 
 
 (defvar predictive-syntax-alist nil
@@ -281,16 +285,10 @@ Overrides the default function based on a typed character's syntax. Used by
 Each entry should be a list of the form \(REGEXP CLASS DICT @rest PROPS), or a
 list of such lists.
 
-REGEXP is a regexp, CLASS is one of the symbols 'word, 'start, 'end, or
+REGEXP is a regexp, CLASS is one of the symbols 'word, 'line, 'start, 'end, or
 'self. DICT is a predictive mode dictionary. 'start and 'end regexps must be
 combined together in a list containing at least one of each. The others can
 *not* be combined in lists.
-
-Any region of a buffer that lies between text matching 'start and 'end
-regexps, or between text matching the same 'self regexp, will use the
-associated dictionary. If typed text that is being completed matches a 'word
-regexp, predictive mode will temporarily switch to the associated dictionary
-for the duration of the completion.
 
 See the predictive completion manual for full details.")
 
@@ -772,10 +770,11 @@ argument."
 	   (dotimes (i (min (length predictive-offer-completions-keylist)
 			    (length predictive-completions)))
 	     (setq msg (concat msg
-			  (format "(%s) %s%s  "
+			  (format "(%s) %s  "
 				  (nth i predictive-offer-completions-keylist)
-				  predictive-typed-string
-				  (car (aref predictive-completions i))))))
+				  (concat
+				   predictive-typed-string
+				   (car (aref predictive-completions i)))))))
 	   (message msg)))
        (setq predictive-completions-on-offer t)
        )))
@@ -826,10 +825,11 @@ of possible completions. Intended to be bound in
 	(dotimes (i (min (length predictive-offer-completions-keylist)
 			 (length predictive-completions)))
 	  (setq msg (concat msg
-		      (format "(%s) %s%s  "
+		      (format "(%s) %s  "
 			      (nth i predictive-offer-completions-keylist)
-			      predictive-typed-string
-			      (car (aref predictive-completions i))))))
+			      (concat predictive-typed-string
+				      (car (aref predictive-completions i)))
+			      ))))
 	(sit-for 2)
 	(message msg)))
      
@@ -1030,10 +1030,11 @@ that was automatically accepted or abandoned because the had point moved."
 	     (dotimes (i (min (length predictive-offer-completions-keylist)
 			      (length predictive-completions)))
 	       (setq msg (concat msg
-			    (format "(%s) %s%s  "
+			    (format "(%s) %s  "
 			       (nth i predictive-offer-completions-keylist)
-			       predictive-typed-string
-			       (car (aref predictive-completions i))))))
+			       (concat predictive-typed-string
+				       (car (aref predictive-completions i)))
+			       ))))
 	     (message msg)))
 	 (setq predictive-completions-on-offer t))
        )))
@@ -1348,7 +1349,7 @@ that was automatically accepted or abandoned because the had point moved."
     ;; look for existing match overlay or overlay with higher priority
     (setq o-match (predictive-matched-p (pred-regexp-type regexp)
 					(pred-match-start match)
-					(pred-match-end match)))
+					(pred-delim-start match)))
     (setq o-priority (predictive-overlays-at-point
 		      (pred-delim-start match)
 		      (list (list '> 'priority (pred-regexp-priority regexp))
@@ -1360,9 +1361,19 @@ that was automatically accepted or abandoned because the had point moved."
      ((and o-match o-priority)
       (predictive-delete-overlay (overlay-get o-match 'parent)))
      
-     ;; ignore match if it has already been matched by regexp of same type, or
-     ;; is inside an overlay of higher priority that sets a dictionary
-     ((or o-match o-priority) nil)
+     ;; ignore match if it is inside an overlay of higher priority that sets a
+     ;; dictionary
+     (o-priority nil)
+     
+     ;; if match has already been matched by regexp of same type, but match is
+     ;; now different, move overlay
+     (o-match
+      (when (or (/= (overlay-start o-match) (pred-match-start match))
+		(/= (overlay-end o-match) (pred-match-end match)))
+	(move-overlay (overlay-get o-match 'parent)
+		      (pred-delim-start match) (pred-delim-end match))
+	(move-overlay o-match (pred-match-start match) (pred-match-end match))
+	))
      
      (t  ; otherwise, create a new overlay
       (predictive-make-overlay (pred-regexp-type regexp)
@@ -1380,8 +1391,8 @@ that was automatically accepted or abandoned because the had point moved."
     
     ;; look for existing match overlay and overlay with higher priority
     (setq o-match (predictive-matched-p (pred-regexp-type regexp)
-					(pred-match-start match)
-					(pred-match-end match)))
+					(pred-delim-start match)
+					(pred-delim-end match)))
     (setq o-priority (predictive-overlays-at-point
 		      (pred-delim-start match)
 		      (list (list '> 'priority (pred-regexp-priority regexp))
@@ -1430,8 +1441,8 @@ that was automatically accepted or abandoned because the had point moved."
     ;; type, or if it is within an overlay of higher priority that sets a
     ;; dictionary
     (unless (or (predictive-matched-p (pred-regexp-type regexp)
-				      (pred-match-start match)
-				      (pred-match-end match))
+				      (pred-delim-start match)
+				      (pred-delim-end match))
 		(predictive-overlays-at-point
 		 nil (list (list '> 'priority (pred-regexp-priority regexp))
 			   (list 'identity 'dict))))
@@ -1502,12 +1513,14 @@ that was automatically accepted or abandoned because the had point moved."
      ;; if match is part of an existing match overlay, check if new match
      ;; should take precedence
      ((setq o (predictive-matched-p (pred-regexp-type regexp)
-				    (pred-match-start match)
-				    (pred-match-end match) 'start))
+				    (pred-delim-start match)
+				    (pred-delim-end match) 'start))
       (when (< (pred-match-sequence match) (overlay-get o 'sequence))
-	(predictive-match-overlay (overlay-get o 'parent)
-				  (overlay-get o 'edge)
-				  match)))
+	(setq o (overlay-get o 'parent))
+	(predictive-match-overlay o 'start match)
+	;; set properties specified by new match
+	(dolist (p (pred-regexp-props regexp))
+	  (overlay-put o (car p) (cdr p)))))
 
      
      ;; otherwise, we got stuff ta do!...
@@ -1560,12 +1573,16 @@ that was automatically accepted or abandoned because the had point moved."
      ;; if match is part of an existing match overlay, check if new match
      ;; should take precedence
      ((setq o (predictive-matched-p (pred-regexp-type regexp)
-				    (pred-match-start match)
-				    (pred-match-end match) 'end))
+				    (pred-delim-start match)
+				    (pred-delim-end match) 'end))
       (when (< (pred-match-sequence match) (overlay-get o 'sequence))
-	(predictive-match-overlay (overlay-get o 'parent)
-				  (overlay-get o 'edge)
-				  match)))
+	(setq o (overlay-get o 'parent))
+	(predictive-match-overlay o 'end match)
+	;; if overlay is start-unmatched, set properties specified by new
+	;; match
+	(when (null (overlay-get o 'start-match))
+	  (dolist (p (pred-regexp-props regexp))
+	    (overlay-put o (car p) (cdr p))))))
 
      
      ;; otherwise, we got stuff ta do!...
@@ -1733,21 +1750,30 @@ that was automatically accepted or abandoned because the had point moved."
   
   ;; if we're being called after modification, and suicide isn't blocked...
   (when (and modified (not predictive-block-overlay-suicide))
-    ;; check if regexp still matches text in overlay
-    (string-match (overlay-get o-self 'regexp)
-		  (buffer-substring (overlay-start o-self)
-				    (overlay-end o-self)))
-    ;; if it doesn't, delete the match overlay and sort out switch-dict regions
-    (unless (and (= (match-beginning 0) 0)
+    ;; if regexp no longer matches text in overlay...
+    (unless (and (string-match (overlay-get o-self 'regexp)
+			       (buffer-substring (overlay-start o-self)
+						 (overlay-end o-self)))
+		 (= (match-beginning 0) 0)
 		 (= (match-end 0) (- (overlay-end o-self)
 				     (overlay-start o-self))))
-      (delete-overlay o-self)
-      (predictive-cascade-overlays
-       (predictive-overlay-stack
-	(overlay-get o-self 'type)
-	(overlay-get o-self (if (eq (overlay-get o-self 'edge) 'start)
-				'delim-end 'delim-start))))
-      (predictive-switch-dict (overlay-start o-self))))
+      
+      (let ((type (nth 1 (nth (overlay-get o-self 'type)
+			      predictive-switch-dict-regexps)))
+	    (point (overlay-start o-self)))
+	
+	;; if we're a 'word or 'line overlay, just delete ourselves
+	(if (or (eq type 'word) (eq type 'line))
+	    (predictive-delete-overlay (overlay-get o-self 'parent))
+	  ;; otherwise, have to sort overlay stack too
+	  (delete-overlay o-self)
+	  (predictive-cascade-overlays
+	   (predictive-overlay-stack
+	    (overlay-get o-self 'type)
+	    (overlay-get o-self (if (eq (overlay-get o-self 'edge) 'start)
+				    'delim-end 'delim-start)))))
+	;; sort out switch-dictionary regions
+	(predictive-switch-dict point))))
 )
 
 
@@ -1842,8 +1868,9 @@ that was automatically accepted or abandoned because the had point moved."
 	      (when (and (overlay-get o 'predictive-switch-dict-match)
 			 (= (overlay-get o 'type) type)
 			 (or (null edge) (eq edge (overlay-get o 'edge)))
-			 (>= beg (overlay-start o))
-			 (<= end (overlay-end o)))
+;; 			 (>= beg (overlay-start o))
+;; 			 (<= end (overlay-end o))
+			 )
 		(setq o-match o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
@@ -2658,7 +2685,8 @@ symbol-constituent characters."
     (define-key map "z" 'predictive-self-insert)
     (define-key map "'" 'predictive-self-insert)
     (define-key map "-" 'predictive-self-insert)
-    (define-key map "\\" 'predictive-self-insert)
+    (define-key map "<" 'predictive-self-insert)
+    (define-key map ">" 'predictive-self-insert)
     (define-key map " " 'predictive-self-insert)
     (define-key map "." 'predictive-self-insert)
     (define-key map "," 'predictive-self-insert)
