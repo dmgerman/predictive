@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.6
+;; Version: 0.6.1
 ;; Keywords: predictive, completion
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -27,6 +27,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.1
+;; * minor bug fixes
 ;;
 ;; Version 0.6
 ;; * predictive-auto-add-to-dict no longer buffer-local
@@ -601,7 +604,7 @@ bound to printable characters in a keymap."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
-;;  (with-resolve-old-completion
+  (with-resolve-old-completion
    
    ;; if a completion is in progress...
    (when predictive-typed-string
@@ -627,6 +630,7 @@ bound to printable characters in a keymap."
 			   (format "Add word \"%s\" to dictionary? " word))
 			  ))
 	     (cond
+	      
 	      ;; if adding to the currently active dictionary, then do just
 	      ;; that, adding to the first in the list if there are a list of
 	      ;; dictionaries
@@ -639,6 +643,7 @@ bound to printable characters in a keymap."
 			    predictive-auto-add-cache)
 		 ;; otherwise, add it to the dictionary
 		 (dict-insert (car dict) word)))
+	      
 	      ;; if adding to the buffer dictionary, add to the word list in
 	      ;; the buffer, as well as to the buffer dictionary
 	      ((eq predictive-auto-add-to-dict 'buffer)
@@ -650,19 +655,26 @@ bound to printable characters in a keymap."
 			    predictive-auto-add-cache)
 		 ;; otherwise, add it to the dictionary
 		 (predictive-add-to-buffer-dict word)))
+	      
 	      ;; anything else specifies an explicit dictionary to add to
 	      (t
-	       (if predictive-use-auto-learn-cache
-		   ;; if caching auto-added words, do so
-		   (progn
-		     (setq dict (eval predictive-auto-add-to-dict))
-		     (puthash (cons word dict)
-			      (1+ (gethash (cons word dict)
-					   predictive-auto-add-cache 0))
-			      predictive-auto-add-cache))
-		 ;; otherwise, add it to the dictionary
-		 (dict-insert dict word)))
+	       (setq dict (eval predictive-auto-add-to-dict))
+	       ;; check `predictive-auto-add-to-dict' is a dictionary
+	       (if (dict-p dict)
+		 (if (not predictive-use-auto-learn-cache)
+		     ;; if caching is off, add word to the dictionary
+		     (dict-insert dict word)
+		   ;; if caching is on, cache word
+		   (puthash (cons word dict)
+			    (1+ (gethash (cons word dict)
+					 predictive-auto-add-cache 0))
+			    predictive-auto-add-cache))
+		 ;; display error message if not a dictionary
+		 (beep)
+		 (message "Word not added: `predictive-auto-add-to-dict'\
+ does not evaluate to a dictionary")))
 	      ))
+
 	 
 	 ;; if the completion was in the dictionary and auto-learn is set...
 	 (when predictive-auto-learn
@@ -680,6 +692,7 @@ bound to printable characters in a keymap."
 		 (dict-insert (nth i dict) word)
 		 (throw 'learned t))))))
 	 ))
+
      
      ;; move point to the end of the completion
      (goto-char (overlay-end predictive-overlay))
@@ -691,7 +704,7 @@ bound to printable characters in a keymap."
    )
    
    ;; reset completion state
-   (predictive-reset-state);)
+   (predictive-reset-state))
 )
 
 
@@ -2198,7 +2211,8 @@ use the defaults provided by `predictive-completion-speed' and
   
   (interactive "SDictionary name: \nFAssociated filename \(optional): \n\
 fFile to populate from \(leave blank to create an empty dictionary\): ")
-  (unless (file-regular-p populate) (setq populate nil))
+  (unless (or (null populate) (file-regular-p populate))
+    (setq populate nil))
   
   (let ((complete-speed (if speed speed predictive-completion-speed))
 	(autosave (if autosave autosave predictive-dict-autosave))
