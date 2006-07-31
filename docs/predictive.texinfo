@@ -74,7 +74,7 @@ liking.
 * Dictionaries::                
 * Character Syntax and Key Bindings::  
 * Working with Major Modes::    
-* Bugs and Future Improvements::   
+* Bugs and Future Improvements::  
 * Credits::                     
 * Command Index::               
 * Variable Index::              
@@ -112,7 +112,7 @@ Character Syntax and Key Bindings
 * Syntax::                      
 * Functions for Binding to Characters::  
 
-Bugs and Feature Requests
+Bugs and Future Improvements
 
 * Known Bugs::                  
 * Future Improvements::         
@@ -211,16 +211,23 @@ sentences preceding it.)
 @cindex obtaining
 
 The current version of the predictive completion package can be obtained
-from @uref{http://www.dr-qubit.org/predictive.html}. You will need both
-the predictive package and the package containing the default
-dictionaries. You will also need the Emacs LISP Library, obtainable from
+from @uref{http://www.dr-qubit.org/predictive.html}. You will also need
+the Emacs Lisp Library (Elib), obtainable from
 @uref{http://jdee.sunsite.dk}.
 
-To install the packages, the files should be extracted to a directory in
+To install the package, the files should be extracted to a directory in
 the Emacs load-path (@pxref{Lisp Libraries, , , emacs, GNU Emacs
 Manual}). You can view the current load-path using @kbd{C-h v
-load-path}, assuming default keybindings. To make use of the predictive
-minor-mode, put the following line in your @file{.emacs} file:
+load-path}, assuming default keybindings.
+
+For performance reasons, it is important to byte-compile the lisp
+code. Do this using the Emacs @command{byte-compile-file} command, for
+each of the five lisp files in the package: @file{heap.el},
+@file{tstree.el}, @file{dict.el}, @file{predictive.el}, and
+@file{dict-english.el}.
+
+If you want the predictive minor-mode to be available whenever you start
+Emacs, put the following line in your @file{.emacs} file:
 
 @example
 (require 'predictive)
@@ -228,6 +235,24 @@ minor-mode, put the following line in your @file{.emacs} file:
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
+
+The main package only contains an English dictionary. Extra dictionary
+packages for other languages (e.g. LaTeX) are available from the same
+page as the predictive completion package. Each dictionary package
+includes a plain text word list and a lisp file defining a setup
+function. (@xref{Working with Major Modes}, for an explanation of how to
+use setup functions to automatically configure predictive mode
+appropriately when switching major-modes.)
+@cindex dictionaries
+@cindex dictionary packages
+@cindex setup function
+
+If you want to use a dictionary package, you must extract the files to a
+directory in your emacs load-path, and then create the dictionary
+yourself from the word list using the @command{predictive-create-dict}
+command. @xref{Creating Dictionaries}. Creating it yourself ensures the
+dictionary will work with your particular version of Emacs.
+@findex predictive-create-dict
 
 
 
@@ -1172,8 +1197,9 @@ things of predictive completion, you may find yourself changing a large
 number of settings when switching major modes.
 
 To facilitate using predictive completion alongside different
-major-modes, predictive mode runs a setup function determined by the
+major-modes, predictive mode can run a setup function determined by the
 current major-mode whenever it is switched on in a buffer.
+@cindex setup function
 
 @vtable @env
 @item predictive-major-mode-alist
@@ -1200,10 +1226,18 @@ like this:
 (add-hook '@var{major-mode}-hook 'turn-on-predictive-mode
 @end lisp
 
-A rather incomplete collection of setup functions is already provided by
-predictive mode. Since many settings are down to personal preference,
-they may not do precisely what you want, but if nothing else they
-provide examples to base your own setup functions on:
+The predictive package itself only contains one setup function,
+@command{predictive-setup-english} which sets things up for typing
+normal English text. The default setting of
+@env{predictive-major-mode-alist} runs this setup function when entering
+a text mode.
+
+Additional setup functions are provided by the extra dictionary
+packages. @xref{Obtaining and Installing}. The collection is currently
+rather incomplete (contributions are welcome!). Since many settings are
+down to personal preference, the setup functions may not do precisely
+what you want, but if nothing else they provide examples to base your
+own on:
 
 @ftable @command
 @item predictive-setup-english
@@ -1213,26 +1247,26 @@ text. @env{predictive-main-dict} is set to an English dictionary
 behave like word-constituents.
 
 @item predictive-setup-latex
-Sets up predictive mode for use with La@TeX{} major
-modes. @env{predictive-main-dict} is set to an English dictionary
-@code{dict-english}, and the @samp{\} character is added to
-@env{predictive-dict-alist} to automatically switch to the
-@code{dict-latex} dictionary when typing La@TeX{} commands.
+Provided by the @file{dict-latex} dictionary package. Sets up predictive
+mode for use with La@TeX{} major modes. @env{predictive-main-dict} is
+set to an English dictionary @code{dict-english}, and the @samp{\}
+character is added to @env{predictive-dict-alist} to automatically
+switch to the @code{dict-latex} dictionary when typing La@TeX{}
+commands.
 
-@item predictive-setup-c
-Sets up predictive mode for use with C major
-modes. @env{predictive-main-dict} is set to a dictionary of C functions
-and keywords @code{dict-c}, and @env{predictive-auto-add-to-dict} is set
-to @code{buffer} so that function and variable names are added to the
-buffer dictionary.
+@c @item predictive-setup-c
+@c Sets up predictive mode for use with C major
+@c modes. @env{predictive-main-dict} is set to a dictionary of C functions
+@c and keywords @code{dict-c}, and @env{predictive-auto-add-to-dict} is set
+@c to @code{buffer} so that function and variable names are added to the
+@c buffer dictionary.
 @end ftable
 
 
 
 
-
 @node Bugs and Future Improvements
-@chapter Bugs and Feature Requests
+@chapter Bugs and Future Improvements
 @cindex bugs and future improvements
 @cindex reporting bugs
 @cindex bugs, reporting
@@ -1268,6 +1302,13 @@ Known bugs (in no particular order):
 @item
 The @command{predictive-learn-from-buffer} and
 @command{predictive-learn-from-file} commands do not exist.
+
+@item
+No @command{predictive-remove-from-dict} command exists to remove a word
+from a dictionary. (The best work-around at the moment is to reduce the
+word's weight using @command{predictive-add-to-dict} with a large
+negative weight, so that it is unlikely to show up as a likely
+completion.)
 @end enumerate
 
 
@@ -1287,17 +1328,15 @@ dynamic completion and the completion list are disabled. It might as
 well just wait until asked, instead of wasting processor cycles.
 
 @item
-More setup functions.
-
-@item
-More dictionaries.
+More dictionaries and setup functions.
 
 @item
 @env{predictive-dict-alist} only allows you to switch dictionaries on
 single characters. It could be made more flexible, to allow more complex
 switching: e.g. switching to a maths-mode dictionary in La@TeX{}
-@samp{equation} environments, or completing on parameter names when
-inside HTML tags.
+@samp{equation} environments, completing on parameter names when
+inside HTML tags, or switching to the English dictionary inside comments
+when writing code.
 @end enumerate
 
 
