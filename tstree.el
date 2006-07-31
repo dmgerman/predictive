@@ -58,6 +58,10 @@
 (require 'stack-m)
 (require 'heap)
 
+;; the only common lisp function that's used is `signum', so this dependency
+;; should probably be removed
+(require 'cl)
+
 
 
 ;;; ================================================================
