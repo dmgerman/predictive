@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: automatic, overlays, word
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * updated to reflect changes in `auto-overlays.el'
 ;;
 ;; Version 0.1:
 ;; * initial version separated off from auto-overlays.el
@@ -55,11 +58,7 @@
   (let ((o-new (make-overlay (overlay-get o-match 'delim-start)
 			     (overlay-get o-match 'delim-end)
 			     nil nil 'rear-advance)))
-    
     ;; give overlays appropriate properties
-    (overlay-put o-new 'auto-overlay t)
-    (overlay-put o-new 'set (overlay-get o-match 'set))
-    (overlay-put o-new 'type (overlay-get o-match 'type))
     (overlay-put o-new 'start o-match)
     (overlay-put o-match 'parent o-new)
     ;; bundle properties inside list if not already, then update set overlay

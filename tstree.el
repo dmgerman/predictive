@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6
+;; Version: 0.7
 ;; Keywords: ternary search tree, tstree
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -58,6 +58,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7
+;; * finally wrote a `tstree-delete' function!
+;; * minor changes to functions that use equal child of a node, to
+;;   avoid errors caused by null equal children left by deleting keys
+;; * renamed "string" to "key" or "sequence" in function arguments
 ;;
 ;; Version 0.6.1
 ;; * modifications required by changes to heap.el
@@ -119,146 +125,114 @@
 
 (defmacro tstree--tree-root (tree)  ; INTERNAL USE ONLY.
   ;; Return the root node for a ternary search tree.
-  `(tstree--node-equal (car (cdr ,tree)))
-)
-
+  `(tstree--node-equal (car (cdr ,tree))))
 
 
 (defmacro tstree--tree-dummyroot (tree)  ; INTERNAL USE ONLY.
   ;; Return the dummy node of a ternary search tree.
-  `(car (cdr ,tree))
-)
-
+  `(car (cdr ,tree)))
 
 
 (defmacro tstree--tree-cmpfun (tree)  ; INTERNAL USE ONLY.
   ;; Return the compare function of ternary search tree TREE.
-  `(car (cdr (cdr ,tree)))
-)
-
+  `(car (cdr (cdr ,tree))))
 
 
 (defmacro tstree--tree-insfun (tree)  ; INTERNAL USE ONLY.
   ;; Return the insert function of ternary search tree TREE.
-  `(car (cdr (cdr (cdr ,tree))))
-)
+  `(car (cdr (cdr (cdr ,tree)))))
 
 
 (defmacro tstree--tree-rankfun (tree)  ; INTERNAL USE ONLY
   ;; Return the rank function of ternary search tree TREE.
-  `(cdr (cdr (cdr (cdr ,tree))))
-)
+  `(cdr (cdr (cdr (cdr ,tree)))))
 
 
-(defmacro tstree--node-create (low equal high split)  ; INTERNAL USE ONLY.
+
+(defmacro tstree--node-create (low equal high split) ; INTERNAL USE ONLY.
   ;; Create a TST node from LOW, EQUAL, HIGH and SPLIT.
   ;; Note: If SPLIT is nil, EQUAL stores data rather than a pointer
-  `(vector ,low ,equal ,high ,split)
-)
-
+  `(vector ,low ,equal ,high ,split))
 
 
 (defmacro tstree--node-p (obj)  ; INTERNAL USE ONLY
   ;; Return t if OBJ is a valid ternary search tree node, nil
   ;; otherwise.
-  `(and (vectorp ,obj) (= (length ,obj) 4))
-)
-
+  `(and (vectorp ,obj) (= (length ,obj) 4)))
 
 
 (defmacro tstree--node-low (node)  ; INTERNAL USE ONLY.
   ;; Return the low pointer of NODE.
-  `(aref ,node 0)
-)
+  `(aref ,node 0))
 
+
+(defmacro tstree--node-set-low (node newlow)  ; INTERNAL USE ONLY.
+  ;; Set the low pointer of NODE to NEWLOW
+  `(aset ,node 0 ,newlow))
 
 
 (defmacro tstree--node-equal (node)  ; INTERNAL USE ONLY.
   ;; Return the equal pointer of NODE.
-  `(aref ,node 1)
-)
+  `(aref ,node 1))
 
+
+(defmacro tstree--node-set-equal (node newequal)  ; INTERNAL USE ONLY.
+  ;; Set the equal pointer of NODE to NEWEQUAL
+  `(aset ,node 1 ,newequal))
 
 
 (defmacro tstree--node-high (node)  ; INTERNAL USE ONLY.
   ;; Return the high pointer of NODE.
-  `(aref ,node 2)
-)
+  `(aref ,node 2))
 
+
+(defmacro tstree--node-set-high (node newhigh)  ; INTERNAL USE ONLY.
+  ;; Set the high pointer of NODE to NEWHIGH
+  `(aset ,node 2 ,newhigh))
 
 
 (defmacro tstree--node-split (node)  ; INTERNAL USE ONLY.
   ;; Return the split value of NODE.
-  `(aref ,node 3)
-)
+  `(aref ,node 3))
 
 
+(defmacro tstree--node-set-split (node newsplit)  ; INTERNAL USE ONLY.
+  ;; Set the split value of NODE to NEWSPLIT
+  `(aset ,node 3 ,newsplit))
 
 
 (defmacro tstree--node-branch (node d)  ; INTERNAL USE ONLY.
   ;; For D negative, zero, or positive, return the low, equal or high
   ;; pointer of NODE respectively.
-  `(aref ,node (1+ (tstree--signum ,d)))
-)
-
-
-
-(defmacro tstree--node-set-high (node newhigh)  ; INTERNAL USE ONLY.
-  ;; Set the high pointer of NODE to NEWHIGH
-  `(aset ,node 0 ,newhigh)
-)
-
-
-
-(defmacro tstree--node-set-equal (node newequal)  ; INTERNAL USE ONLY.
-  ;; Set the equal pointer of NODE to NEWEQUAL
-  `(aset ,node 1 ,newequal)
-)
-
-
-
-(defmacro tstree--node-set-low (node newlow)  ; INTERNAL USE ONLY.
-  ;; Set the low pointer of NODE to NEWLOW
-  `(aset ,node 2 ,newlow)
-)
-
-
-
-(defmacro tstree--node-set-split (node newsplit)  ; INTERNAL USE ONLY.
-  ;; Set the split value of NODE to NEWSPLIT
-  `(aset ,node 3 ,newsplit)
-)
-
+  `(aref ,node (1+ (tstree--signum ,d))))
 
 
 (defmacro tstree--node-set-branch (node d newbranch)  ; INTERNAL USE ONLY.
   ;; If D is negative, zero or positive, set the high, equal or low
   ;; value respectively of NODE to NEWBRANCH.
-  `(aset ,node (1+ (tstree--signum ,d)) ,newbranch)
-)
+  `(aset ,node (1+ (tstree--signum ,d)) ,newbranch))
 
 
 
-
-(defun tstree--node-find (tree string)  ; INTERNAL USE ONLY
-  ;; Returns the node corresponding to STRING, or nil if none found.
+(defun tstree--node-find (tree sequence)  ; INTERNAL USE ONLY
+  ;; Returns the node corresponding to SEQUENCE, or nil if none found.
   
   (cond
    ;; don't search for nil!
-   ((null string) nil)
-   ;; return root node if searching for an empty string
-   ((= 0 (length string)) (tstree--tree-root tree))
-   ;; otherwise search for node corresponding to string
+   ((null sequence) nil)
+   ;; return root node if searching for an empty sequence
+   ((= 0 (length sequence)) (tstree--tree-root tree))
+   ;; otherwise search for node corresponding to sequence
    (t (let ((cmpfun (tstree--tree-cmpfun tree))
 	    (node (tstree--tree-root tree))
-	    (c 0) (chr (elt string 0)) (d 0)
-	    (len (length string)))
+	    (c 0) (chr (elt sequence 0)) (d 0)
+	    (len (length sequence)))
 	
         ;; as long as we keep finding nodes, keep descending the tree
 	(while (and node (< c len))
 	  (setq d (funcall cmpfun chr (tstree--node-split node)))
 	  (if (= 0 d)
-	      (when (< (setq c (1+ c)) len) (setq chr (elt string c))))
+	      (when (< (setq c (1+ c)) len) (setq chr (elt sequence c))))
 	  (setq node (tstree--node-branch node d)))
 	node))
   )
@@ -303,15 +277,14 @@ stored as data in the tree or nil, and returns the same type. It
 defaults to \"replace\". See `tstree-insert'.
 
 The optional RANK-FUNCTION takes two arguments, each a cons whose
-car is an array (vector or string) referencing data in the tree,
-and whose cdr is the data at that reference. It should return
-non-nil if the first argument is \"better than\" the second, nil
-otherwise. It defaults to numerical comparison of the data using
-\"greater than\". Used by `tstree-complete-ordered' to rank
-completions."
+car is a sequence referencing data in the tree, and whose cdr is
+the data at that reference. It should return non-nil if the first
+argument is \"better than\" the second, nil otherwise. It
+defaults to numerical comparison of the data using \"greater
+than\". Used by `tstree-complete-ordered' to rank completions."
 
          ;; comparison-function defaults to -
-  (let* ((cmpfun (when compare-function compare-function '-))
+  (let* ((cmpfun (if compare-function compare-function '-))
 	 ;; the lambda expression redefines the compare funtion to ensure
 	 ;; that all values other than nil are "greater" than nil
 	 (cmpfun `(lambda (a b)
@@ -368,30 +341,28 @@ completions."
 
 
 
-(defun tstree-insert (tree string &optional data insert-function)
-  "Calculate the result of applying the tree TREE's insetion
-function to DATA and the existing data at position STRING in the
-tree (or nil if empty), and insert the result into the ternary
-search tree at the position referenced by STRING. STRING must be
-an array (vector or string) containing the type used to reference
-data in the tree.
+(defun tstree-insert (tree key &optional data insert-function)
+  "Associate KEY with the result of the TREE's insertion function
+called with two arguments: DATA, and the existing data associated
+with KEY (or nil if key has no association). KEY must be a
+sequence containing the type used to reference data in the tree.
 
 The optional INSERT-FUNCTION over-rides the tree's own insertion
 function. It should take two arguments of the type stored as data
 in the tree, or nil. The first is the data DATA, the second is
-the data stored at position STRING in the tree, or nil if STRING
-doesn't yet exist. It should return the same type. The return
-value is stored in the tree."
+the data associated with KEY, or nil if KEY doesn't yet exist. It
+should return the same type. The return value is stored in the
+tree."
   
-  ;; don't add empty strings to the tree
-  (if (= 0 (length string)) nil
+  ;; don't add empty keys to the tree
+  (if (= 0 (length key)) nil
     
     (let ((cmpfun (tstree--tree-cmpfun tree))
 	  (insfun (if insert-function insert-function
 		    (tstree--tree-insfun tree)))
 	  (node (tstree--tree-dummyroot tree))
-	  (c 0) (chr (elt string 0)) (d 0)
-	  (len (length string)) newdata)
+	  (c 0) (chr (elt key 0)) (d 0)
+	  (len (length key)) newdata)
       
       ;; as long as we keep finding nodes, keep descending the tree
       (while (and node (tstree--node-branch node d))
@@ -399,29 +370,30 @@ value is stored in the tree."
 	(setq d (funcall cmpfun chr (tstree--node-split node)))
 	(when (= 0 d)
 	  (if (< (setq c (1+ c)) len)
-	      (setq chr (elt string c))
-	    ;; if complete string already exists in the tree and
+	      (setq chr (elt key c))
+	    ;; if complete key already exists in the tree and
 	    ;; we've found the data node, insert new data
 	    (if (tstree--node-split node)
 		(setq chr nil)  ; not at data node so keep descending
 	      (tstree--node-set-equal
 	       node (setq newdata
-			  (funcall insfun data (tstree--node-equal node))))
+			  (funcall insfun data
+				   (tstree--node-equal node))))
 	      (setq node nil)))))  ; forces loop to exit
       
       ;; once we've found one node that doesn't exist, must create all
       ;; others
       (while node
-	;; create nodes for remainder of string, if any
+	;; create nodes for remainder of key, if any
 	(if (< c len)
 	    (progn
-	      (setq chr (elt string c))
+	      (setq chr (elt key c))
 	      (tstree--node-set-branch
 	       node d (tstree--node-create nil nil nil chr))
 	      (setq node (tstree--node-branch node d))
 	      (setq d 0)
 	      (setq c (1+ c)))
-	  ;; if we've reached end of string, create data node and exit
+	  ;; if we've reached end of key, create data node and exit
 	  (tstree--node-set-branch
 	   node d (tstree--node-create
 		   nil (setq newdata (funcall insfun data nil)) nil nil))
@@ -435,15 +407,15 @@ value is stored in the tree."
 
 
 
-(defun tstree-member (tree string &optional combine-function)
-  "Return the data referenced by STRING from the tree TREE,
-or nil if STRING does not exist in the tree.
+(defun tstree-member (tree key &optional combine-function)
+  "Return the data associated with KEY in the tree TREE,
+or nil if KEY has no association.
 
-Note: this will not distinguish between a non-existant STRING and
-a STRING whose data is nil. Use `tstree-member-p' instead.
+Note: this will not distinguish between a non-existant KEY and
+a KEY whose data is nil. Use `tstree-member-p' instead.
 
 If TREE is a list of trees, the return value will be created by
-combining data from all trees containing STRING, by calling
+combining data from all trees containing KEY, by calling
 COMBINE-FUNCTION on pairs of data. COMBINE-FUNCTION defaults to
 the insersion function of the first tree in the list."
 
@@ -455,8 +427,8 @@ the insersion function of the first tree in the list."
     ;; loop over all trees
     (dotimes (i (length tree))
       
-      ;; find first node corresponding to STRING
-      (setq node (tstree--node-find (nth i tree) string))
+      ;; find first node corresponding to KEY
+      (setq node (tstree--node-find (nth i tree) key))
       
       ;; keep following the low branch until we find the data node, or
       ;; can't go any further
@@ -474,38 +446,99 @@ the insersion function of the first tree in the list."
 
 
 
-(defun tstree-member-p (tree string)
-  "Return t if STRING is in tree TREE, nil otherwise."
+(defun tstree-member-p (tree key)
+  "Return t if KEY is in tree TREE, nil otherwise."
   
-  (let ((node (tstree--node-find tree string)))
-    
+  (let ((node (tstree--node-find tree key)))
+    ;; keep descending low child until we find data node or can't go any
+    ;; further
     (while (tstree--node-p node)
-      (setq node (if (tstree--node-split node) (tstree--node-low node)
-		   (setq node t))))
+      (setq node
+	    (if (tstree--node-split node) (tstree--node-low node)
+	      ;; data nodes flagged as deleted don't count (they have a
+	      ;; non-nil, atomic low child)
+	      (if (and (tstree--node-low node)
+		       (not (tstree--node-p (tstree--node-low node))))
+		  nil t))))
     node)
 )
 
 
 
-;; Deleting strings from a ternary search tree is a messy
+;; Deleting keys from a ternary search tree is a messy
 ;; operation. Basically, either the tree has to be left with redundant
-;; nodes and probably nodes with nil equal children, or the sub-tree
-;; below the string needs to be restructured.
+;; nodes including nodes with null equal children, or the sub-tree below
+;; the key needs to be restructured.
 ;;
-;; Possible solutions are either to leave the tree in a mess, or delete
-;; the entire sub-tree then add the strings it contained back
-;; again. Both are undesirable: the former because it leaves the tree
-;; with redundant nodes that apart from making the tree slightly
-;; inefficient, might even cause errors when running functions; the
-;; latter because it could potentially be very inefficient.
+;; Possible solutions are either to leave the redundant nodes in the
+;; tree, or delete the entire sub-tree then add the keys it contained
+;; back again. Both are imperfect: the former because it leaves the tree
+;; with redundant nodes that make the tree slightly less efficient; the
+;; latter because it could potentially end up recreating almost the
+;; entire tree, making it very inefficient.
 ;;
-;; The best option is probably to make sure you never need to delete
-;; strings from the tree! Therefore I haven't bothered writing the
-;; following function:
-;;
-;; (defun tstree-delete (tree string)
-;;   "Delete string STRING from tree TREE."
-;; )
+;; The following function adopts the former solution: it leaves the tree
+;; with redundant nodes (though deleting all keys from the tree will
+;; result in an empty tree again).
+
+(defun tstree-delete (tree key)
+  "Delete KEY and its associated data from TREE.
+Returns non-nil if KEY was deleted, nil if KEY was not in TREE."
+  (let ((node (tstree--tree-root tree))
+	stack)
+    
+    ;; as long as we keep finding nodes, keep descending the tree and
+    ;; adding the nodes to the stack
+    (let ((cmpfun (tstree--tree-cmpfun tree))
+	  (c 0) (chr (elt key 0)) (d 0)
+	  (len (length key)))
+      (push (tstree--tree-dummyroot tree) stack)
+      (while (and node (< c len))
+	(push node stack)
+	(setq d (funcall cmpfun chr (tstree--node-split node)))
+	(if (= 0 d)
+	    (when (< (setq c (1+ c)) len) (setq chr (elt key c))))
+	(setq node (tstree--node-branch node d))))
+    ;; keep adding the low branch to the stack until we find the data
+    ;; node, or can't go any further
+    (while (tstree--node-p node)
+      (push node stack)
+      (setq node (if (tstree--node-split node) (tstree--node-low node)
+		   (tstree--node-equal node))))
+    (setq node (pop stack))
+    
+    (cond
+     ;; if KEY is not in TREE, return nil
+     ((or (tstree--node-split node) (eq (tstree--node-low node) 'deleted))
+      nil)
+     ;; if KEY is in TREE, recurse up the stack deleting the nodes, until
+     ;; we reach a node that has a branch other than the one containing
+     ;; KEY
+     (t
+      (let (parent)
+	(setq parent (car stack))
+	(tstree--node-set-equal node nil)
+	;; flag data node as deleted, in case it has to be left in the
+	;; tree because there are branches below it
+	(tstree--node-set-low node 'deleted)
+	(while (and parent
+		    (or (null (tstree--node-low node))
+			(eq (tstree--node-low node) 'deleted))
+		    (null (tstree--node-equal node))
+		    (null (tstree--node-high node)))
+	  (cond
+	   ((eq node (tstree--node-low parent))
+	    (tstree--node-set-low parent nil))
+	   ((eq node (tstree--node-equal parent))
+	    (tstree--node-set-equal parent nil))
+	   ((eq node (tstree--node-high parent))
+	    (tstree--node-set-high parent nil)))
+	  (setq node (pop stack))
+	  (setq parent (car stack)))
+	;; return t to indicate successful deletion
+	t))
+     ))
+)
 
 
 
@@ -565,14 +598,16 @@ function calls is returned. Don't use this. Use the
 		(setq result (funcall function str
 				      (tstree--node-equal node)))
 		(when mapcar (setq accumulate (cons result accumulate))))
-	    (push (tstree--node-equal node) stack)
-	    (push (cond
-		   ((eq type 'string)
-		    (concat str (string (tstree--node-split node))))
-		   ((eq type 'list)
-		    (append str (list (tstree--node-split node))))
-		   (t (vconcat str (vector (tstree--node-split node)))))
-		  stack)))))
+	    (when (tstree--node-equal node)
+	      (push (tstree--node-equal node) stack)
+	      (push (cond
+		     ((eq type 'string)
+		      (concat str (string (tstree--node-split node))))
+		     ((eq type 'list)
+		      (append str (list (tstree--node-split node))))
+		     (t (vconcat str (vector (tstree--node-split node)))))
+		    stack)))
+	  )))
     
     ;; return accumulated list of results (nil if MAPCAR was nil)
     (nreverse accumulate))
@@ -683,7 +718,7 @@ included in the results."
 	
         ;; if we're not at a data node, add the equal child to the stack
 	(if (tstree--node-split node)
-	    (progn
+	    (when (tstree--node-equal node)
 	      (push (tstree--node-equal node) stack)
 	      (push (cond
 		     ((stringp seq)
@@ -698,7 +733,8 @@ included in the results."
 	  ;; filter...
 	  (when (or (null filter)
 		    (funcall filter seq (tstree--node-equal node)))
-	    ;; skip completion if we've already found it in a previous tree
+	    ;; skip completion if we've already found it in a previous
+	    ;; tree
 	    (unless (catch 'found
 		      (dotimes (j i)
 			(when (tstree-member-p (nth j tree) seq)
@@ -709,7 +745,8 @@ included in the results."
 		(setq data
 		      (if combine-function
 			  (funcall combine-function data
-				   (tstree-member (nth (+ i j 1) tree) seq))
+				   (tstree-member (nth (+ i j 1) tree)
+						  seq))
 			data)))
 	      ;; add the completion to the list
 	      (setq completions (cons (cons seq data) completions))
@@ -737,8 +774,8 @@ included in the results."
 
 
 (defun tstree-complete-ordered
-  (tree sequence &optional maxnum rank-function combine-function filter)
-  "Return an alist containing all completions of STRING found in
+  (tree key &optional maxnum rank-function combine-function filter)
+  "Return an alist containing all completions of KEY found in
 ternary search tree TREE, along with their associated data. If no
 completions are found, return nil.
 
@@ -756,7 +793,7 @@ COMBINE-FUNCTION on pairs of data. COMBINE-FUNCTION defaults to
 the first tree's insersion function. The completions are ranked
 according to the values of the combined data.
 
-SEQUENCE must be a sequence (vector, list or string) containing
+KEY must be a sequence (vector, list or string) containing
 elements of the type used to reference data in the tree, or a
 list of such sequences. (If the sequence is a string, it must be
 possible to apply the `string' function to the tree's reference
@@ -782,18 +819,18 @@ return the combined data.
 The FILTER argument sets a filter function for the
 completions. If supplied, it is called for each possible
 completion with two arguments: the completion (a sequence of the
-same type as SEQUENCE), and its associated data. If the filter
+same type as KEY), and its associated data. If the filter
 function returns nil, the completion is not included in the
 results."
   
   (let* (stack heap)
-    ;; wrap tree and sequence in lists if necessary
+    ;; wrap tree and key in lists if necessary
     (when (tstree-p tree) (setq tree (list tree)))
-    ;; FIXME: this will fail if SEQUENCE is a list, and tree's
+    ;; FIXME: this will fail if KEY is a list, and tree's
     ;;        reference type is itself a sequence
-    (when (or (atom sequence)
-	      (and (listp sequence) (not (sequencep (car sequence)))))
-      (setq sequence (list sequence)))
+    (when (or (atom key)
+	      (and (listp key) (not (sequencep (car key)))))
+      (setq key (list key)))
 
     
     ;; ----- initialise the heap -----
@@ -809,8 +846,8 @@ results."
 	(setq num 0)
 	
 	;; ----- initialise the stack -----
-	(dolist (seq sequence)
-	  ;; if completions exist, add initial node and sequence to the
+	(dolist (seq key)
+	  ;; if completions exist, add initial node and key to the
 	  ;; stack
 	  (if (car (push (tstree--node-find (nth i tree) seq) stack))
 	      (push seq stack)
@@ -835,7 +872,7 @@ results."
 	  
 	  ;; if we're not at a data node, add the equal child to the stack
 	  (if (tstree--node-split node)
-	      (progn
+	      (when (tstree--node-equal node)
 		(push (tstree--node-equal node) stack)
 		(push (cond
 		       ((stringp seq)

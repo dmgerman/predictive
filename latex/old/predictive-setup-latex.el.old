@@ -1,0 +1,129 @@
+
+;;; predictive-setup-latex-ams.el --- predictive mode LaTeX setup function
+;;                                    (for AMSmath users)
+
+
+;; Copyright (C) 2004 Toby Cubitt
+
+;; Author: Toby Cubitt
+;; Version: 0.1
+;; Keywords: predictive, setup function, latex
+
+;; This file is part of the Emacs Predictive Completion package.
+;;
+;; The Emacs Predicive Completion package is free software; you can
+;; redistribute it and/or modify it under the terms of the GNU
+;; General Public License as published by the Free Software
+;; Foundation; either version 2 of the License, or (at your option)
+;; any later version.
+;;
+;; The Emacs Predicive Completion package is distributed in the hope
+;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
+;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+;; PURPOSE.  See the GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with the Emacs Predicive Completion package; if not, write
+;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+;; Boston, MA 02111-1307 USA
+
+
+;;; Change Log:
+;;
+;; version 0.1: initial release
+
+
+
+;;; Code:
+
+(require 'predictive)
+(provide 'predictive-setup-latex-ams)
+
+
+(defun predictive-setup-latex-ams ()
+  "Sets up predictive mode for use with latex major modes."
+  (interactive)
+  
+  ;; load the dictionaries
+  (require 'dict-latex-ams)
+  (require 'dict-latex-ams-math)
+  (require 'dict-latex-ams-env)
+  
+  ;; this ensures correct backwards-delete behaviour when \ is involved
+  (set (make-local-variable 'words-include-escapes) t)
+  
+  ;; setup regexps defining switch-dict regions
+  (set (make-local-variable 'predictive-switch-dict-regexps)
+       (list
+	(list "\\$" 'self 'dict-latex-ams-math '(priority . 1))
+	(list "\\\\" 'word 'dict-latex-ams)
+	(list
+	 (list "\\\\begin{" 'start 'dict-latex-ams-env '(priority . 2))
+	 (list "\\\\end{" 'start 'dict-latex-ams-env '(priority . 2))
+	 (list "\\\\text{" 'start 'dict-english '(priority . 2))
+	 (list (cons "\\([^\\]\\|^\\)\\({\\)" 2) 'start nil)
+	 (list (cons "\\([^\\]\\|^\\)\\(}\\)" 2) 'end nil))
+	(list
+	 (list "\\\\begin{equation}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{equation}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{equation\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{equation\\*}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{align}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{align}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{align\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{align\\*}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{alignat}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{alignat}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{alignat\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{alignat\\*}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{flalign}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{flalign}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{flalign\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{flalign\\*}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{gather}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{gather}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{gather\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{gather\\*}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{multline}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{multline}" 'end 'dict-latex-ams-math))
+	(list
+	 (list "\\\\begin{multline\\*}" 'start 'dict-latex-ams-math
+	       (cons 'priority 1))
+	 (list "\\\\end{multline\\*}" 'end 'dict-latex-ams-math))
+	))
+  
+  ;; make "\", "$", "{" and "}" do the right thing
+  (setq predictive-override-syntax-alist
+	(list
+	 (cons ?\\ (lambda () (interactive)
+		     (predictive-abandon)
+		     (predictive-insert-and-complete)))
+	 (cons ?$ 'predictive-accept-and-insert)
+	 (cons ?{ 'predictive-accept-and-insert)
+	 (cons ?} 'predictive-accept-and-insert)))
+
+  t  ; indicate succesful setup
+)
+
+;;; predictive-setup-latex.el ends here

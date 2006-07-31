@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: auto-overlay, automatic, overlays, compatability
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2
+;; * added replace-regexps-in-string compatibility function
+;;
 ;; Version 0.1
 ;; * initial release
 
@@ -43,6 +46,16 @@
   "Return (narrowed) buffer line number at position POS.
 \(Defaults to the point.\)"
   (1+ (count-lines (point-min) pos))
+)
+
+
+(defun auto-overlays-compat-replace-regexp-in-string (regexp rep string)
+  "Return a new string with all matches for REGEXP in STRING replaced
+with REP."
+  (let ((str string))
+    (while (string-match regexp str)
+      (setq str (replace-match rep nil nil str)))
+    str)
 )
 
 ;;; auto-overlays-compat.el ends here

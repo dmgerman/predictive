@@ -1,0 +1,12 @@
+allocatable
+dimension
+external
+intent
+intrinsic
+optional
+parameter
+pointer
+private
+public
+save
+target

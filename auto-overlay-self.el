@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.2
+;; Version: 0.2.3
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.3
+;; * updated to reflect changes in `auto-overlays.el'
+;; * changed `auto-o-self-list' to make it run faster
 ;;
 ;; Version 0.2.2
 ;; * small but important bug fix
@@ -91,8 +95,8 @@
     
     (cond
      ;; if stack is empty, create a new end-unmatched overlay, adding it to
-      ;; the list of unascaded overlays (avoids treating it as a special
-      ;; case), and return it
+     ;; the list of unascaded overlays (avoids treating it as a special
+     ;; case), and return it
      ((null overlay-list)
       (auto-o-make-self o-match nil))
      
@@ -196,11 +200,6 @@
        (t (setq pos (point-max))))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance)))
       
-    ;; give the new overlay its basic properties
-    (overlay-put o-new 'auto-overlay t)
-    (overlay-put o-new 'set (overlay-get o-start 'set))
-    (overlay-put o-new 'type (overlay-get o-start 'type))
-    
     ;; if overlay is end-unmatched, add it to the list of uncascaded overlays
     (unless (overlayp end) (push o-new auto-o-pending-self-cascade))
     
@@ -285,23 +284,53 @@
 
 
 
+;; (defun auto-o-self-list (o-start &optional end)
+;;   ;; Return list of self overlays ending at or after match overlay O-START and
+;;   ;; starting before or at END, corresponding to same entry as O-START. If END
+;;   ;; is null, all overlays after O-START are included.
+
+;;   (when (null end) (setq end (point-max)))
+  
+;;   (let (overlay-list)
+;;     ;; create list of all overlays corresponding to same entry between O-START
+;;     ;; and END
+;;     (mapc (lambda (o) (when (and (>= (overlay-end o)
+;; 				     (overlay-get o-start 'delim-start))
+;; 				 (<= (overlay-start o) end))
+;; 			(push o overlay-list)))
+;; 	  (auto-overlays-in
+;; 	   (point-min) (point-max)
+;; 	   (list
+;; 	    '(identity auto-overlay)
+;; 	    (list 'eq 'set-id (overlay-get o-start 'set-id))
+;; 	    (list 'eq 'entry-id (overlay-get o-start 'entry-id)))))
+;;     ;; sort the list by start position, from first to last
+;;     (sort overlay-list
+;; 	  (lambda (a b) (< (overlay-start a) (overlay-start b)))))
+;; )
+
+
+
 (defun auto-o-self-list (o-start &optional end)
   ;; Return list of self overlays ending at or after match overlay O-START and
-  ;; starting before or at END, with same type as O-START. If END is null, all
-  ;; overlays after O-START are included.
+  ;; starting before or at END, corresponding to same entry as O-START. If END
+  ;; is null, all overlays after O-START are included.
 
   (when (null end) (setq end (point-max)))
   
   (let (overlay-list)
-    ;; create list of all overlays of same type between O-START and END
-    (mapc (lambda (o) (when (and (>= (overlay-end o)
-				     (overlay-get o-start 'delim-start))
-				 (<= (overlay-start o) end))
-			(push o overlay-list)))
-	  ;; Note: already have list of overlays of same type so no need to
-	  ;;       use `auto-o-overlays-in'
-	  (nth (overlay-get o-start 'type)
-	       (nth (overlay-get o-start 'set) auto-overlay-list)))
+    ;; create list of all overlays corresponding to same entry between O-START
+    ;; and END
+    (setq overlay-list
+	  ;; Note: We add 1 to end to catch overlays that start at end. This
+	  ;;       seems to give same results as the old version of
+	  ;;       `auto-o-self-list' (above) in all circumstances.
+	  (auto-overlays-in
+	   (overlay-get o-start 'delim-start) (1+ end)
+	   (list
+	    '(identity auto-overlay)
+	    (list 'eq 'set-id (overlay-get o-start 'set-id))
+	    (list 'eq 'entry-id (overlay-get o-start 'entry-id)))))
     ;; sort the list by start position, from first to last
     (sort overlay-list
 	  (lambda (a b) (< (overlay-start a) (overlay-start b)))))

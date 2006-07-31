@@ -158,7 +158,7 @@ PROP-TEST."
 	      (setq prop-list (list prop-list)))
 	    (setq value-list nil)
 	    (unless (or (< (length test) 3)
-			(and (setq value-list (nth 2 test))  ;; nil isn't list
+			(and (setq value-list (nth 2 test))  ; nil isn't list
 			     (listp value-list)))
 	      (setq value-list (list value-list)))
 	    

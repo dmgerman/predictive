@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Keywords: automatic, overlays, stack
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.3
+;; * updated to reflect changes in `auto-overlays.el'
 ;;
 ;; Version 0.1.2
 ;; * bug fix to `auto-o-suicide' behaviour, require change to `auto-o-stack'
@@ -142,11 +145,6 @@
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
       (auto-o-match-overlay o-new 'unmatched o-match)))
 
-    ;; give the new overlay its basic properties
-    (overlay-put o-new 'auto-overlay t)
-    (overlay-put o-new 'set (overlay-get o-match 'set))
-    (overlay-put o-new 'type (overlay-get o-match 'type))
-    
     ;; return the new overlay
     o-new)
 )
@@ -205,21 +203,22 @@
 
 
 (defun auto-o-stack (o-match)
-  ;; Return a list of the overlays that overlap and are of same type as match
-  ;; overlay O-MATCH, ordered from innermost to outermost. (Assumes overlays
-  ;; are correctly stacked.) The parent of O-MATCH is guaranteed to come
-  ;; before any other overlay that has exactly the same length (which implies
-  ;; they cover identical regions if overlays are correctly stacked). For
-  ;; other overlays with identical lengths, the order is undefined.
+  ;; Return a list of the overlays that overlap and correspond to same entry
+  ;; as match overlay O-MATCH, ordered from innermost to outermost. (Assumes
+  ;; overlays are correctly stacked.) The parent of O-MATCH is guaranteed to
+  ;; come before any other overlay that has exactly the same length (which
+  ;; implies they cover identical regions if overlays are correctly
+  ;; stacked). For other overlays with identical lengths, the order is
+  ;; undefined.
   
-  ;; find overlays of same type overlapping O-MATCH
+  ;; find overlays corresponding to same entry overlapping O-MATCH
   (let ((overlay-stack (auto-overlays-at-point
 			(if (eq (auto-o-edge o-match) 'start)
 			    (overlay-get o-match 'delim-end)
 			  (overlay-get o-match 'delim-start))
 			(list '(eq auto-overlay t)
-			      (list '= 'set (overlay-get o-match 'set))
-			      (list '= 'type (overlay-get o-match 'type)))))
+			      (list 'eq 'set-id (overlay-get o-match 'set-id))
+			      (list 'eq 'entry-id (overlay-get o-match 'entry-id)))))
 	(o-parent (overlay-get o-match 'parent)))
     ;; sort the list by overlay length, i.e. from innermost to outermose
     (sort overlay-stack

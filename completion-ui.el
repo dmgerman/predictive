@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.4
+;; Version: 0.3.6
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.6
+;; * fixed bug in `completion-define-minor-mode'
+;;
+;; Version 0.3.5
+;; * added eval-when-compile to prevent bogus compilation errors
 ;;
 ;; Version 0.3.4
 ;; * added function to `after-change-functions' to hide tooltip
@@ -769,7 +775,8 @@ The other arguments are as for `define-minor-mode'."
   `(define-minor-mode ,mode ,doc ,init-value ,lighter ,keymap
     (if ,mode
 	(setq completion-function ,function)
-      (setq completion-function nil)))
+      (setq completion-function nil))
+    ,@body)
 )
 
 
@@ -1075,12 +1082,18 @@ unless you know what you are doing, it only bind
     
     
     ;; otherwise, lookup behaviour in syntax alists
-    (let* ((behaviour
-	    (or (cdr (assq last-input-event
-			   completion-override-syntax-alist))
-		(cdr (assq (char-syntax last-input-event)
-			   completion-syntax-alist))
-		(cdr (assq t completion-syntax-alist))))
+    (let* ((syntax-alist (if (fboundp 'auto-overlay-local-binding)
+			     (auto-overlay-local-binding
+			      'completion-syntax-alist)
+			   'completion-syntax-alist))
+	   (override-alist (if (fboundp 'auto-overlay-local-binding)
+			       (auto-overlay-local-binding
+				'completion-override-syntax-alist)
+			     'completion-override-syntax-alist))
+	   (behaviour
+	    (or (cdr (assq last-input-event override-alist))
+		(cdr (assq (char-syntax last-input-event) syntax-alist))
+		(cdr (assq t syntax-alist))))
 	   (resolve-behaviour (nth 0 behaviour))
 	   (insert-behaviour (nth 1 behaviour))
 	   (complete-behaviour (nth 2 behaviour))
@@ -1175,7 +1188,10 @@ carrots will start growing out your ears."
 
   (unless overlay (setq overlay (completion-overlay-at-point)))
   
-  (let (prefix pos)
+  (let ((word-thing (if (fboundp 'auto-overlay-local-binding)
+			(auto-overlay-local-binding 'completion-word-thing)
+		      completion-word-thing))
+	prefix pos)
     (cond
      ;; if within an existing overlay, complete its prefix
      (overlay (complete (overlay-get overlay 'prefix) overlay))
@@ -1184,7 +1200,7 @@ carrots will start growing out your ears."
      ((completion-end-of-word-p)
       (setq pos (point))
       (save-excursion
-	(forward-thing completion-word-thing -1)
+	(forward-thing word-thing -1)
 	(setq prefix (buffer-substring-no-properties (point) pos)))
       (complete prefix overlay))
      
@@ -1195,17 +1211,17 @@ carrots will start growing out your ears."
       ;; find first completion overlay within word
       (unless overlay
 	(save-excursion
-	  (forward-thing completion-word-thing)
+	  (forward-thing word-thing)
 	  (setq overlay
 		(car (sort (completion-overlays-in pos (point))
 			   (lambda (a b) (< (overlay-start a)
 					    (overlay-start b))))))))
       ;; delete old completion and complete new prefix
       (save-excursion
-	(forward-thing completion-word-thing)
+	(forward-thing word-thing)
 	(delete-region pos (if overlay (overlay-start overlay)
 			     (point)))
-	(forward-thing completion-word-thing -1)
+	(forward-thing word-thing -1)
 	(setq prefix (buffer-substring-no-properties (point) pos)))
       (complete prefix overlay))
      ))
@@ -1276,7 +1292,10 @@ If this deletes into a word, complete what remains of that word."
   (completion-cancel-tooltip)
   
   (let ((overlay (completion-overlay-at-point))
-	(wordstart (completion-beginning-of-word-p)))
+	(wordstart (completion-beginning-of-word-p))
+	(word-thing (if (fboundp 'auto-overlay-local-binding)
+			(auto-overlay-local-binding 'completion-word-thing)
+		      completion-word-thing)))
     
     (combine-after-change-calls
       ;; if not auto-completing, just resolve old pending completiong
@@ -1322,7 +1341,7 @@ If this deletes into a word, complete what remains of that word."
 			     (completion-end-of-word-p))))
 	    (let ((pos (point)) prefix)
 	      (save-excursion
-		(forward-thing completion-word-thing -1)
+		(forward-thing word-thing -1)
 		(setq prefix
 		      (buffer-substring-no-properties (point) pos)))
 	      (completion-setup-overlay prefix nil nil overlay)))
@@ -1549,9 +1568,12 @@ newlines. Interactively, N is the prefix argument."
     (let (bounds)
       (and (< point (point-max))
 	   (setq bounds
-		 (bounds-of-thing-at-point completion-word-thing))
+		 (bounds-of-thing-at-point
+		  (if (fboundp 'auto-overlay-local-binding)
+		      (auto-overlay-local-binding 'completion-word-thing)
+		    completion-word-thing)))
 	   (= point (car bounds)))))
-)    
+)
   
 
 
@@ -1563,7 +1585,10 @@ newlines. Interactively, N is the prefix argument."
     (goto-char point)
     (let (bounds)
       (and (setq bounds
-		 (bounds-of-thing-at-point completion-word-thing))
+		 (bounds-of-thing-at-point
+		  (if (fboundp 'auto-overlay-local-binding)
+		      (auto-overlay-local-binding 'completion-word-thing)
+		    completion-word-thing)))
 	   (> point (car bounds))
 	   (< point (cdr bounds)))))
 )
@@ -1579,7 +1604,10 @@ newlines. Interactively, N is the prefix argument."
     (let (bounds)
       (and (> point (point-min))
 	   (setq bounds
-		 (bounds-of-thing-at-point completion-word-thing))
+		 (bounds-of-thing-at-point
+		  (if (fboundp 'auto-overlay-local-binding)
+		      (auto-overlay-local-binding 'completion-word-thing)
+		    completion-word-thing)))
 	   (= point (cdr bounds)))))
 )
 
@@ -1950,7 +1978,7 @@ of completion overlay."
 
 (defun completion-construct-browser-menu
   (prefix completions &optional menu-item-func sub-menu-func)
-  "Construct the ompletion browser menu keymap
+  "Construct the completion browser menu keymap
 from the supplied PREFIX (COMPLETIONS is ignored and replaced by
 all completions of PREFIX in the current dictionary).
 
@@ -2211,6 +2239,11 @@ See also `completion-window-posn-at-point' and
 
 ;;; ===============================================================
 ;;;                       Compatibility Stuff
+
+;; prevent bogus compiler warnings
+(eval-when-compile
+  (defun completion-compat-window-offsets (dummy)))
+
 
 (unless (fboundp 'posn-at-point)
 ;;  (require 'completion-ui-compat)

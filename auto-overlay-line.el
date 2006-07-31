@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3
+;; Version: 0.3.1
 ;; Keywords: automatic, overlays, line
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,7 +30,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.2
+;; Version 0.3.1
+;; * updated to reflect changes in `auto-overlays.el'
+;;
+;; Version 0.3
 ;; * updated `auto-o-extend-line' to bring it into line with new procedure for
 ;;   calling functions after a buffer modification
 ;;
@@ -69,10 +72,6 @@
 			       (goto-char (overlay-get o-match 'delim-end))
 			       (1+ (line-end-position))))))
     
-    ;; give the new overlay its basic properties
-    (overlay-put o-new 'auto-overlay t)
-    (overlay-put o-new 'set (overlay-get o-match 'set))
-    (overlay-put o-new 'type (overlay-get o-match 'type))
     ;; match start of new overlay with match
     (auto-o-match-overlay o-new o-match nil)
     ;; set overlay's modification hooks to ensure that it always extends to
@@ -115,7 +114,7 @@
 				       (1+ (line-end-position))))
 	  ;; if we're exclusive, delete lower priority overlays in newly
 	  ;; covered region
-	  (auto-o-update-exclusive (overlay-get o-self 'set)
+	  (auto-o-update-exclusive (overlay-get o-self 'set-id)
 				   end (overlay-end o-self)
 				   nil (overlay-get o-self 'priority)))
 	 
@@ -124,7 +123,7 @@
 	  ;; shrink ourselves so we extend till end of line
 	  (move-overlay o-self start (+ start (match-end 0)))
 	  ;; if we're exclusive, re-parse region that is no longer covered
-	  (auto-o-update-exclusive (overlay-get o-self 'set)
+	  (auto-o-update-exclusive (overlay-get o-self 'set-id)
 				   (overlay-end o-self) end
 				   (overlay-get o-self 'priority) nil))
 	 ))))

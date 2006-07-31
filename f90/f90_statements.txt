@@ -1,0 +1,56 @@
+allocate
+assign
+backspace
+block data
+call
+case
+character
+close
+common
+complex
+contains
+continue
+cycle
+data
+deallocate
+do
+double precision
+else
+else if
+elsewhere
+end
+endfile
+entry
+equivalence
+exit
+format
+function
+go to
+if
+implicit
+include
+inquire
+integer
+interface
+logical
+module
+module procedure
+namelist
+nullify
+open
+pause
+print
+program
+read
+real
+return
+rewind
+save
+select case
+sequence
+stop
+subroutine
+type
+use
+where
+write

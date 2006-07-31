@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.2
+;; Version: 0.13
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.13
+;; * finally wrote a `predictive-remove-from-dict' function!
 ;;
 ;; Version 0.12.2
 ;; * added `predictive-dump-dict-to-buffer/file' functions, since dict-tree.el
@@ -447,22 +450,27 @@ Note: this can be overridden by an \"overlay local\" binding (see
 )
 
 
-;; FIXME: `replace-regexp-in-string' not defined in Emacs 21.x
-;;
+
 (defmacro predictive-buffer-local-dict-name ()
   ;; Return the buffer-local dictionary name
   '(intern
-    (concat "dict-" (replace-regexp-in-string
-		     "\\." "-" (file-name-nondirectory (buffer-file-name))))))
+    (concat "dict-"
+	    (replace-regexp-in-string
+	     "\\." "-"
+	     (file-name-nondirectory
+	      (or (buffer-file-name) (buffer-name)))))))
 
 
-;; FIXME: `replace-regexp-in-string' not defined in Emacs 21.x
-;;
+
 (defmacro predictive-buffer-local-meta-dict-name ()
   ;; Return the buffer-local meta-dictionary name
   '(intern
-    (concat "dict-meta-" (replace-regexp-in-string
-			  "\\." "-" (file-name-nondirectory (buffer-file-name))))))
+    (concat "dict-meta-"
+	    (replace-regexp-in-string
+	     "\\." "-"
+	     (file-name-nondirectory
+	      (or (buffer-file-name)
+		  (buffer-name)))))))
 
 
 
@@ -612,7 +620,8 @@ do: emails, academic research articles, letters...)"
 				  'predictive-flush-auto-learn-caches 'idle))
     ;; set the mode variable and run the hook
     (setq predictive-mode t)
-    (run-hooks 'predictive-mode-hook))
+    (run-hooks 'predictive-mode-hook)
+    (message "Predictive mode enabled"))
    
    
    ;; ----- disabling predictive mode -----
@@ -640,7 +649,8 @@ do: emails, academic research articles, letters...)"
     (kill-local-variable 'completion-menu)
     ;; reset the mode variable and run the hook
     (setq predictive-mode nil)
-    (run-hooks 'predictive-mode-disable-hook))
+    (run-hooks 'predictive-mode-disable-hook)
+    (message "Predictive mode disabled"))
    )
 )
 
@@ -848,80 +858,63 @@ To set it permanently, you should customize
 
 
 (defun predictive-load-dict (dict)
-  "Load the dictionary DICTNAME and associate it with the current buffer.
+  "Load the dictionary DICT into the current buffer.
 
-DICT must be the name of a dictionary to be found somewhere in the load
-path. Interactively, it is read from the mini-buffer."
+DICT must be the name of a dictionary to be found somewhere in
+the load path. Returns nil if dictionary fails to
+load. Interactively, it is read from the mini-buffer."
   (interactive "sDictionary to load: \n")
   (unless (stringp dict) (setq dict (symbol-name dict)))
 
   ;; load dictionary if not already loaded
-  (unless (dictree-p (condition-case
-			 error (eval (intern-soft dict))
-		       (void-variable nil)))
-    (unless (and (load dict t)
-		 (condition-case
-			 error (eval (intern-soft dict))
-		   (void-variable nil)))
-      (error "Could not load dictionary %s" (prin1-to-string dict))))
-
-  ;; add dictionary to buffer's used dictionary list (note: can't use
-  ;; add-to-list because we want comparison with eq, not equal)
-  (setq dict (eval (intern-soft dict)))
-  (unless (memq dict predictive-used-dict-list)
-    (setq predictive-used-dict-list
-	  (cons dict predictive-used-dict-list)))
+  (if (not (or (dictree-p (condition-case
+			      error (eval (intern-soft dict))
+			    (void-variable nil)))
+	       (and (load dict t)
+		    (dictree-p (condition-case
+				   error (eval (intern-soft dict))
+				 (void-variable nil))))))
+      ;; if we failed to load dictionary, throw an error if called
+      ;; interactively, otherwise just return nil
+      (if (interactive-p)
+	  (error "Could not load dictionary %s" (prin1-to-string dict))
+	nil)
+    
+    ;; if we successfully loaded the dictionary, add it to buffer's used
+    ;; dictionary list (note: can't use add-to-list because we want comparison
+    ;; with eq, not equal)
+    (setq dict (eval (intern-soft dict)))
+    (unless (memq dict predictive-used-dict-list)
+      (setq predictive-used-dict-list
+	    (cons dict predictive-used-dict-list)))
+    
+    ;; indicate successful loading
+    t)
 )
 
 
 
+(defun predictive-unload-dict (dict)
+  "Unload the dictionary DICT from the current buffer.
+Interactively, DICT is read from the mini-buffer.
 
-(defun predictive-add-to-dict (dict word &optional weight)
-  "Insert WORD into predictive mode dictionary DICT.
-
-Optional argument WEIGHT sets the weight. If the word is not in the
-dictionary, it will be added to the dictionary with initial weight WEIGHT \(or
-0 if none is supplied\). If the word is already in the dictionary, its weight
-will be incremented by WEIGHT \(or by 1 if WEIGHT is not supplied).
-
-Interactively, WORD and DICT are read from the minibuffer, and WEIGHT is
-specified by the prefix argument."
-  (interactive (list (read-dict "Dictionary to add to: ")
-		     (read-from-minibuffer
-		      (concat "Word to add"
-			      (let ((str (thing-at-point 'word)))
-				(when str (concat " (default \"" str "\")")))
-			      ": "))
-		     current-prefix-arg))
-
-  ;; if called interactively, sort out arguments
-  (when (interactive-p)
-    ;; throw error if no dict supplied
-    (unless dict (error "No dictionary supplied"))
-    ;; sort out word argument
-    (when (string= word "")
-      (let ((str (thing-at-point 'word)))
-	(if str
-	    (setq word str)
-	  (error "No word supplied"))))
-    ;; sort out weight argument
-    (unless (null weight) (setq weight (prefix-numeric-value weight))))
+\(Note that this does not unload the dictionary from Emacs. See
+`dictree-unload'.\)"
   
-  ;; insert word
-  (let ((newweight (dictree-insert dict word weight))
-	pweight)
-    ;; if word has associated prefices, make sure weight of each prefix is at
-    ;; least as great as word's new weight
-    (dolist (prefix (dictree-lookup-meta-data dict word))
-      (setq pweight (dictree-lookup dict prefix))
-      (when (and pweight (< pweight newweight))
-	(dictree-insert dict prefix newweight (lambda (a b) a)))))
+  (interactive "sDictionary to unload: \n")
+  (unless (stringp dict) (setq dict (symbol-name dict)))
+  ;; remove dictionary from buffer's used dictionary list
+  (when (setq dict (condition-case
+		       error (eval (intern-soft dict))
+		     (void-variable nil)))
+    (setq predictive-used-dict-list (delq dict predictive-used-dict-list)))
 )
 
 
 
 
-(defun predictive-create-dict (dictname &optional file populate autosave speed)
+(defun predictive-create-dict (&optional dictname file
+					 populate autosave speed)
   "Create a new predictive mode dictionary called DICTNAME.
 
 The optional argument FILE specifies a file to associate with the
@@ -954,25 +947,29 @@ respectively."
 		 nil "")))
   
   ;; sort out arguments
+  (when (and (stringp populate) (string= populate ""))
+    (setq populate nil))
   (unless (or (null populate) (file-regular-p populate))
     (setq populate nil)
     (message "File %s does not exist; creating blank dictionary" populate))
-  (when (symbolp dictname) (setq dictname (symbol-name dictname)))
+  (when (and dictname (symbolp dictname))
+    (setq dictname (symbol-name dictname)))
   
   ;; confirm if overwriting existing dict, then unload existing one
   ;; (Note: we need the condition-case to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead)
-  (when (or (and (null (dictree-p (condition-case
+  (when (or (null dictname)
+	    (and (null (dictree-p (condition-case
 				      error (eval (intern-soft dictname))
 				    (void-variable nil))))
 		 (setq dictname (intern dictname)))
-	    (or (null (interactive-p))
-		(and (y-or-n-p
-		      (format "Dictionary %s already exists. Replace it? "
+	    (and (or (null (interactive-p))
+		     (and (y-or-n-p
+			   (format "Dictionary %s already exists. Replace it? "
 			      dictname))
-		     (dictree-unload (eval (intern-soft dictname)))
-		     (setq dictname (intern dictname)))))
+			  (dictree-unload (eval (intern-soft dictname)))))
+		 (setq dictname (intern dictname))))
     
     (let (dict
 	  (complete-speed (if speed speed predictive-completion-speed))
@@ -1118,6 +1115,78 @@ creating it using `predictive-create-dict'. See also
 		     (read-file-name "File to dump to: ")
 		     current-prefix-arg))
   (dictree-dump-to-file dict filename 'string overwrite)
+)
+
+
+
+(defun predictive-add-to-dict (dict word &optional weight)
+  "Insert WORD into predictive mode dictionary DICT.
+
+Optional argument WEIGHT sets the weight. If the word is not in the
+dictionary, it will be added to the dictionary with initial weight WEIGHT \(or
+0 if none is supplied\). If the word is already in the dictionary, its weight
+will be incremented by WEIGHT \(or by 1 if WEIGHT is not supplied).
+
+Interactively, WORD and DICT are read from the minibuffer, and WEIGHT is
+specified by the prefix argument."
+  (interactive (list (read-dict "Dictionary to add to: ")
+		     (read-from-minibuffer
+		      (concat "Word to add"
+			      (let ((str (thing-at-point 'word)))
+				(when str (concat " (default \"" str "\")")))
+			      ": "))
+		     current-prefix-arg))
+
+  ;; if called interactively, sort out arguments
+  (when (interactive-p)
+    ;; throw error if no dict supplied
+    (unless dict (error "No dictionary supplied"))
+    ;; sort out word argument
+    (when (string= word "")
+      (let ((str (thing-at-point 'word)))
+	(if str
+	    (setq word str)
+	  (error "No word supplied"))))
+    ;; sort out weight argument
+    (unless (null weight) (setq weight (prefix-numeric-value weight))))
+  
+  ;; insert word
+  (let ((newweight (dictree-insert dict word weight))
+	pweight)
+    ;; if word has associated prefices, make sure weight of each prefix is at
+    ;; least as great as word's new weight
+    (dolist (prefix (dictree-lookup-meta-data dict word))
+      (setq pweight (dictree-lookup dict prefix))
+      (when (and pweight (< pweight newweight))
+	(dictree-insert dict prefix newweight (lambda (a b) a)))))
+)
+
+
+
+
+(defun predictive-remove-from-dict (dict word)
+  "Delete WORD from predictive mode dictionary DICT.
+Interactively, WORD and DICT are read from the minibuffer."
+  (interactive (list (read-dict "Dictionary to delete from: ")
+		     (read-from-minibuffer
+		      (concat "Word to delete"
+			      (let ((str (thing-at-point 'word)))
+				(when str (concat " (default \"" str "\")")))
+			      ": "))))
+  
+  ;; if called interactively, sort out arguments
+  (when (interactive-p)
+    ;; throw error if no dict supplied
+    (unless dict (error "No dictionary supplied"))
+    ;; sort out word argument
+    (when (string= word "")
+      (let ((str (thing-at-point 'word)))
+	(if str
+	    (setq word str)
+	  (error "No word supplied")))))
+
+  ;; delete word
+  (dictree-delete dict word)
 )
 
 
@@ -1585,7 +1654,7 @@ there's only one."
 	  ((symbolp dic) (setq dic (eval dic))))
 
 	 (cond
-	  ;; if element is a dictinary, return it
+	  ;; if element is a dictionary, return it
 	  ((dictree-p dic) dic)
 	  
 	  ;; if element is a plist with a :generate property...
@@ -1640,7 +1709,14 @@ there's only one."
 		    (symbol-name (predictive-buffer-local-dict-name))
 		    ".elc")))
     ;; if the buffer-local dictionary exists, load it, otherwise create it
-    (if (file-exists-p filename) (load filename)
+    (if (and filename (file-exists-p filename))
+	(progn
+	  (load filename)
+	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
+	  ;; function
+	  (dictree--set-filename (eval (predictive-buffer-local-dict-name))
+				 filename)
+	  (setq buffer-dict (eval (predictive-buffer-local-dict-name))))
       ;; The insertion function inserts a weight multiplied by the multiplier
       ;; if none already exists, otherwise it adds the new weight times the
       ;; multiplier to the existing one, or if supplied weight is nil,
@@ -1670,8 +1746,11 @@ there's only one."
 		    (symbol-name (predictive-buffer-local-meta-dict-name))
 		    ".elc")))
     ;; if the buffer meta-dictionary exists, load it
-    (when (file-exists-p filename)
+    (when (and filename (file-exists-p filename))
       (load filename)
+      ;; FIXME: probably shouldn't be using an internal dict-tree.el function
+      (dictree--set-filename (eval (predictive-buffer-local-meta-dict-name))
+			     filename)
       ;; if the meta-dictionary is not based on the current main dictionary,
       ;; prompt user to update it
       (when (and
