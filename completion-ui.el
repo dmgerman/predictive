@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3
+;; Version: 0.3.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -88,6 +88,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.1
+;; * bug fixes
 ;;
 ;; Version 0.3
 ;; * incorporated a lot of code from predictive.el
@@ -224,8 +227,8 @@ progress elsewhere in the buffer:
 (defcustom completion-syntax-alist
   '(
     ;; word constituents add to current completion
-    (?w . (add . word-at-point))
-    (?_ . (add . word-at-point))
+    (?w . (add . word))
+    (?_ . (add . word))
     ;; whitespace and punctuation chars accept current completion
     (?  . (accept . nil))
     (?. . (accept . nil))
@@ -244,18 +247,17 @@ completion candidate at the point. 'add causes the character to
 be added to the any completion prefix at the point.
 
 If the cdr of BEHAVIOUR contains 'basic, the prefix at the point
-will be completed. If it contains 'word-at-point, it will produce
-more advanced completion behaviour that tries to do the right
-thing with the word at the point. If it is null, no completion
-will take place."
+will be completed. If it contains 'word, it will produce more
+advanced completion behaviour that tries to do the right thing
+with the word at the point. If it is null, no completion will
+take place."
   :group 'completion-ui
   :type '(alist :key-type (choice character (const :tag "default" t))
 		:value-type (cons (choice (const :tag "accept" accept)
 					  (const :tag "reject" reject)
 					  (const :tag "add" add))
 				  (choice (const :tag "basic" basic)
-					  (const :tag "word-at-point"
-						 word-at-point)
+					  (const :tag "word" word)
 					  (const :tag "none" nil))))
 )
 
@@ -272,8 +274,7 @@ characters rather than syntax descriptors."
 					  (const :tag "reject" reject)
 					  (const :tag "add" add))
 				  (choice (const :tag "basic" basic)
-					  (const :tag "word-at-point"
-						 word-at-point)
+					  (const :tag "word" word)
 					  (const :tag "none" nil))))
 )
 
@@ -765,6 +766,16 @@ or creating one."
 
   ;; delete old completion
   (delete-region (overlay-start overlay) (overlay-end overlay))
+  ;; for some reason, the delete-region sometimes deletes the overlay,
+  ;; and even moving it back fails, so we have to re-create it
+  (unless (overlay-buffer overlay)
+    (setq completion-overlay-list
+	  (delq overlay completion-overlay-list))
+    (setq overlay
+	  (completion-setup-overlay
+	   (overlay-get overlay 'prefix)
+	   (overlay-get overlay 'completions))))
+  
   ;; insert new one, if any
   (let ((completions (overlay-get overlay 'completions)))
     (when completions
@@ -1061,8 +1072,15 @@ unless you know what you are doing, it only bind
 	   (wordstart (completion-beginning-of-word-p))
 	   prefix)
       
+      
+      ;; if behaviour alist entry is a function, call it
+      (when (functionp before-insert)
+	(setq before-insert (funcall before-insert)))
+
       ;; do whatever is specified in alists
       (cond
+       ;; noop
+       ((null before-insert))
        ;; accept
        ((or (eq before-insert 'accept))
 	(completion-accept overlay)
@@ -1090,11 +1108,19 @@ unless you know what you are doing, it only bind
       (when overlay (move-overlay overlay (point) (point)))
       
       
+      ;; if behaviour alist entry is a function, call it
+      (when (functionp complete-after)
+	(setq complete-after (funcall complete-after)))
+      
       (cond
        ;; if not using automatic completion or not completing after
        ;; inserting, resolve any overlay
        ((or (not completion-auto-complete) (not complete-after))
-	(when overlay (completion-resolve-old)))
+	(when overlay
+	  (delete-overlay overlay)
+	  (setq completion-overlay-list
+		(delq overlay completion-overlay-list))
+	  (completion-resolve-old)))
 
        ;; if doing basic completion, or we're in a completion overlay
        ;; or at the beginning of a word, do normal completion
@@ -1102,7 +1128,7 @@ unless you know what you are doing, it only bind
 	(complete prefix overlay))
        
        ;; if completing word at point, do so
-       ((eq complete-after 'word-at-point)
+       ((eq complete-after 'word)
 	(complete-word-at-point overlay))
 
        ;; error
@@ -1122,31 +1148,13 @@ for one at the point. The point had better be within OVERLAY or
 carrots will start growing out your ears."
   (interactive)
 
-  (unless overlay
-    (setq overlay (completion-overlay-at-point))
-    (when (and (null overlay) (completion-within-word-p))
-      (let ((pos (point)))
-	(save-excursion
-	  (forward-thing completion-word-thing)
-	  (setq overlay
-		(car (sort (auto-overlays-in
-			    pos (point)
-			    '(identity completion-overlay))
-			   (lambda (o1 o2)
-			     (< (overlay-start o1)
-				(overlay-start o2))))))
-	  ))))
+  (unless overlay (setq overlay (completion-overlay-at-point)))
   
   (let (prefix pos)
-    ;; delete current completion if we're within one
-    (when overlay
-      (delete-region (overlay-start overlay) (overlay-end overlay)))
-    
     (cond
      ;; if within an existing overlay, complete its prefix
-     ((and overlay (= (point) (overlay-start overlay)))
-      (complete (overlay-get overlay 'prefix) overlay))
-
+     (overlay (complete (overlay-get overlay 'prefix) overlay))
+     
      ;; if point is at end of a word, complete it
      ((completion-end-of-word-p)
       (setq pos (point))
@@ -1159,6 +1167,15 @@ carrots will start growing out your ears."
      ;; to overlay, if there is one) and complete remainding prefix
      ((completion-within-word-p)
       (setq pos (point))
+      ;; find first completion overlay within word
+      (unless overlay
+	(save-excursion
+	  (forward-thing completion-word-thing)
+	  (setq overlay
+		(car (sort (completion-overlays-in pos (point))
+			   (lambda (a b) (< (overlay-start a)
+					    (overlay-start b))))))))
+      ;; delete old completion and complete new prefix
       (save-excursion
 	(forward-thing completion-word-thing)
 	(delete-region pos (if overlay (overlay-start overlay)
@@ -1220,14 +1237,15 @@ If this deletes into a word, complete what remains of that word."
 	  ;; overlay to prevent word after point being deleted
 	  (when (or overlay
 		    (and wordstart
+			 (null (completion-overlay-at-point))
 			 (or (completion-within-word-p)
 			     (completion-end-of-word-p))))
 	    (let ((pos (point)) prefix)
 	      (save-excursion
 		(forward-thing completion-word-thing -1)
 		(setq prefix
-		      (buffer-substring-no-properties (point) pos))
-		(completion-setup-overlay prefix nil nil overlay))))
+		      (buffer-substring-no-properties (point) pos)))
+	      (completion-setup-overlay prefix nil nil overlay)))
 	  
 	  ;; if there's no existing timer, set one up to complete
 	  ;; remainder of word after some idle time
@@ -1488,10 +1506,10 @@ newlines. Interactively, N is the prefix argument."
 
 (defun completion-setup-overlay
   (prefix &optional completions num overlay)
-  "Get completion overlay at point,
-or create a new one if none exists, and set its properties
-according to PREFIX, COMPLETIONS and NUM. If NUM is t, the
-overlay's completion-num property is left unchanged."
+  "Get completion overlay at point, or create a new one
+if none exists, and set its properties according to PREFIX,
+COMPLETIONS and NUM. If NUM is t, the overlay's completion-num
+property is left unchanged."
 
   (unless overlay (setq overlay (completion-overlay-at-point)))
   ;; if overlay does not already exists, create one
@@ -1523,17 +1541,45 @@ overlay's completion-num property is left unchanged."
 \(There should only be one; if not, one is returned at random\)"
   (setq point (or point (point)))
 
-  ;; get list of overlays overlapping POINT (including zero-length),
-  ;; overlays ending at POINT, and overlays starting at POINT
-  (let ((overlay-list
-	 (append (overlays-in point point)
-		 (overlays-in (1- point) point)
-		 (overlays-in point (1+ point)))))
-    ;; return first completion overlay in the list, or nil
+  ;; and overlays starting at POINT
+  (let (overlay-list)
     (catch 'found
+      ;; check overlays overlapping POINT (including zero-length)
+      (setq overlay-list (overlays-in point point))
       (dolist (o overlay-list)
 	(when (overlay-get o 'completion-overlay)
-	  (throw 'found o)))))
+	  (throw 'found o)))
+
+      ;; check overlays ending at POINT
+      (setq overlay-list (overlays-in (1- point) point))
+      (dolist (o overlay-list)
+	(when (and (overlay-get o 'completion-overlay)
+		   (= (overlay-end o) point))
+	  (throw 'found o)))
+      
+      ;; check overlays starting at POINT
+      (setq overlay-list (overlays-in point (1+ point)))
+      (dolist (o overlay-list)
+	(when (and (overlay-get o 'completion-overlay)
+		   (= (overlay-start o) point))
+	  (throw 'found o)))
+      ))
+)
+
+
+
+(defun completion-overlays-in (start end)
+  "Return list of completion overlays between START and END."
+
+  ;; get overlays between START and END
+  (let ((o-list (overlays-in start end))
+	overlay-list)
+    ;; filter overlay list
+    (dolist (o o-list)
+      (when (overlay-get o 'completion-overlay)
+	(push o overlay-list)))
+    ;; return the overlay list
+    overlay-list)
 )
 
 
@@ -1595,13 +1641,13 @@ OVERLAY will be left alone."
 		  ;; accept
 		  (run-hook-with-args
 		   'completion-accept-functions
-		   (concat (overlay-get overlay 'prefix)
+		   (concat (overlay-get o 'prefix)
 			   (buffer-substring (overlay-start o)
 					     (overlay-end o))))
 		;; reject
 		(run-hook-with-args
 		 'completion-reject-functions
-		 (concat (overlay-get overlay 'prefix)
+		 (concat (overlay-get o 'prefix)
 			 (buffer-substring (overlay-start o)
 					   (overlay-end o))))
 		(delete-region (overlay-start o) (overlay-end o)))
@@ -2092,4 +2138,4 @@ See also `completion-window-posn-at-point' and
 )
 
 
-;;; predictive-completion.el ends here
+;;; completion-ui.el ends here

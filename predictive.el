@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11
+;; Version: 0.11.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -42,7 +42,10 @@
 
 ;;; Change Log:
 ;;
-; Version 0.11
+;; Version 0.11.1
+;; * bug fixes in completion-ui and predictive-latex.el
+;;
+;; Version 0.11
 ;; * moved a lot of functions to completion-ui
 ;;
 ;; Version 0.10.3

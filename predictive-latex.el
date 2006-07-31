@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5.1
+;; Version: 0.5.4
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.4
+;; * updated to reflect changes in completion-ui.el
 ;;
 ;; Version 0.5.3
 ;; * updated to reflect naming changes in dict-tree.el
@@ -108,12 +111,12 @@
   (add-to-list 'predictive-main-dict 'dict-latex predictive-main-dict)
 
   ;; use latex browser menu if first character of prefix is "\"
-  (make-local-variable 'predictive-completion-browser-menu)
-  (setq predictive-completion-browser-menu
+  (make-local-variable 'completion-browser-menu)
+  (setq completion-browser-menu
 	(lambda (prefix completions)
 	  (if (string= (substring prefix 0 1) "\\")
-	      (predictive-latex-generate-browser-menu prefix completions)
-	    (predictive-completion-generate-browser-menu prefix completions))
+	      (predictive-latex-construct-browser-menu prefix completions)
+	    (completion-construct-browser-menu prefix completions))
 	  ))
   
   ;; clear overlays when predictive mode is disabled
@@ -128,13 +131,13 @@
 	   (line "%" (dict . predictive-main-dict) (priority . 4)
 		 (exclusive . t)
 		 (completion-menu
-		  . predictive-latex-generate-browser-menu)
+		  . predictive-latex-construct-browser-menu)
 		 (face . (background-color . ,predictive-latex-debug-color)))
 	   
 	   ;; $'s delimit the start and end of inline maths regions
 	   (self "\\$" (dict . dict-latex-math) (priority . 3)
 		 (completion-menu .
-				  predictive-latex-generate-browser-menu)
+				  predictive-latex-construct-browser-menu)
 		 (face . (background-color
 			  . ,predictive-latex-debug-color)))
 	   
@@ -146,31 +149,31 @@
 	   (stack
 	    (start "\\\\begin{" (dict . dict-latex-env) (priority . 2)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\end{" (dict . dict-latex-env) (priority . 2)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\text{"
 		   (dict . predictive-main-dict)
 		   (priority . 2)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\documentclass\\(\\[.*\\]\\)?{"
 		   (dict . dict-latex-docclass) (priority . 2)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 		   (dict . dict-latex-bibstyle) (priority . 2)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start ("^\\({\\)" . 1) (priority . 2)
@@ -193,14 +196,14 @@
 		    0 1)
 		   (dict . dict-latex-math) (priority . 1)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (end ("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 		    0 1)
 		   (dict . dict-latex-math) (priority . 1)
 		   (completion-menu
-		    . predictive-latex-generate-browser-menu)
+		    . predictive-latex-construct-browser-menu)
 		   (face . (background-color
 			    . ,predictive-latex-debug-color)))
 	    (start ("\\\\begin{\\(.*?\\)}" 0 1)
@@ -212,205 +215,33 @@
 		 (dict . nil)
 		 (face . nil)
 		 ))
-	   
-;; 	   ;; \begin{...} and \end{...} start and end various maths displays
-;; 	   (stack
-;; 	    (start "\\\\begin{equation}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{equation}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{equation\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{equation\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{align}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{align}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{align\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{align\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{alignat}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{alignat}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{alignat\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{alignat\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{flalign}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{flalign}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{flalign\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{flalign\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{gather}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{gather}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{gather\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{gather\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{multline}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{multline}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;;  		 (face . (background-color
-;; 			  . ,predictive-latex-debug-color))))
-;; 	   (stack
-;; 	    (start "\\\\begin{multline\\*}"
-;; 		   (dict . dict-latex-math) (priority . 1)
-;; 		   (completion-menu
-;; 		    . predictive-latex-generate-browser-menu)
-;;  		   (face . (background-color
-;; 			    . ,predictive-latex-debug-color)))
-;; 	    (end "\\\\end{multline\\*}"
-;; 		 (dict . dict-latex-math) (priority . 1)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;; 		 (face . (background-color
-;;			  . ,predictive-latex-debug-color))))
-;;
-;; 	   ;; \ starts a LaTeX command, which consists either entirely of
-;; 	   ;; letter characters, or of a single non-letter character
-;; 	   (word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
-;; 		 (dict . dict-latex)
-;; 		 (completion-menu
-;; 		  . predictive-latex-generate-browser-menu)
-;; 		 (face . (background-color
-;;			  . ,predictive-latex-debug-color)))
 	   )))
-
-  ;; word-constituents add to the current completion, symbol-constituents
-  ;; reject it, punctuation and whitespace accept it, anything else rejects
-  (setq predictive-syntax-alist
-	'((?w . predictive-insert-and-complete-word-at-point)
-	  (?_ . predictive-reject-and-insert)
-	  (?  . predictive-accept-and-insert)
-	  (?. . predictive-accept-and-insert)
-	  (t  . predictive-reject-and-insert)))
   
   ;; make "\", "$", "{" and "}" do the right thing
-  (setq predictive-override-syntax-alist
-	'((?\\ . (lambda ()
-		 (unless (and (char-before) (= (char-before) ?\\))
-		   (completion-accept))
-		 (predictive-insert-and-complete)))
-	  (?{ . (lambda ()
-		(if (and (char-before) (= (char-before) ?\\))
-		    (predictive-insert-and-complete)
-		  (predictive-accept-and-insert)
-		  (when (auto-overlays-at-point
-			 nil '(eq dict dict-latex-env))
-		    (predictive-complete "")))))
-	  (?} . predictive-accept-and-insert)
-	  (?\( . predictive-accept-and-insert)
-	  (?\) . predictive-accept-and-insert)
-	  (?$ . predictive-accept-and-insert)
-	  (?\" . (lambda () (completion-accept) (TeX-insert-quote nil)))))
+  (setq completion-override-syntax-alist
+	'((?\\ . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  . word))
+	  
+	  (?{ . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		    'add 'accept))
+		 . (lambda ()
+		     (when (auto-overlays-at-point
+			    nil '(eq dict dict-latex-env))
+		       (complete "") nil))))
+	  
+	  (?} . (accept . word))
+	  (?\( . (accept . word))
+	  (?\) . (accept . word))
+	  (?$ . (accept . word))
+	  (?\" . (accept . (lambda () (TeX-insert-quote nil) nil)))
+	  ))
 
+  
   ;; consider \ as start of a word
-  (setq predictive-word-thing 'predictive-latex-word)
+  (setq completion-word-thing 'predictive-latex-word)
   (set (make-local-variable 'words-include-escapes) nil)
   
   t  ; indicate succesful setup
@@ -443,10 +274,10 @@
 
 
 
-(defun predictive-latex-generate-browser-menu (prefix completions)
+(defun predictive-latex-construct-browser-menu (prefix completions)
   "Construct the AMS-LaTeX browser menu keymap."
   
-  (predictive-completion-generate-browser-menu
+  (completion-construct-browser-menu
    prefix completions 'predictive-latex-browser-menu-item)
 )
 
@@ -465,9 +296,9 @@
 	  (menu (make-sparse-keymap)))
       (setq envs (mapcar (lambda (e) (concat completion "{" e "}")) envs))
       ;; create sub-menu keymap
-      (setq menu (predictive-completion-browser-sub-menu
+      (setq menu (completion-browser-sub-menu
 		  prefix envs 'predictive-latex-browser-menu-item
-		  'predictive-completion-browser-sub-menu))
+		  'completion-browser-sub-menu))
       ;; add completion itself (\begin or \end) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
@@ -487,9 +318,9 @@
       (setq classes
 	    (mapcar (lambda (e) (concat completion "{" e "}")) classes))
       ;; create sub-menu keymap
-      (setq menu (predictive-completion-browser-sub-menu
+      (setq menu (completion-browser-sub-menu
 		  prefix classes 'predictive-latex-browser-menu-item
-		  'predictive-completion-browser-sub-menu))
+		  'completion-browser-sub-menu))
       ;; add completion itself (i.e. \documentclass) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
@@ -508,9 +339,9 @@
       (setq classes
 	    (mapcar (lambda (e) (concat completion "{" e "}")) classes))
       ;; create sub-menu keymap
-      (setq menu (predictive-completion-browser-sub-menu
+      (setq menu (completion-browser-sub-menu
 		  prefix classes 'predictive-latex-browser-menu-item
-		  'predictive-completion-browser-sub-menu))
+		  'completion-browser-sub-menu))
       ;; add completion itself (i.e. \bibliographystyle) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
