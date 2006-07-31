@@ -7,10 +7,6 @@ from:
 
 http://www.dr-qubit.org/emacs.php
 
-You will also need the Emacs Lisp Library (Elib), obtainable from:
-
-http://jdee.sunsite.dk
-
 
 
 Installing
@@ -23,7 +19,7 @@ cd /some/directory/in/load-path
 tar -xvzf predictive.tar.gz
 
 You can view the current load-path using `C-h v load-path' in Emacs, assuming
-default keybindings. All subdirectories creating by unpacking the package
+default keybindings. All subdirectories created by unpacking the package
 should also be added to the load-path.
 
 If you want the predictive completion minor-mode to be available whenever you

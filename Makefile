@@ -1,10 +1,10 @@
 
-all: core dict-english dicts
+all: core dicts
 
 clean:
 	rm dict-english.el *.elc latex/*.elc ams-latex/*.elc html/*.elc f90/*.elc
 
-EMACS = emacs
+EMACS = /usr/bin/emacs
 
 
 
@@ -26,9 +26,14 @@ f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 # byte-compilation target
 core: $(core_files)
 
+# overrides implicit rule for dictionaries
+dict-english.elc: dict-english.el
+	$(EMACS) --batch -L ./ -f batch-byte-compile $<
+
+
 
 # dictionary targets
-dicts: dict-english.el dict-english.elc latex_dicts ams_latex_dicts html_dicts f90_dicts
+dicts: latex_dicts ams_latex_dicts html_dicts f90_dicts
 
 latex_dicts: $(latex_dicts) 
 
@@ -38,14 +43,12 @@ html_dicts: $(html_dicts)
 
 f90_dicts: $(f90_dicts)
 
-dict-english.el: dict-english.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict 'dict-english \"dict-english\" \"dict-english.word-list\") (dict-write dict-english \"dict-english\" t t))"
-
 
 
 # implicit rule for creating dictionaries
 dict-%.elc: dict-%.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dict-save-modified))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dict-save-modified))"
+
 
 # implicit rule for byte-compiling elisp files
 %.elc: %.el

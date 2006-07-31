@@ -187,7 +187,7 @@
   (setq predictive-override-syntax-alist
 	(list
 	 (cons ?< (lambda () (interactive)
-		    (predictive-abandon-and-insert)
+		    (predictive-reject-and-insert)
 		    (predictive-complete "")))
 	 (cons ?> 'predictive-accept-and-insert)))
   

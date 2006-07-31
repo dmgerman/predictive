@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.4
+;; Version: 0.5
 ;; Keywords: predictive, setup function, latex
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -30,6 +30,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.5
+;; * added support for completion browser
+;; * modified latex enviroments to use new stack-sync class
+;;
 ;; Version 0.4
 ;; * modified to work with new auto-overlays package
 ;;
@@ -51,11 +55,23 @@
 
 (require 'predictive)
 (require 'auto-overlays)
+(require 'auto-overlay-word)
+(require 'auto-overlay-line)
+(require 'auto-overlay-self)
+(require 'auto-overlay-stack)
+(require 'auto-overlay-stack-sync)
+
 (provide 'predictive-ams-latex)
+
 
 ;; variable to store identifier from call to `auto-overlay-init'
 (defvar predictive-ams-latex-regexps nil)
 (make-local-variable 'predictive-ams-latex-regexps)
+
+;; set up 'predictive-latex-word to be a `thing-at-point' symbol
+(put 'predictive-latex-word 'forward-op 'predictive-latex-forward-word)
+
+
 
 
 (defun predictive-setup-ams-latex ()
@@ -67,25 +83,26 @@
   (predictive-load-dict 'dict-ams-latex-math)
   (predictive-load-dict 'dict-ams-latex-env)
   (predictive-load-dict 'dict-latex-docclass)
-
+  (predictive-load-dict 'dict-latex-bibstyle)
+  
   ;; clear overlays when predictive mode is disabled
   (add-hook 'predictive-mode-disable-hook
 	    (lambda () (auto-overlay-clear predictive-ams-latex-regexps)))
   
-  ;; this ensures correct backwards-delete behaviour when \ is involved
-  (set (make-local-variable 'words-include-escapes) t)
-  
   ;; setup regexps defining switch-dict regions
   (setq predictive-ams-latex-regexps
 	(auto-overlay-init
-	 '(
+	 `(
 	   ;; %'s start comments that last till end of line
 	   (line "%" (dict . predictive-main-dict) (priority . 4)
-		 (exclusive . t))
+		 (exclusive . t)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu))
 	   
 	   ;; $'s delimit the start and end of inline maths regions
 	   (self "\\$" (dict . dict-ams-latex-math) (priority . 3)
-		 (face (background-color . "green")))
+		 (completion-menu .
+				  predictive-ams-latex-generate-browser-menu))
 	   
 	   ;; \begin{ and \end{ start and end LaTeX environments
 	   ;; \text{ starts a text region within a maths display
@@ -93,102 +110,292 @@
 	   ;; All are ended by } but not by \}. The { is included to ensure
 	   ;; all { and } match, but \{ is excluded.
 	   (stack
-	    (start "\\\\begin{" (dict . dict-ams-latex-env) (priority . 2))
-	    (start "\\\\end{" (dict . dict-ams-latex-env) (priority . 2))
+	    (start "\\\\begin{" (dict . dict-ams-latex-env) (priority . 2)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
+	    (start "\\\\end{" (dict . dict-ams-latex-env) (priority . 2)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (start "\\\\text{"
 		   (dict . (list predictive-main-dict predictive-buffer-dict))
-		   (priority . 2))
+		   (priority . 2)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (start "\\\\documentclass\\(\\[.*\\]\\)?{"
-		   (dict . dict-latex-docclass) (priority . 2))
-	    (start ("\\([^\\]\\|^\\)\\({\\)" . 2) (priority . 2))
-	    (end ("\\([^\\]\\|^\\)\\(}\\)" . 2) (priority . 2)))
+		   (dict . dict-latex-docclass) (priority . 2)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
+	    (start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
+		   (dict . dict-latex-bibstyle) (priority . 2)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
+	    (start ("^\\({\\)" . 1) (priority . 2))
+	    (start ("[^\\]\\({\\)" . 1) (priority . 2))
+	    (end ("^\\(}\\)" . 1) (priority . 2))
+	    (end ("[^\\]\\(}\\)" . 1) (priority . 2)))
+
 	   
 	   ;; \begin{...} and \end{...} start and end various maths displays
 	   (stack
 	    (start "\\\\begin{equation}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{equation}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{equation\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{equation\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{align}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{align}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{align\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{align\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{alignat}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{alignat}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{alignat\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{alignat\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{flalign}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{flalign}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{flalign\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{flalign\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{gather}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{gather}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{gather\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{gather\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{multline}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{multline}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   (stack
 	    (start "\\\\begin{multline\\*}"
-		   (dict . dict-ams-latex-math) (priority . 1))
+		   (dict . dict-ams-latex-math) (priority . 1)
+		   (completion-menu
+		    . predictive-ams-latex-generate-browser-menu))
 	    (end "\\\\end{multline\\*}"
-		 (dict . dict-ams-latex-math) (priority . 1)))
+		 (dict . dict-ams-latex-math) (priority . 1)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu)))
 	   
 	   ;; \ starts a LaTeX command, which consists either entirely of
 	   ;; letter characters, or of a single non-letter character
 	   (word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
-		 (dict . dict-ams-latex))
+		 (dict . dict-ams-latex)
+		 (completion-menu
+		  . predictive-ams-latex-generate-browser-menu))
 	   )))
   
   
+  ;; word-constituents add to the current completion, symbol-constituents
+  ;; reject it, punctuation and whitespace accept it, anything else rejects
+  (setq predictive-syntax-alist
+	'((?w . predictive-insert-and-complete-word-at-point)
+	  (?_ . predictive-reject-and-insert)
+	  (?  . predictive-accept-and-insert)
+	  (?. . predictive-accept-and-insert)
+	  (t  . predictive-reject-and-insert)))
+  
   ;; make "\", "$", "{" and "}" do the right thing
   (setq predictive-override-syntax-alist
-	'((?\\ . (lambda () (interactive)
-		   (predictive-abandon)
-		   (predictive-insert-and-complete)))
-	  (?{ . (lambda () (interactive)
+	'((?\\ . (lambda ()
+		 (unless (and (char-before) (= (char-before) ?\\))
+		   (completion-accept))
+		 (predictive-insert-and-complete)))
+	  (?{ . (lambda ()
+		(if (and (char-before) (= (char-before) ?\\))
+		    (predictive-insert-and-complete)
 		  (predictive-accept-and-insert)
-		  (when (auto-overlays-at-point nil '((identity auto-overlay)
-						      (identity dict)))
-		    (predictive-complete ""))))
+		  (when (auto-overlays-at-point
+			 nil '(eq dict dict-ams-latex-env))
+		    (predictive-complete "")))))
 	  (?} . predictive-accept-and-insert)
-	  (?\" . (lambda () (interactive)
-		   (predictive-accept)
-		   (TeX-insert-quote nil)))))
+	  (?\( . predictive-accept-and-insert)
+	  (?\) . predictive-accept-and-insert)
+	  (?$ . predictive-accept-and-insert)
+	  (?\" . (lambda () (completion-accept) (TeX-insert-quote nil)))))
 
+  ;; consider \ as start of a word
+  (setq predictive-word-thing 'predictive-latex-word)
+  (set (make-local-variable 'words-include-escapes) nil)
+  
   t  ; indicate succesful setup
 )
+
+
+
+(defun predictive-latex-forward-word (&optional n)
+  (let (m)
+    ;; going backwards...
+    (if (and n (< n 0))
+	(progn
+	  (setq m (- n))
+	  (when (= ?\\ (char-before))
+	    (while (= ?\\ (char-before)) (backward-char))
+	    (setq m (1- m)))
+	  (dotimes (i m)
+	    (backward-word 1)  ; argument not optional in Emacs 21
+	    (while (and (char-before) (= ?\\ (char-before)))
+	      (backward-char))))
+      ;; going forwards...
+      (setq m (if n n 1))
+      (dotimes (i m)
+	(re-search-forward "\\\\\\|\\w" nil t)
+	(backward-char)
+	(re-search-forward "\\\\+\\w*\\|\\w+" nil t))
+      ))
+)
+
+
+
+(defun predictive-ams-latex-generate-browser-menu (prefix completions)
+  "Construct the AMS-LaTeX browser menu keymap."
+  
+  (predictive-completion-generate-browser-menu
+   prefix completions 'predictive-ams-latex-browser-menu-item)
+)
+
+
+
+(defun predictive-ams-latex-browser-menu-item (prefix completion &rest ignore)
+  "Construct predictive ams-LaTeX completion browser menu item."
+  
+  (cond
+   ;; if entry is \begin or \end, create sub-menu containing environment
+   ;; completions
+   ((or (string= (concat prefix completion) "\\begin")
+	(string= (concat prefix completion) "\\end"))
+    ;; find all latex environments
+    (let ((envs (dict-mapcar (lambda (word entry) word) dict-ams-latex-env))
+	  (menu (make-sparse-keymap)))
+      (setq envs (mapcar (lambda (e) (concat completion "{" e "}")) envs))
+      ;; create sub-menu keymap
+      (setq menu (predictive-completion-browser-sub-menu
+		  prefix envs 'predictive-ams-latex-browser-menu-item
+		  'predictive-completion-browser-sub-menu))
+      ;; add completion itself (\begin or \end) to the menu
+      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
+      (define-key menu [completion-insert-root]
+	(list 'menu-item (concat prefix completion)
+	      `(lambda () (insert ,completion))))
+      ;; return the menu keymap
+      menu))
+   
+   
+   ;; if entry is \documentclass, create sub-menu containing environment
+   ;; completions
+   ((string= (concat prefix completion) "\\documentclass")
+    ;; find all latex docclasses
+    (let ((classes
+	   (dict-mapcar (lambda (word entry) word) dict-latex-docclass))
+	  (menu (make-sparse-keymap)))
+      (setq classes
+	    (mapcar (lambda (e) (concat completion "{" e "}")) classes))
+      ;; create sub-menu keymap
+      (setq menu (predictive-completion-browser-sub-menu
+		  prefix classes 'predictive-ams-latex-browser-menu-item
+		  'predictive-completion-browser-sub-menu))
+      ;; add completion itself (i.e. \documentclass) to the menu
+      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
+      (define-key menu [completion-insert-root]
+	(list 'menu-item (concat prefix completion)
+	      `(lambda () (insert ,completion))))
+      ;; return the menu keymap
+      menu))
+   
+   
+   ;; if entry is \bibliographystyle, create sub-menu containing bib styles
+   ((string= (concat prefix completion) "\\bibliographystyle")
+    ;; find all bib styles
+    (let ((classes
+	   (dict-mapcar (lambda (word entry) word) dict-latex-bibstyle))
+	  (menu (make-sparse-keymap)))
+      (setq classes
+	    (mapcar (lambda (e) (concat completion "{" e "}")) classes))
+      ;; create sub-menu keymap
+      (setq menu (predictive-completion-browser-sub-menu
+		  prefix classes 'predictive-ams-latex-browser-menu-item
+		  'predictive-completion-browser-sub-menu))
+      ;; add completion itself (i.e. \bibliographystyle) to the menu
+      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
+      (define-key menu [completion-insert-root]
+	(list 'menu-item (concat prefix completion)
+	      `(lambda () (insert ,completion))))
+      ;; return the menu keymap
+      menu))
+   
+   
+   ;; otherwise, create a selectable completion item
+   (t `(lambda () (insert ,completion))))
+)
+
 
 
 ;;; predictive-ams-latex.el ends here

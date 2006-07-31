@@ -1,10 +1,10 @@
 
 ;;; tstree.el --- ternary search tree package
 
-;; Copyright (C) 2004 2005 Toby Cubitt
+;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.2.1
+;; Version: 0.3
 ;; Keywords: ternary search tree, tstree
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -37,11 +37,16 @@
 ;; first argument is "greater than" the second, and zero if the two
 ;; arguments are "equal".
 ;;
-;; This package uses the elib LIFO stack package, stack-m.el, and the
-;; ternary heap package heap.el.
+;; This package uses the ternary heap package heap.el.
 
 
 ;;; Change Log:
+;;
+;; Version 0.4
+;; * removed elib dependency by replacing elib stacks with lists
+;;
+;; Version 0.3
+;; * added `tstree-mapcar' macro
 ;;
 ;; Version 0.2.1
 ;; * fixed bug in `tstree-map' so it doesn't error on empty trees
@@ -58,7 +63,7 @@
 
 (provide 'tstree)
 
-(require 'stack-m)
+;;(require 'stack-m)
 (require 'heap)
 
 ;; the only common lisp function that's used is `signum', so this dependency
@@ -227,23 +232,26 @@
 
 (defun tstree-create (&optional compare-function insert-function
 				rank-function)
-  "Create an empty ternary search tree. If no arguments are supplied, it
-creates a tree suitable for storing strings with numerical data.
+  "Create an empty ternary search tree. If no arguments are
+supplied, it creates a tree suitable for storing strings with
+numerical data.
 
-The optional COMPARE-FUNCTION sets the comparison function for the
-tree. COMPARE-FUNCTION takes two arguments, A and B, and returns a negative
-value if A is less than B, zero if A is equal to B, and a positive value if A
-is greater than B. It defaults to subtraction.
+The optional COMPARE-FUNCTION sets the comparison function for
+the tree. COMPARE-FUNCTION takes two arguments, A and B, and
+returns a negative value if A is less than B, zero if A is equal
+to B, and a positive value if A is greater than B. It defaults to
+subtraction.
 
-The optional INSERT-FUNCTION takes two arguments of the type stored as data in
-the tree or nil, and returns the same type. It defaults to \"replace\". See
-`tstree-insert'.
+The optional INSERT-FUNCTION takes two arguments of the type
+stored as data in the tree or nil, and returns the same type. It
+defaults to \"replace\". See `tstree-insert'.
 
-The optional RANK-FUNCTION takes two arguments, each a cons whose car is an
-array (vector or string) referencing data in the tree, and whose cdr is the
-data at that reference. It should return non-nil if the first argument is
-\"better than\" the second, nil otherwise. It defaults numerical comparison of
-the data using \"greater than\". Used by `tstree-complete-ordered' to rank
+The optional RANK-FUNCTION takes two arguments, each a cons whose
+car is an array (vector or string) referencing data in the tree,
+and whose cdr is the data at that reference. It should return
+non-nil if the first argument is \"better than\" the second, nil
+otherwise. It defaults numerical comparison of the data using
+\"greater than\". Used by `tstree-complete-ordered' to rank
 completions."
 
          ;; comparison-function defaults to -
@@ -420,79 +428,113 @@ between a non-existant STRING and a STRING whose data is nil. Use
 
 
 
-(defun tstree-map (function tree &optional string)
-  "Apply FUNTION to all elements in the ternary search tree TREE.
+(defun tstree-map (function tree &optional string mapcar)
+  "Apply FUNTION to all elements in the ternary search tree TREE,
+for side-effects only.
 
-FUNCTION will be passed two arguments: an array referencing a location in the
-tree, and its associated data. It is safe to assume the tree will be traversed
-in \"lexical\" order (i.e. the order defined by the tree's comparison
-function).
+FUNCTION will be passed two arguments: an array referencing a
+location in the tree, and its associated data. It is safe to
+assume the tree will be traversed in \"lexical\" order (i.e. the
+order defined by the tree's comparison function).
 
-If the optional argument STRING is nil, the array passed to FUNCTION will be a
-vector containing elements of the type used to reference data in the tree. If
-STRING is non-nil, the array will be a real string (this will cause an error
-if the type used to reference the tree can not be converted to a string by the
-`string' function)."
+If the optional argument STRING is nil, the array passed to
+FUNCTION will be a vector containing elements of the type used to
+reference data in the tree. If STRING is non-nil, the array will
+be a real string (this will cause an error if the type used to
+reference the tree can not be converted to a string by the
+`string' function).
+
+\(If optional argument MAPCAR is non-nil, a list of results of
+function calls is returned. Don't user this. Use the
+`tstree-mapcar' macro instead\)."
 
   ;; only other doing something if tree is not empty
   (when (tst-tree-root tree)
-    (let ((stack (stack-create))
-	  str node)
+    (let (stack str node result accumulate)
       
       ;; initialise the stack
-      (stack-push stack (tst-tree-root tree))
-      (if string (stack-push stack "") (stack-push stack []))
+      (push (tst-tree-root tree) stack)
+      (if string (push "" stack) (push [] stack))
       
       ;; Keep going until we've traversed all nodes (node stack is empty)
-      (while (not (stack-empty stack))
-	(setq str (stack-pop stack))
-	(setq node (stack-pop stack))
+      (while (not (null stack))
+	(setq str (pop stack))
+	(setq node (pop stack))
 	;; add the high child to the stack, if it exists
 	(when (tst-node-high node)
-	  (stack-push stack (tst-node-high node))
-	  (stack-push stack str))
+	  (push (tst-node-high node) stack)
+	  (push str stack))
 	;; If we're at a data node call FUNCTION, otherwise add the equal
 	;; child to the stack.
 	(if (null (tst-node-split node))
-	    (funcall function str (tst-node-equal node))
-	  (stack-push stack (tst-node-equal node))
-	  (stack-push stack
-		      (if (stringp str)
-			  (concat str (string (tst-node-split node)))
-			(vconcat str (vector (tst-node-split node))))))
+	    (progn
+	      (setq result (funcall function str (tst-node-equal node)))
+	      (when mapcar (setq accumulate (cons result accumulate))))
+	  (push (tst-node-equal node) stack)
+	  (push (if (stringp str)
+		    (concat str (string (tst-node-split node)))
+		  (vconcat str (vector (tst-node-split node))))
+		stack))
 	;; add the low child to the stack, if it exists
 	(when (tst-node-low node)
-	  (stack-push stack (tst-node-low node))
-	  (stack-push stack str))
-	)))
+	  (push (tst-node-low node) stack)
+	  (push str stack))
+	)
+      
+      ;; return accumulated list of results (nil if MAPCAR was nil)
+      (nreverse accumulate)))
 )
 
 
 
+(defmacro tstree-mapcar (function tree &optional string)
+  "Apply FUNTION to all elements in the ternary search tree TREE,
+and make a list of the results.
 
-(defun tstree-complete (tree string &optional maxnum all)
-  "Return a vector containing all completions of STRING found in ternary searh
-tree TREE, in \"lexical\" order (i.e. the order defined by the tree's
-comparison function). Each element of the returned vector is a cons containing
-the completed \"string\" and its associated data. If no completions are found,
-return nil.
+FUNCTION will be passed two arguments: an array referencing a
+location in the tree, and its associated data. It is safe to
+assume the tree will be traversed in \"lexical\" order (i.e. the
+order defined by the tree's comparison function).
 
-STRING must either be an array (vector or string) containing elements of the
-type used to reference data in the tree, or a list of such arrays. (Thus if
-the tree stores real strings, STRING can be a string or a list of strings.) If
-a list is supplied, completions of all elements of the list are included in
+If the optional argument STRING is nil, the array passed to
+FUNCTION will be a vector containing elements of the type used to
+reference data in the tree. If STRING is non-nil, the array will
+be a real string (this will cause an error if the type used to
+reference the tree can not be converted to a string by the
+`string' function)."
+  `(tstree-map ,function ,tree ,string t))
+  
+
+
+(defun tstree-complete (tree string &optional maxnum all filter)
+  "Return a vector containing all completions of STRING found in
+ternary searh tree TREE, in \"lexical\" order (i.e. the order
+defined by the tree's comparison function). Each element of the
+returned vector is a cons containing the completed \"string\" and
+its associated data. If no completions are found, return nil.
+
+STRING must either be an array (vector or string) containing
+elements of the type used to reference data in the tree, or a
+list of such arrays. (Thus if the tree stores real strings,
+STRING can be a string or a list of strings.) If a list is
+supplied, completions of all elements of the list are included in
 the returned vector.
 
-The optional numerical argument MAXNUM limits the results to the first
-MAXNUM completions. If it is absent or nil, all completions are
-returned.
+The optional numerical argument MAXNUM limits the results to the
+first MAXNUM completions. If it is absent or nil, all completions
+are returned.
 
-Normally, only the remaining \"characters\" needed to complete STRING are
-returned. If the optional argument ALL is non-nil, the entire completion is
-returned."
+Normally, only the remaining \"characters\" needed to complete
+STRING are returned. If the optional argument ALL is non-nil, the
+entire completion is returned.
+
+The FILTER argument sets a filter function for the
+completions. If supplied, it is called for each possible
+completion with two arguments: the completion, and its associated
+data. If the filter function returns nil, the completion is not
+included in the results."
   
-  (let ((stack (stack-create))
-	(completions []))
+  (let (stack (completions []))
     
     ;; ----- initialise the stack -----
     (let ((strlist (if (listp string) (reverse (sort string 'string<))
@@ -502,42 +544,50 @@ returned."
       (while strlist
 	(setq str (pop strlist))
 	;; if completions exist, add initial node to the stack
-	(if (car (stack-push stack (tst-node-find tree str)))
+	(if (car (push (tst-node-find tree str) stack))
 	    ;; force entire completion to be returned if arg ALL was set
-	    (if all (stack-push stack str)
-	      (if (stringp str) (stack-push stack "") (stack-push stack [])))
-	  (stack-pop stack)))
+	    (if all (push str stack)
+	      (if (stringp str) (push "" stack) (push [] stack)))
+	  (pop stack)))
     )
     
     ;; ----- search the tree -----
     (let ((num 0) str node)
       ;; Keep going until we've searched all nodes (node stack is empty), or
       ;; have found enough completions.
-      (while (and (not (stack-empty stack)) (or (null maxnum) (< num maxnum)))
-	(setq str (stack-pop stack))
-	(setq node (stack-pop stack))
+      (while (and (not (null stack)) (or (null maxnum) (< num maxnum)))
+	(setq str (pop stack))
+	(setq node (pop stack))
+	
         ;; add the high child to the stack, if it exists
 	(when (tst-node-high node)
-	  (stack-push stack (tst-node-high node))
-	  (stack-push stack str))
+	  (push (tst-node-high node) stack)
+	  (push str stack))
+	
         ;; If we're at a data node, we've found a completion. Otherwise, add
         ;; the equal child to the stack.
 	(if (tst-node-split node)
 	    (progn
-	      (stack-push stack (tst-node-equal node))
-	      (stack-push stack
-			  (if (stringp str)
-			      (concat str (string (tst-node-split node)))
-			    (vconcat str (vector (tst-node-split node))))))
-	  (setq completions
-		(vconcat completions
-			 (vector (cons str (tst-node-equal node)))))
-	  (setq num (1+ num)))
+	      (push (tst-node-equal node) stack)
+	      (push (if (stringp str)
+			(concat str (string (tst-node-split node)))
+		      (vconcat str (vector (tst-node-split node))))
+		     stack))
+	  ;; If no filter was supplied, or the completion passes the filter,
+	  ;; add the completion to the list.
+	  (when (or (null filter)
+		    (funcall filter str (tst-node-equal node)))
+	    (setq completions
+		  (vconcat completions
+			   (vector (cons str (tst-node-equal node)))))
+	    (setq num (1+ num))))
+	  
         ;; add the low child to the stack, if it exists
 	(when (tst-node-low node)
-	  (stack-push stack (tst-node-low node))
-	  (stack-push stack str)))
-    )
+	  (push (tst-node-low node) stack)
+	  (push str stack))
+	))
+
     
     ;; return nil if no completions were found, otherwise return the vector of
     ;; completions
@@ -547,44 +597,52 @@ returned."
 
 
 
-(defun tstree-complete-ordered (tree string
-				     &optional maxnum all rank-function)
-  "Return a vector containing all completions of STRING found in ternary
-search tree TREE. Each element of the returned vector is a cons containing the
-completed \"string\" and its associated data. If no completions are found,
-return nil.
+(defun tstree-complete-ordered
+  (tree string &optional maxnum all rank-function filter)
+  "Return a vector containing all completions of STRING found in
+ternary search tree TREE. Each element of the returned vector is
+a cons containing the completed \"string\" and its associated
+data. If no completions are found, return nil.
 
 Note that `tstree-complete' is significantly more efficient than
-`tstree-complete-ordered', especially when a maximum number of completions is
-specified. Always use `tstree-complete' when you don't care about the ordering
-of the completions, or you need the completions ordered \"alphabetically\".
+`tstree-complete-ordered', especially when a maximum number of
+completions is specified. Always use `tstree-complete' when you
+don't care about the ordering of the completions, or you need the
+completions ordered \"alphabetically\".
 
-TREE can also be a list of ternary search trees, in which case completions are
-sought in all trees in the list.
+TREE can also be a list of ternary search trees, in which case
+completions are sought in all trees in the list.
 
-STRING must either be an array (vector or string) containing elements of the
-type used to reference data in the tree, or a list of such arrays. (Thus if
-the tree stores real strings, STRING can be a string or a list of strings.) If
-a list is supplied, completions of all elements of the list are included in
+STRING must either be an array (vector or string) containing
+elements of the type used to reference data in the tree, or a
+list of such arrays. (Thus if the tree stores real strings,
+STRING can be a string or a list of strings.) If a list is
+supplied, completions of all elements of the list are included in
 the returned vector.
 
-The optional numerical argument MAXNUM limits the results to the \"best\"
-MAXNUM completions. If nil, all completions are returned.
-
-Normally, only the remaining \"characters\" needed to complete STRING are
-returned. If the optional argument ALL is non-nil, the entire completion is
+The optional numerical argument MAXNUM limits the results to the
+\"best\" MAXNUM completions. If nil, all completions are
 returned.
 
-The optional argument RANK-FUNCTION over-rides the tree's default rank
-function. It should take two arguments, each a cons whose car is a vector
-referencing data in the tree, and whose cdr is the data at that reference. It
-should return non-nil if the first argument is \"better than\" the second, nil
-otherwise. The elements of the returned vector are sorted according to this
-rank-function, in descending order."
+Normally, only the remaining \"characters\" needed to complete
+STRING are returned. If the optional argument ALL is non-nil, the
+entire completion is returned.
+
+The optional argument RANK-FUNCTION over-rides the tree's default
+rank function. It should take two arguments, each a cons whose
+car is a vector referencing data in the tree, and whose cdr is
+the data at that reference. It should return non-nil if the first
+argument is \"better than\" the second, nil otherwise. The
+elements of the returned vector are sorted according to this
+rank-function, in descending order.
+
+The FILTER argument sets a filter function for the
+completions. If supplied, it is called for each possible
+completion with two arguments: the completion, and its associated
+data. If the filter function returns nil, the completion is not
+included in the results."
   
-  (let* ((stack (stack-create))
-	 (completions [])
-	 heap)
+  (let* (stack heap (completions []))
     
     
     ;; ----- initialise the stack and heap -----
@@ -605,43 +663,49 @@ rank-function, in descending order."
 	(while strlist
 	  (setq tmpstr (pop strlist))
 	  ;; if completions exist, add initial node to the stack
-	  (if (car (stack-push stack (tst-node-find tmptree tmpstr)))
+	  (if (car (push (tst-node-find tmptree tmpstr) stack))
 	      ;; force entire completion to be returned if arg ALL was set
-	      (if all (stack-push stack tmpstr)
-		(stack-push stack (if (stringp tmpstr) "" [])))
-	    (stack-pop stack))))
+	      (if all (push tmpstr stack)
+		(push (if (stringp tmpstr) "" []) stack))
+	    (pop stack))))
     )
     
     
     ;; ------ search the tree -----
     (let ((num 0) str node)
       ;; keep going until we've searched all nodes (node stack is empty)
-      (while (not (stack-empty stack))
-	(setq str (stack-pop stack))
-	(setq node (stack-pop stack))
+      (while (not (null stack))
+	(setq str (pop stack))
+	(setq node (pop stack))
+	
         ;; add the high child to the stack, if it exists
 	(when (tst-node-high node)
-	  (stack-push stack (tst-node-high node))
-	  (stack-push stack str))
+	  (push (tst-node-high node) stack)
+	  (push str stack))
+	
         ;; If we're at a data node, we've found a completion. Otherwise, add
         ;; the equal child to the stack.
 	(if (tst-node-split node)
 	    (progn
-	      (stack-push stack (tst-node-equal node))
-	      (stack-push stack
-			  (if (stringp str)
-			      (concat str (string (tst-node-split node)))
-			    (vconcat str (vector (tst-node-split node))))))
-	  ;; Add completions to the heap. If we already have enough
-	  ;; completions, delete the worst one from the heap.
-	  (heap-add heap (cons str (tst-node-equal node)))
-	  (setq num (1+ num))
-	  (when (and maxnum (> num maxnum)) (heap-delete-root heap)))
+	      (push (tst-node-equal node) stack)
+	      (push (if (stringp str)
+			(concat str (string (tst-node-split node)))
+		      (vconcat str (vector (tst-node-split node))))
+		    stack))
+	  ;; If no filter was supplied, or the completion passes the filter...
+	  (when (or (null filter)
+		    (funcall filter str (tst-node-equal node)))
+	    ;; ...add the completion to the heap. If we already have enough
+	    ;; completions, delete the worst one from the heap.
+	    (heap-add heap (cons str (tst-node-equal node)))
+	    (setq num (1+ num))
+	    (when (and maxnum (> num maxnum)) (heap-delete-root heap))))
+	
         ;; add the low child to the stack, if it exists
 	(when (tst-node-low node)
-	  (stack-push stack (tst-node-low node))
-	  (stack-push stack str)))
-    )
+	  (push (tst-node-low node) stack)
+	  (push str stack))
+	))
       
       
     ;; ----- create the completions vector -----

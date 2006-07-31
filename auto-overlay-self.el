@@ -1,9 +1,9 @@
 ;;; auto-overlay-self.el --- self-delimited automatic overlays
 
-;; Copyright (C) 2005 Toby Cubitt
+;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: automatic, overlays, self
 
 ;; This file is part of the Emacs Automatic Overlays package.
@@ -27,11 +27,14 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.2:
+;; Version 0.2.1
+;; * bug fixes
+;;
+;; Version 0.2
 ;; * substantially re-written to postpone cascading until absolutely
 ;;   necessary, for improved responsiveness
 ;;
-;; Version 0.1:
+;; Version 0.1
 ;; * initial version separated off from auto-overlays.el
 
 
@@ -59,7 +62,8 @@
   ;; Make sure `auto-o-perform-self-cascades' is in `before-change-functions',
   ;; so that any cascading that is required is performed before anything else
   ;; happens.
-  (add-hook 'before-change-functions 'auto-o-perform-self-cascades t)
+  (add-hook 'before-change-functions 'auto-o-perform-self-cascades
+	    nil t)
   ;; initialise variables
   (setq auto-o-pending-self-cascade nil)
 )
@@ -112,11 +116,13 @@
 	  ;; if the new match is inside an existing overlay...
 	  (setq o (pop overlay-list))
 	  ;; create overlay from end of existing one till start of the one
-	  ;; after, and add it to the list of uncascaded overlays
+	  ;; after (or end of buffer if there isn't one), and add it to the
+	  ;; list of uncascaded overlays
 	  (setq o-new (auto-o-make-self
 		       (overlay-get o 'end)
-		       (overlay-get (overlay-get (car overlay-list) 'start)
-				    'delim-start)))
+		       (when overlay-list
+			 (overlay-get (overlay-get (car overlay-list) 'start)
+				      'delim-start))))
 	  ;; match existing one with the new match
 	  (auto-o-match-overlay o nil o-match 'no-props))
       

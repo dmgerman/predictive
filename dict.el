@@ -1,10 +1,10 @@
 
 ;;; dict.el --- dictionary package
 
-;; Copyright (C) 2004 2005 Toby Cubitt
+;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.6.2
+;; Version: 0.7
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,6 +43,9 @@
 
 
 ;;; Change log:
+;;
+;; Version 0.7
+;; * added `dict-mapcar' macro
 ;;
 ;; Version 0.6.2
 ;; * minor bug fixes
@@ -274,50 +277,57 @@
 			      unlisted)
   "Create an empty dictionary stored in variable NAME, and return it.
 
-Optional argument FILENAME supplies a directory and file name to use when
-saving the dictionary. If the AUTOSAVE flag is non-nil, then the
-dictionary will automatically be saved to this file when it is unloaded or
-when exiting emacs.
+Optional argument FILENAME supplies a directory and file name to
+use when saving the dictionary. If the AUTOSAVE flag is non-nil,
+then the dictionary will automatically be saved to this file when
+it is unloaded or when exiting emacs.
 
-The SPEED settings set the desired speed for the corresponding dictionary
-search operations (lookup, completion, ordered completion), in seconds. If a
-particular instance of the operation \(e.g. looking up the word \"cat\"\)
-takes longer than this, the results will be cached in a hash table. If exactly
-the same operation is requested subsequently, it should perform significantly
-faster. \(Note \"should\": there's no guarantee!\) The down side is that the
-memory or disk space required to store the dictionary grows, and inserting
-words into the dictionary becomes slower, since the cache has to be
-synchronized.
+The SPEED settings set the desired speed for the corresponding
+dictionary search operations (lookup, completion, ordered
+completion), in seconds. If a particular instance of the
+operation \(e.g. looking up the word \"cat\"\) takes longer than
+this, the results will be cached in a hash table. If exactly the
+same operation is requested subsequently, it should perform
+significantly faster. \(Note \"should\": there's no guarantee!\)
+The down side is that the memory or disk space required to store
+the dictionary grows, and inserting words into the dictionary
+becomes slower, since the cache has to be synchronized.
 
-All SPEED's default to nil. The values nil and t are special. If a SPEED is
-set to nil, no caching is done for that operation. If it is set to t,
-everything is cached for that operation \(similar behaviour can be obtained by
-setting the SPEED to 0, but it is better to use t\).
+All SPEED's default to nil. The values nil and t are special. If
+a SPEED is set to nil, no caching is done for that operation. If
+it is set to t, everything is cached for that operation \(similar
+behaviour can be obtained by setting the SPEED to 0, but it is
+better to use t\).
 
-If LOOKUP-ONLY is non-nil, it disables all advanced search features for the
-dictionary \(currently, completion\). All the SPEED settings are ignored, as
-is the RANK-FUNCTION, and everything is stored in the lookup cache, even when
-inserting data. This is appropriate when a dictionary is only going to be used
-for lookup, since it speeds up lookups *and* decreases the memory required.
+If LOOKUP-ONLY is non-nil, it disables all advanced search
+features for the dictionary \(currently, completion\). All the
+SPEED settings are ignored, as is the RANK-FUNCTION, and
+everything is stored in the lookup cache, even when inserting
+data. This is appropriate when a dictionary is only going to be
+used for lookup, since it speeds up lookups *and* decreases the
+memory required.
 
 
-Optional argument INSERT-FUNCTION sets the function used to insert data into
-the dictionary. It should take two arguments: the new data, and the data
-already in the dictionary (or nil if none exists yet). It should return the
-data to insert. It defaults to replacing any existing data with the new data.
+Optional argument INSERT-FUNCTION sets the function used to
+insert data into the dictionary. It should take two arguments:
+the new data, and the data already in the dictionary (or nil if
+none exists yet). It should return the data to insert. It
+defaults to replacing any existing data with the new data.
 
-Optional argument RANK-FUNCTION sets the function used to rank the results of
-the `dict-complete-ordered' function. It should take two arguments, each a
-cons whose car is a word in the dictionary and whose cdr is the data
-associated with that word. It should return non-nil if the first argument is
-\"better\" than the second, nil otherwise. It defaults to string comparison of
-the words, ignoring the data \(which is not very useful, since the
-`dict-complete' function already returns completions in alphabetical order
-much more efficiently, but at least will never cause any errors, whatever data
-is stored!\)
+Optional argument RANK-FUNCTION sets the function used to rank
+the results of the `dict-complete-ordered' function. It should
+take two arguments, each a cons whose car is a word in the
+dictionary and whose cdr is the data associated with that
+word. It should return non-nil if the first argument is
+\"better\" than the second, nil otherwise. It defaults to string
+comparison of the words, ignoring the data \(which is not very
+useful, since the `dict-complete' function already returns
+completions in alphabetical order much more efficiently, but at
+least will never cause any errors, whatever data is stored!\)
 
-If optional argument UNLISTED is non-nil, the dictionary will not be added to
-the list of loaded dictionaries."
+If optional argument UNLISTED is non-nil, the dictionary will not
+be added to the list of loaded dictionaries. Note that this will
+disable autosaving."
 
   ;; a dictionary is a list containing:
   ;; ('DICT
@@ -325,7 +335,7 @@ the list of loaded dictionaries."
   ;;  filename
   ;;  autosave flag
   ;;  modified flag
-  ;;  tstree/insert-function
+  ;;  tstree / insert-function (if lookup-only)
   ;   lookup-only
   ;;  lookup-hash
   ;;  --- rest only if not lookup-only ---
@@ -590,13 +600,25 @@ Use `dict-member-p' to distinguish non-existant words from nil data."
 
 
 (defmacro dict-map (function dict)
-  "Apply FUNCTION to all entries in dictionary DICT.
+  "Apply FUNCTION to all entries in dictionary DICT, for side-effects only.
 
-FUNCTION will be passed two arguments: a word from the dictionary, and the
-data associated with that word. It is safe to assume the dictionary entries
-will be traversed in alphabetical order."
-  `(tstree-map ,function (dic-tstree ,dict) t)
-)
+FUNCTION will be passed two arguments: a word from the
+dictionary, and the data associated with that word. It is safe to
+assume the dictionary entries will be traversed in alphabetical
+order."
+  `(tstree-map ,function (dic-tstree ,dict) t))
+
+
+
+(defmacro dict-mapcar (function dict)
+  "Apply FUNCTION to all entries in dictionary DICT,
+and make a list of the results.
+
+FUNCTION will be passed two arguments: a word from the
+dictionary, and the data associated with that word. It is safe to
+assume the dictionary entries will be traversed in alphabetical
+order."
+  `(tstree-map ,function (dic-tstree ,dict) t t))
 
 
 
@@ -613,25 +635,36 @@ will be traversed in alphabetical order."
 
 
 
-(defun dict-complete (dict string &optional maxnum all)
-  "Return a vector containing all completions of STRING found in dictionary
-DICT, in alphabetial order. Each element of the returned vector is a cons
-containing the completed string and its associated data. If no completions are
-found, return nil.
+(defun dict-complete (dict string &optional maxnum all filter no-cache)
+  "Return a vector containing all completions of STRING found in
+dictionary DICT, in alphabetial order. Each element of the
+returned vector is a cons containing the completed string and its
+associated data. If no completions are found, return nil.
 
-DICT can also be a list of dictionaries, in which case completions are sought
-in all dictionaries in the list, as though they were one large dictionary.
+DICT can also be a list of dictionaries, in which case
+completions are sought in all dictionaries in the list, as though
+they were one large dictionary.
 
-STRING can be a single string or a list of strings. If a list is supplied,
-completions of all elements of the list are included in the returned vector.
+STRING can be a single string or a list of strings. If a list is
+supplied, completions of all elements of the list are included in
+the returned vector.
 
-The optional numerical argument MAXNUM limits the results to the first
-MAXNUM completions. If it is absent or nil, all completions are
-returned.
+The optional numerical argument MAXNUM limits the results to the
+first MAXNUM completions. If it is absent or nil, all completions
+are returned.
 
-Normally, only the remaining characters needed to complete STRING are
-returned. If the optional argument ALL is non-nil, the entire completion is
-returned."
+Normally, only the remaining characters needed to complete STRING
+are returned. If the optional argument ALL is non-nil, the entire
+completion is returned.
+
+The FILTER argument sets a filter function for the
+completions. If supplied, it is called for each possible
+completion with two arguments: the completion, and its associated
+data. If the filter function returns nil, the completion is not
+included in the results.
+
+If the optional argument NO-CACHE is non-nil, it prevents caching
+of the result."
   
   (let* ((dictlist (if (dict-p dict) (list dict) dict)) dic
 	 (rankfun (dic-rankfun (car dictlist)))
@@ -656,7 +689,7 @@ returned."
 	
         ;; look in completion cache first
 	(setq cache (if (dic-completion-speed dic)
-			(gethash str (dic-completion-hash dic))
+			(gethash (cons str filter) (dic-completion-hash dic))
 		      nil))
 	
 	;; if we've found a cached result with enough completions...
@@ -672,17 +705,17 @@ returned."
 	  ;; completions than asked for, look in the ternary search tree and
 	  ;; time it
 	  (setq time (float-time))
-	  (setq vect (tstree-complete (dic-tstree dic) str maxnum))
+	  (setq vect (tstree-complete (dic-tstree dic) str maxnum filter))
 	  (setq time (- (float-time) time))
 	  ;; if the completion function was slower than the dictionary's
 	  ;; completion speed, add the results to the completion hash and set
 	  ;; the dictionary's modified flag
-	  (when (and (setq speed (dic-completion-speed dic))
+	  (when (and (not no-cache)
+		     (setq speed (dic-completion-speed dic))
 		     (or (eq speed t) (> time speed)))
 	    (dic-set-modified dic t)
-	    (puthash str (cache-create vect maxnum)
-		     (dic-completion-hash dic)))
-	  )
+	    (puthash (cons str filter) (cache-create vect maxnum)
+		     (dic-completion-hash dic))))
 	
 	;; if ALL is set, add string to the fronts of the completions
 	(when all
@@ -703,40 +736,54 @@ returned."
 
 
 
-(defun dict-complete-ordered (dict string
-				   &optional maxnum all rank-function)
-  "Return a vector containing all completions of STRING found in dictionary
-DICT. Each element of the returned vector is a cons containing the completed
-string and its associated data. If no completions are found, return nil.
+(defun dict-complete-ordered
+  (dict string &optional maxnum all rank-function filter no-cache)
+  "Return a vector containing all completions of STRING found in
+dictionary DICT. Each element of the returned vector is a cons
+containing the completed string and its associated data. If no
+completions are found, return nil.
 
 Note that `dict-complete' is significantly more efficient than
-`dict-complete-ordered', especially when a maximum number of completions is
-specified. Always use `dict-complete' when you don't care about the ordering
-of the completions, or you need the completions ordered alphabetically.
+`dict-complete-ordered', especially when a maximum number of
+completions is specified. Always use `dict-complete' when you
+don't care about the ordering of the completions, or you need the
+completions ordered alphabetically.
 
-DICT can also be a list of dictionaries, in which case completions are sought
-in all trees in the list. If RANK-FUCTION is ot specified, the rank function
-of the first dictionary in the list is used. All the dictionaries' rank
-functions had better be compatible, otherwise at best you will get unexpected
-results, at worst errors.
+DICT can also be a list of dictionaries, in which case
+completions are sought in all trees in the list. If RANK-FUCTION
+is ot specified, the rank function of the first dictionary in the
+list is used. All the dictionaries' rank functions had better be
+compatible, otherwise at best you will get unexpected results, at
+worst errors.
 
-STRING must either be a single string, or a list of strings. If a list is
-supplied, completions of all elements of the list are included in the returned
-vector.
+STRING must either be a single string, or a list of strings. If a
+list is supplied, completions of all elements of the list are
+included in the returned vector.
 
-The optional numerical argument MAXNUM limits the results to the \"best\"
-MAXNUM completions. If nil, all completions are returned.
-
-Normally, only the remaining characters needed to complete STRING are
-returned. If the optional argument ALL is non-nil, the entire completion is
+The optional numerical argument MAXNUM limits the results to the
+\"best\" MAXNUM completions. If nil, all completions are
 returned.
 
-The optional argument RANK-FUNCTION over-rides the dictionary's default rank
-function. It should take two arguments, each a cons whose car is a vector
-referencing data in the tree, and whose cdr is the data at that reference. It
-should return non-nil if the first argument is \"better than\" the second, nil
-otherwise. The elements of the returned vector are sorted according to this
-rank-function, in descending order."
+Normally, only the remaining characters needed to complete STRING
+are returned. If the optional argument ALL is non-nil, the entire
+completion is returned.
+
+The optional argument RANK-FUNCTION over-rides the dictionary's
+default rank function. It should take two arguments, each a cons
+whose car is a vector referencing data in the tree, and whose cdr
+is the data at that reference. It should return non-nil if the
+first argument is \"better than\" the second, nil otherwise. The
+elements of the returned vector are sorted according to this
+rank-function, in descending order.
+
+The FILTER argument sets a filter function for the
+completions. If supplied, it is called for each possible
+completion with two arguments: the completion, and its associated
+data. If the filter function returns nil, the completion is not
+included in the results.
+
+If the optional argument NO-CACHE is non-nil, it prevents caching
+of the result."
   
   (let ((dictlist (if (dict-p dict) (list dict) dict)) dic)
     
@@ -778,12 +825,13 @@ rank-function, in descending order."
 	    
             ;; look in completion cache first
 	    (setq cache (if (dic-ordered-speed dic)
-			    (gethash str (dic-ordered-hash dic))
+			    (gethash (cons str filter) (dic-ordered-hash dic))
 			  nil))
 	    
 	    ;; if we've found a cached result with enough completions...
 	    (if (and cache (or (null (setq cachenum (cache-num cache)))
-			       (and (not (null maxnum)) (<= maxnum cachenum))))
+			       (and (not (null maxnum))
+				    (<= maxnum cachenum))))
 		(progn
 		  (setq vect (cache-vect cache))
 	          ;; drop any excess cached completions
@@ -799,10 +847,11 @@ rank-function, in descending order."
 	      ;; if the completion function was slower than the dictionary's
 	      ;; completion speed, add the results to the completion hash and
 	      ;; set the dictionary's modified flag
-	      (when (and (setq speed (dic-ordered-speed dic))
+	      (when (and (not no-cache)
+			 (setq speed (dic-ordered-speed dic))
 			 (or (eq speed t) (> time speed)))
 		(dic-set-modified dic t)
-		(puthash str (cache-create vect maxnum)
+		(puthash (cons str filter) (cache-create vect maxnum)
 			 (dic-ordered-hash dic))))
 	    
 	    ;; if ALL is set, add string to the fronts of the completions
@@ -825,35 +874,39 @@ rank-function, in descending order."
 
 
 (defun dict-populate-from-file (dict file)
-  "Populate dictionary DICT from the word list in file FILE. Each line of the
-file should contain a word, delimeted by \"\". Use the escape sequence \\\" to
-include a \" in the string. If a line does not contain a delimeted string, it
-is silently ignored. The words should ideally be sorted alphabetically.
+  "Populate dictionary DICT from the word list in file FILE. Each
+line of the file should contain a word, delimeted by \"\". Use
+the escape sequence \\\" to include a \" in the string. If a line
+does not contain a delimeted string, it is silently ignored. The
+words should ideally be sorted alphabetically.
 
-Each line can also include data to be associated with the word, separated from
-the word by whitespace. Anything after the whitespace is considered
-data. String data should be \"\"-delimited, and must be on a single
-line. However, the escape sequence \"\\n\" can be used to include a newline,
-the escape sequence \\\" can again be used to include a \", and the escape
+Each line can also include data to be associated with the word,
+separated from the word by whitespace. Anything after the
+whitespace is considered data. String data should be
+\"\"-delimited, and must be on a single line. However, the escape
+sequence \"\\n\" can be used to include a newline, the escape
+sequence \\\" can again be used to include a \", and the escape
 sequence \\\\ must be used to include a \\.
 
 
 Technicalities:
 
-The word and data can actually be separated by any character that is not a
-word-constituent according to the standard syntax table. However, you're safe
-if you stick to whitespace.
+The word and data can actually be separated by any character that
+is not a word-constituent according to the standard syntax
+table. However, you're safest sticking to whitespace.
 
-The data is read as a lisp expression and evaluated, so can be more complex
-than a simple constant. However, it must be entirely on one line. The symbol
-_word can be used to refer to the word associated with the data.
+The data is read as a lisp expression and evaluated, so can be
+more complex than a simple constant. However, it must be entirely
+on one line. The symbol \"_word\" can be used to refer to the
+word associated with the data.
 
-The word list is read from the middle outwards, i.e. first the middle word is
-read, then the word directly after it, then the word directly before it, then
-the one two lines after the middle, and so on. Assuming the words in the file
-are sorted alphabetically, this helps produce a reasonably efficient
-dictionary. However, it may have implications if the data is a lisp expression
-that has side-effects."
+The word list is read from the middle outwards, i.e. first the
+middle word is read, then the word directly after it, then the
+word directly before it, then the one two lines after the middle,
+and so on. Assuming the words in the file are sorted
+alphabetically, this helps produce a reasonably efficient
+dictionary. However, it may have implications if the data is a
+lisp expression that has side-effects."
   
   (save-excursion
     (let ((buff (generate-new-buffer " *dict-populate*")))
@@ -900,9 +953,9 @@ that has side-effects."
 
 ;;; FIXME: doesn't fail gracefully if file has invalid format
 (defun dict-read-line ()
-  ;; Return a cons containing the word and data (if any, otherwise 0) at the
-  ;; current line of the current buffer. Returns nil if line is in wrong
-  ;; format.
+  "Return a cons containing the word and data \(if any, otherwise
+nil\) at the current line of the current buffer. Returns nil if
+line is in wrong format."
   
   (save-excursion
     (let (data _word)
@@ -944,12 +997,16 @@ Use `dict-write' to save to a different file."
 
 (defun dict-write (dict filename &optional overwrite uncompiled)
   "Write dictionary DICT to file FILENAME.
-If optional argument OVERWRITE is non-nil, no confirmation will be asked for
-before overwriting an existing file. If optional argument UNCOMPILED is set,
-an uncompiled copy of the dictionary will be created.
 
-Interactivley, DICT and FILENAME are read from the minibuffer, and OVERWRITE
-is the prefix argument."
+If optional argument OVERWRITE is non-nil, no confirmation will
+be asked for before overwriting an existing file.
+
+If optional argument UNCOMPILED is set, an uncompiled copy of the
+dictionary will be created.
+
+Interactivley, DICT and FILENAME are read from the minibuffer,
+and OVERWRITE is the prefix argument."
+  
   (interactive (list (read-dict "Dictionary to write: ")
 		     (read-file-name "File to write to: ")
 		     current-prefix-arg))
@@ -1097,10 +1154,13 @@ is the prefix argument."
 
 
 (defun dict-save-modified (&optional ask all)
-  "Save all modified dictionaries that have their autosave flag set. If
-optional argument ASK is non-nil, ask for confirmation before
-saving. Interactively, ASK is the prefix argument. If optional argument ALL is
-non-nil, save all dictionaries, even those without the autosave flag."
+  "Save all modified dictionaries that have a non-nil autosave flag.
+
+If optional argument ASK is non-nil, ask for confirmation before
+saving. Interactively, ASK is the prefix argument.
+
+If optional argument ALL is non-nil, save all dictionaries, even
+those without the autosave flag."
   (interactive "P")
   ;; For each loaded dictionary, check if dictionary has been modified. If so,
   ;; save it if autosave is on
@@ -1117,8 +1177,8 @@ non-nil, save all dictionaries, even those without the autosave flag."
 
 
 (defun dict-load (file)
-  "Load a dictionary object from file FILE. Returns t if successful, nil
-otherwise."
+  "Load a dictionary object from file FILE.
+Returns t if successful, nil otherwise."
   (interactive "fDictionary file to load: ")
   
   ;; sort out dictionary name and file name
@@ -1178,13 +1238,16 @@ NOT be saved even if its autosave flag is set."
 
 
 (defun dict-dump-words-to-buffer (dict &optional buffer)
-  "Dump words and their associated data from dictionary DICT to BUFFER, in the
-same format as that used by `dict-populate-from-file'. If BUFFER exists, words
-will be appended to the end of it. Otherwise, a new buffer will be created. If
-BUFFER is omitted, the current buffer is used.
+  "Dump words and their associated data
+from dictionary DICT to BUFFER, in the same format as that used
+by `dict-populate-from-file'. If BUFFER exists, words will be
+appended to the end of it. Otherwise, a new buffer will be
+created. If BUFFER is omitted, the current buffer is used.
 
-Note that if the data does not have a read syntax, the dumped data can not be
-used to recreate the dictionary using `dict-populate-from-file'."
+Note that if the data does not have a read syntax, the dumped
+data can not be used to recreate the dictionary using
+`dict-populate-from-file'."
+  
   (interactive (list (read-dict "Dictionary to dump: ")
 		     (read-buffer "Buffer to dump to: "
 				  (buffer-name (current-buffer)))))
@@ -1201,7 +1264,8 @@ used to recreate the dictionary using `dict-populate-from-file'."
     (insert "\n"))
   
   ;; dump words
-  (message "Dumping words from %s to %s..." (dic-name dict) (buffer-name buffer))
+  (message "Dumping words from %s to %s..."
+	   (dic-name dict) (buffer-name buffer))
   (let ((count 0) (dictsize (dict-size dict)))
     (message "Dumping words from %s to %s...(word 1 of %d)"
 	     (dic-name dict) (buffer-name buffer) dictsize)
@@ -1222,11 +1286,14 @@ used to recreate the dictionary using `dict-populate-from-file'."
 
 
 (defun dict-dump-words-to-file (dict filename &optional overwrite)
-  "Dump words and their associated data from dictionary DICT to a text file
-FILENAME, in the same format as that used by `dict-populate-from-file'.
+  "Dump words and their associated data
+from dictionary DICT to a text file FILENAME, in the same format
+as that used by `dict-populate-from-file'.
 
-Note that if the data does not have a read syntax, the dumped data can not be
-used to recreate the dictionary using `dict-populate-from-file'."
+Note that if the data does not have a read syntax, the dumped
+data can not be used to recreate the dictionary using
+`dict-populate-from-file'."
+  
   (interactive (list (read-dict "Dictionary to dump: ")
 		     (read-file-name "File to dump to: ")
 		     current-prefix-arg))
@@ -1248,9 +1315,9 @@ used to recreate the dictionary using `dict-populate-from-file'."
 )
 
 
+
 (defvar dict-history nil
   "History list for commands that read an existing ditionary name.")
-
 
 
 (defun read-dict (prompt &optional default)

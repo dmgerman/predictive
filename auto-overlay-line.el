@@ -1,9 +1,9 @@
 ;;; auto-overlay-line.el --- automatic overlays for single lines
 
-;; Copyright (C) 2005 Toby Cubitt
+;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: automatic, overlays, line
 
 ;; This file is part of the Emacs Automatic Overlays package.
@@ -26,6 +26,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.1
+;; * bug fixes in auto-o-extend-line
 ;;
 ;; Version 0.2:
 ;; * got rid of fake end match overlays, which ensured the overlay always
@@ -82,43 +85,45 @@
   ;; if not.
 
   ;; if we will be run after modification, increment pending suicide count to
-  ;; avoid running `auto-overlay-update' until all suicides are done (this
-  ;; isn't a suicide function, but we hook into the same mechanism anyway)
+  ;; avoid running `auto-overlay-update' until we're done (this isn't a
+  ;; suicide function, but we hook into the same mechanism anyway)
   (if (null modified)
       (setq auto-o-pending-suicide-count (1+ auto-o-pending-suicide-count))
-
+    
     
     ;; if being run after modification, decrement pending suicide count
     (setq auto-o-pending-suicide-count (1- auto-o-pending-suicide-count))
-    
-    (save-match-data
-      (let ((start (overlay-start o-self))
-	    (end (overlay-end o-self)))
-	(cond
-	 ;; if we no longer extend to end of line...
-	 ((null (string-match "\n" (buffer-substring-no-properties
-				    (overlay-start o-self)
-				    (overlay-end o-self))))
-	  ;; grow ourselves so we extend till end of line
-	  (move-overlay o-self start (save-excursion
-				       (goto-char (overlay-end o-self))
-				       (1+ (line-end-position))))
-	  ;; if we're exclusive, delete lower priority overlays in newly
-	  ;; covered region
-	  (auto-o-update-exclusive (overlay-get o-self 'set)
-				   end (overlay-end o-self)
-				   nil (overlay-get o-self 'priority)))
 
-	 
-	 ;; if we extend beyond end of line...
-	 ((/= (overlay-end o-self) (+ start (match-end 0)))
-	  ;; shrink ourselves so we extend till end of line
-	  (move-overlay o-self start (+ start (match-end 0)))
-	  ;; if we're exclusive, re-parse region that is no longer covered
-	  (auto-o-update-exclusive (overlay-get o-self 'set)
-				   (overlay-end o-self) end
-				   (overlay-get o-self 'priority) nil))
-	 )))
+    ;; if we haven't been deleted by a suicide function...
+    (when (overlay-buffer o-self)
+      (save-match-data
+	(let ((start (overlay-start o-self))
+	      (end (overlay-end o-self)))
+	  (cond
+	   ;; if we no longer extend to end of line...
+	   ((null (string-match "\n" (buffer-substring-no-properties
+				      (overlay-start o-self)
+				      (overlay-end o-self))))
+	    ;; grow ourselves so we extend till end of line
+	    (move-overlay o-self start (save-excursion
+					 (goto-char (overlay-end o-self))
+					 (1+ (line-end-position))))
+	    ;; if we're exclusive, delete lower priority overlays in newly
+	    ;; covered region
+	    (auto-o-update-exclusive (overlay-get o-self 'set)
+				     end (overlay-end o-self)
+				     nil (overlay-get o-self 'priority)))
+	   
+	   
+	   ;; if we extend beyond end of line...
+	   ((/= (overlay-end o-self) (+ start (match-end 0)))
+	    ;; shrink ourselves so we extend till end of line
+	    (move-overlay o-self start (+ start (match-end 0)))
+	    ;; if we're exclusive, re-parse region that is no longer covered
+	    (auto-o-update-exclusive (overlay-get o-self 'set)
+				     (overlay-end o-self) end
+				     (overlay-get o-self 'priority) nil))
+	   ))))
     
     
     ;; if there are no more pending suicides and `auto-overlay-update' has

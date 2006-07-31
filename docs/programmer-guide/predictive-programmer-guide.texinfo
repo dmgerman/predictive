@@ -1,0 +1,707 @@
+@node Region-Local Dictionaries
+@section Region-Local Dictionaries
+@cindex dictionaries, region-local
+@cindex dictionaries, region of text
+@cindex automatic dictionary switching
+@cindex switching dictionaries automatically
+@cindex changing dictionaries automatically
+@cindex using multiple dictionaries
+@cindex multiple dictionaries
+
+When typing an ordinary piece of text, you may well only need to use one
+dictionary. But when typing something more complex, such as a La@TeX{}
+document or a c program, it can be useful to switch back and forth
+between different dictionaries. For example, you might switch to a
+dictionary of markup tags when you want to insert one, then switch back
+to an English dictionary afterwards. You could manually set
+@env{predictive-main-dict} every time you wanted to change dictionary,
+but it would be even more useful if predictive mode could automatically
+switch dictionaries for you.
+
+Predictive mode uses the @dfn{auto-overlays} package (included with the
+predictive package and written specifically for it) to provide a
+powerful mechanism for automatically detecting when to switch
+dictionaries, based on defining text regions via regular expression
+delimiters.
+
+@menu
+* Defining Regions::            
+* Dictionary Switching Example::  
+* Displaying Active Dictionaries in the Mode Line::  
+* Low-Level Details::           
+@end menu
+
+
+@node Defining Regions
+@subsection Defining Dictionary Regions
+@cindex defining dictionary regions
+@cindex dictionaries, defining regions
+@cindex dictionary switching, defining regions
+@cindex regexp list
+
+To initialise regions within which an alternative dictionary is active,
+@command{auto-overlay-init} must be called with an argument that defines
+the regexps and dictionaries. This should almost always be done in a
+setup function (@pxref{Working with Major Modes}). The argument to
+@code{auto-overlay-init} should be a list, each element of which should
+itself be a list with one of the following forms:
+
+@lisp
+(@var{class} @var{regexp} @@rest @var{props})
+@end lisp
+
+@lisp
+(@var{class} (@var{edge} @var{regexp} @@rest @var{props})
+             (@var{edge} @var{regexp} @@rest @var{propr}) ...)
+@end lisp
+
+@noindent
+I.e. in the most complicated case, it can be a list of lists of lists
+(this is where the @i{LIS}t @i{P}rocessor lives up to its name!)
+
+The @var{class} element defines the behaviour of the switch-dictionary
+region, and must be one of the four symbols: @code{'word}, @code{line},
+@code{self} or @code{stack}, which are described in detail
+below@footnote{It is possible to define your own classes, but that is
+beyond the scope of this manual.}
+
+The @var{edge} element should be one of the symbols @code{start} or
+@code{end}, and indicates whether the regexp defines a start or end
+delimiter.
+
+The @var{regexp} element can either be a regular expression (i.e. a
+string that defines a valid regular expression, @pxref{Regular
+Expressions, , , elisp, GNU Emacs Lisp Reference Manual}, or a cons cell
+containing a regexp in its @code{car} and an integer in its @code{cdr}
+(whose significance is explained below). The only restriction on the
+regexp is that it should not match text across more than one line.
+
+The remaining optional @var{props} elements should be cons cells of the
+form:
+
+@lisp
+(@var{property} . @var{value})
+@end lisp
+
+@noindent
+@code{property} is a property name (a symbol), and @code{value} the
+corresponding value to set it to. To activate an alternative predictive
+mode dictionary in the region, use the @code{dict} property, whose value
+can either be the name of a dictionary (a symbol) or the dictionary
+itself. You must ensure that the dictionary is loaded before it is used
+(it should probably be loaded in a startup function, @pxref{Working with
+Major Modes}). The values @code{predictive-main-dict} and @code{t} are
+dealt with as special cases. @code{predictive-main-dict} indicates that
+the dictionary should revert to the default, i.e. a list containing
+@code{predictive-main-dict} and the buffer dictionary (see @pxref{Buffer
+Dictionaries}). The value @code{t} indicates that no dictionary should
+be active at all.
+
+The only properties you are likely to need (other than @code{dict}), are
+@code{priority} and @code{exclusive}. The value of the @code{priority}
+property should be a number. It determines which switch-dictionary
+region takes priority in setting the dictionary when two overlap, with
+larger values taking precedence (@pxref{Low-Level Details}). It is a
+good idea to order the regexps within the regexp list by priority, from
+highest to lowest.
+
+Normally, the different regions exist completely independently; they
+have no effect on each other, apart from a higher priority region
+`masking' any lower priority one it overlaps. Sometimes it is useful to
+block matches for other regexps entirely when another region is active
+(e.g. for comments in markup and programming languages: any other
+delimiters within the comment should be ignored). You can do this by
+setting the @code{exclusive} property to a non-nil value.
+
+The different `classes' of regexp cover the different ways that
+switch-dictionary regions may need to be delimited:
+
+@menu
+* word regexps::                
+* line regexps::                
+* stack regexps::               
+* self regexps::                
+@end menu
+
+
+@node word regexps
+@subsubsection @code{word} regexps
+@cindex word regexps
+@cindex dictionary switching, word regexps
+
+A @code{word} regexp defines a dictionary switch which only lasts for a
+single word. All the text matched by the regexp is considered part of
+the word, and forms the region where the dictionary is active. However,
+if you want the switch-dictionary region to start and end @emph{within}
+the matched text, you can use a cons cell of the form:
+
+@lisp
+(@var{regexp} . @var{group})
+@end lisp
+
+@noindent
+in place of the regexp, as described previously. The @var{regexp} should
+be a string defining a valid regular expression, as before, but groups
+within the regexp (portions of the regexp surrounded by @samp{\(} and
+@samp{\)}) are now significant. The @var{group} integer specifies which
+subgroup of the regexp forms the region. The rest of the regexp must
+still match, but the switch-dictionary region will only cover the part
+of the text matching the specified subgroup.
+
+A @code{word} regexp can not be combined with others in a list. It must
+appear on its own as a separate element of the regexp list.
+
+
+@node line regexps
+@subsubsection @code{line} regexps
+@cindex line regexps
+@cindex dictionary switching, line regexps
+
+A @code{line} regexp defines a dictionary switch that lasts till the end
+of the line. The switch-dictionary region extends from just after
+the text matching the regexp, to the end of the line. However, if you
+want the region to start @emph{within} the matched text, you can do so
+by using a cons cell of the form:
+
+@lisp
+(@var{regexp} . @var{group})
+@end lisp
+
+@noindent
+in place of the regexp, as described previously (see @pxref{word
+regexps}). The @var{group} integer specifies which subgroup of the
+regexp defines the start of the region. The region will start from the
+end of the text matching that subgroup.
+
+A @code{line} regexp can not be combined with others in a list. It must
+appear on its own as a separate element of the regexp list.
+
+
+@node stack regexps
+@subsubsection @code{stack} regexps
+@cindex stack regexps
+@cindex start regexps
+@cindex end regexps
+@cindex dictionary switching, stack regexps
+@cindex dictionary switching, start and end regexps
+
+@code{stack} regexps match the beginning and end of a switch-dictionary
+region. Text that matches such a regexp establishes an opening or
+closing delimiter, and the regions stretch between paired
+delimiters. ``Between'' normally means from just after the end of the
+text matching the @code{start} delimiter to just before the beginning of
+the @code{end} delimiter (this can be modified, see below).
+
+A @code{stack} regexp @emph{must} be combined with others in a list. The
+list should contain at least one regexp whose @code{edge} is
+@code{start} and one whose @code{edge} is @code{end}. The order of
+regexps in the list is significant: if two regexps in the list could
+match overlapping pieces of text, the one appearing first in the list
+takes precedence and the other is ignored.
+
+All @code{end} regexps in the list can pair with all @code{start}
+regexps in the list to define a region. However, nothing requires the
+dictionaries (or other properties) associated with the regexps to be the
+same. Which dictionary takes precedence is again determined by which
+regexp appears earliest in the list. A @code{start} and an @code{end}
+regexp in the same list may @emph{not} match overlapping pieces of text;
+the regexps must be defined so that this is impossible, or your teeth
+might turn green, your hair could fall out, and other strange behaviour
+may result.
+
+Unpaired @code{end} and @code{start} delimiters create switch-dictionary
+regions that stretch to the beginning or end of the buffer,
+respectively, until a delimiter is inserted to pair with it.
+
+If the buffer contains paired @code{start} and @code{end} delimiters of
+the same type (i.e. the regexps are in the same list) nested inside one
+another, these will define multiple switch-dictionary regions nested one
+inside the other. Usually, the innermost region will take precedence
+when two regions overlap. However, an outer region with a larger
+@code{priority} (see above) takes precedence over an inner one with a
+lower or non-existent @code{priority}.
+
+Occasionally, you may want the switch-dictionary region to start or end
+somewhere @emph{within} the text matching the regexps. This can be
+achieved by using a cons cell of the form:
+
+@lisp
+(@var{regexp} . @var{group})
+@end lisp
+
+@noindent
+in place of the regexp, as described previously (see @pxref{word
+regexps}). The @var{group} integer specifies which subgroup of the
+regexp forms the delimiter. The rest of the regexp must still match, but
+the delimiter is formed only by the part of the text matching the
+specified subgroup. The switch-dictionary region will therefore stretch
+from the end of the specified subgroup of the @code{start} regexp, to
+the start of the subgroup of the @code{end} regexp.
+
+In this case, the restriction on @code{start} and @code{end} regexps in
+the same list not being allowed to match overlapping pieces of text is
+loosened slightly: the subgroups defining the delimiter parts of two
+regexps in the same list are not allowed to match overlapping pieces of
+text, but the non-delimiter parts may overlap.
+
+
+@node self regexps
+@subsubsection @code{self} regexps
+@cindex self regexps
+@cindex dictionary switching, self regexps
+
+A @code{self} regexp matches both the beginning @emph{and} end of a
+switch-dictionary region. Between two such delimiters, the dictionary
+associated with the regexp will be active. (Note that this can not be
+achieved using the @code{start} and @code{end} regexps described above,
+since whichever comes first in the list will always match first,
+preventing whichever comes second from ever matching.) @code{self}
+regexps can not be combined with others in a list.
+
+As in the case of @code{stack} regexps (@pxref{stack regexps}),
+``between'' means from the end of the text matching one regexp to the
+beginning of the text matching the next. And as before, this can be
+modified by using a cons cell containing a regexp and an integer in
+place of the regexp (@pxref{word regexps}). Since the same delimiter can
+match the beginning or end of a region, overlapping regions can never be
+created.
+
+
+
+@node Dictionary Switching Example
+@subsection Dictionary Switching Example
+@cindex dictionary switching, example
+@cindex example of dictionary switching
+
+The interaction of all the different settings, properties and behaviours
+provided by predictive mode's dictionary switching can be a little
+confusing. This section will go through an example of how the the regexp
+list could be set up for typing La@TeX{}. La@TeX{} is complex enough to
+demonstrate most of the dictionary switching features. However, the
+example in this section will not be a complete La@TeX{} setup. (A more
+complete La@TeX{} setup is included in the predictive mode package,
+@pxref{Obtaining and Installing}).
+
+La@TeX{} is a markup language, so a La@TeX{} document combines commands
+with normal text. Commands start with @samp{\}, and end at the first
+non-word-constituent character. The only two commands we will be
+concerned with are @samp{\begin} and @samp{\end}, which begin and end a
+La@TeX{} environment. La@TeX{} provides many environments, used to
+create lists, tables, titles, etc. We will take the example of an
+@samp{equation} environment, used to typeset mathematical
+equations. Thus equations are enclosed by @samp{\begin@{equation@}} and
+@samp{\end@{equation@}}.
+
+Another example we will use is the @samp{$} delimiter. Pairs of
+@samp{$}s delimit mathematical expressions that appear in the middle of
+a paragraph of normal text (whereas @samp{equation} environments appear
+on their own, slightly separated from surrounding text). The final
+example is the @samp{%} character, which creates a comment that lasts
+till the end of the line (i.e. text after the @samp{%} is ignored by the
+La@TeX{} processor).
+
+La@TeX{} commands are a good example of when to use @code{word} regular
+expressions (@pxref{word regexps}). When a @samp{\} is typed, we would
+like predictive mode to switch to a dictionary of La@TeX{} commands, and
+this switch should last until the entire command has been typed
+(La@TeX{} commands end at the first non-letter character after the
+@samp{\}). A @code{word} regexp does exactly this, so we will use one in
+our regexp list, which at this point contains:
+
+@lisp
+(('word "\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+@code{"\\\\"} is the string defining the regexp that matches a
+@emph{single} @samp{\}. The @samp{\} character has a special meaning in
+regular expressions, so to include a literal one it must be escaped:
+@samp{\\}. However, @samp{\} also has a special meaning in lisp strings,
+so both @samp{\} characters must be escaped there too, giving
+@code{"\\\\"}.
+
+@samp{[[:alpha:]]*?} matches a sequence of zero or more letter
+characters. The @samp{?} ensures that it matches the @emph{shortest}
+sequence of letters consistent with matching the regexp, since we want
+the region to end at the first non-letter character, matched by
+@samp{[^[:alpha:]]}. The @samp{\|} defines an alternative, to allow the
+command to be terminated either by a non-letter character or by the end
+of the line (@samp{$}). @xref{Regular Expressions, , , elisp, GNU Emacs
+Lisp Reference Manual}, for more details on Emacs regular expressions.
+
+This example assumes that @code{dict-latex} is the name of a loaded
+predictive mode dictionary containing all the La@TeX{} commands. (The
+correct place to load the dictionary is in a predictive major mode
+setup function, @pxref{Working with Major Modes}).
+
+However, there's a small problem. We only want the dictionary switch to
+be active for the characters making up a La@TeX{} command. But as we've
+defined things so far, it will be active for all the text matched by the
+regexp, which includes the leading @samp{\} and the trailing non-letter
+character. To rectify this, we need to group the part of the regexp that
+matches the command (i.e. by surround it with @samp{\(} and @samp{\)}),
+and put the regexp inside a cons cell containing the regexp in its
+@code{car} and a number indicating which subgroup to use in its
+@code{cdr}:
+
+@lisp
+(('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+The @samp{$} delimiter is an obvious example of when to use a
+@code{self} regexp (@pxref{self regexps}). We can update our example to
+include this:
+
+@lisp
+(('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex))
+ ('self "\\$" ('dict . 'dict-latex-math)))
+@end lisp
+
+@noindent
+@samp{$} also has a special meaning in regular expressions, so it must
+be escaped with a @samp{\} which itself must be escaped in lisp
+strings. The @code{dict-latex-math} dictionary should contain La@TeX{}
+maths commands.
+
+This won't quite work though. La@TeX{} maths commands also start with a
+@samp{\} character, which will match the @code{word} regexp. Since the
+@code{word} switch-dictionary region will be within the @code{self}
+region, it will take precedence. We can change this by giving the
+@code{self} delimiter a higher priority (any priority is higher than a
+non-existent one; we use 3 here for later convenience). Remembering that
+it's a good idea to put higher priority regexps before lower priority
+ones, we get:
+
+@lisp
+(('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+Predictive mode will now correctly switch to the maths dictionary and
+use it in preference to the normal La@TeX{} command dictionary when you
+are typing text enclosed by @samp{$} delimiters.
+
+The @samp{\begin@{equation@}} and @samp{\end@{equation@}} commands also
+enclose maths regions, so we would like predictive mode to switch to the
+maths dictionary between these too. Since the opening and closing
+delimiters are different in this case, we must use @code{stack} regexps
+(@pxref{stack regexps}). Our list now contains:
+
+@lisp
+(('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+Notice how we've used a list of @code{start} and @code{end} regexps to
+define the region. Once again, we have had to escape the @samp{\}
+characters, and increase the priority of the region.
+
+La@TeX{} comments start with @samp{%} and last till the end of the
+line: a perfect demonstration of a @code{line} regexp. We want the
+dictionary to revert to the default, so we set it to
+@env{predictive-main-dict}.
+
+@lisp
+(('self "\\$" ('dict . 'predictive-main-dict) ('priority . 3))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex))
+ ('line "%" 'dict-english))
+@end lisp
+
+Let's think about this a bit. We probably don't want to switch
+dictionaries for La@TeX{} commands within a comment. Not only do we not
+want it, creating regions for @samp{\begin} and @samp{\end} commands
+which are within a comment could cause havoc! If they don't occur in
+pairs within the commented region, they will erroneously pair up with
+ones outside the comment. We need comments to take precedence over
+everything else, and we need them to block other regexps:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+We're well on our way to creating a useful setup, at least for the
+La@TeX{} commands we're considering in this example. There is one last
+dictionary switch to create, but it is the most complicated. When
+@samp{\begin@{} is typed, predictive mode should switch to a dictionary
+of La@TeX{} environment names, until it encounters a @samp{@}}
+character. A first attempt at this might result in:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+However, we'll hit a problem with this. The @samp{@}} character also
+closes the @samp{\end@{} command. Since we haven't told predictive mode
+about @samp{\end@{}, every @samp{@}} that should close a @samp{\end@{}
+command will instead be interpreted as the end of a @samp{\start@{}
+command, probably resulting in lots of unmatched @samp{@}} characters
+creating switch-dictionary regions stretching to the beginning of the
+buffer. Clearly, we need something more along the lines of:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" '(priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+We still haven't solved the problem though. The @samp{@}} character
+doesn't only close @samp{\begin@{} and @samp{\end@{} commands in
+La@TeX{}. @emph{All} arguments to La@TeX{} commands are surrounded by
+@samp{@{} and @samp{@}}. We could add all the commands that take
+arguments, but we don't really want to switch dictionaries for those
+other commands (at least in this example). All we want to do is prevent
+predictive mode incorrectly pairing the @samp{@}} characters used for
+other commands. Instead, we can just add @samp{@{} to the list:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "@{" '(priority . 2))
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" '(priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+Notice how the @code{@{} and @code{@}} regexps do not have a dictionary
+associated with them, so any switch-dictionary regions they create will
+not have any effect, other than making sure predictive mode correctly
+pairs all @samp{@{} and @samp{@}} characters. We've made one
+mistake though: by putting the @code{@{} regexp at the beginning of the
+list, it will take priority over any other regexp in the list that could
+match the same text. And since @code{@{} will match whenever
+@code{\begin@{} or @code{\end@{} matches, predictive mode will never
+create a @code{dict-latex-env} region! The @code{@{} regexp must appear
+@emph{after} the @code{\begin@{} and @code{\end@{} regexps, to ensure it
+is only used if neither of them match (it doesn't matter whether it
+appears before or after the @code{@{} regexp, since the latter will
+never match the same text and neither set dictionaries):
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2))
+  ('start "@{" '(priority . 2))
+  ('end "@}" '(priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+There is one last issue. A literal @samp{@{} or @samp{@}} character can
+be included in a La@TeX{} document by escaping it with @samp{\}:
+@samp{\@{} and @samp{\@}}. In this situation, the characters do not
+match anything and should not be treated as delimiters. We can modify
+the @code{@{} and @code{@}} regexps to exclude these cases:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2))
+  ('start "\\([^\\]\\|^\\)@{" '(priority . 2))
+  ('end "\\([^\\]\\|^\\)@}" '(priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+@noindent
+The complicated-looking regexps will only match @samp{@{} and @samp{@}}
+characters if they are @emph{not} preceded by a @samp{\} character
+(@pxref{Regular Expressions, , , elisp, GNU Emacs Lisp Reference
+Manual}).
+
+However, when it does match, the @samp{@}} regexp will now match an
+additional character before the @samp{@}}, causing the switch-dictionary
+region to end one character early. (The @samp{@{} regexp will also match
+one additional character before the @samp{@{}, but since the beginning
+of the switch-dictionary region starts from the @emph{end} of the
+@code{start} delimiter, this poses no problem.) We need to group the
+part of the regexp that should define the delimiter, i.e. the @code{@}},
+by surrounding it with @code{\(} and @code{\)}, and put the regexp in
+the @code{car} of a cons cell whose @code{cdr} specifies the new
+subgroup (i.e. the 2nd subgroup, since the regexp already included a
+group for other reasons). Our finished regexp list looks like this:
+
+@lisp
+(('line "%" ('dict . 'predictive-main-dict) ('priority . 4)
+            ('exclusive . t))
+ ('self "\\$" ('dict . 'dict-latex-math) ('priority . 3))
+ ('stack
+  ('start "\\begin@{" ('dict . 'dict-latex-env) ('priority . 2))
+  ('end "@}" ('dict . 'dict-latex-env) ('priority . 2))
+  ('start "\\([^\\]\\|^\\)@{" '(priority . 2))
+  ('end ("\\([^\\]\\|^\\)\\(@}\\)" . 2) '(priority . 2)))
+ ('stack
+  ('start "\\begin@{equation@}" ('dict . 'dict-latex-math) ('priority . 1))
+  ('end "\\end@{equation@}" ('dict . 'dict-latex-math) ('priority . 1)))
+ ('word ("\\\\\\([[:alpha:]]*?\\)\\([^[:alpha:]]\\|$\\)" . 1)
+        ('dict . 'dict-latex)))
+@end lisp
+
+With these regexps, predictive mode will switch to a dictionary of
+La@TeX{} commands whenever you type a @samp{\} character. It will switch
+to a dictionary of maths commands when you are typing text within an
+@samp{equation} environment, or text surrounded by @samp{$}
+delimiters. It will ignore La@TeX{} markup within comments between
+@samp{%} and the end of the line. It will switch to a dictionary of
+La@TeX{} environment names when typing a @samp{\begin} or @samp{\end}
+command. And it will correctly take account of @samp{@{} and @samp{@}}
+characters from other commands. Not bad for a bundle of brackets!
+
+
+
+@node Displaying Active Dictionaries in the Mode Line
+@subsection Displaying Active Dictionaries in the Mode Line
+@cindex dictionary switching, active dictionary
+@cindex dictionary switching, mode line
+@cindex displaying active dictionary
+@cindex mode line, active dictionary
+@vindex predictive-which-dict
+
+Predictive mode can display the name of the dictionary or dictionaries
+that are active at the point. The name appears in the mode line, after
+the predictive minor mode indicator. It is enabled along with predictive
+mode when the @env{predictive-which-dict} variable is non-nil (disabled
+by default), and can be toggled on and off with the
+@command{predictive-which-dict-mode} command.
+
+This feature is particularly useful for debugging regexps in when trying
+to set up switch-dictionary regions.
+
+
+
+@node Low-Level Details
+@subsection Low-Level Details
+@cindex dictionary switching, low-level details
+
+Anyone familiar with Emacs lisp may recognize the @code{priority}
+property that can be associated with a regexp as an overlay property. In
+fact, the switch-dictionary regions in predictive mode are implemented
+using overlays. The properties are just passed on to the
+overlay. Although the @code{priority} property is the most useful
+standard property, any other overlay property can be specified too
+(@pxref{Overlay Properties, , , elisp, GNU Emacs Lisp Reference
+Manual}). Clever use of the @code{modification-hooks} property, for
+example, could produce some interesting effects, or the @code{face}
+property could help when debugging your regexps@enddots{}
+
+
+
+
+
+
+@node Buffer Dictionaries
+@section Buffer Dictionaries
+@cindex buffer dictionary
+@cindex dictionary, buffer
+@vindex predictive-buffer-dict
+
+One special dictionary is not saved in a file, but is recreated and
+stored in the buffer-local @env{predictive-buffer-dict} variable
+whenever a file is loaded into a buffer. The buffer dictionary is
+populated from a word list at the end of the buffer.
+
+The start of this word list is indicated by the text
+@samp{predictive-mode local words:}. The entries start on the following
+line and take the same format as files used to populate a normal
+dictionary: words delimited by @samp{""}, optional weights separated
+from the words by whitespace. @xref{Creating Dictionaries}. Since
+characters before the first quote @samp{"} are ignored, the words can be
+commented out with whatever comment character is appropriate. Usually,
+you will not need to create the word list manually, since words can be
+inserted into it automatically (@pxref{Automatic Learning}) or using the
+@command{predictive-add-to-buffer-dict} command:
+@findex predictive-add-to-buffer-dict
+
+@ftable @command
+@item predictive-add-to-buffer-dict
+Adds a word to the word list at the end of the current buffer, and to
+the buffer-local dictionary. The word is read from the mini-buffer and
+its weight can optionally be specified by a prefix argument. If the word
+is already there, its weight is incremented.
+@end ftable
+
+Buffer dictionaries are particularly useful when using programming
+languages. A general dictionary will only contain the functions and
+keywords defined in the language itself. The buffer dictionary can be
+used to store variable and function names specific to one file.
+
+
+
+
+@c was under predictive-auto-add-to-dict
+If set to the special symbol @code{buffer}, new words are automatically
+added to the word list at the end of the buffer (@pxref{Buffer
+Dictionaries}).
+
+
+@c was under Bugs
+However, if you're reporting a bug with the regdictionary switching
+features, and you've using your own regular expressions (rather than
+using a setup function included in the package), please carefully
+re-read the dictionary switching section of this manual
+(@pxref{Automatic Dictionary Switching}, and especially the
+@ref{Dictionary Switching Example}), make absolutely sure that the bug
+isn't with your regexps rather than predictive mode, count to ten, check
+your regexps again, stand on your head and count to ten again, and only
+then report the bug (photographic evidence of these acrobatic antics
+will give your bug report higher priority).

@@ -1,9 +1,9 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
-;; Copyright (C) 2005 Toby Cubitt
+;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.3
+;; Version: 0.4
 ;; Keywords: automatic, overlays
 
 ;; This file is part of the Emacs Automatic Overlays package.
@@ -27,6 +27,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.4
+;; * (a lot of) bug fixes
+;;
 ;; Version 0.3
 ;; * completely re-written after realising that the match overlays, not the
 ;;   auto overlays themselves, should be the "primary" objects - much better!
@@ -38,7 +41,7 @@
 ;; * added exclusive overlay support
 ;; * major code tidying and bug fixes
 ;;
-;; Version 0.1:
+;; Version 0.1
 ;; * initial version created by copying code from Predictive Completion
 ;;   package, with minor modifications
 
@@ -54,11 +57,8 @@
 (defvar auto-overlay-unload-hook nil)
 
 
+(require 'auto-overlay-common)
 (provide 'auto-overlays)
-(require 'auto-overlay-word)
-(require 'auto-overlay-line)
-(require 'auto-overlay-self)
-(require 'auto-overlay-stack)
 
 
 (defvar auto-overlay-list nil)
@@ -134,7 +134,12 @@ appropriate identifier."
       ;; run initialisation hooks
       (run-hooks 'auto-overlay-load-hook)
       ;; make sure overlays are updated after any buffer modification
-      (add-hook 'after-change-functions 'auto-overlay-update t))
+      (add-hook 'after-change-functions 'auto-overlay-update nil t)
+      ;; reset pending-suicide-count before updates to work around bug(?) that
+      ;; overlay modification-hooks are not always called after modification
+      (add-hook 'before-change-functions
+		(lambda (&rest ignore) (setq auto-o-pending-suicide-count 0))
+		nil t))
     
     
     ;; search for new auto overlays
@@ -189,6 +194,9 @@ from BUFFER, or the current buffer if none is specified."
       (run-hooks 'auto-overlay-unload-hook)
       ;; reset variables
       (remove-hook 'after-change-functions 'auto-overlay-update t)
+      (remove-hook 'before-change-functions
+		   (lambda (&rest ignore)
+		     (setq auto-o-pending-suicide-count 0)) t)
       (setq auto-o-pending-suicide-count 0)
       (setq auto-o-pending-post-suicide nil))
     )
@@ -206,16 +214,24 @@ from BUFFER, or the current buffer if none is specified."
   ;; if there are pending match overlay suicides, postpone update till they're
   ;; done (`auto-o-suicide' will run `auto-overlay-update' again)
   (if (> auto-o-pending-suicide-count 0)
-      (push (list 'auto-overlay-update start end nil regexp-set)
-	    auto-o-pending-post-suicide)
+      (progn
+	(save-excursion
+	  (goto-char start)
+	  (forward-line 0)
+	  (setq start (point))
+	  (if (null end) (end-of-line)
+	    (goto-char end)
+	    (end-of-line))
+	  (setq end (point)))
+	(add-to-list 'auto-o-pending-post-suicide
+		     (list 'auto-overlay-update start end nil regexp-set)))
     
     ;; otherwise...
-    (let (lines regexp-list class regexp group priority
+    (let (lines regexp-list class regexp group priority set sequence
 		o-match o-overlap o-new)
       (unless start (setq start (point)))
       (if end
-	  (setq lines
-		(1+ (- (line-number-at-pos start) (line-number-at-pos end))))
+	  (setq lines (count-lines start end))
 	(setq lines 1))
       (save-excursion
 	(save-match-data
@@ -223,8 +239,8 @@ from BUFFER, or the current buffer if none is specified."
 	  (dotimes (i lines)
 
 	    ;; check each set of overlays, unless specific set was specified
-	    (dotimes (set (if regexp-set 1 (length auto-overlay-regexps)))
-	      (when regexp-set (setq set regexp-set))
+	    (dotimes (s (if regexp-set 1 (length auto-overlay-regexps)))
+	      (if regexp-set (setq set regexp-set) (setq set s))
 	      ;; check each type of auto overlay
 	      (dotimes (type (length (nth set auto-overlay-regexps)))
 		(setq regexp-list (nth type (nth set auto-overlay-regexps)))
@@ -234,18 +250,17 @@ from BUFFER, or the current buffer if none is specified."
 		  (setq regexp-list (list regexp-list))) ; bundle in list
 		
 		;; check all regexps for current type
-		(dotimes (sequence (length regexp-list))
+		(dotimes (seq (length regexp-list))
+		  (if (> (length regexp-list) 1)
+		      (setq sequence seq)
+		    (setq sequence nil))
 		  
 		  ;; extract regexp properties from current entry
-		  (let ((entry (nth sequence regexp-list)))
-		    (setq regexp (nth 1 entry))
-		    (if (atom regexp)
-			(setq group 0)
-		      (setq group (cdr regexp))
-		      (setq regexp (car regexp)))
-		    (setq priority
-			  (cdr (assq 'priority
-				     (auto-o-type-props set type sequence)))))
+ 		  (setq regexp (auto-o-seq-regexp set type sequence))
+		  (setq group (auto-o-seq-regexp-group set type sequence))
+		  (setq priority
+			(cdr (assq 'priority
+				   (auto-o-type-props set type sequence))))
 		  
 		  
 		  ;; look for matches in current line
@@ -257,22 +272,12 @@ from BUFFER, or the current buffer if none is specified."
 					set type sequence))
 		     
 		     
-		     ;; if match is within a higher priority exclusive
-		     ;; overlay, create match overlay but don't parse it
-		     ((auto-o-within-exclusive-p (match-beginning 0)
-						 (match-end 0)
-						 priority)
-		      (auto-o-make-match set type
-					 (match-beginning 0) (match-end 0)
-					 sequence (match-beginning group)
-					 (match-end group)))
-		     
 		     ;; if existing match overlay of same type and edge but
 		     ;; different sequence overlaps the new match...
 		     ((and (auto-o-type-is-list-p set type)
 			   (setq o-overlap
 				 (auto-o-overlapping-match
-				  (match-beginning 0) (match-end 0)
+				  (match-beginning group) (match-end group)
 				  set type sequence
 				  (auto-o-seq-edge set type sequence))))
 		      ;; if new match takes precedence, replace existing one
@@ -284,8 +289,22 @@ from BUFFER, or the current buffer if none is specified."
 				       (match-beginning 0) (match-end 0)
 				       sequence (match-beginning group)
 				       (match-end group)))
-			(auto-o-match-overlay (overlay-get o-overlap 'parent)
-					      o-match)))
+			(when (overlay-get o-overlap 'parent)
+			  (auto-o-match-overlay (overlay-get o-overlap 'parent)
+						o-match))
+			    ;; run match function if there is one
+			(let ((match-func (auto-o-match-function o-match)))
+			  (when match-func (funcall match-func o-match)))))
+		     
+		     ;; if match is within a higher priority exclusive
+		     ;; overlay, create match overlay but don't parse it
+		     ((auto-o-within-exclusive-p (match-beginning group)
+						 (match-end group)
+						 priority)
+		      (auto-o-make-match set type
+					 (match-beginning 0) (match-end 0)
+					 sequence (match-beginning group)
+					 (match-end group)))
 		     
 		     
 		     ;; if we're going to parse the new match...
@@ -313,7 +332,10 @@ from BUFFER, or the current buffer if none is specified."
 			      (overlay-put o 'set set)
 			      (unless (overlay-get o 'type)
 				(overlay-put o 'type type)))
-			    o-new)))
+			    o-new)
+		      ;; run match function if there is one
+		      (let ((match-func (auto-o-match-function o-match)))
+			(when match-func (funcall match-func o-match)))))
 		    
 		    
 		    ;; go to character one beyond the start of the match, to
@@ -332,13 +354,19 @@ from BUFFER, or the current buffer if none is specified."
   ;; calls the appropriate suicide function for match overlay O-SELF as
   ;; specified in `auto-overlay-functions'.
   
-  ;; if we will be run after modification, increment pending suicide count to
-  ;; avoid running `auto-overlay-update' until all suicides are done
-  (if (not modified)
-      (setq auto-o-pending-suicide-count (1+ auto-o-pending-suicide-count))
+  (cond
+   ;; this is here to avoid a weird bug(?) where the modification-hooks seem
+   ;; to be called occasionally for overlays that have already been deleted
+   ((not (overlay-buffer o-self)))
+   
+   ;; if we will be run after modification, increment pending suicide count to
+   ;; avoid running `auto-overlay-update' until all suicides are done
+   ((not modified)
+    (setq auto-o-pending-suicide-count (1+ auto-o-pending-suicide-count)))
 
-    ;; if being run after modification...
-    ;; if match overlay no longer matches the text it covers...
+   ;; if being run after modification...
+   ;; if match overlay no longer matches the text it covers...
+   (t
     (unless (and (save-excursion
 		   (goto-char (overlay-start o-self))
 		   (looking-at (auto-o-regexp o-self)))
@@ -348,19 +376,22 @@ from BUFFER, or the current buffer if none is specified."
       ;; ourselves
       (when (overlay-get o-self 'parent)
 	(funcall (auto-o-suicide-function o-self) o-self))
-      (auto-overlay-update (overlay-start o-self) nil nil
-			   (overlay-get o-self 'set))
+      ;; Note: not supplying the 'set can avoid multiple, effectively
+      ;; identical auto-overlay-update calls
+      (auto-overlay-update (overlay-start o-self))
+;;       (auto-overlay-update (overlay-start o-self) nil nil
+;; 			   (overlay-get o-self 'set))
       (delete-overlay o-self))
-
+    
     ;; decrement pending suicide count
     (setq auto-o-pending-suicide-count (1- auto-o-pending-suicide-count))
-
+    
     ;; if there are no more pending suicides and there are postponed functions
     ;; to be run, run them now
     (when (and auto-o-pending-post-suicide (= auto-o-pending-suicide-count 0))
       (mapc (lambda (f) (apply (car f) (cdr f)))
 	    auto-o-pending-post-suicide)
-      (setq auto-o-pending-post-suicide nil)))
+      (setq auto-o-pending-post-suicide nil))))
 )
 
 
@@ -492,19 +523,19 @@ from BUFFER, or the current buffer if none is specified."
 
 (defun auto-o-match-overlay (overlay start &optional end
 				     no-props no-parse protect-match)
-  ;; Match start and end of OVERLAY with START and END match overlays.
-  ;; If START or END are numbers or markers, move that edge to the buffer
-  ;; location specified by the number or marker and make it unmatched.
-  ;; If START or END are non-nil but neither of the above, make that edge
-  ;; unmatched.
-  ;; If START or END are null, don't change that edge. However, if END is
-  ;; null, and START is an 'end overlay, match end of OVERLAY rather than
-  ;; start.
-  ;;
-  ;; If NO-PARSE is non-nil, block re-parsing due to exclusive overlay
-  ;; changes. If NO-PROPS is non-nil, block updating of overlay's
-  ;; properties. If PROTECT-MATCH is non-nil, don't modify any match overlays
-  ;; associated with OVERLAY (i.e. don't modify their 'parent properties).
+  "Match start and end of OVERLAY with START and END match overlays.
+If START or END are numbers or markers, move that edge to the
+buffer location specified by the number or marker and make it
+unmatched.  If START or END are non-nil but neither of the above,
+make that edge unmatched.  If START or END are null, don't change
+that edge. However, if END is null, and START is an 'end overlay,
+match end of OVERLAY rather than start.
+  
+If NO-PARSE is non-nil, block re-parsing due to exclusive overlay
+changes. If NO-PROPS is non-nil, block updating of overlay's
+properties. If PROTECT-MATCH is non-nil, don't modify any match
+overlays associated with OVERLAY (i.e. don't modify their 'parent
+properties)."
   
   (let ((old-start (overlay-start overlay))
 	(old-end (overlay-end overlay))
@@ -585,9 +616,9 @@ from BUFFER, or the current buffer if none is specified."
 	(dolist (p props) (overlay-put overlay (car p) (cdr p)))))
     
     
-    ;; unless it's blocked, check if anything needs reparsing due to
-    ;; exclusive overlay changes
-    (unless no-parse
+    ;; unless it's blocked or overlay is inactive, check if anything needs
+    ;; reparsing due to exclusive overlay changes
+    (unless (or no-parse (overlay-get overlay 'inactive))
       (let ((set (overlay-get overlay 'set))
 	    (start (overlay-start overlay))
 	    (end (overlay-end overlay))
@@ -688,170 +719,19 @@ from BUFFER, or the current buffer if none is specified."
 
 
 
-(defun auto-overlays-at-point (&optional point prop-test inactive)
-  "Return overlays overlapping POINT (or the point, if POINT is
-null). If PROP-TEST is supplied, it should be a list which
-specifies a property test with one of the following forms (or a
-list of such lists if more than one property test is required):
-
-  (FUNCTION PROPERTY)
-
-  (FUNCTION PROPERTY VALUE)
-
-  (FUNCTION (PROPERTY1 PROPERTY2 ...) (VALUE1 VALUE2 ...))
-
-where PROPERTY indicates an overlay property name (a symbol), and
-VALUE indicates an arbitrary value or lisp expression.
-
-For each overlay between START and END, first the values
-corresponding to the property names are retrieved from the
-overlay, then FUNCTION is called with the properties values
-followed by the other values as its arguments. The test is
-satisfied if the result is non-nil, otherwise it fails. Tests are
-evaluated in order, but only up to the first failure. Only
-overlays that satisfy all property tests are returned.
-
-If INACTIVE is non-nil, both active and inactive overlays are
-returned (usually inactive ones are ignored).
-
-Note that this function returns any overlay. If you want to
-restrict it to auto overlays, include '(identity auto-overlay) in
-PROP-TEST."
-  
-  (when (null point) (setq point (point)))
-  
-  ;; find overlays at point
-  (let (overlay-list
-	(modified (buffer-modified-p))
-	(inhibit inhibit-modification-hooks)
-	(undo buffer-undo-list))
-    (save-excursion
-      ;; there's no inbuilt function that finds all overlays overlapping point
-      ;; including all zero-length overlays, so we use the ugly kludge of
-      ;; inserting a character then deleting it, necessitating inhibiting
-      ;; modification hooks and saving/restoring the buffer's modified flag
-      (setq inhibit-modification-hooks t)
-      (goto-char point)
-      (insert " ")
-      
-      ;; find overlays overlapping point
-      (setq overlay-list (auto-overlays-in (- (point) 1) (point) prop-test
-					   nil inactive))
-
-      ;; restore buffer properties
-      (delete-backward-char 1)
-      (setq inhibit-modification-hooks inhibit)
-      (set-buffer-modified-p modified)
-      (setq buffer-undo-list undo))
-    
-    ;; return overlay list
-    overlay-list)
-)
-
-
-
-
-(defun auto-overlays-in (start end &optional prop-test within inactive)
-  "Return auto overlays overlapping region between START and END.
-
-If PROP-TEST is supplied, it should be a list which specifies a
-property test with one of the following forms (or a list of such
-lists if more than one property test is required):
-
-  (FUNCTION PROPERTY)
-
-  (FUNCTION PROPERTY VALUE)
-
-  (FUNCTION (PROPERTY1 PROPERTY2 ...) (VALUE1 VALUE2 ...))
-
-where PROPERTY indicates an overlay property name (a symbol), and
-VALUE indicates an arbitrary value or lisp expression.
-
-For each overlay between START and END, first the values
-corresponding to the property names are retrieved from the
-overlay, then FUNCTION is called with the properties values
-followed by the other values as its arguments. The test is
-satisfied if the result is non-nil, otherwise it fails. Tests are
-evaluated in order, but only up to the first failure. Only
-overlays that satisfy all property tests are returned.
-
-If WITHIN is non-nil, only overlays entirely within START and END
-are returned. If INACTIVE is non-nil, both active and inactive
-overlays are returned (usually inactive ones are ignored).
-
-Note that this function returns any overlay. If you want to
-restrict it to auto overlays, include '(identity auto-overlay) in
-PROP-TEST."
-
-   ;; make sure prop-test is a list of lists, even if there's only one, and
-  ;; exclude inactive overlays unless told not to
-  (cond
-   ((null prop-test)
-    (unless inactive (setq prop-test '((null inactive)))))
-   ((functionp (car prop-test))
-    (if inactive
-	(setq prop-test (list prop-test))
-      (setq prop-test (list '(null inactive) prop-test))))
-   (t
-    (unless inactive (setq prop-test (push '(null inactive) prop-test)))))
-  
-  (let (overlay-list function prop-list value-list result)    
-    ;; check properties of each overlay in region
-    (dolist (o (overlays-in start end))
-      ;; check overlay is entirely within region
-      (if (and within
-	       (or (< (overlay-start o) start) (> (overlay-end o) end)))
-	  (setq result nil)
-	
-	;; if it is, or we don't care
-	(setq result t)
-	(catch 'failed
-	  ;; check if properties match
-	  (dolist (test prop-test)
-	    ;; (Note: the whole thing would be neater with something like
-	    ;; (apply 'and (map ...)) but 'and is a special form, not a
-	    ;; function, so can't be applied)
-	    (setq function (nth 0 test))
-	    (unless (listp (setq prop-list (nth 1 test)))
-	      (setq prop-list (list prop-list)))
-	    (setq value-list nil)
-	    (unless (or (< (length test) 3)
-			(and (setq value-list (nth 2 test))  ;; nil isn't list
-			     (listp value-list)))
-	      (setq value-list (list value-list)))
-	    
-	    ;; apply the test
-	    (setq result
-		  (and result
-		       (apply function
-			      (append (mapcar (lambda (p) (overlay-get o p))
-					      prop-list)
-				      value-list))))
-	    (when (null result) (throw 'failed nil)))))
-      
-      ;; add overlay to result list if its properties matched
-      (when result (push o overlay-list)))
-    ;; return result list
-    overlay-list)
-)
-
-
-
-
 (defun auto-o-matched-p (beg end set type &optional sequence)
   ;; Determine if characters between BEG end END are already matched by a
-  ;; match overlay from set SET of type TYPE and optionally sequence
-  ;; SEQUENCE.
+  ;; match overlay from set SET of type TYPE and optionally sequence SEQUENCE.
   (let (o-match)
     (catch 'match
       (mapc (lambda (o)
 	      (when (and (overlay-get o 'auto-overlay-match)
 			 (= (overlay-get o 'set) set)
 			 (= (overlay-get o 'type) type)
-			 (= (overlay-start o) beg)
-			 (= (overlay-end o) end)
 			 (or (not (auto-o-type-is-list-p set type))
-			     (= (overlay-get o 'sequence) sequence)))
+			     (= (overlay-get o 'sequence) sequence))
+			 (= (overlay-start o) beg)
+			 (= (overlay-end o) end))
 		(setq o-match o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
@@ -868,13 +748,13 @@ PROP-TEST."
   ;; priority than PRIORITY.
 
   (when (null end)
-    (setq end (overlay-end match))
+    (setq end (overlay-get match 'delim-end))
     (setq priority (overlay-get match 'priority))
-    (setq match (overlay-start match)))
+    (setq match (overlay-get match 'delim-start)))
   
   ;; look for higher priority exclusive overlays
-  (auto-overlays-at-point
-   match
+  (auto-overlays-in
+   match end
    (list '(identity auto-overlay)
 	 '(identity exclusive)
 	 (list (lambda (p q) (and p (or (null q) (> p q))))
@@ -886,8 +766,9 @@ PROP-TEST."
 
 (defun auto-o-overlapping-match (beg end set type sequence edge)
   ;; Returns any match overlay of same SET, TYPE and EDGE but different
-  ;; SEQUENCE that overlaps region from BEG to END. (Only returns first one it
-  ;; finds; which is returned if more than one exists is undefined.)
+  ;; SEQUENCE whose delimeter overlaps region from BEG to END. (Only returns
+  ;; first one it finds; which is returned if more than one exists is
+  ;; undefined.)
   (let (o-overlap)
     (catch 'match
       (mapc (lambda (o)
@@ -895,7 +776,10 @@ PROP-TEST."
 			 (= (overlay-get o 'set) set)
 			 (= (overlay-get o 'type) type)
 			 (/= (overlay-get o 'sequence) sequence)
-			 (eq (auto-o-edge o) edge))
+			 (eq (auto-o-edge o) edge)
+			 ;; check delimeter (not just o) overlaps BEG to END
+			 (<= (overlay-get o 'delim-start) end)
+			 (>= (overlay-get o 'delim-end) beg))
 		(setq o-overlap o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
@@ -920,15 +804,56 @@ PROP-TEST."
 	     (nth (overlay-get ,o-match 'set) auto-overlay-regexps))))
 
 
-(defmacro auto-o-regexp (o-match)
-  ;; Return match overlay O-MATCH's regexp.
-  `(let ((regexp (nth 1 (auto-o-entry (overlay-get ,o-match 'set)
-				      (overlay-get ,o-match 'type)
-				      (overlay-get ,o-match 'sequence)))))
+(defmacro auto-o-seq-regexp (set type &optional sequence)
+  ;; Return regexp corresponsing to SET, TYPE and SEQUENCE.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
      (if (atom regexp) regexp (car regexp))))
 
 
-(defmacro auto-o-type-props (set type sequence)
+(defmacro auto-o-regexp (o-match)
+  ;; Return match overlay O-MATCH's regexp.
+  `(auto-o-seq-regexp (overlay-get ,o-match 'set)
+		      (overlay-get ,o-match 'type)
+		      (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-seq-regexp-group (set type &optional sequence)
+  ;; Return regexp group corresponsing to SET, TYPE and SEQUENCE, or 0 if none
+  ;; is specified.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
+     (cond
+      ((atom regexp) 0)
+      ((atom (cdr regexp)) (cdr regexp))
+      (t (cadr regexp)))))
+
+
+(defmacro auto-o-regexp-group (o-match)
+  ;; Return match overlay O-MATCH's regexp group.
+  `(auto-o-seq-regexp-group (overlay-get ,o-match 'set)
+			    (overlay-get ,o-match 'type)
+			    (overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-seq-regexp-group-nth (n set type &optional sequence)
+  ;; Return Nth regexp group entry corresponsing to SET, TYPE and SEQUENCE, or
+  ;; 0 if there is no Nth entry.
+  `(let ((regexp (nth 1 (auto-o-entry ,set ,type ,sequence))))
+     (cond
+      ((atom regexp) 0)
+      ((> (1+ ,n) (length (cdr regexp))) 0)
+      (t (nth ,n (cdr regexp))))))
+
+
+(defmacro auto-o-regexp-group-nth (n o-match)
+  ;; Return match overlay O-MATCH's Nth regexp group entry, or 0 if there is
+  ;; no Nth entry.
+  `(auto-o-seq-regexp-group-nth ,n
+				(overlay-get ,o-match 'set)
+				(overlay-get ,o-match 'type)
+				(overlay-get ,o-match 'sequence)))
+
+
+(defmacro auto-o-type-props (set type &optional sequence)
   ;; Return properties of regexp with SET, TYPE and SEQUENCE
   `(if (auto-o-type-is-list-p ,set ,type)
        (nthcdr 2 (auto-o-entry ,set ,type ,sequence))
@@ -966,14 +891,9 @@ PROP-TEST."
   `(nth 2 (assq (auto-o-class ,o-match) auto-overlay-functions)))
 
 
-(defmacro auto-o-init-function (entry)
-  ;; Return appropriate suicide function for match overlay O-MATCH.
-  `(nth 3 ,entry))
-
-
-(defmacro auto-o-clear-function (entry)
-  ;; Return appropriate suicide function for match overlay O-MATCH.
-  `(nth 4 ,entry))
+(defmacro auto-o-match-function (o-match)
+  `(let ((funcs (assq (auto-o-class ,o-match) auto-overlay-functions)))
+     (when (>= (length funcs) 4) (nth 3 funcs))))
 
 
 (defmacro auto-o-start-matched-p (overlay)
@@ -991,6 +911,17 @@ PROP-TEST."
   ;; rather than a single entry.
   `(let ((entry (auto-o-entry ,set ,type 0)))
     (and (listp entry) (symbolp (car entry)))))
+
+
+
+;;; ===============================================================
+;;;                       Compatibility Stuff
+
+(unless (fboundp 'line-number-at-pos)
+  (require 'predictive-compat)
+  (defalias 'line-number-at-pos
+            'predictive-compat-line-number-at-pos)
+)
 
 
 ;; auto-overlays.el ends here

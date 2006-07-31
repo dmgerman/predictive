@@ -102,7 +102,11 @@
 	    (start "\\\\documentclass[.*?]{"
 		   (dict . dict-latex-docclass) (priority . 2))
 	    (start ("\\([^\\]\\|^\\)\\({\\)" . 2) (priority . 2))
-	    (end ("\\([^\\]\\|^\\)\\(}\\)" . 2) (priority . 2)))
+	    (end ("\\([^\\]\\|^\\)\\(}\\)" . 2) (priority . 2))
+	    (start ("^\\({\\)" . 1) (priority . 2))
+	    (start ("[^\\]\\({\\)" . 1) (priority . 2))
+	    (end ("^\\(}\\)" . 1) (priority . 2))
+	    (end ("[^\\]\\(}\\)" . 1) (priority . 2)))
 	   
 	   ;; \begin{...} and \end{...} start and end various maths displays
 	   (stack
@@ -136,7 +140,7 @@
   ;; make "\", "$", "{" and "}" do the right thing
   (setq predictive-override-syntax-alist
 	'((?\\ . (lambda () (interactive)
-		   (predictive-abandon)
+		   (predictive-reject)
 		   (predictive-insert-and-complete)))
 	  (?{ . (lambda () (interactive)
 		  (predictive-accept-and-insert)

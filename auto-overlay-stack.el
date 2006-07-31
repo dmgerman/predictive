@@ -1,9 +1,9 @@
 ;;; auto-overlay-stack.el --- stacked start/end-delimited automatic overlays
 
-;; Copyright (C) 2005 Toby Cubitt
+;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: automatic, overlays, stack
 
 ;; This file is part of the Emacs Automatic Overlays package.
@@ -27,7 +27,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.1:
+;; Version 0.1.1
+;; * bug fixes
+;;
+;; Version 0.1
 ;; * initial version separated off from auto-overlays.el
 
 
@@ -131,7 +134,7 @@
      
      ((eq (auto-o-edge o-match) 'end)
       (setq pos (overlay-get o-match 'delim-start))
-      (setq o-new (make-overlay pos pos))
+      (setq o-new (make-overlay pos pos nil nil 'rear-advance))
       (auto-o-match-overlay o-new 'unmatched o-match)))
 
     ;; give the new overlay its basic properties
