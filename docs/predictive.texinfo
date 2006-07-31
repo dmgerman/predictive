@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.3.
+0.4.
 @c --version--
 
 Copyright @copyright{} 2005 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.3
+@subtitle Version 0.4
 @c --version--
 @author Toby Cubitt
 
@@ -37,9 +37,6 @@ Documentation License".
 @vskip 0pt plus 1filll
 @insertcopying
 @end titlepage
-
-
-@contents
 
 
 @ifnottex
@@ -110,6 +107,7 @@ Automatic Dictionary Switching
 
 * Defining Regions::            
 * Dictionary Switching Example::  
+* Displaying Active Dictionaries in the Mode Line::  
 * Low-Level Details::           
 
 Defining Dictionary Regions
@@ -118,9 +116,9 @@ Defining Dictionary Regions
 * start and end regexps::       
 * self regexps::                
 
-Learning
+Dictionary Learning
 
-* Learning from Files::         
+* Learning from Buffers and Files::  
 * Automatic Learning::          
 
 Character Syntax and Key Bindings
@@ -144,6 +142,9 @@ Copying this Manual
 @end ifnottex
 
 
+@c table of contents
+@contents
+
 
 
 @node What is predictive completion?
@@ -159,7 +160,7 @@ probably easily guess how to fill in the missing letters in the
 following sentence:
 
 @display
-Giv th fir fe lett o a wow i no diffi t predi wh shou com nex.
+Giv th fir fe lett o a wor i no diffi t predi wh shou com nex.
 @end display
 
 This is even more true of the languages used to communicate with
@@ -393,6 +394,7 @@ is also provided as a convenience for use in hooks.
 (@kbd{C-TAB}) Find completions for the word at or next to the point.
 @end ftable
 
+@vindex predictive-accept-if-point-moved
 @command{predictive-cycle} is the most useful completion command if
 dynamic completion and the completion list are disabled. It cycles
 through the available completions for the current word, provisionally
@@ -402,7 +404,6 @@ end-of-word character (@pxref{Character Syntax and Key Bindings}).
 Moving the point elsewhere and typing something will also work if
 @env{predictive-accept-if-point-moved} is enabled (@pxref{Miscellaneous
 Options}).
-@vindex predictive-accept-if-point-moved
 
 Normally, predictive mode finds completions as you type. Occasionally,
 you may need to manually force it to look for completions of a word
@@ -493,12 +494,13 @@ elsewhere. Therefore whenever you start a new completion when an old one
 is still in progress, the old completion is either accepted or abandoned
 automatically, depending on the setting of the variable
 @env{predictive-accept-if-point-moved} (@pxref{Miscellaneous Options}).
-@vindex predictive-accept-if-point-moved
 
 Since you may want to return to the old completion to check if it's
 correct, the @command{predictive-jump-to-old-completion} command
 exists. (Note that only one old completion is stored and can be returned
 to.)
+
+@vindex predictive-accept-if-point-moved
 
 
 
@@ -506,6 +508,7 @@ to.)
 @section Dynamic Completion
 @cindex dynamic completion
 @cindex completion, dynamic
+@vindex predictive-dynamic-completion
 
 When dynamic completion is enabled, the most likely completion is
 provisionally inserted in the buffer after the point and highlighted to
@@ -517,7 +520,6 @@ punctuation character) accepts the completion.
 Dynamic completion is enabled when the
 @env{predictive-dynamic-completion} variable non-nil (the default), and
 disabled when it is nil.
-@vindex predictive-dynamic-completion
 
 The current syntax table (@pxref{Syntax, , , emacs, GNU Emacs Manual})
 determines which characters are word-constituents and which are not
@@ -582,6 +584,7 @@ respectively (@pxref{Inserting Completions}).
 @cindex completion, offering list of
 @cindex list of completions
 @cindex completions, list of
+@vindex predictive-offer-completions
 
 When the variable @env{predictive-offer-completions} is non-nil,
 predictive mode will display a list of the most likely completions in
@@ -590,7 +593,6 @@ likelihood. This is enabled by default. The character in brackets in
 labeling each completion in the list can be used to insert the
 corresponding completion (the numerical characters 0--9 are used by
 default).
-@vindex predictive-offer-completions
 
 @noindent
 The following variables affect the behavior of the completions list:
@@ -784,7 +786,16 @@ Dictionaries}.
 @ftable @command
 @item dict-load
 Load a dictionary from file. The name given to the loaded dictionary is
-the same as the file name, with the extension removed.
+the same as the file name, with the extension removed. This will not add
+it to the list of dictionaries used by the current buffer (see
+@command{predictive-load-dict}, below).
+
+@item predictive-load-dict
+Load a dictionary from file, and add it to the list of dictionaries used
+by the current buffer. The name given to the loaded dictionary is
+the same as the file name, with the extension removed. The dictionary
+will be included when learning from the buffer, see @ref{Learning from
+Buffers and Files}.
 
 @item dict-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
@@ -840,6 +851,7 @@ dictionaries.
 @cindex basic dictionary usage
 @cindex dictionaries, basic usage
 @cindex dictionaries, using
+@vindex predictive-main-dict
 
 The name of the main dictionary used by a buffer is stored in the
 buffer-local @env{predictive-main-dict} variable. Note that the variable
@@ -847,7 +859,6 @@ contains the @emph{name} of the dictionary, which must already by loaded
 (@pxref{Loading and Saving Dictionaries}), not the dictionary
 itself. This is the dictionary predictive mode will normally search for
 words in.
-@vindex predictive-main-dict
 
 @env{predictive-main-dict} can also hold a list of dictionary
 names. They are then treated as though they form one combined
@@ -883,6 +894,7 @@ regular expression delimiters.
 @menu
 * Defining Regions::            
 * Dictionary Switching Example::  
+* Displaying Active Dictionaries in the Mode Line::  
 * Low-Level Details::           
 @end menu
 
@@ -892,18 +904,18 @@ regular expression delimiters.
 @cindex defining dictionary regions
 @cindex dictionaries, defining regions
 @cindex dictionary switching, defining regions
+@vindex predictive-switch-dict-regexps
 
 Regions within which an alternative dictionary is active are defined via
 the @env{predictive-switch-dict-regexps} variable. This contains regular
 expressions that identify the beginning and end of each region, along
 with the dictionary that should be active in that region.
-@vindex predictive-switch-dict-regexps
 
 Each element of the @env{predictive-switch-dict-regexps} list should
 either itself be a list of the form
 
 @lisp
-(@var{class} @var{regexp} @var{dict} @@rest @var{props})
+(@var{regexp} @var{class} @var{dict} @@rest @var{props})
 @end lisp
 
 @noindent
@@ -939,7 +951,7 @@ value should be a number. This determines which switch-dictionary region
 takes priority when two overlap, with larger values taking precedence
 (@pxref{Low-Level Details}).
 
-The different regexp `classes' of regexp cover the different ways that
+The different `classes' of regexp cover the different ways that
 switch-dictionary regions may need to be delimited:
 
 @menu
@@ -958,8 +970,8 @@ A @code{word} regexp defines a temporary dictionary switch which only
 lasts for the current word, i.e. until the current completion process is
 finished (@pxref{Offering a List of Completions}, and @ref{Dynamic
 Completion}). Whenever the regexp matches text which has just been typed
-(text immediately before point), the predictive mode dictionary will
-switch to that associated with the regexp, until the end of the word.
+and is being completed, the predictive mode dictionary will switch to
+that associated with the regexp, until the end of the word.
 
 A @code{word} regexp can not be combined with others in a list. It must
 appear on its own as a separate element of the
@@ -988,7 +1000,9 @@ two regexps in the list could match the same piece of text, the one
 appearing first in the list takes precedence. All @code{end} regexps in
 the list can match all @code{start} regexps in the list. However,
 nothing requires the dictionaries (or other properties) associated with
-the regexps in the list to be the same.
+the regexps to be the same. Two regexps in the same list may @emph{not}
+match overlapping pieces of text; the regexps must be defined so that
+this is impossible.
 
 What about the dictionary associated with the @code{end} regexp? It is
 only used when an @code{end} delimiter has no matching @code{start}
@@ -1026,6 +1040,12 @@ therefore stretch from the end of the specified subgroup of the
 @code{start} regexp, to the start of the subgroup of the @code{end}
 regexp.
 
+In this case, the restriction on regexps in the same list not being
+allowed to match overlapping pieces of text is loosened slightly: the
+subgroups defining the delimiter parts of two regexps in the same list
+are not allowed to match overlapping pieces of text, but the
+non-delimiter parts may overlap.
+
 
 @node self regexps
 @subsubsection @code{self} regexps
@@ -1054,6 +1074,7 @@ overlapping regions can never be created.
 @subsection Dictionary Switching Example
 @cindex dictionary switching, example
 @cindex example of dictionary switching
+@vindex predictive-switch-dict-regexps
 
 The interaction of all the different settings, properties and behaviours
 provided by predictive mode's dictionary switching can be a little
@@ -1064,7 +1085,6 @@ dictionary switching features. However, the example in this section will
 not be a complete La@TeX{} setup. (A more complete La@TeX{} setup is
 available from the predictive mode web page, see @pxref{Obtaining and
 Installing}).
-@vindex predictive-switch-dict-regexps
 
 La@TeX{} is a markup language, so a La@TeX{} document combines commands
 with normal text. Commands start with @samp{\}, and end at the first
@@ -1081,11 +1101,16 @@ The other example we will use is the @samp{$} delimiter. Pairs of
 a paragraph of normal text (whereas @samp{equation} environments appear
 on their own, slightly separated from surrounding text).
 
-La@TeX{} commands are a perfect example of when to use @code{word}
-regular expressions (@pxref{word regexps}). When a @samp{\} is typed, we
-would like predictive mode to switch to a dictionary of La@TeX{}
-commands, and this switch should last until the entire command has been
-typed. A @code{word} regexp does exactly this, so we will use one in
+La@TeX{} commands are a good example of when to use @code{word} regular
+expressions@footnote{In fact, the La@TeX{} setup available from the
+predictive mode web page (@pxref{Obtaining and Installing}) uses
+@code{start} and @code{end} regexps rather than a @code{word} regexp,
+mostly because this enables dictionaries to learn the frequencies of
+La@TeX{} commands (see @pxref{Learning from Buffers and Files}).}
+(@pxref{word regexps}). When a @samp{\} is typed, we would like
+predictive mode to switch to a dictionary of La@TeX{} commands, and this
+switch should last until the entire command has been typed. A
+@code{word} regexp does exactly this, so we will use one in
 @env{predictive-switch-dict-regexps}, which at this point contains:
 
 @lisp
@@ -1296,6 +1321,24 @@ characters from other commands.
 
 
 
+@node Displaying Active Dictionaries in the Mode Line
+@subsection Displaying Active Dictionaries in the Mode Line
+@cindex dictionary switching, active dictionary
+@cindex dictionary switching, mode line
+@cindex displaying active dictionary
+@cindex mode line, active dictionary
+@vindex predictive-which-dict
+
+Predictive mode can display the name of the dictionary or dictionaries
+that are active at the point. The name appears in the mode line, after
+the predictive minor mode indicator. It is enabled by the
+@env{predictive-which-dict} variable. (This feature is particularly
+useful for debugging regexps in @env{predictive-switch-dict-regexps}
+when trying to set up switch-dictionary regions.)
+@vindex predictive-switch-dict-regexps
+
+
+
 @node Low-Level Details
 @subsection Low-Level Details
 @cindex dictionary switching, low-level details
@@ -1309,7 +1352,8 @@ passed on to the overlay. Although the @code{priority} property is the
 most useful, any other overlay property can be specified too
 (@pxref{Overlay Properties, , , elisp, GNU Emacs Lisp Reference
 Manual}). Clever use of the @code{modification-hooks} property, for
-example, could produce some interesting effects @enddots{}
+example, could produce some interesting effects, or the @code{face}
+property could help when debugging your regexps@enddots{}
 
 
 
@@ -1338,17 +1382,56 @@ weights from them. Predictive mode provides two ways to do this:
 learning from existing files, and automatic learning as you type.
 
 @menu
-* Learning from Files::         
+* Learning from Buffers and Files::  
 * Automatic Learning::          
 @end menu
 
 
-@node Learning from Files
-@subsection Learning from Files
+@node Learning from Buffers and Files
+@subsection Learning from Buffers and Files
+@cindex learning from buffers
 @cindex learning from files
+@cindex dictionaries, learning from buffers
 @cindex dictionaries, learning from files
 
-These functions do not exist yet. @xref{Known Bugs}.
+Predictive mode can learn word weights from existing text. The following
+commands can be used to do this. Note that they will not add new words
+to a dictionary; they only update weight of word that are already in the
+dictionary. The learning commands can use the information provided by
+switch-dictionary regions to decide which dictionary a word belongs
+to. However, switch-dictionary regions defined by @code{word} regexps
+can not be used, basically because once the completion process is over,
+it is impossible in general to know where the word starts and ends (see
+@pxref{word regexps}).
+
+Note that all the learning command (even the ``fast'' ones!) can take a
+long time to run.
+
+@ftable @command
+@item predictive-learn-from-buffer
+Learns weights for words in a dictionary from text in a buffer. By
+default, learns word weights for all dictionaries used by the current
+buffer when predictive mode is enabled (@pxref{Loading and Saving
+Dictionaries}). Each occurence of a word increments its weight in the
+dictionary. By default, only occurences that occur in a region where the
+dictionary is active are taken into account (@pxref{Defining
+Regions}). This can be overridden by supplying a prefix argument, in
+which case all occurences are taken into account.
+
+@item predictive-learn-from-file
+Like @command{predictive-learn-from-buffer}, but learns from a file
+instead of a buffer.
+
+@item predictive-fast-learn-from-buffer
+Similar to @command{predictive-learn-from-buffer}. It runs faster for
+large dictionaries, at the expense of missing some words. Specifically,
+only words consisting entirely of word- or symbol-constituent characters
+(according to the buffer's syntax table) will be taken into account.
+
+@item predictive-fast-learn-from-file
+Like @command{predictive-fast-learn-from-buffer}, but learns from a file
+instead of a buffer.
+@end ftable
 
 
 @node Automatic Learning
@@ -1411,12 +1494,12 @@ not duplicate any words.
 @section Buffer Dictionaries
 @cindex buffer dictionary
 @cindex dictionary, buffer
+@vindex predictive-buffer-dict
 
 One special dictionary is not saved in a file, but is recreated and
 stored in the buffer-local @env{predictive-buffer-dict} variable
 whenever a file is loaded into a buffer. The buffer dictionary is
 populated from a word list at the end of the buffer.
-@vindex predictive-buffer-dict
 
 The start of this word list is indicated by the text
 @samp{predictive-mode local words:}. The entries start on the following
@@ -1500,12 +1583,15 @@ list. Default is numerical characters 0 to 9. @xref{Offering a List of
 Completions}.
 @end vtable
 
+@findex predictive-self-insert.
+@vindex predictive-syntax-alist
+@vindex predictive-override-syntax-alist
+
 The various keymaps define key bindings for different situations that
 arise in predictive mode. The main @env{predictive-map} keymap is
 enabled whenever predictive mode is enabled. By default, this keymap
 binds all printable characters to the @command{predictive-self-insert}
 function (@pxref{Functions for Binding to Characters}).
-@findex predictive-self-insert.
 
 Note: if you find yourself thinking of re-binding printable characters
 in @env{predictive-map} to something other than
@@ -1513,8 +1599,6 @@ in @env{predictive-map} to something other than
 on a bit). What you probably want to change are the
 @env{predictive-syntax-alist} and @env{predictive-override-syntax-alist}
 variables. @xref{Syntax}.
-@vindex predictive-syntax-alist
-@vindex predictive-override-syntax-alist
 
 The @env{predictive-completing-map} is only enabled when a completion is
 in progress, and is used to bind key combinations to completion
@@ -1591,6 +1675,8 @@ associates characters with functions, and takes precedence over
 @node Functions for Binding to Characters
 @section Functions for Binding to Characters
 @cindex functions for binding to characters
+@vindex predictive-syntax-alist
+@vindex predictive-override-syntax-alist
 
 All predictive mode functions with @samp{insert} in their names insert
 the last input event into the buffer, in addition to carrying out
@@ -1599,8 +1685,6 @@ Commands}). Therefore unless you know what you are doing, they should
 probably only be bound to printable characters, or used in the
 @env{predictive-syntax-alist} and @env{predictive-override-syntax-alist}
 variables (@pxref{Syntax}).
-@vindex predictive-syntax-alist
-@vindex predictive-override-syntax-alist
 
 @ftable @command
 @item predictive-self-insert
@@ -1747,8 +1831,8 @@ However, if you're reporting a bug with the dictionary switching
 features, and you've using your own regular expressions (rather than
 using a setup function available from the web-site), please carefully
 re-read the dictionary switching section of this manual
-(@pxref{Automatic Dictionary Switching}, especially the worked example
-(@pxref{Dictionary Switching Example}, make absolutely sure that the bug
+(@pxref{Automatic Dictionary Switching}, and especially the
+@ref{Dictionary Switching Example}), make absolutely sure that the bug
 isn't with your regexps rather than predictive mode, count to ten, check
 your regexps again, and only then report the bug.
 
@@ -1769,15 +1853,13 @@ Known bugs (in no particular order):
 
 @enumerate
 @item
-The @command{predictive-learn-from-buffer} and
-@command{predictive-learn-from-file} commands do not exist.
-
-@item
 No @command{predictive-remove-from-dict} command exists to remove a word
-from a dictionary. (The best work-around at the moment is to reduce the
-word's weight using @command{predictive-add-to-dict} with a large
-negative weight, so that it is unlikely to show up as a likely
-completion.)
+from a dictionary. However, it it unlikely ever to exist unless there is
+huge demand (because removing entries from a ternary search tree is
+frought with difficulties). The best work-around at the moment is to
+reduce the word's weight using @command{predictive-add-to-dict} with a
+large negative weight, so that it is unlikely to show up as a likely
+completion.
 @end enumerate
 
 

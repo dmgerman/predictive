@@ -1,10 +1,10 @@
 
 ;;; tstree.el --- ternary search tree package
 
-;; Copyright (C) 2004 Toby Cubitt
+;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: ternary search tree, tstree
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,7 +43,11 @@
 
 ;;; Change Log:
 ;;
-;; version 0.1: initial release
+;; Version 0.2
+;; * added tstree-map function
+;;
+;; Version 0.1
+;; * initial release
 
 
 
@@ -228,11 +232,12 @@ The optional INSERT-FUNCTION takes two arguments of the type stored as data in
 the tree or nil, and returns the same type. It defaults to \"replace\". See
 `tstree-insert'.
 
-The optional RANK-FUNCTION takes two arguments, each a cons whose car is a
-vector referencing data in the tree, and whose cdr is the data at that
-reference. It should return non-nil if the first argument is \"better than\"
-the second, nil otherwise. It defaults numerical comparison of the data using
-\"greater than\". Used by `tstree-complete-ordered' to rank completions."
+The optional RANK-FUNCTION takes two arguments, each a cons whose car is an
+array (vector or string) referencing data in the tree, and whose cdr is the
+data at that reference. It should return non-nil if the first argument is
+\"better than\" the second, nil otherwise. It defaults numerical comparison of
+the data using \"greater than\". Used by `tstree-complete-ordered' to rank
+completions."
 
          ;; comparison-function defaults to -
   (let* ((cmpfun (when compare-function compare-function '-))
@@ -296,8 +301,8 @@ the second, nil otherwise. It defaults numerical comparison of the data using
   "Calculate the result of applying the tree TREE's insetion function to DATA
 and the existing data at position STRING in the tree (or nil if empty), and
 insert the result into the ternary search tree at the position referenced by
-STRING. STRING must be a vector containing the type used to reference data
-in the tree.
+STRING. STRING must be an array (vector or string) containing the type used to
+reference data in the tree.
 
 The optional INSERT-FUNCTION over-rides the tree's own insertion function. It
 should take two arguments of the type stored as data in the tree, or nil. The
@@ -318,17 +323,17 @@ type. The return value is stored in the tree."
       (while (and node (tst-node-branch node d))
 	(setq node (tst-node-branch node d))
 	(setq d (funcall cmpfun chr (tst-node-split node)))
-	(if (= 0 d)
-	    (if (< (setq c (1+ c)) len)
-		(setq chr (aref string c))
-	      ;; if complete string already exists in the tree and
-	      ;; we've found the data node, insert new data
-	      (if (tst-node-split node)
-		  (setq chr nil)  ; not at data node so keep descending
-		(tst-node-set-equal
-		 node (setq newdata
-			    (funcall insfun data (tst-node-equal node))))
-		(setq node nil)))))  ; forces loop to exit
+	(when (= 0 d)
+	  (if (< (setq c (1+ c)) len)
+	      (setq chr (aref string c))
+	    ;; if complete string already exists in the tree and
+	    ;; we've found the data node, insert new data
+	    (if (tst-node-split node)
+		(setq chr nil)  ; not at data node so keep descending
+	      (tst-node-set-equal
+	       node (setq newdata
+			  (funcall insfun data (tst-node-equal node))))
+	      (setq node nil)))))  ; forces loop to exit
       
       ;; once we've found one node that doesn't exist, must create all others
       (while node
@@ -395,7 +400,7 @@ between a non-existant STRING and a STRING whose data is nil. Use
 ;; the entire sub-tree then add the strings it contained back
 ;; again. Both are undesirable: the former because it leaves the tree
 ;; with redundant nodes that apart from making the tree slightly
-;; inefficient, might even cause errors when running functions;; the
+;; inefficient, might even cause errors when running functions; the
 ;; latter because it could potentially be very inefficient.
 ;;
 ;; The best option is probably to make sure you never need to delete
@@ -408,24 +413,71 @@ between a non-existant STRING and a STRING whose data is nil. Use
 
 
 
+(defun tstree-map (function tree &optional string)
+  "Apply FUNTION to all elements in the ternary search tree TREE.
+
+FUNCTION will be passed two arguments: an array referencing a location in the
+tree, and its associated data. It is safe to assume the tree will be traversed
+in \"lexical\" order (i.e. the order defined by the tree's comparison
+function).
+
+If the optional argument STRING is nil, the array passed to FUNCTION will be a
+vector containing elements of the type used to reference data in the tree. If
+STRING is non-nil, the array will be a real string (this will cause an error
+if the type used to reference the tree can not be converted to a string by the
+`string' function)."
+
+  (let ((stack (stack-create))
+	str node)
+    
+    ;; initialise the stack
+    (stack-push stack (tst-tree-root tree))
+    (if string (stack-push stack "") (stack-push stack []))
+    
+    ;; Keep going until we've traversed all nodes (node stack is empty)
+    (while (not (stack-empty stack))
+      (setq str (stack-pop stack))
+      (setq node (stack-pop stack))
+      ;; add the high child to the stack, if it exists
+      (when (tst-node-high node)
+	(stack-push stack (tst-node-high node))
+	(stack-push stack str))
+      ;; If we're at a data node call FUNCTION, otherwise add the equal
+      ;; child to the stack.
+      (if (null (tst-node-split node))
+	  (funcall function str (tst-node-equal node))
+	(stack-push stack (tst-node-equal node))
+	(stack-push stack
+		    (if (stringp str)
+			(concat str (string (tst-node-split node)))
+		      (vconcat str (vector (tst-node-split node))))))
+      ;; add the low child to the stack, if it exists
+      (when (tst-node-low node)
+	(stack-push stack (tst-node-low node))
+	(stack-push stack str))))
+)
+
+
+
+
 (defun tstree-complete (tree string &optional maxnum all)
   "Return a vector containing all completions of STRING found in ternary searh
-tree TREE, in \"alphabetial\" order (i.e. the order defined by the tree's
+tree TREE, in \"lexical\" order (i.e. the order defined by the tree's
 comparison function). Each element of the returned vector is a cons containing
-the completed string and its associated data. If no completions are found,
+the completed \"string\" and its associated data. If no completions are found,
 return nil.
 
-STRING must either be a vector containing elements of the type used to
-reference data in the tree, or a list of such vectors. (If the tree stores
-real strings, STRING can be a string or a list of strings, since strings are
-treated internally as vectors of numbers.) If a list is supplied, completions
-of all elements of the list are included in the returned vector.
+STRING must either be an array (vector or string) containing elements of the
+type used to reference data in the tree, or a list of such arrays. (Thus if
+the tree stores real strings, STRING can be a string or a list of strings.) If
+a list is supplied, completions of all elements of the list are included in
+the returned vector.
 
 The optional numerical argument MAXNUM limits the results to the first
 MAXNUM completions. If it is absent or nil, all completions are
 returned.
 
-Normally, only the remaining characters needed to complete STRING are
+Normally, only the remaining \"characters\" needed to complete STRING are
 returned. If the optional argument ALL is non-nil, the entire completion is
 returned."
   
@@ -489,8 +541,8 @@ returned."
 				     &optional maxnum all rank-function)
   "Return a vector containing all completions of STRING found in ternary
 search tree TREE. Each element of the returned vector is a cons containing the
-completed string and its associated data. If no completions are found, return
-nil.
+completed \"string\" and its associated data. If no completions are found,
+return nil.
 
 Note that `tstree-complete' is significantly more efficient than
 `tstree-complete-ordered', especially when a maximum number of completions is
@@ -500,16 +552,16 @@ of the completions, or you need the completions ordered \"alphabetically\".
 TREE can also be a list of ternary search trees, in which case completions are
 sought in all trees in the list.
 
-STRING must either be a vector containing elements of the type used to
-reference data in the tree, or a list of such vectors. (If the tree stores
-real strings, STRING can be a string or a list of strings, since strings are
-treated internally as vectors of numbers.) If a list is supplied, completions
-of all elements of the list are included in the returned vector.
+STRING must either be an array (vector or string) containing elements of the
+type used to reference data in the tree, or a list of such arrays. (Thus if
+the tree stores real strings, STRING can be a string or a list of strings.) If
+a list is supplied, completions of all elements of the list are included in
+the returned vector.
 
 The optional numerical argument MAXNUM limits the results to the \"best\"
 MAXNUM completions. If nil, all completions are returned.
 
-Normally, only the remaining characters needed to complete STRING are
+Normally, only the remaining \"characters\" needed to complete STRING are
 returned. If the optional argument ALL is non-nil, the entire completion is
 returned.
 

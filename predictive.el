@@ -1,10 +1,10 @@
 
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
-;; Copyright (C) 2004 Toby Cubitt
+;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.3.1
+;; Version: 0.4
 ;; Keywords: predictive, completion
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -27,6 +27,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4
+;; * tidied and fixed bugs in switch-dictionary code
+;; * added option to display active dictionary in mode line
+;; * added functions to learn from buffers and files
+;; * cleaned up auto-learning and auto-adding code
 ;;
 ;; Version 0.3.1
 ;; * fixed bugs in switch-dictionary regions
@@ -164,6 +170,7 @@ the list of completions in the future."
   :type 'boolean)
 
 
+;; this variable should be set in a setup function, so not a defcustom
 (defvar predictive-auto-add-to-dict nil
   "*In predictive mode, controls automatic adding of new words to dictionaries.
 If nil, words are never automatically added to a dictionary. If t, new words
@@ -182,6 +189,12 @@ any word.")
   "*If non-nil, predictive mode will ask before automatically adding a word
 to a dictionary. Enabled by default. This has no effect unless
 `predictive-auto-add-to-dict' is enabled."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-which-dict nil
+  "*If non-nil, the active predictive dictionary is shown in the mode line."
   :group 'predictive
   :type 'boolean)
 
@@ -332,6 +345,7 @@ How to select the resulting completions depends on the settings of variables
 
 (defun predictive-self-insert ()
   "Execute a predictive mode function based on syntax.
+
 Decide what predictive mode completion function to execute by looking up the
 character's syntax in `predictive-syntax-alist'. The syntax-derived function
 can be overridden for individual characters by
@@ -339,7 +353,7 @@ can be overridden for individual characters by
 
 The default functions in `predictive-syntax-alist' all insert the last input
 event, in addition to taking any completion related action \(hence the name,
-`predictive-seld-insert'\). Therefore, unless you know what you are doing, it
+`predictive-self-insert'\). Therefore, unless you know what you are doing, it
 is best to only bind `predictive-self-insert' to printable characters."
   (interactive)
   
@@ -369,12 +383,13 @@ is best to only bind `predictive-self-insert' to printable characters."
 
 (defun predictive-insert-and-complete ()
   "Insert the last input event and complete the resulting string.
+
 The last input event should be a printable character. This function is
 intended to be bound to printable characters in a keymap."
   (interactive)
 
   ;; resolve any old completion that's hanging around
-;;  (with-resolve-old-completion
+  (with-resolve-old-completion
    ;; delete the current completion, if any
    (predictive-delete-completion)
    ;; insert the newly typed character and advance overlay
@@ -387,7 +402,7 @@ intended to be bound to printable characters in a keymap."
    ;; check whether we're starting or ending a switch-dictionary region
    (predictive-switch-dict)
    ;; try to complete the new string
-   (predictive-complete predictive-typed-string);)
+   (predictive-complete predictive-typed-string))
 )
 
 
@@ -395,6 +410,7 @@ intended to be bound to printable characters in a keymap."
 
 (defun predictive-backward-delete (&optional n)
   "In predictive mode, delete backwards N characters \(default 1\).
+
 Remove N characters from the string currently being completed, and complete
 the resulting shorter string. If N is larger than or equal to the length of
 the string being completed, delete the entire string and abandon the
@@ -497,10 +513,9 @@ any. Interactively, N is the prefix argument."
 
 
 (defun predictive-accept-and-insert ()
-  "In predictive mode, accept the current completion,
-and insert the last input invent, which should be a single printable
-character. This function is intended to be bound to printable characters
-in a keymap."
+  "In predictive mode, accept current completion, and insert last input event,
+which should be a single printable character. This function is intended to be
+bound to printable characters in a keymap."
   (interactive)
   
   ;; resolve any old completion that's still hanging around
@@ -524,68 +539,61 @@ in a keymap."
   (with-resolve-old-completion
    
    ;; if a completion is in progress...
-   (if predictive-typed-string
+   (when predictive-typed-string
+     ;; set up variables storing current dictionary and completion
+     (let ((dict (predictive-current-dict))
+	   (word (concat predictive-typed-string
+			 (when predictive-completion-num
+			   (car (aref predictive-completions
+				      predictive-completion-num))))))
+       (when (dict-p dict) (setq dict (list dict)))
+       (when (and predictive-ignore-initial-caps
+		  (predictive-capitalized-p word))
+	 (setq word (downcase word)))
        
-       ;; if the completion was not in the dictionary, auto-add-to-dict
-       ;; is enabled, and either add-to-dict-ask is disabled or user
-       ;; responded "y" when asked, then add the new word to the
-       ;; appropriate dictionary
+       ;; if the completion was not in the dictionary, auto-add-to-dict is
+       ;; enabled, and either add-to-dict-ask is disabled or user responded
+       ;; "y" when asked, then add the new word to the appropriate
+       ;; dictionary
        (if (null predictive-completion-num)
-	   (if (and predictive-auto-add-to-dict
-		    (or (not predictive-add-to-dict-ask)
-			(y-or-n-p (format "Add word \"%s\" to dictionary? "
-					  predictive-typed-string))))
-	       (cond
-		;; if adding to the currently active dictionary, then do just
-		;; that, adding to the first in the list if there are a list of
-		;; dictionaries
-		((equal predictive-auto-add-to-dict t)
-		 (predictive-add-to-dict (if (listp (predictive-current-dict))
-					     (car (predictive-current-dict))
-					   (predictive-current-dict))
-					 predictive-typed-string))
-		
-		;; if adding to the buffer dictionary, add to the word list
-		;; in the buffer, as well as to the buffer dictionary
-		((equal predictive-auto-add-to-dict 'buffer)
-		 (predictive-add-to-buffer-dict predictive-typed-string))
-		
-		;; anything else specifies an explicit dictionary to add to
-		(predictive-auto-add-to-dict
-		 (predictive-add-to-dict
-		  predictive-auto-add-to-dict predictive-typed-string))))
-	 
+	   (when (and predictive-auto-add-to-dict
+		      (or (not predictive-add-to-dict-ask)
+			  (y-or-n-p
+			   (format "Add word \"%s\" to dictionary? " word))
+			  ))
+	     (cond
+	      ;; if adding to the currently active dictionary, then do just
+	      ;; that, adding to the first in the list if there are a list of
+	      ;; dictionaries
+	      ((eq predictive-auto-add-to-dict t)
+	       (dict-insert (car dict) word))
+	      ;; if adding to the buffer dictionary, add to the word list in
+	      ;; the buffer, as well as to the buffer dictionary
+	      ((eq predictive-auto-add-to-dict 'buffer)
+	       (predictive-add-to-buffer-dict word))
+	      ;; anything else specifies an explicit dictionary to add to
+	      (t
+	       (dict-insert predictive-auto-add-to-dict word))
+	      ))
 	 
 	 ;; if the completion was in the dictionary and auto-learn is set...
 	 (when predictive-auto-learn
-	   (let ((dict (predictive-current-dict)) (i 0)
-		 (word (concat predictive-typed-string
-			       (car (aref predictive-completions
-					  predictive-completion-num)))))
-	     ;; when ignoring initial capitalization, convert to lower case
-	     (when (and predictive-ignore-initial-caps
-			(predictive-capitalized-p word))
-	       (setq word (downcase word)))
-	     ;; search for the first dictionary containing the completion
-	     (when (listp (predictive-current-dict))
-	       (while (and (not (dict-member-p
-				 (nth i (predictive-current-dict))
-				 word))
-			   (< i (length (predictive-current-dict))))
-		 (setq i (1+ i)))
-	       (setq dict (nth i (predictive-current-dict))))
-	     ;; increment the weight in that dictionary
-	     (predictive-add-to-dict dict word)
-	   ))
-	 
-	 ;; move point to the end of the completion
-	 (goto-char (overlay-end predictive-overlay))
-	 ;; if we've actually inserted some characters, check whether we're
-	 ;; starting or ending a switch-dictionary region
-	 (unless (eq (overlay-start predictive-overlay)
-		     (overlay-end predictive-overlay))
-	   (predictive-switch-dict))
-       ))
+	   ;; search for the first dictionary containing the completion
+	   (catch 'learned
+	     (dotimes (i (length dict))
+	       (when (dict-member-p (nth i dict) word)
+		 (dict-insert (nth i dict) word)
+		 (throw 'learned t)))))
+	 ))
+     
+     ;; move point to the end of the completion
+     (goto-char (overlay-end predictive-overlay))
+     ;; if we've actually inserted some characters, check whether we're
+     ;; starting or ending a switch-dictionary region
+     (unless (= (overlay-start predictive-overlay)
+		(overlay-end predictive-overlay))
+       (predictive-switch-dict))
+   )
    
    ;; reset completion state
    (predictive-reset-state))
@@ -595,9 +603,9 @@ in a keymap."
 
 
 (defun predictive-abandon-and-insert ()
-  "In predictive mode, abandon the current completion, and insert the last
-input event, which should be a single printable character. This function is
-intended to be bound to printable characters in a keymap."
+  "In predictive mode, abandon current completion, and insert last input
+event, which should be a single printable character. This function is intended
+to be bound to printable characters in a keymap."
   (interactive)
   
   ;; abandon the current completion
@@ -1114,7 +1122,7 @@ that was automatically accepted or abandoned because the had point moved."
   
   (unless point (setq point (point)))
   (let (regexp-list entry class regexp group props
-	overlay-stack o o1 match beg end)
+	overlay-stack o o1 match)
     
     ;; check each type of switch-dict region
     (dotimes (type (length predictive-switch-dict-regexps))
@@ -1153,13 +1161,14 @@ that was automatically accepted or abandoned because the had point moved."
 			      (+ (- point (length predictive-typed-string))
 				 (match-end group))
 			      regexp sequence))
+	    ;;ignore match if itis already part of an existing match overlay
+	    ;;of same type
 	    (unless (predictive-matched-p
 		     (length predictive-switch-dict-regexps)
-		     (nth 0 match) (nth 1 match))
+		     (pred-match-start match) (pred-match-end match))
 	      (predictive-make-overlay
 	       (length predictive-switch-dict-regexps)
-	       (+ (- point (length predictive-typed-string))
-		  (match-end group))
+	       (pred-delim-end match)
 	       (point-max) match nil props))))
 	 
 	 
@@ -1173,26 +1182,25 @@ that was automatically accepted or abandoned because the had point moved."
 				(match-beginning group) (match-end group)
 				regexp sequence))
 	      ;; ignore match if it is already part of an existing match
-	      ;; overlay
-	      (unless (setq o (predictive-matched-p type
-						    (match-beginning group)
-						    (match-end group)))
-		(setq beg (match-beginning group))
-		(setq end (match-end group))
-		(setq overlay-stack (predictive-overlay-stack type beg))
+	      ;; overlay of same type
+	      (unless (setq o (predictive-matched-p
+			       type (pred-match-start match)
+			       (pred-match-end match)))
+		(setq overlay-stack (predictive-overlay-stack
+				     type (pred-delim-start match)))
 		(cond
 		 
 		 ;; if stack is empty, create a new end-unmatched overlay
 		 ((null overlay-stack)
-		  (predictive-make-overlay type end (point-max)
-					   match nil props))
+		  (predictive-make-overlay type (pred-delim-end match)
+					   (point-max) match nil props))
 		 
 		 ;; if new delimiter is inside the first existing overlay and
 		 ;; existing one is end-unmatched, just match it
 		 ((and (not (overlay-end
 			     (overlay-get (setq o (car overlay-stack))
 					  'end-match)))
-		       (>= beg (overlay-start o)))
+		       (>= (pred-delim-start match) (overlay-start o)))
 		  (predictive-match-overlay o 'end match))
 		  
 		  ;; otherwise, have to sort out overlay stack...
@@ -1200,26 +1208,24 @@ that was automatically accepted or abandoned because the had point moved."
 		   ;; if the new delimiter is outside existing overlays,
 		   ;; create a new start-unmatched overlay ending at the
 		   ;; delimiter, and add it to the front of the stack
-		   (if (< end (overlay-start (car overlay-stack)))
-		       (push (predictive-make-overlay type (point-min) beg
-						      nil match props)
+		   (if (< (pred-delim-end match)
+			  (overlay-start (car overlay-stack)))
+		       (push (predictive-make-overlay type (point-min)
+						      (pred-delim-start match) nil
+						      match props)
 			     overlay-stack)
 		     ;; if the new delimiter is inside an existing overlay...
 		     (setq o (pop overlay-stack))
 		     ;; create a new start-unmatched overlay ending at the
 		     ;; existing one and add it to the front of the stack
-		     (let (o3)
-		       (setq o3 (overlay-get o 'end-match))
-		       (setq o1 (predictive-make-overlay
-				 type (point-min) (overlay-end o) nil 
-				 (list (overlay-start o3)
-				       (overlay-end o3)
-				       (overlay-get o3  'regexp)
-				       (overlay-get o3 'sequence))
-				 props)))
+		     (setq o1 (predictive-make-overlay
+			       type (point-min) (overlay-end o)
+			       nil nil props))
+		     (overlay-put o1 'end-match (overlay-get o 'end-match))
+		     (overlay-put (overlay-get o1 'end-match) 'parent o1)
 		     (push o1 overlay-stack)
 		     ;; match the existing one with the new delimiter
-		     (predictive-match-overlay o 'end match))
+		     (predictive-match-overlay o 'end match t))
 		   
 		   ;; sort out the overlay stack
 		   (predictive-cascade-overlays overlay-stack))))
@@ -1227,7 +1233,7 @@ that was automatically accepted or abandoned because the had point moved."
 	      ;; go to character one beyond the start of the match, to make
 	      ;; sure we don't miss the next match (if we find the same one
 	      ;; again, it will just be ignored)
-	      (goto-char (+ (match-beginning 0) 1))
+	      (goto-char (+ (pred-match-start match) 1))
 	      )))
 	 
 	 
@@ -1242,32 +1248,25 @@ that was automatically accepted or abandoned because the had point moved."
 				regexp sequence))
 	      
 	      ;; if match is part of an existing match overlay...
-	      (if (setq o (predictive-matched-p type (match-beginning group)
-						(match-end group)))
-		  (cond
-		   ;; if existing match overlay is not a start overlay, throw
-		   ;; an error since start and end regexps are not allowed to
-		   ;; match overlapping text
-		   ((not (eq (overlay-get o 'edge) 'start))
-		    (error "'start and 'end regexps of same type matched\
- overlapping text"))
-		   ;; check if new match should take precedence
-		   ((< sequence (overlay-get o 'sequence))
+	      (if (setq o (predictive-matched-p
+			   type (pred-match-start match)
+			   (pred-match-end match) 'start))
+		  ;; check if new match should take precedence
+		  (when (< sequence (overlay-get o 'sequence))
 		    (predictive-match-overlay (overlay-get o 'parent)
 					      (overlay-get o 'edge)
-					      match)))
+					      match))
 		
 		;; if match isn't part of an existing match overlay...
-		(setq beg (match-beginning group))
-		(setq end (match-end group))
-		(setq overlay-stack (predictive-overlay-stack type end))
+		(setq overlay-stack (predictive-overlay-stack
+				     type (pred-delim-end match)))
 		(cond
 		 
 		 ;; if the stack is empty, just create a new end-unmatched
 		 ;; overlay
 		 ((null overlay-stack)
-		  (predictive-make-overlay type end (point-max)
-					   match nil props))
+		  (predictive-make-overlay type (pred-delim-end match)
+					   (point-max) match nil props))
 		 
 		 ;; if the innermost overlay is start-unmatched, we just have
 		 ;; to match it and we're done
@@ -1281,8 +1280,8 @@ that was automatically accepted or abandoned because the had point moved."
 		 
 		 (t ; if innermost overlay is already start-matched...
 		  ;; create new innermost overlay and add it to overlay stack
-		  (push (predictive-make-overlay type end (point-max)
-						 match nil props)
+		  (push (predictive-make-overlay type (pred-delim-end match)
+						 (point-max) match nil props)
 			overlay-stack)
 		  ;; sort out the overlay stack
 		  (predictive-cascade-overlays overlay-stack))))
@@ -1290,7 +1289,7 @@ that was automatically accepted or abandoned because the had point moved."
 	      ;; go to character one beyond the start of the match, to make
 	      ;; sure we don't miss the next match (if we find the same one
 	      ;; again, it will just be ignored)
-	      (goto-char (+ (match-beginning 0) 1))
+	      (goto-char (+ (pred-match-start match) 1))
 	      )))
 	   
 	   
@@ -1305,32 +1304,24 @@ that was automatically accepted or abandoned because the had point moved."
 				regexp sequence))
 
 	      ;; if match is part of an existing match overlay...
-	      (if (setq o (predictive-matched-p type (match-beginning group)
-						(match-end group)))
-		  (cond
-		   ;; if existing match overlay is not an end overlay, throw
-		   ;; an error since start and end regexps are not allowed to
-		   ;; match overlapping text
-		   ((not (eq (overlay-get o 'edge) 'end))
-		    (error "'start and 'end regexps of same type matched\
- overlapping text"))
-		   ;; check if new match should take precedence
-		   ((< sequence (overlay-get o 'sequence))
-		    (predictive-match-overlay (overlay-get o 'parent)
-					      (overlay-get o 'edge)
-					      match)))
+	      (if (setq o (predictive-matched-p
+			   type (pred-match-start match)
+			   (pred-match-end match) 'end))
+		  ;; check if new match should take precedence
+		  (when (< sequence (overlay-get o 'sequence))
+		    (predictive-match-overlay
+		     (overlay-get o 'parent) (overlay-get o 'edge) match))
 		
 		;; if match isn't part of an existing match overlay...
-		(setq beg (match-beginning group))
-		(setq end (match-end group))
-		(setq overlay-stack (predictive-overlay-stack type end))
+		(setq overlay-stack (predictive-overlay-stack
+				     type (pred-delim-end match)))
 		(cond
 		 
 		 ;; if the overlay stack is empty, just create a new
 		 ;; start-unmatched overlay
 		 ((null overlay-stack)
-		  (predictive-make-overlay type (point-min) beg
-					   nil match props))
+		  (predictive-make-overlay
+		   type (point-min) (pred-delim-start match) nil match props))
 		 
 		 ;; if the innermost overlay is end-unmatched, we just have to
 		 ;; match it and we're done
@@ -1341,7 +1332,8 @@ that was automatically accepted or abandoned because the had point moved."
 		 (t ; if innermost overlay is already end-matched...
 		  ;; create new innermost overlay ending at the new delimiter,
 		  ;; and add it to the front of the stack
-		  (push (predictive-make-overlay type (point-min) beg
+		  (push (predictive-make-overlay type (point-min)
+						 (pred-delim-start match)
 						 nil match props)
 			overlay-stack)
 		;; sort out the overlay stack
@@ -1350,32 +1342,77 @@ that was automatically accepted or abandoned because the had point moved."
 	      ;; go to character one beyond the start of the match, to make
 	      ;; sure we don't miss the next match (if we find the same one
 	      ;; again, it will just be ignored)
-	      (goto-char (+ (match-beginning 0) 1))
+	      (goto-char (+ (pred-match-start match) 1))
 	      )))
 	 ))))
 )
 
 
+;; code-tidying macros
+(defmacro pred-match-start (match) '(car match))
+(defmacro pred-match-end (match) '(car (cdr match)))
+(defmacro pred-delim-start (match) '(nth 2 match))
+(defmacro pred-delim-end (match) '(nth 3 match))
+(defmacro pred-regexp (match) '(nth 4 match))
+(defmacro pred-sequence (match) '(nth 5 match))
+
+
 
 (defun predictive-make-overlay (type start end start-match end-match props)
   ;; Create a switch-dict overlay of type TYPE from START to END, and add it
-  ;; to the predictive-switch-dict-overlays list. (See
-  ;; `predictive-make-match-overlay' for the format of START-MATCH and
-  ;; END-MATCH.)
+  ;; to the predictive-switch-dict-overlays list. If new overlay should be
+  ;; start and/or end matched, START-MATCH and/or END-MATCH should be lists of
+  ;; the form:
+  ;;
+  ;;   (MATCH-START MATCH-END DELIM-START DELIM-END REGEXP SEQUENCE).
+  ;;
+  ;; MATCH-START and MATCH-END specify the start and end of the overlay,
+  ;; DELIM-START and DELIM-END specify the start and end of the text within
+  ;; the overlay that forms the delimiter, REGEXP is the regexp that the
+  ;; overlay matches, and SEQUENCE is it's position in the list of regexps of
+  ;; type TYPE.
   
-  (let (o-new marker)
+  
+  (let (o-new o-match match)
     ;; create the new overlay
     (setq o-new (make-overlay start end nil nil t))
     (overlay-put o-new 'predictive-switch-dict-region t)
     (overlay-put o-new 'type type)
-    
-    ;; create overlay's start-match overlay
-    (predictive-make-match-overlay o-new 'start type start-match)
-    ;; create overlay's end-match overlay
-    (predictive-make-match-overlay o-new 'end type end-match)
-    
     ;; give new overlay the supplied properties
     (dolist (p props) (overlay-put o-new (car p) (cdr p)))
+    
+    
+    ;; create overlay's start- and end-match overlays
+    (dolist (edge '(start end))
+      ;; if the edge is matched, set appropriate properties
+      (setq match (if (eq edge 'start) start-match end-match))
+      (if match
+	(progn
+	  (setq o-match (make-overlay (pred-match-start match)
+				      (pred-match-end match) nil t nil))
+	  (overlay-put o-match 'regexp (pred-regexp match))
+	  (overlay-put o-match 'sequence (pred-sequence match))
+	  (overlay-put o-match 'delim-start
+		       (set-marker (make-marker) (pred-delim-start match)))
+	  (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
+	  (overlay-put o-match 'delim-end
+		       (set-marker (make-marker) (pred-delim-end match)))
+	  (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
+      ;; otherwise, create an empty overlay
+      (setq o-match (make-overlay (point-min) (point-min) nil t nil))
+      (delete-overlay o-match))
+      
+    ;; set universal match-overlay properties
+    (overlay-put o-match 'predictive-switch-dict-match t)
+    (overlay-put o-match 'parent o-new)
+    (overlay-put o-match 'type type)
+    (overlay-put o-match 'edge edge)
+    (overlay-put o-match 'modification-hooks '(predictive-overlay-suicide))
+    ;; assign the match-overlay to the appropriate edge of OVERLAY
+    (overlay-put o-new (if (eq edge 'start) 'start-match 'end-match)
+		 o-match))
+    
+    
     ;; add new overlay to the predictive-switch-dict-overlays list
     (push o-new (nth type predictive-switch-dict-overlays))
     ;; return the new overlay
@@ -1384,57 +1421,111 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
-(defun predictive-make-match-overlay (overlay edge type match)
-  ;; Create a switch-dict match overlay for edge EDGE ('start or 'end) of
-  ;; switch-dict overlay OVERLAY, with properties given by MATCH. If MATCH is
-  ;; nil, the overlay is created as a lisp object but not in the
-  ;; buffer. Otherwise, MATCH should be a list of the form:
-  ;;
-  ;;   (START END DELIM-START DELIM-END REGEXP SEQUENCE).
-  ;;
-  ;; START and END specify the start and end of the overlay, DELIM-START and
-  ;; DELIM-END specify the start and end of the text within the overlay that
-  ;; forms the delimiter, REGEXP is the regexp that the overlay matches, and
-  ;; SEQUENCE is it's position in the list of regexps of type TYPE.
+;; (defun predictive-make-match-overlay (overlay edge type match)
+;;   ;; Create a switch-dict match overlay for edge EDGE ('start or 'end) of
+;;   ;; switch-dict overlay OVERLAY, with properties given by MATCH. If MATCH is
+;;   ;; nil, the overlay is created as a lisp object but not in the
+;;   ;; buffer. Otherwise, MATCH should be a list of the form:
+;;   ;;
+;;   ;;   (START END DELIM-START DELIM-END REGEXP SEQUENCE).
+;;   ;;
+;;   ;; START and END specify the start and end of the overlay, DELIM-START and
+;;   ;; DELIM-END specify the start and end of the text within the overlay that
+;;   ;; forms the delimiter, REGEXP is the regexp that the overlay matches, and
+;;   ;; SEQUENCE is it's position in the list of regexps of type TYPE.
   
-  (let ((type (overlay-get overlay 'type))
-	(start (nth 0 match))
-	(end (nth 1 match))
-	(delim-start (nth 2 match))
-	(delim-end (nth 3 match))
-	(regexp (nth 4 match))
-	(sequence (nth 5 match))
-	o-match marker)
+;;   (let ((type (overlay-get overlay 'type))
+;; 	(start (nth 0 match))
+;; 	(end (nth 1 match))
+;; 	(delim-start (nth 2 match))
+;; 	(delim-end (nth 3 match))
+;; 	(regexp (nth 4 match))
+;; 	(sequence (nth 5 match))
+;; 	o-match marker)
     
-    ;; if it's matched, create it with the appropriate properties
-    (if match
-	(progn
-	  (setq o-match (make-overlay start end nil t nil))
-	  (overlay-put o-match 'regexp regexp)
-	  (overlay-put o-match 'sequence sequence)
-	  (overlay-put o-match 'delim-start
-		       (set-marker (make-marker) delim-start))
-	  (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
-	  (overlay-put o-match 'delim-end
-		       (set-marker (make-marker) delim-end))
-	  (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
-      ;; otherwise, create an empty overlay
+;;     ;; if it's matched, create it with the appropriate properties
+;;     (if match
+;; 	(progn
+;; 	  (setq o-match (make-overlay start end nil t nil))
+;; 	  (overlay-put o-match 'regexp regexp)
+;; 	  (overlay-put o-match 'sequence sequence)
+;; 	  (overlay-put o-match 'delim-start
+;; 		       (set-marker (make-marker) delim-start))
+;; 	  (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
+;; 	  (overlay-put o-match 'delim-end
+;; 		       (set-marker (make-marker) delim-end))
+;; 	  (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
+;;       ;; otherwise, create an empty overlay
+;;       (setq o-match (make-overlay (point-min) (point-min) nil t nil))
+;;       (delete-overlay o-match))
+    
+;;     ;; set the invariant match-overlay properties
+;;     (overlay-put o-match 'predictive-switch-dict-match t)
+;;     (overlay-put o-match 'parent overlay)
+;;     (overlay-put o-match 'type type)
+;;     (overlay-put o-match 'edge edge)
+;;     (overlay-put o-match 'modification-hooks
+;; 		 (list 'predictive-overlay-suicide))
+;;     ;; assign the match-overlay to the appropriate edge of OVERLAY
+;;     (overlay-put overlay (if (eq edge 'start) 'start-match 'end-match)
+;; 		 o-match)
+;;     ;; return the new overlay
+;;     o-match)
+;; )
+
+
+
+(defun predictive-match-overlay (overlay edge match &optional new)
+  ;; Matches the start (if EDGE is 'start) or end (if it's 'end) of
+  ;; switch-dict overlay OVERLAY, setting the position of the appropriate edge
+  ;; of the overlay, and setting the corresponding match-overlay's properties
+  ;; according to MATCH (see `predictive-make-overlay' for details).  If MATCH
+  ;; is nil, unmatches the appropriate edge instead.
+  ;;
+  ;; If optional argument NEW is non-nil, a new match-overlay will be created,
+  ;; rather than moving existing one. (Only `predictive-cascade-overlays'
+  ;; should use this.)
+  
+  (let ((o-match (overlay-get
+		  overlay (if (eq edge 'start) 'start-match 'end-match))))
+    
+    ;; move appropriate edge of the overlay to the new position
+    (if (eq edge 'start)
+	(move-overlay overlay (if (pred-delim-end match)
+				  (pred-delim-end match)(point-min))
+		      (overlay-end overlay))
+      (move-overlay overlay (overlay-start overlay)
+		    (if (pred-delim-start match) (pred-delim-start match)
+		      (point-max))))
+    
+    ;; if we're creating a new match overlay, do so
+    (when new
       (setq o-match (make-overlay (point-min) (point-min) nil t nil))
-      (delete-overlay o-match))
-    
-    ;; set the invariant match-overlay properties
-    (overlay-put o-match 'predictive-switch-dict-match t)
-    (overlay-put o-match 'parent overlay)
-    (overlay-put o-match 'type type)
-    (overlay-put o-match 'edge edge)
-    (overlay-put o-match 'modification-hooks
-		 (list 'predictive-overlay-suicide))
-    ;; assign the match-overlay to the appropriate edge of OVERLAY
-    (overlay-put overlay (if (eq edge 'start) 'start-match 'end-match)
-		 o-match)
-    ;; return the new overlay
-    o-match)
+      (overlay-put o-match 'predictive-switch-dict-match t)
+      (overlay-put o-match 'parent overlay)
+      (overlay-put o-match 'type (overlay-get overlay 'type))
+      (overlay-put o-match 'edge edge)
+      (overlay-put o-match 'modification-hooks '(predictive-overlay-suicide))
+      ;; assign the match-overlay to the appropriate edge of OVERLAY
+      (overlay-put overlay (if (eq edge 'start) 'start-match 'end-match)
+		   o-match))
+       
+    ;; if we're unmatching the overlay, delete it
+    (if (not match)
+	(delete-overlay o-match)
+      ;; otherwise, update its properties according to MATCH
+      (move-overlay o-match (pred-match-start match) (pred-match-end match))
+      (overlay-put o-match 'regexp (pred-regexp match))
+      (overlay-put o-match 'sequence (pred-sequence match))
+      (overlay-put o-match 'delim-start
+		   (set-marker (make-marker) (pred-delim-start match)))
+      (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
+      (overlay-put o-match 'delim-end
+		   (set-marker (make-marker) (pred-delim-end match)))
+      (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
+    )
 )
+
 
 
 
@@ -1442,24 +1533,30 @@ that was automatically accepted or abandoned because the had point moved."
   "When t, prevents switch-dict match overlays from deleting themselves")
 
 
+
 (defun predictive-overlay-suicide (o-self modified &rest stuff)
   ;; This function is assigned to all match overlay modification hooks. It
   ;; checks if the match overlay's regexp still matches it's contents, and if
   ;; not, deletes the match overlay and sorts out all the relevant switch-dict
   ;; overlays.
-  (when (and modified
-	     (not predictive-block-overlay-suicide)
-	     (not (string-match
-		   (overlay-get o-self 'regexp)
-		   (buffer-substring (overlay-start o-self)
-				     (overlay-end o-self)))))
-    (delete-overlay o-self)
-    (predictive-cascade-overlays
-     (predictive-overlay-stack
-      (overlay-get o-self 'type)
-      (overlay-get o-self (if (eq (overlay-get o-self 'edge) 'start)
-			      'delim-end 'delim-end))))
-    (predictive-switch-dict (overlay-get o-self 'delim-start)))
+  
+  ;; if we're being called after modification, and suicide isn't blocked...
+  (when (and modified (not predictive-block-overlay-suicide))
+    ;; check if regexp still matches text in overlay
+    (string-match (overlay-get o-self 'regexp)
+		  (buffer-substring (overlay-start o-self)
+				    (overlay-end o-self)))
+    ;; if it doesn't, delete the match overlay and sort out switch-dict regions
+    (unless (and (= (match-beginning 0) 0)
+		 (= (match-end 0) (- (overlay-end o-self)
+				     (overlay-start o-self))))
+      (delete-overlay o-self)
+      (predictive-cascade-overlays
+       (predictive-overlay-stack
+	(overlay-get o-self 'type)
+	(overlay-get o-self (if (eq (overlay-get o-self 'edge) 'start)
+				'delim-end 'delim-start))))
+      (predictive-switch-dict (overlay-start o-self))))
 )
 
 
@@ -1481,61 +1578,22 @@ that was automatically accepted or abandoned because the had point moved."
   ;; predictive-switch-dict-overlays list. Optional arguments PROTECT-START
   ;; and PROTECT-END, if non-nil, prevent the start-match and end-match
   ;; overlays respectively from being deleted.
+  
+  ;; delete overlays from buffer
+  (delete-overlay overlay)
+  (unless protect-start
+    (delete-overlay (overlay-get overlay 'start-match)))
+  (unless protect-end
+    (delete-overlay (overlay-get overlay 'end-match)))
+  
+  ;; remove overlay from predictive-switch-dict-overlays list
   (let (o-list type n)
     (setq type (overlay-get overlay 'type))
-    (delete-overlay overlay)
-    (unless protect-start
-      (delete-overlay (overlay-get overlay 'start-match)))
-    (unless protect-end
-      (delete-overlay (overlay-get overlay 'end-match)))
     (setq o-list (nth type predictive-switch-dict-overlays))
     (setq n (position overlay o-list))
-    ;; remove overlay from predictive-switch-dict-overlays list
     (if (= n 0)
 	(setcar (nthcdr type predictive-switch-dict-overlays) (cdr o-list))
       (setcdr (nthcdr (- n 1) o-list) (nthcdr (+ n 1) o-list))))
-)
-
-
-
-
-(defun predictive-match-overlay (overlay edge match)
-  ;; Matches the start (if EDGE is 'start) or end (if it's 'end) of
-  ;; switch-dict overlay OVERLAY, setting the position of the appropriate edge
-  ;; of the overlay, and setting the corresponding match-overlay's properties
-  ;; according to MATCH (see `predictive-make-match-overlay' for details). If
-  ;; MATCH is nil, unmatches the appropriate edge instead.
-  
-  (let ((start (nth 0 match))
-	(end (nth 1 match))
-	(delim-start (nth 2 match))
-	(delim-end (nth 3 match))
-	(regexp (nth 4 match))
-	(sequence (nth 5 match))
-	(o-match (overlay-get
-		  overlay (if (eq edge 'start) 'start-match 'end-match))))
-    
-    ;; move appropriate edge of the overlay to the new position
-    (if (eq edge 'start)
-	(move-overlay overlay (if delim-end delim-end (point-min))
-		      (overlay-end overlay))
-      (move-overlay overlay (overlay-start overlay)
-		    (if delim-start delim-start (point-max))))
-    
-    ;; if we're unmatching the overlay, delete it
-    (if (not match)
-	(delete-overlay o-match)
-      ;; otherwise, update its properties according to MATCH
-      (move-overlay o-match start end)
-      (overlay-put o-match 'regexp regexp)
-      (overlay-put o-match 'sequence sequence)
-      (overlay-put o-match 'delim-start
-		   (set-marker (make-marker) delim-start))
-      (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
-      (overlay-put o-match 'delim-end
-		   (set-marker (make-marker) delim-end))
-      (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
-    )
 )
 
 
@@ -1545,6 +1603,8 @@ that was automatically accepted or abandoned because the had point moved."
   ;; Return a list of the overlays of type TYPE overlapping POINT (or the
   ;; point, if POINT is null), ordered from innermost to outermost.
   ;; (Assumes overlays are correctly stacked.)
+  ;; If the TYPE is self-delimited, return all overlays of that TYPE after
+  ;; POINT (or the point).
   
   (unless point (setq point (point)))
   (let ((regexps (nth type predictive-switch-dict-regexps))
@@ -1595,14 +1655,16 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
-(defun predictive-matched-p (type beg end)
-  ;; determine whether the characters between BEG and END are part of a
-  ;; delimiter for a switch-dict region of type TYPE.
+(defun predictive-matched-p (type beg end &optional edge)
+  ;; Determine whether the characters between BEG and END are part of a
+  ;; delimiter for a switch-dict region of type TYPE (and optionally for edge
+  ;; EDGE, either 'start or 'end), and return the corresponding match-overlay.
   (let (o-match)
     (catch 'match
       (mapc (lambda (o)
 	      (when (and (overlay-get o 'predictive-switch-dict-match)
 			 (= (overlay-get o 'type) type)
+			 (or (null edge) (eq edge (overlay-get o 'edge)))
 			 (>= beg (overlay-get o 'delim-start))
 			 (<= end (overlay-get o 'delim-end)))
 		(setq o-match o)
@@ -1616,8 +1678,8 @@ that was automatically accepted or abandoned because the had point moved."
 
 (defun predictive-cascade-overlays (overlay-stack)
   ;; Cascade the ends of the overlays in OVERLAY-STACK up or down the stack,
-  ;; so as to re-establish a valid stack. It assumes that only the innermost
-  ;; overlay is incorrect.
+  ;; so as to re-establish a valid stack. It assumes that only the
+  ;; innermost/first overlay is incorrect.
   
   (when overlay-stack
     (let (o o1 type)
@@ -1675,7 +1737,7 @@ that was automatically accepted or abandoned because the had point moved."
 	    (overlay-put (overlay-get o 'start-match) 'edge 'start)
 	    ;; need to create new end match-overlay since existing one is now
 	    ;; used by previous flipped overlay
-	    (predictive-make-match-overlay o 'end type nil))
+	    (predictive-match-overlay o 'end nil t))
 	  ))
        
        
@@ -1694,12 +1756,12 @@ that was automatically accepted or abandoned because the had point moved."
 	(if (not (overlay-start
 		  (overlay-get
 		   (setq o (car (last overlay-stack))) 'start-match)))
-	    ;; need to protect its end-match overlay since next overlay down
+	    ;; need to protect its end-match overlay since previous overlay in
 	    ;; the stack now uses it
 	    (predictive-delete-overlay o nil t)
 	  ;; otherwise, make it end-unmatched
 	  (move-overlay o (overlay-start o) (point-max))
-	  (predictive-make-match-overlay o 'end type nil)))
+	  (predictive-match-overlay o 'end nil t)))
        
        
        ;; if innermost overlay is start-unmatched...
@@ -1720,8 +1782,7 @@ that was automatically accepted or abandoned because the had point moved."
 	    ;; create a new overlay and add it to the end of the stack
 	    (nconc overlay-stack
 		   (list (predictive-make-overlay
-			  type (point-min) (overlay-end o) nil nil props)))
-	    ))
+			  type (point-min) (overlay-end o) nil nil props)))))
 	
 	;; cascade overlay end positions down through stack, from outermost to
 	;; innermost, until one is left
@@ -1743,7 +1804,7 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 (defun predictive-current-dict (&optional point)
-  ;; Return the currently active dictionary
+  ;; Return the currently active dictionary at POINT (or the point, if nil).
   (when (null point) (setq point (point)))
   
   (let (overlay overlay-list p p1)
@@ -1782,14 +1843,71 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
+(defun predictive-update-which-dict ()
+  ;; Updates the `predictive-which-dict-name' variable used in the mode
+  ;; line. Runs automatically from an idle timer setup by the minor mode
+  ;; function.
+  
+  (let ((dict (predictive-current-dict)) name str)
+    ;; get current dictionary name(s)
+    (if (dict-p dict) (setq name (dict-name dict))
+      (setq name (mapconcat
+		  (lambda (d) (if (stringp (dict-name d)) (dict-name d)
+				(symbol-name (dict-name d))))
+		  dict ",")))
+    
+    ;; filter string to remove "-dict-" and "-predictive-"
+    (while (string-match "-*dict-*\\|-*predictive-*" name)
+      (setq name (replace-match "" nil nil name)))
+    
+    ;; if dictionary name has changed, update the mode line
+    (unless (string= name predictive-which-dict-name)
+      (setq predictive-which-dict-name name)
+      (force-mode-line-update)))
+)
+
+
+;; Stores current dictionary name for display in mode line
+(defvar predictive-which-dict-name nil)
+(make-variable-buffer-local 'predictive-which-dict-name)
+
+
+;; Stores idle-timer that updates the current dictionary name
+(defvar predictive-which-dict-timer nil)
+(make-variable-buffer-local 'predictive-which-dict-timer)
+
+
 
 
 
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
 
+;; stores list of dictionaries used by buffer
+(defvar predictive-used-dict-list nil)
+(make-variable-buffer-local 'predictive-used-dict-list)
+
+
+
+(defun predictive-load-dict (dict)
+  "Load the dictionary DICTNAME and associate it with the current buffer.
+
+DICT must be the name of a dictionary to be found somewhere in the load
+path. Interactively, it is read from the mini-buffer."
+  (interactive "sDictionary to load: \n")
+  (when (stringp dict) (setq dict (intern dict)))
+  
+  (if (require dict nil t)
+      (setq predictive-used-dict-list
+	    (cons (eval dict) predictive-used-dict-list))
+    (error "Dictionary %s not found" (prin1-to-string dict)))
+)
+
+
+
 (defun predictive-add-to-dict (dict word &optional weight)
   "Insert WORD into predictive mode dictionary DICT.
+
 Optional argument WEIGHT sets the weight. If the word is not in the
 dictionary, it will be added to the dictionary with initial weight WEIGHT \(or
 0 if none is supplied\). If the word is already in the dictionary, its weight
@@ -1805,9 +1923,9 @@ specified by the prefix argument."
 
 
 
-
 (defun predictive-create-dict (dict &optional file populate autosave speed)
   "Create a new predictive mode dictionary called DICT.
+
 If POPULATE is not specified, create an empty dictionary. If POPULATE is
 specified, populate the dictionary from that file \(see
 `dict-populate-from-file').
@@ -1865,7 +1983,6 @@ fFile to populate from \(leave blank to create an empty dictionary\): ")
 
 
 
-
 (defun predictive-add-to-buffer-dict (string &optional weight)
   "Add STRING to the predictive mode buffer-local dictionary,
 and to the word list at the end of the current buffer. Interactively, STRING
@@ -1873,7 +1990,7 @@ is read from the mini-buffer and weight is specified by the prefix argument."
   (interactive "sString to add: \nP")
   
   ;; add string and weight to dictionary
-  (predictive-add-to-dict predictive-buffer-dict string weight)
+  (dict-insert predictive-buffer-dict string weight)
   
   (save-excursion
     ;; look for comment marking location of buffer word list, and create it if
@@ -1900,14 +2017,260 @@ is read from the mini-buffer and weight is specified by the prefix argument."
 
 
 
-;;; ================================================================
-;;;    Internal functions to do with predictive mode dictionaries
+(defun predictive-learn-from-buffer (&optional buffer dict all)
+  "Learn word weights from BUFFER (defaults to the current buffer).
+
+The word weight of each word in dictionary DICT is incremented by the number
+of occurences of that word in the buffer. DICT can either be a dictionary, or
+a list of dictionaries. If DICT is not supplied, it defaults to all
+dictionaries used by BUFFER. However, DICT must be supplied if ALL is
+specified (see below).
+
+By default, only occurences of a word that occur in a region where the
+dictionary is active are taken into account. If optional argument ALL is
+non-nil, all occurences are taken into account. In this case, a dictionary
+must be sprecified.
+
+Interactively, BUFFER and DICT are read from the mini-buffer, and ALL is
+specified by the presence of a prefix argument.
+
+See also `predictive-fast-learn-from-buffer'."
+
+  (interactive "bBuffer to learn from: \nsDictionary to update (defaults to\
+ all in use): \nP")
+  
+  (let ((i 0) (d 0) numdicts dictname restore-mode regexp currdict)
+    (save-excursion
+      
+      ;; switch on predictive mode in the buffer if necessary
+      (when buffer (set-buffer buffer))
+      (unless all
+	(if predictive-mode (setq restore-mode t) (predictive-mode t)))
+      
+      ;; default to all dictionaries used by the buffer
+      (if (or (null dict) (string= dict ""))
+	  (if all
+	      (error "Argument ALL supplied but no dictionary specified")
+	    (setq dict predictive-used-dict-list))
+	(unless (setq dict (intern-soft dict))
+	  (error "Dictionary %s could not be found" dict)))
+      (when (dict-p dict) (setq dict (list dict)))
+      (setq numdicts (length dict))
+      
+      ;; map over all dictionaries in dictionary list
+      (mapc
+       (lambda (dic)
+	 ;;initialise counters etc.for messages
+	 (setq dictname (dic-name dic))
+	 (setq d (1+ d))
+	 (setq i 0)
+	 (message "Learning words for dictionary %s\
+ (dict %d of %d, word 1)..." dictname d numdicts) 
+	 
+	 ;; map over all words in dictionary
+	 (dict-map
+	  (lambda (word weight)   ; (value passed to weight is ignored)
+	    ;; construct regexp for word
+	    (setq regexp (regexp-quote word))
+	    (when (= ?w (char-syntax (aref word 0)))
+	      (setq regexp (concat "\\b" regexp)))
+	    (when (= ?w (char-syntax (aref word (1- (length word)))))
+	      (setq regexp (concat regexp "\\b")))
+	    ;; count occurences of current word
+	    (setq weight 0)
+	    (goto-char (point-min))
+	    (while (re-search-forward regexp nil t)
+	      (if all
+		  (setq weight (1+ weight))
+		;; if ALL is nil, only count occurence if the active
+		;; dictionary at that location matches the dictionary we're
+		;; working on
+		(setq currdict (predictive-current-dict))
+		(when (or (and (listp currdict) (memq dic currdict))
+			  (eq dic currdict))
+		  (setq weight (1+ weight)))))
+	    ;; increment word's weight
+	    (dict-insert dic word weight)
+	    (when (= 0 (mod (setq i (1+ i)) 10))
+	      (message "Learning words for dictionary %s\
+ (dict %d of %d, word %d)..." dictname d numdicts i)))
+	  dic)   ; map over all words in dic
+	 
+	 (message "Learning words for dictionary %s\
+ (dict %d of %d)...done" dictname d numdicts))
+       dict)     ; map over dictionaries in dict list
+      
+      ;; restore predictive-mode state
+      (unless (or all restore-mode) (predictive-mode nil))
+    ))
+)
+
+
+
+(defun predictive-learn-from-file (file &optional dict all)
+  "Learn word weights from FILE.
+
+The word weight of each word in dictionary DICT is incremented by the number
+of occurences of that word in the file. DICT can either be a dictionary, or a
+list of dictionaries. If DICT is not supplied, it defaults to all dictionaries
+used by FILE. However, DICT must be supplied if ALL is specified, see below.
+
+By default, only occurences of a word that occur in a region where the
+dictionary is active are taken into account. If optional argument ALL is
+non-nil, all occurences are taken into account. In this case, a dictionary
+must be specified.
+
+Interactively, FILE and DICT are read from the mini-buffer, and ALL is
+specified by the presence of a prefix argument."
+
+  (interactive "fFile to learn from: \nsDictionary to update (required if
+ prefix argument supplied): \nP")
+  
+  (save-excursion
+    ;; open file in a buffer
+    (let (visiting buff)
+      (if (setq buff (get-file-buffer file))
+	  (setq visiting t)
+	(find-file file))
+      ;; learn from the buffer
+      (predictive-learn-from-buffer buff dict all)
+      (unless visiting (kill-buffer buff))))
+)
+
+
+
+(defun predictive-fast-learn-from-buffer (&optional buffer dict all)
+  "Learn word weights from BUFFER (defaults to the current buffer).
+
+The word weight of each word in dictionary DICT is incremented by the number
+of occurences of that word in the buffer. DICT can either be a dictionary, or
+a list of dictionaries. If DICT is not supplied, it defaults to all
+dictionaries used by BUFFER. However, DICT must be supplied if ALL is
+specified, see below.
+
+By default, only occurences of a word that occur in a region where the
+dictionary is active are taken into account. If optional argument ALL is
+non-nil, all occurences are taken into account. In this case, a dictionary
+must be sprecified.
+
+Interactively, BUFFER and DICT are read from the mini-buffer, and ALL is
+specified by the presence of a prefix argument.
+
+This function is faster then `predictive-learn-from-buffer' for large
+dictionaries, but will miss any words not consisting entirely of word- or
+symbol-constituent characters according to the buffer's syntax table."
+  
+  (interactive "bBuffer to learn from: \nsDictionary to update (defaults to\
+ all in use): \nP")
+  
+  (let (restore-mode currdict word percent)
+    (save-excursion
+      ;; switch on predictive mode in the buffer if necessary
+      (when buffer (set-buffer buffer))
+      (unless all
+	(if predictive-mode (setq restore-mode t) (predictive-mode t)))
+      
+      ;; default to all dictionaries used by buffer
+      (if (or (string= dict "") (null dict))
+	  (if all
+	      (error "Argument ALL supplied but no dictionary specified")
+	    (setq dict nil))
+	(unless (setq dict (intern-soft dict))
+	  (error "Dictionary %s could not be found" dict)))
+      
+      
+      ;; step through each word in buffer...
+      (goto-char (point-min))
+      (setq percent 0)
+      (message "Learning words (0%%)...")
+      (while (re-search-forward "\\b\\(\\sw\\|\\s_\\)+\\b" nil t)
+	(setq word (match-string 0))
+	(when (and predictive-ignore-initial-caps
+		   (predictive-capitalized-p word))
+	  (setq word (downcase word)))
+	(cond
+	 ;; if ALL was specified, learn current word
+	 (all
+	  (when (dict-member-p dict (match-string 0))
+	    (dict-insert dict (match-string 0))))
+	 ;; if ALL was not specified and a dictionary has been specified, only
+	 ;; increment the current word's weight if dictionary is active there
+	 (dict
+	  (setq currdict (predictive-current-dict))
+	  (when (and (or (and (listp currdict) (memq dict currdict))
+			 (eq dict currdict))
+		     (dict-member-p dict word))
+	    (dict-insert dict word)))
+	 ;; if ALL is not specified and no dictionary was specified, increment
+	 ;; its weight in first dictionary active there that contains the word
+	 (t
+	  (setq currdict (predictive-current-dict))
+	  (when (dict-p currdict) (setq currdict (list currdict)))
+	  (catch 'learned
+	    (dotimes (i (length currdict))
+	      (when (dict-member-p (nth i currdict) word)
+		(dict-insert (nth i currdict) word)
+		(throw 'learned t))))))
+	
+	(when (/= (/ (* (point) 100) (point-max)) percent)
+	  (setq percent (/ (* (point) 100) (point-max)))
+	  (message "Learning words (%d%%)..." percent))
+      )  ; end while loop
+      
+      (unless (or all restore-mode) (predictive-mode nil))
+      (message "Learning words...done")))
+)
+
+
+
+(defun predictive-fast-learn-from-file (file &optional dict all)
+  "Learn word weights from FILE.
+
+The word weight of each word in dictionary DICT is incremented by the number
+of occurences of that word in the file. DICT can either be a dictionary, or a
+list of dictionaries. If DICT is not supplied, it defaults to all dictionaries
+used by FILE. However, DICT must be supplied if ALL is specified, see below.
+
+By default, only occurences of a word that occur in a region where the
+dictionary is active are taken into account. If optional argument ALL is
+non-nil, all occurences are taken into account. In this case, a dictionary
+must be specified.
+
+Interactively, FILE and DICT are read from the mini-buffer, and ALL is
+specified by the presence of a prefix argument.
+
+This function is faster then `predictive-learn-from-file' for large
+dictionaries, but will miss any words not consisting entirely of word- or
+symbol-constituent characters."
+
+  (interactive "fFile to learn from: \nsDictionary to update (required if
+ prefix argument supplied): \nP")
+  
+  (save-excursion
+    ;; open file in a buffer
+    (let (visiting buff)
+      (if (setq buff (get-file-buffer file))
+	  (setq visiting t)
+	(find-file file))
+      ;; learn from the buffer
+      (predictive-fast-learn-from-buffer buff dict all)
+      (unless visiting (kill-buffer buff))))
+)
+
+
+
+
+
+;;; ===================================================================
+;;;    Internal functions and variables to do with predictive mode
+;;;    dictionaries
+
 
 (defun predictive-create-buffer-dict ()
-  "Create the buffer-local predictive mode dictionary,
-and fill it with words from the word list at the end of the current buffer (if
-it exists)."
-  ;; the insertion function inserts a weight if none already exists, otherwise
+  ;; Create the buffer-local predictive mode dictionary, and fill it with
+  ;; words from the word list at the end of the current buffer (if it exists).
+  
+  ;; The insertion function inserts a weight if none already exists, otherwise
   ;; it adds the new weight to the existing one, or if supplied weight is nil,
   ;; incremenets existing weight
   (let ((insfun '(lambda (weight data)
@@ -1927,14 +2290,14 @@ it exists)."
     
     ;; initialise the buffer dictionary
     (setq predictive-buffer-dict
-	  (dict-create '*buffer-local* "" nil
+	  (dict-create '*buffer* "" nil
 		       nil nil predictive-completion-speed
 		       nil insfun rankfun))
   )
   
   ;; look for buffer-local word list in current buffer
   (save-excursion
-    (goto-line 0)
+    (goto-char (point-min))
     (when (re-search-forward "predictive-mode local words:" nil t)
       (forward-line)
       (let (entry)
@@ -1942,7 +2305,6 @@ it exists)."
 	  (dict-insert predictive-buffer-dict (car entry) (cdr entry))
 	  (forward-line)))))
 )
-
 
 
 
@@ -1955,7 +2317,7 @@ it exists)."
   (interactive)
   
   ;; use english dictionary
-  (require 'dict-english)
+  (predictive-load-dict 'dict-english)
   (set (make-local-variable 'predictive-main-dict) 'dict-english)
   
   ;; set the syntax-derived funtions
@@ -1977,22 +2339,49 @@ it exists)."
 
 
 
+;; (defun predictive-setup-english-alt ()
+;;   "Sets up predictive mode for typing normal english text."
+;;   (interactive)
+  
+;;   ;; use english dictionary
+;;   (predictive-load-dict 'dict-english)
+;;   (set (make-local-variable 'predictive-main-dict) 'dict-english)
+  
+;;   ;; set the syntax-derived funtions
+;;   (set (make-local-variable 'predictive-syntax-alist) (list 
+;;     ;; word constituents add to current completion
+;;     (cons ?w 'predictive-insert-and-complete)
+;;     ;; whitespace and punctuation chars abandon current completion
+;;     (cons ?  'predictive-abandon-and-insert)
+;;     (cons ?. 'predictive-abandon-and-insert)
+;;     ;; anything else abandons the current completion
+;;     (cons t  'predictive-abandon-and-insert)))
+  
+;;   ;; - and & are symbols in text mode but we override them to make them
+;;   ;; behave like word constituents
+;;   (set (make-local-variable 'predictive-override-syntax-alist) (list
+;;     (cons ?- 'predictive-insert-and-complete)
+;;     (cons ?& 'predictive-insert-and-complete)))
+;; )
+  
+
+
 
 
 ;;; ================================================================
 ;;;                     Initialise variables etc.
 
 ;; Set the default dictionary if it hasn't already been set (most likely in an
-;; init file)
+;; init file or setup function)
 (unless predictive-main-dict
-  (require 'dict-english)
+  (predictive-load-dict 'dict-english)
   (setq predictive-main-dict 'dict-english)
 )
 
 
 
 ;; Set the default keymap if it hasn't been defined already (most likely in an
-;; init file)
+;; init file or setup function)
 (unless predictive-map
   (let ((map (make-keymap)))
     ;; All printable characters run predictive-insert, which decides what to do
@@ -2091,7 +2480,7 @@ it exists)."
     (define-key map "|" 'predictive-self-insert)
     (define-key map "\\" 'predictive-self-insert)
     (define-key map "/" 'predictive-self-insert)
-            
+    
     ;; DEL deletes backwards and removes characters from the current
     ;; completion, if any
     (define-key map "\d" 'predictive-backward-delete-and-complete)
@@ -2105,20 +2494,34 @@ it exists)."
 
 
 ;; Set the 'predictive-completing-map' keymap (used during a completion
-;; process), unless it's already been set (most likely in an init file)
+;; process), unless it's already been set (most likely in an init file or
+;; setup function)
 (unless predictive-completing-map
   (let ((map (make-sparse-keymap)))
     ;; <tab> scoots ahead
-    (define-key map "\t" 'predictive-scoot-ahead)
+    (define-key map "\t" 'predictive-scoot-or-cycle)
     ;; M-<tab> cycles
     (define-key map [?\M-\t] 'predictive-cycle)
     ;; M-<space> abandons
     (define-key map "\M- " 'predictive-abandon)
+    
+;;     ;; M-<space> accepts
+;;     (define-key map "\M- " 
+;;       (lambda () "Accept the current completion and insert a space."
+;; 	(interactive)
+;; 	(with-resolve-old-completion (predictive-accept) (insert " "))))
+    
     ;; RET accepts the current completion and inserts a newline
     (define-key map "\r"
       (lambda () "Accept the current completion and insert a newline."
 	(interactive)
 	(with-resolve-old-completion (predictive-accept) (newline))))
+    
+;;     ;; RET abandons the current completion and inserts a newline
+;;     (define-key map "\r"
+;;       (lambda () "Accept the current completion and insert a newline."
+;; 	(interactive)
+;; 	(with-resolve-old-completion (predictive-abandon) (newline))))
     
     (setq predictive-completing-map map))
 )
@@ -2145,7 +2548,7 @@ it exists)."
 ;; Set the syntax-alist that associates syntax with completion function, unless
 ;; it's been set already (most likely in an init file)
 (unless predictive-syntax-alist
-  (setq predictive-syntax-alist (list 
+  (setq predictive-syntax-alist (list
     ;; word constituents add to current completion
     (cons ?w 'predictive-insert-and-complete)
     (cons ?_ 'predictive-insert-and-complete)
@@ -2172,8 +2575,8 @@ it exists)."
 ;; Set the major-mode-alist so that things are set up sensibly in various
 ;; major modes, if it hasn't been set already (most likely in an init file)
 (unless predictive-major-mode-alist
-  (setq predictive-major-mode-alist (list
-    (cons 'text-mode  'predictive-setup-english)
+  (setq predictive-major-mode-alist '(
+    (text-mode predictive-setup-english)
 ;;     (cons 'latex-mode 'predictive-setup-latex)
 ;;     (cons 'LaTeX-mode 'predictive-setup-latex)
 ;;     (cons 'c-mode     'predictive-setup-c)
@@ -2198,8 +2601,16 @@ on typing. It looks up completions for the word currently being typed in a
 dictionary. Completions can be inserted in a variety of ways, depending on how
 intrusive you want it to be. See variables `predictive-dynamic-completion' and
 `predictive-offer-completions', and the predictive mode documentation."
-  ;; initial value, mode-line indicator, and keymap
-  nil " Predict" predictive-map
+  
+  ;; initial value
+  nil
+  
+  ;; mode-line indicator
+  (" Predict" (predictive-which-dict
+	       ("[" predictive-which-dict-name "]")))
+  
+  ;; keymap
+  predictive-map
   
   ;; if predictive mode has been disabled...
   (if (not predictive-mode)
@@ -2207,7 +2618,12 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
 	;; delete all the switch-dict overlays
 	(mapc (lambda (o-list) (mapc 'predictive-delete-overlay o-list))
 	      predictive-switch-dict-overlays)
-	(setq predictive-switch-dict-overlays nil))
+	(setq predictive-switch-dict-overlays nil)
+	;; cancel the which-dict timer
+	(when predictive-which-dict-timer
+	  (cancel-timer predictive-which-dict-timer))
+	;; clear the used-dictionary list
+	(setq predictive-used-dict-list nil))
     
     ;; if predictive  mode has been enabled...
     ;; create the buffer-local dictionary
@@ -2242,6 +2658,11 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
 	  (predictive-switch-dict)
 	  (forward-line 1)))
       (message "Scanning for switch-dictionary regions...done"))
+    
+    ;; setup idle-timer to update `predictive-which-dict-name' variable
+    (when predictive-which-dict
+      (setq predictive-which-dict-timer
+	    (run-with-idle-timer 0.1 t 'predictive-update-which-dict)))
     
     ;; initialise internal variables
     (predictive-reset-state))

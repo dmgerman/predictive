@@ -1,10 +1,10 @@
 
 ;;; dict.el --- dictionary package
 
-;; Copyright (C) 2004 Toby Cubitt
+;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -44,13 +44,18 @@
 
 ;;; Change log:
 ;;
-;; version 0.2: added dictionary autosave flag and related functions;
-;;              fixed bug preventing dict caches being loaded properly;
-;;              explicitly require cl.el;
+;; Version 0.3
+;; * added dict-map function
 ;;
-;; Note: version 0.1 dictionaries not compatible with version 0.2!
+;; Version 0.2
+;; * added dictionary autosave flag and related functions;
+;; * fixed bug preventing dict caches being loaded properly;
+;; * explicitly require cl.el;
 ;;
-;; version 0.1: initial release
+;; Note: version 0.1 dictionaries not compatible with version 0.2 and above!
+;;
+;; Version 0.1
+;; * initial release
 
 
 
@@ -235,6 +240,11 @@
   (eq (car-safe obj) 'DICT)
 )
 
+
+(defun dict-name (dict)
+  "Return dictionary DICT's name."
+  (dic-name dict)
+)
 
 
 (defun dict-create (name &optional filename autosave
@@ -551,6 +561,16 @@ Use `dict-member-p' to distinguish non-existant words from nil data."
 ;;   "Delete string STRING from dict TREE."
 ;; )
 
+
+
+(defmacro dict-map (function dict)
+  "Apply FUNCTION to all entries in dictionary DICT.
+
+FUNCTION will be passed two arguments: a word from the dictionary, and the
+data associated with that word. It is safe to assume the dictionary entries
+will be traversed in alphabetical order."
+  `(tstree-map ,function (dic-tstree ,dict) t)
+)
 
 
 
@@ -880,7 +900,7 @@ different file."
     ;; if dictionary has no associated file, prompt for one
     (unless (and filename (> (length filename) 0))
       (setq filename (read-file-name (format "No file associated with \
-dictionary %s. File to save in: " (dic-name dict)))))
+dictionary %s. Write to file: " (dic-name dict)))))
     
     ;; save dictionary without requiring confirmation
     (dict-write dict filename t))
