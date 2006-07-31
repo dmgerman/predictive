@@ -2903,7 +2903,7 @@
 "act" 27467
 "acted" 2293 ("act")
 "actin" 4851 ("act")
-"acting" 4851 ("act" "actin")
+"acting" 4851 ("act")
 "action" 22096 ("act")
 "actionable" 87 ("act" "action")
 "actions" 4865 ("act" "action")
@@ -29846,26 +29846,25 @@
 "solving" 837
 "somatic" 58
 "sombre" 406
-"some" 171368
-"some one" 62 ("some")
-"somebody" 7316 ("some")
-"someday" 71 ("some")
-"somehow" 4483 ("some")
-"someone" 18681 ("some")
-"somerset" 1308 ("some")
-"something" 52452 ("some")
-"something like" 132 ("some" "something")
-"sometime" 20517 ("some")
-"sometimes" 20517 ("some" "sometime")
-"somewhat" 4684 ("some")
-"somewhere" 7026 ("some")
-"son" 13101
+"some" 171368 ("so")
+"some one" 62 ("so" "some")
+"somebody" 7316 ("so" "some")
+"someday" 71 ("so" "some")
+"somehow" 4483 ("so" "some")
+"someone" 18681 ("so" "some")
+"something" 52452 ("so" "some")
+"something like" 132 ("so" "some" "something")
+"sometime" 20517 ("so" "some")
+"sometimes" 20517 ("so" "some" "sometime")
+"somewhat" 4684 ("so" "some")
+"somewhere" 7026 ("so" "some")
+"son" 13101 ("so")
 "son-in-law" 289 ("son")
 "sonar" 166 ("son")
 "sonata" 242 ("son")
 "sonatas" 126 ("son" "sonata")
-"song" 3994 ("son")
-"songs" 2852 ("son" "song")
+"song" 3994 ("so" "son")
+"songs" 2852 ("so" "son" "song")
 "songwriter" 100 ("son" "song")
 "songwriters" 55 ("son" "song" "songwriter")
 "songwriting" 69 ("son" "song")
@@ -29898,9 +29897,9 @@
 "sorrowful" 60 ("sorrow")
 "sorrows" 117 ("sorrow")
 "sorry" 11435
-"sort" 21516
-"sort of" 6110 ("sort")
-"sorted" 1274 ("sort")
+"sort" 21516 ("so")
+"sort of" 6110 ("so" "sort")
+"sorted" 1274 ("so" "sort")
 "sortie" 128 ("sort")
 "sorties" 128 ("sort" "sortie")
 "sorting" 764 ("sort")
@@ -29911,8 +29910,8 @@
 "soul" 3026
 "soulless" 60 ("soul")
 "souls" 807 ("soul")
-"sound" 14542
-"sounded" 3023 ("sound")
+"sound" 14542 ("so")
+"sounded" 3023 ("so" "sound")
 "sounder" 57 ("sound")
 "sounding" 713 ("sound")
 "soundings" 73 ("sound" "sounding")
@@ -29920,17 +29919,17 @@
 "soundlessly" 60 ("sound" "soundless")
 "soundly" 184 ("sound")
 "soundness" 91 ("sound")
-"sounds" 5983 ("sound")
+"sounds" 5983 ("so" "sound")
 "soundtrack" 185 ("sound")
-"soup" 1350
+"soup" 1350 ("so")
 "soups" 121 ("soup")
 "sour" 666
-"source" 9088
+"source" 9088 ("so")
 "sourced" 57 ("sour" "source")
 "sources" 6659 ("source")
 "soured" 125 ("sour")
 "sourly" 145 ("sour")
-"south" 23170
+"south" 23170 ("so")
 "south-east" 1286 ("south")
 "south-eastern" 168 ("south" "south-east")
 "south-facing" 70 ("south")
@@ -34123,40 +34122,40 @@
 "upmarket" 159
 "upon" 23409
 "upped" 52
-"upper" 5431
-"upper-class" 172 ("upper")
-"uppermost" 238 ("upper")
-"uppers" 57 ("upper")
-"uprating" 61
-"upright" 1265
+"upper" 5431 ("up")
+"upper-class" 172 ("up" "upper")
+"uppermost" 238 ("up" "upper")
+"uppers" 57 ("up" "upper")
+"uprating" 61 ("up")
+"upright" 1265 ("up")
 "uprights" 74 ("upright")
-"uprising" 375
+"uprising" 375 ("up")
 "uprisings" 58 ("uprising")
-"upriver" 61
-"uproar" 243
-"uproot" 115
+"upriver" 61 ("up")
+"uproar" 243 ("up")
+"uproot" 115 ("up")
 "uprooted" 115 ("uproot")
-"ups" 302
-"upset" 3224
-"upsets" 188 ("upset")
-"upsetting" 352 ("upset")
-"upshot" 159
-"upside down" 460
-"upstage" 75
-"upstaged" 54 ("upstage")
-"upstairs" 2854
-"upstart" 58
-"upstream" 419
-"upsurge" 254
-"uptake" 347
-"uptight" 95
-"upturn" 239
-"upturned" 198 ("upturn")
-"upward" 1640
-"upwardly" 63 ("upward")
-"upwards" 1640 ("upward")
-"upwards of" 137 ("upward" "upwards")
-"upwind" 92
+"ups" 302 ("up")
+"upset" 3224 ("up")
+"upsets" 188 ("up" "upset")
+"upsetting" 352 ("up" "upset")
+"upshot" 159 ("up")
+"upside down" 460 ("up")
+"upstage" 75 ("up")
+"upstaged" 54 ("up" "upstage")
+"upstairs" 2854 ("up")
+"upstart" 58 ("up")
+"upstream" 419 ("up")
+"upsurge" 254 ("up")
+"uptake" 347 ("up")
+"uptight" 95 ("up")
+"upturn" 239 ("up")
+"upturned" 198 ("up" "upturn")
+"upward" 1640 ("up")
+"upwardly" 63 ("up" "upward")
+"upwards" 1640 ("up" "upward")
+"upwards of" 137 ("up" "upward" "upwards")
+"upwind" 92 ("up")
 "uranium" 538
 "urban" 5474
 "urbane" 88 ("urban")
@@ -35023,15 +35022,15 @@
 "weeding" 165 ("wee" "weed")
 "weeds" 566 ("wee" "weed")
 "weedy" 107 ("wee" "weed")
-"week" 32216 ("wee")
-"week-end" 154 ("wee" "week")
-"week-long" 98 ("wee" "week")
-"weekday" 184 ("wee" "week")
-"weekdays" 133 ("wee" "week" "weekday")
+"week" 32216
+"week-end" 154 ("week")
+"week-long" 98 ("week")
+"weekday" 184 ("week")
+"weekdays" 133 ("week" "weekday")
 "weekend" 6315 ("week")
-"weekends" 1028 ("wee" "week" "weekend")
+"weekends" 1028 ("week" "weekend")
 "weeklies" 53 ("wee" "week")
-"weekly" 2495 ("wee" "week")
+"weekly" 2495 ("week")
 "weeks" 15461 ("week")
 "weep" 654 ("wee")
 "weeping" 654 ("wee" "weep")

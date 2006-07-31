@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12
+;; Version: 0.12.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.1
+;; * minor bug fixes
 ;;
 ;; Version 0.12
 ;; * changed buffer-local dictionary functionality to use new meta-dictionary
@@ -1353,21 +1356,25 @@ as the weight of WORD."
 		     (setq word (read-string
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
-		     (read-string (format "Add prefix for \"%s\": " word))))
+		     (read-string
+		      (format "Add prefix for \"%s\": "
+			      (if (or (null word) (string= word ""))
+				  (thing-at-point 'word)
+				word)))))
   
   ;; when called interactively, sort out arguments
   (when (interactive-p)
-    (when (null word) (setq word (thing-at-point 'word))))
+    (when (or (null word) (string= word ""))
+	      (setq word (thing-at-point 'word)))
+     ;; word not in dict
+     (when (not (dictree-member-p dict word))
+       (message "\"%s\" not found in dictionary %s"
+		word (dictree-name dict))) )
   
   (let ((prefices (dictree-lookup-meta-data dict word)))
-    (cond
-     ;; word not in dict
-     ((null prefices)
-      (message "\"%s\" not found in dictionary %s" word (dictree-name dict)))
-     ;; prefix already defined
-     ((member prefix prefices))
-     ;; otherwise, add prefix
-     (t (dictree-set-meta-data dict word (cons prefix prefices)))))
+    ;; unless prefix is already defined, define it
+    (unless (member prefix prefices)
+     (dictree-set-meta-data dict word (cons prefix prefices))))
 )
 
 

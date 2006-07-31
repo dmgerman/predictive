@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5.4
+;; Version: 0.5.5
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.5
+;; * minor bug fixes
 ;;
 ;; Version 0.5.4
 ;; * updated to reflect changes in completion-ui.el
@@ -230,11 +233,11 @@
 	  
 	  (?{ . ((lambda ()
 		   (if (and (char-before) (= (char-before) ?\\))
-		    'add 'accept))
+		       'add 'accept))
 		 . (lambda ()
-		     (when (auto-overlays-at-point
-			    nil '(eq dict dict-latex-env))
-		       (complete "") nil))))
+		     (if (auto-overlays-at-point nil
+						 '(eq dict dict-latex-env))
+			 (complete "") 'none))))
 	  
 	  (?}  . (accept . word))
 	  (?\( . (accept . word))
