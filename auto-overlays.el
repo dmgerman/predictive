@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.4.2
+;; Version: 0.5
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5
+;; * changed the way suicide, update and other functions are called after a
+;;   buffer modification: now called from `auto-o-run-after-change-functions'
 ;;
 ;; Version 0.4.2
 ;; * moved compatability code to auto-overlays-compat.el
@@ -72,10 +76,16 @@
 
 (defvar auto-overlay-list nil)
 (make-variable-buffer-local 'auto-overlay-list)
-(defvar auto-o-pending-suicide-count 0)
-(make-variable-buffer-local 'auto-o-pending-suicide-count)
+(defvar auto-o-pending-updates nil)
+(make-variable-buffer-local 'auto-o-pending-updates)
+(defvar auto-o-pending-suicides nil)
+(make-variable-buffer-local 'auto-o-pending-suicides)
+(defvar auto-o-pending-pre-suicide nil)
+(make-variable-buffer-local 'auto-o-pending-pre-suicide)
 (defvar auto-o-pending-post-suicide nil)
 (make-variable-buffer-local 'auto-o-pending-post-suicide)
+(defvar auto-o-pending-post-update nil)
+(make-variable-buffer-local 'auto-o-pending-post-update)
 
 
 
@@ -277,13 +287,18 @@ appropriate identifier."
     (when (= (length auto-overlay-regexps) 1)
       ;; run initialisation hooks
       (run-hooks 'auto-overlay-load-hook)
-      ;; make sure overlays are updated after any buffer modification
-      (add-hook 'after-change-functions 'auto-overlay-update nil t)
-      ;; reset pending-suicide-count before updates to work around bug(?) that
-      ;; overlay modification-hooks are not always called after modification
-      (add-hook 'before-change-functions
-		(lambda (&rest ignore) (setq auto-o-pending-suicide-count 0))
-		nil t))
+      ;; add hook to schedule an update after a buffer modification
+      (add-hook 'after-change-functions 'auto-o-schedule-update nil t)
+      ;; add hook to runs all the various functions scheduled be run after a
+      ;; buffer modification
+      (add-hook 'after-change-functions 'auto-o-run-after-change-functions
+		nil t)
+;;       ;; reset pending-suicide-count before updates to work around bug(?) that
+;;       ;; overlay modification-hooks are not always called after modification
+;;       (add-hook 'before-change-functions
+;; 		(lambda (&rest ignore) (setq auto-o-pending-suicide-count 0))
+;; 		nil t)
+      )
     
     
     ;; search for new auto overlays
@@ -297,7 +312,7 @@ appropriate identifier."
 	  (message
 	   "Scanning for auto-overlays...(line %d of %d)"
 	   (+ i 1) lines))
-	(auto-overlay-update nil nil nil set)
+	(auto-overlay-update nil nil set)
 	(forward-line 1))
       (message "Scanning for auto-overlays...done")
       
@@ -337,183 +352,215 @@ from BUFFER, or the current buffer if none is specified."
       ;; run clear hooks
       (run-hooks 'auto-overlay-unload-hook)
       ;; reset variables
-      (remove-hook 'after-change-functions 'auto-overlay-update t)
+      (remove-hook 'before-change-functions 'auto-o-schedule-update t)
       (remove-hook 'before-change-functions
-		   (lambda (&rest ignore)
-		     (setq auto-o-pending-suicide-count 0)) t)
-      (setq auto-o-pending-suicide-count 0)
-      (setq auto-o-pending-post-suicide nil))
+		   'auto-o-run-after-change-functions)
+;;       (remove-hook 'before-change-functions
+;; 		   (lambda (&rest ignore)
+;; 		     (setq auto-o-pending-suicide-count 0)) t)
+      (setq auto-o-pending-suicides nil
+	    auto-o-pending-updates nil
+	    auto-o-pending-post-suicide nil))
     )
 )
 
 
 
 
-(defun auto-overlay-update (&optional start end unused regexp-set)
-  ;; Parse lines from line containing START to line containing END. If only
-  ;; START is supplied, just parse that line. If neither are supplied, parse
-  ;; line containing the point. If REGEXP-SET is specified, only look for
-  ;; matches in that set of overlay regexps definitions.
-  
-  ;; if there are pending match overlay suicides, postpone update till they're
-  ;; done (`auto-o-suicide' will run `auto-overlay-update' again)
-  (if (> auto-o-pending-suicide-count 0)
-      (progn
-	(save-excursion
-	  (goto-char start)
-	  (forward-line 0)
-	  (setq start (point))
-	  (if (null end) (end-of-line)
-	    (goto-char end)
-	    (end-of-line))
-	  (setq end (point)))
-	(add-to-list 'auto-o-pending-post-suicide
-		     (list 'auto-overlay-update start end nil regexp-set)))
-    
-    ;; otherwise...
-    (let (lines regexp-list class regexp group priority set sequence
-		o-match o-overlap o-new)
-      (unless start (setq start (point)))
-      (if end
-	  (setq lines (count-lines start end))
-	(setq lines 1))
-      (save-excursion
-	(save-match-data
-	  (goto-char start)
-	  (dotimes (i lines)
+(defun auto-o-run-after-change-functions (start end unused)
+  ;; Assigned to the `after-change-functions' hook. Run all the various
+  ;; functions that should run after a change to the buffer, in the correct
+  ;; order.
 
-	    ;; check each set of overlays, unless specific set was specified
-	    (dotimes (s (if regexp-set 1 (length auto-overlay-regexps)))
-	      (if regexp-set (setq set regexp-set) (setq set s))
-	      ;; check each type of auto overlay
-	      (dotimes (type (length (nth set auto-overlay-regexps)))
-		(setq regexp-list (nth type (nth set auto-overlay-regexps)))
-		(setq class (nth 0 regexp-list))
-		(if (auto-o-type-is-list-p set type)
-		    (pop regexp-list)  ; remove class to leave regexp list
-		  (setq regexp-list (list regexp-list))) ; bundle in list
+  ;; run pending pre-suicide functions
+  (when auto-o-pending-pre-suicide
+    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
+    (setq auto-o-pending-pre-suicide nil))  
+  ;; run pending suicides
+  (when auto-o-pending-suicides
+    (mapc (lambda (o) (funcall 'auto-o-suicide o)) auto-o-pending-suicides)
+    (setq auto-o-pending-suicides nil))
+  ;; run pending post-suicide functions
+  (when auto-o-pending-post-suicide
+    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
+    (setq auto-o-pending-post-suicide nil))
+  ;; run updates
+  (when auto-o-pending-updates
+    (mapc (lambda (l) (apply 'auto-overlay-update l)) auto-o-pending-updates)
+    (setq auto-o-pending-updates nil))
+  ;; run pending post-update functions
+  (when auto-o-pending-post-update
+    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
+    (setq auto-o-pending-post-update nil))
+)
+
+
+
+(defun auto-o-schedule-update (start &optional end unused regexp-set)
+  ;; Schedule `auto-overlay-update' of lines between positions START and END
+  ;; (including lines containing START and END), optionally restricted to
+  ;; REGEXP-SET. If END is not supplied, schedule update for just line
+  ;; containing START. The update will be run by
+  ;; `auto-o-run-after-change-functions' after buffer modification is
+  ;; complete. This function is assigned to `after-change-functions'.
+
+  ;; FIXME: we should do more to avoid doing multiple, redundant
+  ;;        updates. Currently, only updates for identical regions are
+  ;;        filtered, not updates for overlapping regions.
+  (add-to-list 'auto-o-pending-updates
+	       (list (line-number-at-pos start)
+		     (when end (line-number-at-pos end))
+		     regexp-set))
+)
+
+
+
+(defun auto-o-schedule-suicide (o-self modified &rest unused)
+  ;; Schedule `auto-o-suicide' to run after buffer modification is
+  ;; complete. It will be run by `auto-o-run-after-change-functions'. Assigned
+  ;; to overlay modification and insert in-front/behind hooks.
+  (unless modified (add-to-list 'auto-o-pending-suicides o-self))
+)
+
+
+
+(defun auto-overlay-update (&optional start end regexp-set)
+  ;; Parse lines from line number START to line number END. If only START is
+  ;; supplied, just parse that line. If neither are supplied, parse line
+  ;; containing the point. If REGEXP-SET is specified, only look for matches
+  ;; in that set of overlay regexps definitions.
+  
+  (let (regexp-list class regexp group priority set sequence
+		    o-match o-overlap o-new)
+    (unless start (setq start (line-number-at-pos)))
+    (save-excursion
+      (save-match-data
+	(goto-line start)
+	(dotimes (i (if end (1+ (- end start)) 1))
+	  
+	  ;; check each set of overlays, unless specific set was specified
+	  (dotimes (s (if regexp-set 1 (length auto-overlay-regexps)))
+	    (if regexp-set (setq set regexp-set) (setq set s))
+	    ;; check each type of auto overlay
+	    (dotimes (type (length (nth set auto-overlay-regexps)))
+	      (setq regexp-list (nth type (nth set auto-overlay-regexps)))
+	      (setq class (nth 0 regexp-list))
+	      (if (auto-o-type-is-list-p set type)
+		  (pop regexp-list)	; remove class to leave regexp list
+		(setq regexp-list (list regexp-list))) ; bundle in list
 		
-		;; check all regexps for current type
-		(dotimes (seq (length regexp-list))
-		  (if (> (length regexp-list) 1)
-		      (setq sequence seq)
-		    (setq sequence nil))
+	      ;; check all regexps for current type
+	      (dotimes (seq (length regexp-list))
+		(if (> (length regexp-list) 1)
+		    (setq sequence seq)
+		  (setq sequence nil))
 		  
-		  ;; extract regexp properties from current entry
- 		  (setq regexp (auto-o-seq-regexp set type sequence))
-		  (setq group (auto-o-seq-regexp-group set type sequence))
-		  (setq priority
-			(cdr (assq 'priority
-				   (auto-o-type-props set type sequence))))
+		;; extract regexp properties from current entry
+		(setq regexp (auto-o-seq-regexp set type sequence))
+		(setq group (auto-o-seq-regexp-group set type sequence))
+		(setq priority
+		      (cdr (assq 'priority
+				 (auto-o-type-props set type sequence))))
 		  
 		  
-		  ;; look for matches in current line
-		  (forward-line 0)
-		  (while (re-search-forward regexp (line-end-position) t)
-		    (cond
-		     ;; ignore match if it already has a match overlay
-		     ((auto-o-matched-p (match-beginning 0) (match-end 0)
-					set type sequence))
+		;; look for matches in current line
+		(forward-line 0)
+		(while (re-search-forward regexp (line-end-position) t)
+		  (cond
+		   ;; ignore match if it already has a match overlay
+		   ((auto-o-matched-p (match-beginning 0) (match-end 0)
+				      set type sequence))
 		     
 		     
-		     ;; if existing match overlay of same type and edge but
-		     ;; different sequence overlaps the new match...
-		     ((and (auto-o-type-is-list-p set type)
-			   (setq o-overlap
-				 (auto-o-overlapping-match
-				  (match-beginning group) (match-end group)
-				  set type sequence
-				  (auto-o-seq-edge set type sequence))))
-		      ;; if new match takes precedence, replace existing one
-		      ;; with new one, otherwise ignore new match
-		      (when (< sequence (overlay-get o-overlap 'sequence))
-			(delete-overlay o-overlap)
-			(setq o-match (auto-o-make-match
-				       set type
-				       (match-beginning 0) (match-end 0)
-				       sequence (match-beginning group)
-				       (match-end group)))
-			(when (overlay-get o-overlap 'parent)
-			  (auto-o-match-overlay (overlay-get o-overlap 'parent)
-						o-match))
-			    ;; run match function if there is one
-			(let ((match-func (auto-o-match-function o-match)))
-			  (when match-func (funcall match-func o-match)))))
-		     
-		     ;; if match is within a higher priority exclusive
-		     ;; overlay, create match overlay but don't parse it
-		     ((auto-o-within-exclusive-p (match-beginning group)
-						 (match-end group)
-						 priority)
-		      (auto-o-make-match set type
-					 (match-beginning 0) (match-end 0)
-					 sequence (match-beginning group)
-					 (match-end group)))
-		     
-		     
-		     ;; if we're going to parse the new match...
-		     (t
-		      ;; create a match overlay for it
+		   ;; if existing match overlay of same type and edge but
+		   ;; different sequence overlaps the new match...
+		   ((and (auto-o-type-is-list-p set type)
+			 (setq o-overlap
+			       (auto-o-overlapping-match
+				(match-beginning group) (match-end group)
+				set type sequence
+				(auto-o-seq-edge set type sequence))))
+		    ;; if new match takes precedence, replace existing one
+		    ;; with new one, otherwise ignore new match
+		    (when (< sequence (overlay-get o-overlap 'sequence))
+		      (delete-overlay o-overlap)
 		      (setq o-match (auto-o-make-match
 				     set type
 				     (match-beginning 0) (match-end 0)
-				     sequence
-				     (match-beginning group)
+				     sequence (match-beginning group)
 				     (match-end group)))
-		      ;; call the appropriate parse function
-		      (setq o-new
-			    (funcall (auto-o-parse-function o-match) o-match))
-		      (unless (listp o-new) (setq o-new (list o-new)))
-		      ;;  and add any new overlays to `auto-overlay-list' and
-		      ;;  give them appropriate properties
-		      (mapc (lambda (o)
-			      (setcar (nthcdr type
-					      (nth set auto-overlay-list))
-				      (cons
-				       o (nth type
-					      (nth set auto-overlay-list))))
-			      (overlay-put o 'auto-overlay t)
-			      (overlay-put o 'set set)
-			      (unless (overlay-get o 'type)
-				(overlay-put o 'type type)))
-			    o-new)
+		      (when (overlay-get o-overlap 'parent)
+			(auto-o-match-overlay (overlay-get o-overlap 'parent)
+					      o-match))
 		      ;; run match function if there is one
 		      (let ((match-func (auto-o-match-function o-match)))
 			(when match-func (funcall match-func o-match)))))
+		     
+		   ;; if match is within a higher priority exclusive
+		   ;; overlay, create match overlay but don't parse it
+		   ((auto-o-within-exclusive-p (match-beginning group)
+					       (match-end group)
+					       priority)
+		    (auto-o-make-match set type
+				       (match-beginning 0) (match-end 0)
+				       sequence (match-beginning group)
+				       (match-end group)))
+		     
+		     
+		   ;; if we're going to parse the new match...
+		   (t
+		    ;; create a match overlay for it
+		    (setq o-match (auto-o-make-match
+				   set type
+				   (match-beginning 0) (match-end 0)
+				   sequence
+				   (match-beginning group)
+				   (match-end group)))
+		    ;; call the appropriate parse function
+		    (setq o-new
+			  (funcall (auto-o-parse-function o-match) o-match))
+		    (unless (listp o-new) (setq o-new (list o-new)))
+		    ;;  and add any new overlays to `auto-overlay-list' and
+		    ;;  give them appropriate properties
+		    (mapc (lambda (o)
+			    (setcar (nthcdr type
+					    (nth set auto-overlay-list))
+				    (cons
+				     o (nth type
+					    (nth set auto-overlay-list))))
+			    (overlay-put o 'auto-overlay t)
+			    (overlay-put o 'set set)
+			    (unless (overlay-get o 'type)
+			      (overlay-put o 'type type)))
+			  o-new)
+		    ;; run match function if there is one
+		    (let ((match-func (auto-o-match-function o-match)))
+		      (when match-func (funcall match-func o-match)))))
 		    
 		    
-		    ;; go to character one beyond the start of the match, to
-		    ;; make sure we don't miss the next match (if we find the
-		    ;; same one again, it will just be ignored)
-		    (goto-char (+ (match-beginning 0) 1)))))
-	      (forward-line 1))
-	    )))))
+		  ;; go to character one beyond the start of the match, to
+		  ;; make sure we don't miss the next match (if we find the
+		  ;; same one again, it will just be ignored)
+		  (goto-char (+ (match-beginning 0) 1)))))
+	    (forward-line 1))
+	  ))))
 )
 
 
 
 
-(defun auto-o-suicide (o-self modified &rest rest)
+(defun auto-o-suicide (o-self)
   ;; This function is assigned to all match overlay modification hooks, and
   ;; calls the appropriate suicide function for match overlay O-SELF as
   ;; specified in `auto-overlay-functions'.
   
-  (cond
-   ;; this is here to avoid a weird bug(?) where the modification-hooks seem
-   ;; to be called occasionally for overlays that have already been deleted
-   ((not (overlay-buffer o-self)))
-   
-   ;; if we will be run after modification, increment pending suicide count to
-   ;; avoid running `auto-overlay-update' until all suicides are done
-   ((not modified)
-    (setq auto-o-pending-suicide-count (1+ auto-o-pending-suicide-count)))
-
-   ;; if being run after modification...
-   ;; if match overlay no longer matches the text it covers...
-   (t
+  ;; this is here to avoid a weird bug(?) where the modification-hooks seem
+  ;; to be called occasionally for overlays that have already been deleted
+  (when (overlay-buffer o-self)
+    ;; if match overlay no longer matches the text it covers...
     (unless (and (save-excursion
-		   (goto-char (overlay-start o-self))
-		   (looking-at (auto-o-regexp o-self)))
+		  (goto-char (overlay-start o-self))
+		  (looking-at (auto-o-regexp o-self)))
 		 (= (match-end 0) (overlay-end o-self)))
       ;; if we have a parent overlay, call appropriate suicide function,
       ;; schedule an update (necessary for complicated reasons!) then delete
@@ -522,20 +569,8 @@ from BUFFER, or the current buffer if none is specified."
 	(funcall (auto-o-suicide-function o-self) o-self))
       ;; Note: not supplying the 'set can avoid multiple, effectively
       ;; identical auto-overlay-update calls
-      (auto-overlay-update (overlay-start o-self))
-;;       (auto-overlay-update (overlay-start o-self) nil nil
-;; 			   (overlay-get o-self 'set))
-      (delete-overlay o-self))
-    
-    ;; decrement pending suicide count
-    (setq auto-o-pending-suicide-count (1- auto-o-pending-suicide-count))
-    
-    ;; if there are no more pending suicides and there are postponed functions
-    ;; to be run, run them now
-    (when (and auto-o-pending-post-suicide (= auto-o-pending-suicide-count 0))
-      (mapc (lambda (f) (apply (car f) (cdr f)))
-	    auto-o-pending-post-suicide)
-      (setq auto-o-pending-post-suicide nil))))
+      (auto-o-schedule-update (overlay-start o-self))
+      (delete-overlay o-self)))
 )
 
 
@@ -652,9 +687,9 @@ from BUFFER, or the current buffer if none is specified."
 			     (if delim-end delim-end end)))
     (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
     (set-marker-insertion-type (overlay-get o-match 'delim-end) nil)
-    (overlay-put o-match 'modification-hooks '(auto-o-suicide))
-    (overlay-put o-match 'insert-in-front-hooks '(auto-o-suicide))
-    (overlay-put o-match 'insert-behind-hooks '(auto-o-suicide))
+    (overlay-put o-match 'modification-hooks '(auto-o-schedule-suicide))
+    (overlay-put o-match 'insert-in-front-hooks '(auto-o-schedule-suicide))
+    (overlay-put o-match 'insert-behind-hooks '(auto-o-schedule-suicide))
     ;; when regexp entry is a list of regexps, store sequence property
     (when (auto-o-type-is-list-p set type)
       (overlay-put o-match 'sequence sequence))

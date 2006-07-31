@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.1
+;; Version: 0.2.2
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.2
+;; * small but important bug fix
 ;;
 ;; Version 0.2.1
 ;; * bug fixes
@@ -273,7 +276,8 @@
 	    (if (setq o1 (nth 1 (auto-o-self-list (overlay-get o 'end))))
 		(setq pos (overlay-get (overlay-get o1 'start) 'delim-start))
 	      (setq pos (point-max)))
-	    (auto-o-match-overlay o (overlay-get o 'end) pos 'no-props))
+	    (auto-o-match-overlay o (overlay-get o 'end) pos
+				  'no-props nil 'protect-match))
 	  (push o auto-o-pending-self-cascade)))
       ))
 )

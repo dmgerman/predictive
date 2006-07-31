@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.12.1
+0.12.2
 @c --version--
 
 Copyright @copyright{} 2005 2006 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.12.1
+@subtitle Version 0.12.2
 @c --version--
 @author Toby Cubitt
 
@@ -61,9 +61,7 @@ liking.
 * Obtaining and Installing::    
 * Quick-Start::                 
 * Completing Words::            
-* Character Syntax and Key Bindings::  
-* Working with Major Modes::    
-* Dictionaries::                
+* Advanced Customisation::      
 * Bugs and Future Improvements::  
 * Credits::                     
 * Command Index::               
@@ -88,11 +86,16 @@ Basic Completion Commands
 * Inserting Completions::       
 * Deleting Characters::         
 
+Advanced Customisation
+
+* Character Syntax and Key Bindings::  
+* Dictionaries::                
+
 Character Syntax and Key Bindings
 
 * Keymaps and Key Bindings::    
 * Syntax::                      
-* Functions for Binding to Characters::  
+* Working with Major Modes::    
 
 Dictionaries
 
@@ -272,17 +275,17 @@ What if you don't want to use the most likely completion? As you type, a
 list of the ten most likely completions is displayed in the echo area,
 and after a short delay in a tooltip, ranked according to
 likelihood. Typing a number 0--9 will insert the corresponding
-completion. @xref{Completion Hotkeys}, @ref{Displaying a List of
-Candidates} and @ref{Displaying a List of Candidates} for details.
+completion. @xref{Completion Hotkeys} and @ref{Displaying a List of
+Candidates} for details.
 @findex completion-select
 
 Typing @kbd{M-Down} will display a menu from which you can select a
 completion (@pxref{Completion Menu and Browser}). From this menu, you
 can also bring up the completion browser menu, which hierarchically
-lists all possible completions (@pxref{Completion Menu and Browser}. (It
-can sometimes take a while to construct the completion browser, but you
-can always hit @kbd{C-g} to cancel it). @xref{Completion Menu and
-Browser}, for details.
+lists all possible completions (@pxref{Completion Menu and
+Browser}). (It can sometimes take a while to construct the completion
+browser, but you can always hit @kbd{C-g} to cancel
+it). @xref{Completion Menu and Browser}, for details.
 @findex completion-show-menu
 
 You can cycle through the available completions using @kbd{M-TAB} and
@@ -293,7 +296,7 @@ end-of-word character accepts the completion, as usual.
 
 Typing @kbd{TAB} will, by default, do traditional ``tab-completion'' on
 the word: the word will be completed up to the longest common prefix of
-all available completions.
+the available completions.
 @findex completion-tab-complete
 
 Another useful command is @kbd{C-TAB}. This accepts all the characters
@@ -315,6 +318,7 @@ customization groups.
 
 
 
+
 @node Completing Words
 @chapter Completing Words
 @cindex completing words
@@ -329,15 +333,13 @@ Predictive mode can work completely unobtrusively, so that using it has
 no discernible effect until you issue a command to insert a completion
 (@pxref{Basic Completion Commands}). It can be slightly more intrusive,
 so that you always see which completions are available, but can still
-ignore them and type normally (@pxref{Displaying a List of Candidates})
-and @ref{Displaying a List of Candidates}). It can let you select a
-completion candidate by hitting a hotkey (@pxref{Completion
-Hotkeys}). Or it can work more intrusively still, by always
-provisionally inserting the most likely completion (@pxref{Dynamic
-Completion}). This is probably the most effective way to use predictive
-mode, but it does mean slightly changing the way you type.
-
-
+ignore them and type normally (@pxref{Displaying a List of
+Candidates}). It can let you select a completion candidate by hitting a
+hotkey (@pxref{Completion Hotkeys}). Or it can work more intrusively
+still, by always provisionally inserting the most likely completion
+(@pxref{Dynamic Completion}). This is probably the most effective way to
+use predictive mode, but it does mean slightly changing the way you
+type.
 
 @menu
 * Basic Completion Commands::   
@@ -347,6 +349,8 @@ mode, but it does mean slightly changing the way you type.
 * Completion Menu and Browser::  
 * Miscellaneous Options::       
 @end menu
+
+
 
 @node Basic Completion Commands
 @section Basic Completion Commands
@@ -417,9 +421,9 @@ found.
 
 @ftable @command
 @item predictive-backward-delete
-Reject current completion, if there is one, and delete backwards. A
-prefix argument sets the number of characters to delete. If this deletes
-into a word, complete what remains of that word.
+(@kbd{DEL}) Reject current completion, if there is one, and delete
+backwards. A prefix argument sets the number of characters to delete. If
+this deletes into a word, complete what remains of that word.
 @end ftable
 
 @command{predictive-backward-delete} works very like
@@ -493,8 +497,7 @@ you will be able to select a completion by typing a single character
 
 You will probably also want to display a list of the possible
 completions, so that you know which completion each character will
-select. The available options are @ref{Displaying a List of Candidates} and
-@ref{Displaying a List of Candidates}.
+select (@pxref{Displaying a List of Candidates}).
 
 @noindent
 The following variables affect the behaviour of the completion hotkeys:
@@ -607,7 +610,7 @@ for the uncapitalised string are also found.
 @end vtable
 
 Only the @emph{first} capital letter of a string is ignored. Thus typing
-@kbd{A} would find @samp{and} (@samp{And} would be inserted),
+@kbd{A} would find @samp{and} (which would complete to @samp{And}),
 @samp{Alaska} and @samp{ANSI}, but typing @kbd{AN} would only find
 @samp{ANSI}, whilst typing @kbd{a} would only find @samp{and}.
 
@@ -635,8 +638,26 @@ you whether you want to accept or reject.
 
 
 
+@node Advanced Customisation
+@chapter Advanced Customisation
+@cindex customisation, advanced
+@cindex advanced customisation
+
+This chapter describes the more advanced customisation features provided
+by predictive mode. Many of these are on the borderline between
+user-customisations and features to be used by Lisp packages that
+enhanced predictive completion for specific major modes, though
+describing all the features available to Lisp packages is beyond the
+scope of this user guide.
+
+@menu
+* Character Syntax and Key Bindings::  
+* Dictionaries::                
+@end menu
+
+
 @node Character Syntax and Key Bindings
-@chapter Character Syntax and Key Bindings
+@section Character Syntax and Key Bindings
 @cindex characters
 @cindex syntax
 @cindex key bindings
@@ -654,13 +675,13 @@ different characters, and how to customise them.
 @menu
 * Keymaps and Key Bindings::    
 * Syntax::                      
-* Functions for Binding to Characters::  
+* Working with Major Modes::    
 @end menu
 
 
 
 @node Keymaps and Key Bindings
-@section Keymaps and Key Bindings
+@subsection Keymaps and Key Bindings
 @cindex keymaps and key bindings
 @cindex key bindings
 @cindex keymaps
@@ -674,16 +695,22 @@ The following keymaps are defined by predictive mode:
 Main keymap, enabled whenever predictive mode is.
 
 @item completion-map
-Keymap used when completing a word.
+Keymap enabled whenever a completion minor mode (including predictive
+mode) is enabled.
 
 @item completion-hotkey-map
 Keymap used when hotkey completion is enabled. Constructed from
-@env{completion-hotkey-list}. Setting this directly has no effect. Set
-@env{completion-hotkey-list} instead. @xref{Completion Hotkeys}.
+@env{completion-hotkey-list}. Warning: setting this directly will cause
+errors! Set @env{completion-hotkey-list} instead. @xref{Completion
+Hotkeys}.
 
 @item completion-hotkey-list
 List of hotkey characters to use for selecting completions. Default is
-numerical characters 0 to 9. @xref{Completion Hotkeys}.
+numerical characters 0 to 9. This must be set @emph{before} predictive
+mode is loaded, so can not be customized, and must instead be set
+manually in your @file{.emacs} file before the @code{(require
+'predictive)} line (@pxref{Obtaining and Installing}. @xref{Completion
+Hotkeys}.
 
 @item completion-dynamic-map
 Keymap assigned to the overlay used to highlight the provisional
@@ -692,11 +719,12 @@ enabled. Not currently used@footnote{Minor mode keymaps override overlay
 keymaps in the stable version (21.x) of Emacs, limiting their use. They
 don't even work well in the unstable version (22.x) when overlays have
 zero length, as they can do in predictive mode}. Use
-@env{completion-map} instead. @xref{Dynamic Completion}.
+@env{completion-map} and the @command{completion-run-if-within-overlays}
+command instead. @xref{Dynamic Completion}.
 
 @item completion-menu-map
-Keymap used when the completion menu is enabled. @xref{Completion Menu
-and Browser}.
+Keymap enabled when the completion menu is enabled. @xref{Completion
+Menu and Browser}.
 @end vtable
 
 @findex predictive-self-insert.
@@ -704,39 +732,38 @@ and Browser}.
 @vindex predictive-override-syntax-alist
 
 The various keymaps define key bindings for different situations that
-arise in predictive mode. The main @env{predictive-map} keymap is
+arise in predictive mode. The main @env{completion-map} keymap is
 enabled whenever predictive mode is enabled. By default, this keymap
-binds all printable characters to the @command{predictive-self-insert}
-function (@pxref{Functions for Binding to Characters}).
+binds all printable characters to the @command{completion-self-insert}
+function.
 
 Note: if you find yourself thinking of re-binding printable characters
-in @env{predictive-map} to something other than
-@command{predictive-self-insert}, don't! (at least not until you've read
+in @env{completion-map} to something other than
+@command{completion-self-insert}, don't! (at least not until you've read
 on a bit). What you probably want to change are the
-@env{predictive-syntax-alist} and @env{predictive-override-syntax-alist}
+@env{completion-syntax-alist} and @env{completion-override-syntax-alist}
 variables. @xref{Syntax}.
 
-The @env{completion-map} is effectively only active when completing a
-word, and is used to bind key combinations to completion functions that
-are only relevant in that situation (@pxref{Basic Completion Commands}).
+The @env{completion-dynamic-map} is provided for future versions of
+Emacs, and does not work properly at the moment. Someday, it will
+replace the use of @command{completion-run-if-within-overlay} in
+@env{completion-map}.
 
 The other keymaps are enabled by the corresponding completion
-options. Like @env{completion-map}, they are effectively only active
-when completing a word.
+options.
 
 The @env{completion-hotkey-map} is is constructed automatically from the
 characters listed in @env{completion-hotkey-list}, and binds all those
-characters to @command{predictive-select-completion} (@pxref{Functions
-for Binding to Characters}). It should @emph{not} be set directly; you
-may get strange results if the keymap and key list do not correspond!
+characters to @command{predictive-select-completion}. It should
+@emph{not} be set directly; you may get strange results if the keymap
+and key list do not correspond!
 @findex completion-select
 
-If the keymaps are not defined when predictive mode is first loaded (for
-instance by a @code{(require 'predictive)} line in your @file{.emacs}
-file), it creates the default keymaps and loads them into
-Emacs. Therefore, to customise predictive mode key bindings, you must
-re-define the keymap variables @emph{before} loading predictive mode
-(e.g. before the @code{(require 'predictive)} line).
+If the keymaps are not defined when predictive mode is first loaded
+(@pxref{Obtaining and Installing}), it creates the default keymaps and
+loads them into Emacs. Therefore, to customise predictive mode key
+bindings, you must re-define the keymap variables @emph{before} loading
+predictive mode (e.g. before the @code{(require 'predictive)} line).
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
@@ -744,121 +771,73 @@ re-define the keymap variables @emph{before} loading predictive mode
 
 
 @node Syntax
-@section Syntax
+@subsection Syntax
 @cindex syntax
 @cindex characters, syntax
 
 @vtable @env
-@item predictive-syntax-alist
+@item completion-syntax-alist
 Alist associating character syntax descriptors with completion
-functions. Used by the @command{predictive-self-insert} function to
+functions. Used by the @command{completion-self-insert} function to
 decide what to do based on a typed character's syntax.
 
-@item predictive-override-syntax-alist
+@item completion-override-syntax-alist
 Alist associating characters with completion functions. Overrides the
 default function for a typed character's syntax. Used by
-@command{predictive-self-insert}.
-
-@item predictive-dict-alist
-Alist associating a character with a dictionary to switch to.
+@command{completion-self-insert}.
 @end vtable
 
 When a character is typed, predictive mode decides what to do based on
 that character's syntax, as defined by the current syntax table
 (@pxref{Syntax, , , emacs, GNU Emacs Manual}). All printable characters
-are bound by default to the function @command{predictive-self-insert}
-(@pxref{Functions for Binding to Characters}), which looks up a
-character's syntax descriptor in @env{predictive-syntax-alist}, and runs
-the corresponding function.
-@findex predictive-self-insert
+are bound by default to the function @command{completion-self-insert},
+which inserts the character, looks up the character's syntax descriptor
+in @env{completion-syntax-alist}, and carries out the associated
+actions.
+@findex completion-self-insert
 
 By default, all word-constituent characters (syntax descriptor @code{w})
-are bound to @command{predictive-insert-and-complete}, all white-space
-and punctuation characters (descriptors @code{SPACE} and @code{.}) are
-bound to @command{predictive-accept-and-insert}, and anything else is
-bound to @command{predictive-abandon-and-insert}. @xref{Functions for
-Binding to Characters}.
-@findex predictive-insert-and-complete
-@findex predictive-accept-and-insert
-@findex predictive-abandon-and-insert
+insert the character and complete the new prefix, all white-space and
+punctuation characters (descriptors @code{SPACE} and @code{.}) accept
+any provisional completion and insert the character, and anything else
+rejects any provisional completion and inserts the character.
 
 Occasionally, the syntax-derived behaviour needs to be overridden for
-certain characters. The @env{predictive-override-syntax-alist}
+individual characters. The @env{completion-override-syntax-alist}
 associates characters with functions, and takes precedence over
-@env{predictive-syntax-alist}.
+@env{completion-syntax-alist}.
 
+Each association in @env{completion-syntax-alist} and
+@env{completion-override-syntax-alist} is a three-element list of the
+form@footnote{Lisp packages can additionally set the second element to
+nil, and can replace any element with a function that returns one of
+these values or nil, but this is beyond the scope of this user-guide.}:
+@lisp
+(<accept|reject|add> t <basic|word|none>)
+@end lisp
 
-
-@node Functions for Binding to Characters
-@section Functions for Binding to Characters
-@cindex functions for binding to characters
-@vindex predictive-syntax-alist
-@vindex predictive-override-syntax-alist
-
-In addition to the basic completion commands (@pxref{Basic Completion
-Commands} which can be called interactively, predictive mode provides a
-number of commands that should only be bound in a keymap or used in
-@env{predictive-syntax-alist} and
-@env{predictive-override-syntax-alist}.
-
-All predictive mode functions with @samp{insert} in their names insert
-the last input event into the buffer, in addition to carrying out
-whatever completion-related task they perform (@pxref{Basic Completion
-Commands}). Therefore unless you know what you are doing, they should
-probably only be bound to printable characters, or used in the
-@env{predictive-syntax-alist} and @env{predictive-override-syntax-alist}
-variables (@pxref{Syntax}).
-
-@ftable @command
-@item predictive-self-insert
-Decide what completion function to execute by looking up the character's
-syntax in @env{predictive-syntax-alist}. The syntax-derived function can
-be overridden for individual characters by
-@env{predictive-override-syntax-alist}.
-
-@item predictive-insert-and-complete
-Insert the last input event, which should be a printable character, and
-complete the resulting, longer string.
-
-@item predictive-insert-and-complete-word-at-point
-Like @command{predictive-insert-and-complete}, but if called when not
-already completing a word, use
-@command{predictive-complete-word-at-point} (@pxref{Basic Completion
-Commands}).
-
-@item predictive-accept-and-insert
-Accept the current completion, and insert the last input invent, which
-should be a single printable character.
-
-@item predictive-reject-and-insert
-Abandon the current completion, and insert the last input invent, which
-should be a single printable character.
-
-@item predictive-accept-and-newline
-Accept the current completion and insert a new line. If supplied, the
-prefix argument supplies the number of newlines to insert.
-
-@item predictive-reject-and-newline
-Reject the current completion and insert a new line. If supplied, the
-prefix argument supplies the number of newlines to insert.
-
-@item predictive-select-completion
-Select a completion to insert from the completion list. Automatically
-bound to the characters listed in
-@env{predictive-offer-completions-keylist} when the
-@env{predictive-offer-completions-map} keymap is
-constructed. @xref{Keymaps and Key Bindings}, and
-@ref{Completion Hotkeys}.
-@vindex completions-hotkey-list
-@vindex completion-hotkey-map
-@end ftable
+The first element determines what happens if there is a provisional
+completion at the point: @code{accept} accepts it, @code{reject} rejects
+it, and @code{add} adds the typed character to the completion's
+prefix. The last element determines what kind of completion is done (if
+any) after the typed character is inserted: @code{basic} completes the
+current prefix and @code{none} doesn't do any completion. The
+@code{word} option does more advanced completion. If completion is
+already in progress, it behaves as @code{basic}. If no completion is in
+progress and the point is within a word, it deletes from point to the
+end of the word, and completes the prefix constructed from the part of
+the word before the point (including the newly typed
+character)@footnote{The value of @env{completion-word-thing} determines
+what is considered a word. Logically enough, it defaults to
+@code{word}. Lisp packages can redefine it, but this is again beyond the
+scope of this user-guide.}.
 
 
 
 
 
 @node Working with Major Modes
-@chapter Working with Major Modes
+@subsection Working with Major Modes
 @cindex working with major modes
 @cindex major modes
 
@@ -904,12 +883,8 @@ particular major-mode, the easiest way to do this is to add the
 (add-hook '@var{major-mode}-hook 'turn-on-predictive-mode)
 @end lisp
 
-The predictive package itself contains one setup function for typing
-normal English text, @command{predictive-setup-english}, which mostly
-reproduces the default settings of most variables and customisation
-options. It also contains setup functions for La@TeX{}
-(@command{predictive-setup-latex}), AMS La@TeX{}
-(@command{predictive-setup-ams-latex}), HTML
+The predictive package itself contains setup functions for La@TeX{}
+(@command{predictive-setup-latex}), HTML
 (@command{predictive-setup-html}), and Fortran 90/95
 (@command{predictive-setup-f90})@footnote{An eclectic mix, which
 reflects the things I use emacs for most often, and perhaps also the
@@ -927,7 +902,7 @@ examples to base your own on.
 
 
 @node Dictionaries
-@chapter Dictionaries
+@section Dictionaries
 @cindex dictionaries
 
 Predictive completion is only as good as the dictionary it uses. The
@@ -960,7 +935,7 @@ go on strike!)
 
 
 @node Creating Dictionaries
-@section Creating Dictionaries
+@subsection Creating Dictionaries
 @cindex creating dictionaries
 @cindex dictionary, creating
 
@@ -1064,7 +1039,7 @@ Dictionaries}.
 
 
 @node Loading and Saving Dictionaries
-@section Loading and Saving Dictionaries
+@subsection Loading and Saving Dictionaries
 @cindex loading and saving dictionaries
 @cindex dictionaries, loading
 @cindex dictionaries, saving
@@ -1101,22 +1076,29 @@ existing file.
 Save all modified dictionaries. If a prefix argument is supplied,
 confirm each dictionary before saving.
 
-@item dictree-dump-words-to-buffer
+@item predictive-dump-dict-to-buffer
 Dumps all words and weights in the dictionary to a buffer, in the
 same format as that used to populate dictionaries (@pxref{Creating
 Dictionaries}).
 
-@item dictree-dump-words-to-file
+@item predictive-dump-dict-to-file
 Dumps words and weights to a text file rather than a buffer. If a prefix
 argument is supplied, you will @emph{not} be asked to confirm if
 over-writing an existing file.
 @end ftable
 
-To use a dictionary, it must be loaded into memory. This can be done
-manually, using the @command{dictree-load} or
-@command{predictive-load-dict} commands. Alternatively, if you want the
-dictionary to be loaded every time you run Emacs, you can add the
-following line to your @file{.emacs} file:
+To use a dictionary, it must be loaded into memory. If the dictionary is
+in your load path, this can be done manually using the
+@command{load-library} or @command{predictive-load-dict} commands. The
+@command{predictive-load-dict} command additionally it to the list of
+dictionaries used by the current buffer. Alternatively, you can manually
+load a dictionary from file using the @command{dictree-load} command
+(you should avoid loading a dictionary using the @command{load-file}
+command, as it will not ensure the dictionary is associated with the
+file it was loaded from).
+
+If you want a dictionary to be loaded every time you run Emacs, you can
+add the following line to your @file{.emacs} file:
 
 @lisp
 (require '@var{dictionary-name})
@@ -1145,7 +1127,7 @@ set. All modified autosave dictionaries are saved when you exit Emacs.
 
 
 @node Basic Dictionary Usage
-@section Basic Dictionary Usage
+@subsection Basic Dictionary Usage
 @cindex basic dictionary usage
 @cindex dictionaries, basic usage
 @cindex dictionaries, using
@@ -1177,7 +1159,7 @@ you want to set the default main dictionary permanently, customize
 
 
 @node Dictionaries Local to a Region of Text
-@section Dictionaries Local to a Region of Text
+@subsection Dictionaries Local to a Region of Text
 @cindex dictionaries, region-local
 @cindex dictionaries, region of text
 @cindex dictionaries, overlays
@@ -1195,7 +1177,7 @@ predictive-programmer-guide, Predictive Programmer Guide}.
 
 
 @node Dictionary Learning
-@section Dictionary Learning
+@subsection Dictionary Learning
 @cindex dictionaries, learning
 @cindex learning
 
@@ -1225,7 +1207,7 @@ learning from existing files, and automatic learning as you type.
 
 
 @node Learning from Buffers and Files
-@subsection Learning from Buffers and Files
+@subsubsection Learning from Buffers and Files
 @cindex learning from buffers
 @cindex learning from files
 @cindex dictionaries, learning from buffers
@@ -1270,7 +1252,7 @@ instead of a buffer.
 
 
 @node Automatic Learning
-@subsection Automatic Learning
+@subsubsection Automatic Learning
 @cindex automatic learning
 @cindex learning, automatic
 @cindex dictionary, automatic learn
@@ -1352,7 +1334,7 @@ ensure that dictionaries in the list do not duplicate any words.
 
 
 @node Relationships Between Words
-@subsection Relationships Between Words
+@subsubsection Relationships Between Words
 @cindex relationship between words
 @cindex prefix words
 @cindex words, relationships
@@ -1448,7 +1430,7 @@ moment is to reduce the word's weight using
 @command{predictive-add-to-dict} with a large negative weight, so that
 it is unlikely to show up as a likely completion. The better work-around
 is to dump the dictionary to a text file using
-@command{predictive-dump-words-to-file}, remove the offending word, and
+@command{predictive-dump-dict-to-file}, remove the offending word, and
 recreate the dictionary.
 
 @item

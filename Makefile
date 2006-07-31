@@ -27,6 +27,10 @@ f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 core: $(core_files)
 
 
+# overrides implicit rule, since requires latex dictionaries
+predictive-latex.elc: predictive-latex.el $(latex-dicts)
+	$(EMACS) --batch -L ./ -L ./latex/ -f batch-byte-compile $<
+
 
 dict-english: dict-english.elc
 

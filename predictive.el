@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.1
+;; Version: 0.12.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.2
+;; * added `predictive-dump-dict-to-buffer/file' functions, since dict-tree.el
+;;   equivalents are no longer interactive
+;; * updated `dictree-create' calls to reflect change in argument list
 ;;
 ;; Version 0.12.1
 ;; * minor bug fixes
@@ -992,7 +997,8 @@ respectively."
     
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave
-				 nil nil complete-speed nil insfun rankfun))
+				 nil nil complete-speed nil
+				 nil insfun rankfun))
       ;; populate it
       (if (null populate)
 	  (when (interactive-p) (message "Created dictionary %s" dictname))
@@ -1072,6 +1078,46 @@ The other arguments are as for `predictive-create-dict'."
 					   combfun rankfun))
       ;; return the new dictionary
       dict))
+)
+
+
+
+(defun predictive-dump-dict-to-buffer (dict &optional buffer)
+  "Dump words and their associated weights
+from dictionary DICT to BUFFER. If BUFFER exists, data will be
+appended to the end of it. Otherwise, a new buffer will be
+created. If BUFFER is omitted, the current buffer is used.
+
+If saved to a file, the dumped data can be used to populate a
+dictionary when creating it using `predictive-create-dict'. See
+also `predictive-dump-dict-to-file'."
+  
+  (interactive (list (read-dict "Dictionary to dump: ")
+		     (read-buffer "Buffer to dump to: "
+				  (buffer-name (current-buffer)))))
+  (dictree-dump-to-buffer dict buffer 'string)
+)
+
+
+
+(defun predictive-dump-dict-to-file (dict &optional filename overwrite)
+  "Dump words and their associated weights
+from dictionary DICT to a text file FILENAME. If BUFFER exists,
+data will be appended to the end of it. Otherwise, a new buffer
+will be created.
+
+If OVERWRITE is non-nil, FILENAME will be overwritten *without*
+prompting if it already exists. Interactively, OVERWRITE is set
+by supplying a prefix arg.
+
+The dumped data can be used to populate a dictionary when
+creating it using `predictive-create-dict'. See also
+`predictive-dump-dict-to-buffer'."
+  
+  (interactive (list (read-dict "Dictionary to dump: ")
+		     (read-file-name "File to dump to: ")
+		     current-prefix-arg))
+  (dictree-dump-to-file dict filename 'string overwrite)
 )
 
 
@@ -1613,7 +1659,8 @@ there's only one."
       (setq buffer-dict
 	    (dictree-create (predictive-buffer-local-dict-name)
 			    filename (when filename t) nil nil
-			    predictive-completion-speed nil insfun rankfun)))
+			    predictive-completion-speed nil
+			    nil insfun rankfun)))
     
     
     ;; ----- meta-dictionary -----

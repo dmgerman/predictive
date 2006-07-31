@@ -3550,108 +3550,108 @@
 "alveolar" 59
 "always" 46228
 "am" 26867
-"amalgam" 296
-"amalgamate" 296 ("amalgam")
-"amalgamated" 296 ("amalgamate")
-"amalgamation" 249 ("amalgam")
-"amalgamations" 52 ("amalgam" "amalgamation")
-"amaranth" 160
-"amassed" 149
-"amateur" 1588
-"amateurish" 70 ("amateur")
-"amateurs" 345 ("amateur")
-"amaze" 1007
-"amazed" 1007 ("amaze")
-"amazement" 502 ("amaze")
-"amazes" 53 ("amaze")
-"amazing" 1910
-"amazingly" 377 ("amazing")
-"amazon" 359
-"ambassador" 1147
-"ambassadors" 258 ("ambassador")
-"amber" 508
-"ambiance" 194
-"ambient" 164
-"ambiguities" 219
-"ambiguity" 855
-"ambiguous" 837
-"ambit" 1340
-"ambition" 1340 ("ambit")
-"ambitions" 1001 ("ambition")
-"ambitious" 1541
-"ambivalence" 239
-"ambivalent" 280
-"amble" 100
-"ambled" 100 ("amble")
-"ambrose" 185
-"ambulance" 1696
-"ambulances" 148 ("ambulance")
-"ambulatory" 110
-"ambush" 273
-"ambushed" 118 ("ambush")
-"ameliorate" 57
-"amelioration" 77
-"amen" 1224
-"amenable" 325 ("amen")
-"amend" 1808 ("amen")
-"amended" 1091 ("amend")
-"amending" 140 ("amen" "amend")
-"amendment" 1808 ("amend")
-"amendments" 983 ("amend" "amendment")
-"amends" 198 ("amen" "amend")
-"amenities" 516 ("amen")
-"amenity" 274 ("amen")
-"amethyst" 62
-"amiable" 289
-"amiably" 101
-"amicable" 208
-"amicably" 90
-"amid" 1096
-"amidst" 496 ("amid")
-"amine" 50
-"amines" 50 ("amine")
-"amino" 607
-"amino-acid" 87 ("amino")
-"amiss" 483
-"ammonia" 370
-"ammonium" 108
-"ammunition" 615
-"amnesia" 108
-"amnesty" 1132
-"among" 22864
-"amongst" 4552 ("among")
-"amoral" 59
-"amorous" 103
-"amorphous" 208
-"amount" 15429
-"amounted" 948 ("amount")
-"amounting" 392 ("amount")
-"amounts" 3017 ("amount")
-"amp" 822
-"amphetamines" 74 ("amp")
-"amphibian" 151 ("amp")
-"amphibians" 151 ("amp" "amphibian")
-"amphibious" 80 ("amp")
-"amphitheatre" 108 ("amp")
-"ample" 822 ("amp")
-"amplification" 299 ("amp")
-"amplified" 294 ("amp")
-"amplifier" 333 ("amp")
-"amplifiers" 135 ("amp" "amplifier")
-"amplify" 109 ("amp")
-"amplitude" 372 ("amp")
-"amplitudes" 71 ("amp" "amplitude")
-"amply" 201 ("amp")
-"amps" 206 ("amp")
-"amputated" 83 ("amp")
-"amputation" 68 ("amp")
-"amuse" 1046
-"amused" 1046 ("amuse")
-"amusement" 973 ("amuse")
-"amusements" 80 ("amuse" "amusement")
-"amusing" 807
-"amylase" 100
-"amyloid" 60
+"amalgam" 296 ("am")
+"amalgamate" 296 ("am" "amalgam")
+"amalgamated" 296 ("am" "amalgamate")
+"amalgamation" 249 ("am" "amalgam")
+"amalgamations" 52 ("am" "amalgam" "amalgamation")
+"amaranth" 160 ("am")
+"amassed" 149 ("am")
+"amateur" 1588 ("am")
+"amateurish" 70 ("am" "amateur")
+"amateurs" 345 ("am" "amateur")
+"amaze" 1007 ("am")
+"amazed" 1007 ("am" "amaze")
+"amazement" 502 ("am" "amaze")
+"amazes" 53 ("am" "amaze")
+"amazing" 1910 ("am")
+"amazingly" 377 ("am" "amazing")
+"amazon" 359 ("am")
+"ambassador" 1147 ("am")
+"ambassadors" 258 ("am" "ambassador")
+"amber" 508 ("am")
+"ambiance" 194 ("am")
+"ambient" 164 ("am")
+"ambiguities" 219 ("am")
+"ambiguity" 855 ("am")
+"ambiguous" 837 ("am")
+"ambit" 1340 ("am")
+"ambition" 1340 ("am" "ambit")
+"ambitions" 1001 ("am" "ambition")
+"ambitious" 1541 ("am")
+"ambivalence" 239 ("am")
+"ambivalent" 280 ("am")
+"amble" 100 ("am")
+"ambled" 100 ("am" "amble")
+"ambrose" 185 ("am")
+"ambulance" 1696 ("am")
+"ambulances" 148 ("am" "ambulance")
+"ambulatory" 110 ("am")
+"ambush" 273 ("am")
+"ambushed" 118 ("am" "ambush")
+"ameliorate" 57 ("am")
+"amelioration" 77 ("am")
+"amen" 1224 ("am")
+"amenable" 325 ("am" "amen")
+"amend" 1808 ("am" "amen")
+"amended" 1091 ("am" "amend")
+"amending" 140 ("am" "amen" "amend")
+"amendment" 1808 ("am" "amend")
+"amendments" 983 ("am" "amend" "amendment")
+"amends" 198 ("am" "amen" "amend")
+"amenities" 516 ("am" "amen")
+"amenity" 274 ("am" "amen")
+"amethyst" 62 ("am")
+"amiable" 289 ("am")
+"amiably" 101 ("am")
+"amicable" 208 ("am")
+"amicably" 90 ("am")
+"amid" 1096 ("am")
+"amidst" 496 ("am" "amid")
+"amine" 50 ("am")
+"amines" 50 ("am" "amine")
+"amino" 607 ("am")
+"amino-acid" 87 ("am" "amino")
+"amiss" 483 ("am")
+"ammonia" 370 ("am")
+"ammonium" 108 ("am")
+"ammunition" 615 ("am")
+"amnesia" 108 ("am")
+"amnesty" 1132 ("am")
+"among" 22864 ("am")
+"amongst" 4552 ("am" "among")
+"amoral" 59 ("am")
+"amorous" 103 ("am")
+"amorphous" 208 ("am")
+"amount" 15429 ("am")
+"amounted" 948 ("am" "amount")
+"amounting" 392 ("am" "amount")
+"amounts" 3017 ("am" "amount")
+"amp" 822 ("am")
+"amphetamines" 74 ("am" "amp")
+"amphibian" 151 ("am" "amp")
+"amphibians" 151 ("am" "amp" "amphibian")
+"amphibious" 80 ("am" "amp")
+"amphitheatre" 108 ("am" "amp")
+"ample" 822 ("am" "amp")
+"amplification" 299 ("am" "amp")
+"amplified" 294 ("am" "amp")
+"amplifier" 333 ("am" "amp")
+"amplifiers" 135 ("am" "amp" "amplifier")
+"amplify" 109 ("am" "amp")
+"amplitude" 372 ("am" "amp")
+"amplitudes" 71 ("am" "amp" "amplitude")
+"amply" 201 ("am" "amp")
+"amps" 206 ("am" "amp")
+"amputated" 83 ("am" "amp")
+"amputation" 68 ("am" "amp")
+"amuse" 1046 ("am")
+"amused" 1046 ("am" "amuse")
+"amusement" 973 ("am" "amuse")
+"amusements" 80 ("am" "amuse" "amusement")
+"amusing" 807 ("am")
+"amylase" 100 ("am")
+"amyloid" 60 ("am")
 "an" 2682874 ("a")
 "an awful lot" 254
 "anachronism" 102
@@ -16058,679 +16058,679 @@
 "he'd" 5473 ("he")
 "he'll" 273 ("he")
 "he's" 84830 ("he")
-"he/she" 276
+"he/she" 276 ("he")
 "head" 37906 ("he")
-"head-dress" 50
-"head-on" 213
-"head-teacher" 243
-"head-teachers" 171 ("head-teacher")
-"headache" 792
-"headaches" 382 ("headache")
-"headband" 50
-"headboard" 88
-"headdress" 52
-"headed" 2848
-"header" 713
-"headers" 90 ("header")
-"headgear" 67
-"headhunters" 165
-"headhunting" 192
-"heading" 2852
-"headings" 857 ("heading")
-"headlamps" 52
-"headland" 268
-"headlands" 59 ("headland")
-"headless" 94
-"headlights" 334
-"headline" 808
-"headlined" 61 ("headline")
-"headlines" 808 ("headline")
-"headlong" 219
-"headman" 62
-"headmaster" 1181
-"headmasters" 69 ("headmaster")
-"headmen" 127
-"headmistress" 260
-"headphones" 226
-"headquarters" 2758
-"headroom" 86
-"heads" 5542 ("head")
-"headset" 59 ("heads")
-"headship" 88 ("heads")
-"headstock" 123 ("heads")
-"headstone" 58 ("heads")
-"headstrong" 57 ("heads")
-"headway" 242
-"heady" 343
-"heal" 1242
-"healed" 304 ("heal")
-"healer" 102 ("heal")
-"healers" 68 ("heal" "healer")
-"healing" 1242 ("heal")
-"heals" 63 ("heal")
-"health" 24643
-"health care" 96 ("heal" "health")
-"healthier" 383 ("heal" "health")
-"healthily" 71 ("heal" "health")
-"healthy" 3587 ("health")
-"heap" 777
-"heaped" 204 ("heap")
-"heaps" 295 ("heap")
-"hear" 20209
-"heard" 20209 ("hear")
-"hearer" 236 ("hear")
-"hearers" 95 ("hear" "hearer")
-"hearing" 5339 ("hear")
-"hearings" 428 ("hear" "hearing")
-"hears" 474 ("hear")
-"hearsay" 145 ("hear" "hears")
-"hearsay-ii" 62 ("hear" "hears" "hearsay")
-"hearse" 100 ("hear" "hears")
-"heart" 13729 ("hear")
-"heart-shaped" 115 ("hear" "heart")
-"heart-stopping" 54 ("hear" "heart")
-"heart-throb" 63 ("hear" "heart")
-"heartache" 80 ("hear" "heart")
-"heartbeat" 241 ("hear" "heart")
-"heartbreak" 114 ("hear" "heart")
-"heartbreaking" 67 ("hear" "heart" "heartbreak")
-"heartbroken" 124 ("hear" "heart")
-"hearted" 84 ("hear" "heart")
-"heartened" 90 ("hear" "heart")
-"heartening" 106 ("hear" "heart")
-"heartfelt" 150 ("hear" "heart")
-"hearth" 401 ("hear" "heart")
-"hearths" 52 ("hear" "heart" "hearth")
-"heartily" 194 ("hear" "heart")
-"heartland" 139 ("hear" "heart")
-"heartlands" 60 ("hear" "heart" "heartland")
-"heartless" 135 ("hear" "heart")
-"hearts" 1525 ("hear" "heart")
-"hearty" 243 ("hear" "heart")
-"heat" 5956
-"heated" 1126 ("heat")
-"heater" 527 ("heat")
-"heaters" 250 ("heat" "heater")
-"heath" 1341 ("heat")
-"heathen" 113 ("heat" "heath")
-"heather" 1019 ("heat" "heath")
-"heathland" 75 ("heat" "heath")
-"heaths" 82 ("heat" "heath")
-"heating" 2153 ("heat")
-"heats" 184 ("heat")
-"heave" 2426
-"heaved" 357 ("heave")
-"heaven" 2426 ("heave")
-"heavenly" 393 ("heave" "heaven")
-"heavens" 634 ("heave" "heaven")
-"heavier" 827
-"heavies" 251
-"heaviest" 251 ("heavies")
-"heavily" 4079
-"heaviness" 89
-"heaving" 301
-"heavy" 9483
-"heavy-duty" 70 ("heavy")
-"heavy-handed" 85 ("heavy")
-"heavyweight" 432 ("heavy")
-"heavyweights" 58 ("heavy" "heavyweight")
-"heck" 201
-"hectare" 758
-"hectares" 758 ("hectare")
-"hectic" 436
-"hector" 529
-"hedge" 975
-"hedged" 126 ("hedge")
-"hedgehog" 261 ("hedge")
-"hedgehogs" 159 ("hedge" "hedgehog")
-"hedgerow" 240 ("hedge")
-"hedgerows" 240 ("hedge" "hedgerow")
-"hedges" 692 ("hedge")
-"hedging" 146
-"hedonism" 61
-"hedonistic" 58
-"heed" 304
-"heeded" 114 ("heed")
-"heedless" 58 ("heed")
-"heel" 1177
-"heeled" 50 ("heel")
-"heels" 1177 ("heel")
-"hefty" 340
-"hegemonic" 100
-"hegemony" 336
-"heifer" 130
-"heifers" 130 ("heifer")
-"height" 3779
-"heighten" 519 ("height")
-"heightened" 519 ("height" "heighten")
-"heightening" 59 ("height" "heighten")
-"heights" 970 ("height")
-"heinous" 72
-"heir" 985
-"heiress" 181 ("heir")
-"heirs" 365 ("heir")
-"held" 27753
-"helical" 84
-"helices" 86
-"helicopter" 1112
-"helicopters" 442 ("helicopter")
-"helium" 213
-"helix" 213
-"hell" 5314 ("he")
-"heller" 56 ("hell")
-"hellish" 82 ("hell")
-"hello" 3847 ("he" "hell")
-"helm" 279
-"helmet" 688
-"helmets" 279 ("helm" "helmet")
-"help" 37969 ("he")
-"helped" 7650 ("help")
-"helper" 352 ("help")
-"helpers" 352 ("help" "helper")
-"helpful" 3174 ("help")
-"helpfully" 157 ("help" "helpful")
-"helping" 4384 ("help")
-"helpings" 72 ("help" "helping")
-"helpless" 833 ("help")
-"helplessly" 439 ("help" "helpless")
-"helplessness" 237 ("help" "helpless")
-"helpline" 215 ("help")
-"helplines" 52 ("help" "helpline")
-"helps" 3150 ("help")
-"hem" 308
-"hemisphere" 913
-"hemispheres" 121 ("hem" "hemisphere")
-"hemispheric" 67 ("hem")
-"hemmed" 91 ("hem")
-"hemp" 107 ("hem")
-"hen" 443
-"hence" 4778
-"henceforth" 339 ("hen" "hence")
-"henceforward" 53 ("hen" "hence")
-"henning" 53 ("hen")
-"henry" 7410
-"hens" 437 ("hen")
-"heparin" 218
-"hepatic" 302
-"hepatitis" 672
-"her" 327009
-"herald" 739
-"heralded" 260 ("herald")
-"heraldic" 91 ("herald")
-"heraldry" 57 ("herald")
-"heralds" 121 ("herald")
-"herb" 877
-"herbaceous" 127 ("herb")
-"herbal" 232 ("herb")
-"herbicides" 85 ("herb")
-"herbivores" 121 ("herb")
-"herbs" 877 ("herb")
-"herd" 675
-"herded" 89 ("herd")
-"herding" 52 ("herd")
-"herds" 371 ("herd")
-"here" 69947 ("he" "her")
-"hereabouts" 80
-"hereafter" 133
-"hereby" 260
-"hereditary" 467
-"heredity" 117
-"herein" 103
-"hereinafter" 80 ("herein")
-"heresy" 216
-"heretic" 94
-"heretical" 94 ("heretic")
-"heretics" 82 ("heretic")
-"hereto" 67
-"heritage" 1964
-"hermit" 155
-"hermitage" 155 ("hermit")
-"hernia" 198
-"hero" 2294
-"heroes" 1090 ("hero")
-"heroic" 607 ("hero")
-"heroics" 63 ("hero" "heroic")
-"heroin" 950 ("hero")
-"heroine" 357 ("hero" "heroin")
-"heroines" 114 ("hero" "heroin" "heroine")
-"heroism" 121 ("hero")
-"heron" 292 ("hero")
-"herons" 88 ("hero" "heron")
-"herpes" 116
-"herring" 361
-"herrings" 86 ("herring")
-"hers" 2525 ("her")
-"herself" 17197 ("her")
-"hertz" 107
-"hesitancy" 72
-"hesitant" 283
-"hesitantly" 204 ("hesitant")
-"hesitate" 1481
-"hesitated" 1481 ("hesitate")
-"hesitates" 58 ("hesitate")
-"hesitating" 114
-"hesitation" 664
-"hesitations" 74 ("hesitation")
-"heterogeneity" 152
-"heterogeneous" 283
-"heterosexual" 384
-"heterosexuality" 79 ("heterosexual")
-"heterosexuals" 71 ("heterosexual")
-"heuristic" 94
-"hewn" 64
-"hexagon" 130
-"hexagonal" 130 ("hexagon")
-"hey" 1757 ("he")
-"heyday" 240 ("hey")
+"head-dress" 50 ("he")
+"head-on" 213 ("he")
+"head-teacher" 243 ("he")
+"head-teachers" 171 ("he" "head-teacher")
+"headache" 792 ("he")
+"headaches" 382 ("he" "headache")
+"headband" 50 ("he")
+"headboard" 88 ("he")
+"headdress" 52 ("he")
+"headed" 2848 ("he")
+"header" 713 ("he")
+"headers" 90 ("he" "header")
+"headgear" 67 ("he")
+"headhunters" 165 ("he")
+"headhunting" 192 ("he")
+"heading" 2852 ("he")
+"headings" 857 ("he" "heading")
+"headlamps" 52 ("he")
+"headland" 268 ("he")
+"headlands" 59 ("he" "headland")
+"headless" 94 ("he")
+"headlights" 334 ("he")
+"headline" 808 ("he")
+"headlined" 61 ("he" "headline")
+"headlines" 808 ("he" "headline")
+"headlong" 219 ("he")
+"headman" 62 ("he")
+"headmaster" 1181 ("he")
+"headmasters" 69 ("he" "headmaster")
+"headmen" 127 ("he")
+"headmistress" 260 ("he")
+"headphones" 226 ("he")
+"headquarters" 2758 ("he")
+"headroom" 86 ("he")
+"heads" 5542 ("he" "head")
+"headset" 59 ("he" "heads")
+"headship" 88 ("he" "heads")
+"headstock" 123 ("he" "heads")
+"headstone" 58 ("he" "heads")
+"headstrong" 57 ("he" "heads")
+"headway" 242 ("he")
+"heady" 343 ("he")
+"heal" 1242 ("he")
+"healed" 304 ("he" "heal")
+"healer" 102 ("he" "heal")
+"healers" 68 ("he" "heal" "healer")
+"healing" 1242 ("he" "heal")
+"heals" 63 ("he" "heal")
+"health" 24643 ("he")
+"health care" 96 ("he" "heal" "health")
+"healthier" 383 ("he" "heal" "health")
+"healthily" 71 ("he" "heal" "health")
+"healthy" 3587 ("he" "health")
+"heap" 777 ("he")
+"heaped" 204 ("he" "heap")
+"heaps" 295 ("he" "heap")
+"hear" 20209 ("he")
+"heard" 20209 ("he" "hear")
+"hearer" 236 ("he" "hear")
+"hearers" 95 ("he" "hear" "hearer")
+"hearing" 5339 ("he" "hear")
+"hearings" 428 ("he" "hear" "hearing")
+"hears" 474 ("he" "hear")
+"hearsay" 145 ("he" "hear" "hears")
+"hearsay-ii" 62 ("he" "hear" "hears" "hearsay")
+"hearse" 100 ("he" "hear" "hears")
+"heart" 13729 ("he" "hear")
+"heart-shaped" 115 ("he" "hear" "heart")
+"heart-stopping" 54 ("he" "hear" "heart")
+"heart-throb" 63 ("he" "hear" "heart")
+"heartache" 80 ("he" "hear" "heart")
+"heartbeat" 241 ("he" "hear" "heart")
+"heartbreak" 114 ("he" "hear" "heart")
+"heartbreaking" 67 ("he" "hear" "heart" "heartbreak")
+"heartbroken" 124 ("he" "hear" "heart")
+"hearted" 84 ("he" "hear" "heart")
+"heartened" 90 ("he" "hear" "heart")
+"heartening" 106 ("he" "hear" "heart")
+"heartfelt" 150 ("he" "hear" "heart")
+"hearth" 401 ("he" "hear" "heart")
+"hearths" 52 ("he" "hear" "heart" "hearth")
+"heartily" 194 ("he" "hear" "heart")
+"heartland" 139 ("he" "hear" "heart")
+"heartlands" 60 ("he" "hear" "heart" "heartland")
+"heartless" 135 ("he" "hear" "heart")
+"hearts" 1525 ("he" "hear" "heart")
+"hearty" 243 ("he" "hear" "heart")
+"heat" 5956 ("he")
+"heated" 1126 ("he" "heat")
+"heater" 527 ("he" "heat")
+"heaters" 250 ("he" "heat" "heater")
+"heath" 1341 ("he" "heat")
+"heathen" 113 ("he" "heat" "heath")
+"heather" 1019 ("he" "heat" "heath")
+"heathland" 75 ("he" "heat" "heath")
+"heaths" 82 ("he" "heat" "heath")
+"heating" 2153 ("he" "heat")
+"heats" 184 ("he" "heat")
+"heave" 2426 ("he")
+"heaved" 357 ("he" "heave")
+"heaven" 2426 ("he" "heave")
+"heavenly" 393 ("he" "heave" "heaven")
+"heavens" 634 ("he" "heave" "heaven")
+"heavier" 827 ("he")
+"heavies" 251 ("he")
+"heaviest" 251 ("he" "heavies")
+"heavily" 4079 ("he")
+"heaviness" 89 ("he")
+"heaving" 301 ("he")
+"heavy" 9483 ("he")
+"heavy-duty" 70 ("he" "heavy")
+"heavy-handed" 85 ("he" "heavy")
+"heavyweight" 432 ("he" "heavy")
+"heavyweights" 58 ("he" "heavy" "heavyweight")
+"heck" 201 ("he")
+"hectare" 758 ("he")
+"hectares" 758 ("he" "hectare")
+"hectic" 436 ("he")
+"hector" 529 ("he")
+"hedge" 975 ("he")
+"hedged" 126 ("he" "hedge")
+"hedgehog" 261 ("he" "hedge")
+"hedgehogs" 159 ("he" "hedge" "hedgehog")
+"hedgerow" 240 ("he" "hedge")
+"hedgerows" 240 ("he" "hedge" "hedgerow")
+"hedges" 692 ("he" "hedge")
+"hedging" 146 ("he")
+"hedonism" 61 ("he")
+"hedonistic" 58 ("he")
+"heed" 304 ("he")
+"heeded" 114 ("he" "heed")
+"heedless" 58 ("he" "heed")
+"heel" 1177 ("he")
+"heeled" 50 ("he" "heel")
+"heels" 1177 ("he" "heel")
+"hefty" 340 ("he")
+"hegemonic" 100 ("he")
+"hegemony" 336 ("he")
+"heifer" 130 ("he")
+"heifers" 130 ("he" "heifer")
+"height" 3779 ("he")
+"heighten" 519 ("he" "height")
+"heightened" 519 ("he" "height" "heighten")
+"heightening" 59 ("he" "height" "heighten")
+"heights" 970 ("he" "height")
+"heinous" 72 ("he")
+"heir" 985 ("he")
+"heiress" 181 ("he" "heir")
+"heirs" 365 ("he" "heir")
+"held" 27753 ("he")
+"helical" 84 ("he")
+"helices" 86 ("he")
+"helicopter" 1112 ("he")
+"helicopters" 442 ("he" "helicopter")
+"helium" 213 ("he")
+"helix" 213 ("he")
+"hell" 5314 ("he" "he")
+"heller" 56 ("he" "hell")
+"hellish" 82 ("he" "hell")
+"hello" 3847 ("he" "he" "hell")
+"helm" 279 ("he")
+"helmet" 688 ("he")
+"helmets" 279 ("he" "helm" "helmet")
+"help" 37969 ("he" "he")
+"helped" 7650 ("he" "help")
+"helper" 352 ("he" "help")
+"helpers" 352 ("he" "help" "helper")
+"helpful" 3174 ("he" "help")
+"helpfully" 157 ("he" "help" "helpful")
+"helping" 4384 ("he" "help")
+"helpings" 72 ("he" "help" "helping")
+"helpless" 833 ("he" "help")
+"helplessly" 439 ("he" "help" "helpless")
+"helplessness" 237 ("he" "help" "helpless")
+"helpline" 215 ("he" "help")
+"helplines" 52 ("he" "help" "helpline")
+"helps" 3150 ("he" "help")
+"hem" 308 ("he")
+"hemisphere" 913 ("he")
+"hemispheres" 121 ("he" "hem" "hemisphere")
+"hemispheric" 67 ("he" "hem")
+"hemmed" 91 ("he" "hem")
+"hemp" 107 ("he" "hem")
+"hen" 443 ("he")
+"hence" 4778 ("he")
+"henceforth" 339 ("he" "hen" "hence")
+"henceforward" 53 ("he" "hen" "hence")
+"henning" 53 ("he" "hen")
+"henry" 7410 ("he")
+"hens" 437 ("he" "hen")
+"heparin" 218 ("he")
+"hepatic" 302 ("he")
+"hepatitis" 672 ("he")
+"her" 327009 ("he")
+"herald" 739 ("he")
+"heralded" 260 ("he" "herald")
+"heraldic" 91 ("he" "herald")
+"heraldry" 57 ("he" "herald")
+"heralds" 121 ("he" "herald")
+"herb" 877 ("he")
+"herbaceous" 127 ("he" "herb")
+"herbal" 232 ("he" "herb")
+"herbicides" 85 ("he" "herb")
+"herbivores" 121 ("he" "herb")
+"herbs" 877 ("he" "herb")
+"herd" 675 ("he")
+"herded" 89 ("he" "herd")
+"herding" 52 ("he" "herd")
+"herds" 371 ("he" "herd")
+"here" 69947 ("he" "he" "her")
+"hereabouts" 80 ("he")
+"hereafter" 133 ("he")
+"hereby" 260 ("he")
+"hereditary" 467 ("he")
+"heredity" 117 ("he")
+"herein" 103 ("he")
+"hereinafter" 80 ("he" "herein")
+"heresy" 216 ("he")
+"heretic" 94 ("he")
+"heretical" 94 ("he" "heretic")
+"heretics" 82 ("he" "heretic")
+"hereto" 67 ("he")
+"heritage" 1964 ("he")
+"hermit" 155 ("he")
+"hermitage" 155 ("he" "hermit")
+"hernia" 198 ("he")
+"hero" 2294 ("he")
+"heroes" 1090 ("he" "hero")
+"heroic" 607 ("he" "hero")
+"heroics" 63 ("he" "hero" "heroic")
+"heroin" 950 ("he" "hero")
+"heroine" 357 ("he" "hero" "heroin")
+"heroines" 114 ("he" "hero" "heroin" "heroine")
+"heroism" 121 ("he" "hero")
+"heron" 292 ("he" "hero")
+"herons" 88 ("he" "hero" "heron")
+"herpes" 116 ("he")
+"herring" 361 ("he")
+"herrings" 86 ("he" "herring")
+"hers" 2525 ("he" "her")
+"herself" 17197 ("he" "her")
+"hertz" 107 ("he")
+"hesitancy" 72 ("he")
+"hesitant" 283 ("he")
+"hesitantly" 204 ("he" "hesitant")
+"hesitate" 1481 ("he")
+"hesitated" 1481 ("he" "hesitate")
+"hesitates" 58 ("he" "hesitate")
+"hesitating" 114 ("he")
+"hesitation" 664 ("he")
+"hesitations" 74 ("he" "hesitation")
+"heterogeneity" 152 ("he")
+"heterogeneous" 283 ("he")
+"heterosexual" 384 ("he")
+"heterosexuality" 79 ("he" "heterosexual")
+"heterosexuals" 71 ("he" "heterosexual")
+"heuristic" 94 ("he")
+"hewn" 64 ("he")
+"hexagon" 130 ("he")
+"hexagonal" 130 ("he" "hexagon")
+"hey" 1757 ("he" "he")
+"heyday" 240 ("he" "hey")
 "hi" 433594
-"hi-fi" 228
-"hi-tech" 210
-"hiatus" 116
-"hibernation" 60
-"hiccup" 91
-"hiccups" 80 ("hiccup")
-"hick" 225
-"hickey" 68 ("hick")
-"hicks" 224 ("hick")
-"hid" 3419
-"hidden" 3419 ("hid")
-"hide" 2517 ("hid")
-"hideaway" 60 ("hid" "hide")
-"hideous" 437 ("hid" "hide")
-"hideously" 85 ("hid" "hide" "hideous")
-"hides" 307 ("hid" "hide")
-"hiding" 1395 ("hid")
-"hiding-place" 51 ("hid" "hiding")
-"hierarchical" 646
-"hierarchically" 62 ("hierarchical")
-"hierarchies" 308
-"hierarchy" 1670
-"high" 38925
-"high-backed" 52
-"high-bay" 63
-"high-ceilinged" 52
-"high-class" 97
-"high-end" 261
-"high-energy" 68
-"high-fibre" 67
-"high-flying" 73
-"high-grade" 52
-"high-handed" 71
-"high-heeled" 101
-"high-level" 334
-"high-minded" 50
-"high-performance" 172
-"high-pitched" 238
-"high-powered" 145
-"high-pressure" 66
-"high-profile" 129
-"high-quality" 277
-"high-ranking" 165
-"high-rise" 130
-"high-risk" 153
-"high-speed" 359
-"high-spirited" 54
-"high-tech" 294
-"high-technology" 91 ("high-tech")
-"highbrow" 70
-"higher" 16273
-"higher-level" 87 ("higher")
-"highest" 4858 ("high")
-"highland" 765 ("high")
-"highlander" 167 ("high" "highland")
-"highlanders" 116 ("high" "highland" "highlander")
-"highlands" 765 ("high" "highland")
-"highlight" 1193 ("high")
-"highlighted" 1174 ("high" "highlight")
-"highlighting" 301 ("high" "highlight")
-"highlights" 1131 ("high" "highlight")
-"highly" 9152 ("high")
-"highness" 263 ("high")
-"highs" 84 ("high")
-"highway" 955 ("high")
-"highwayman" 52 ("high" "highway")
-"highways" 462 ("high" "highway")
-"hijack" 145
-"hijacked" 145 ("hijack")
-"hijackers" 58 ("hijack")
-"hijacking" 65 ("hijack")
-"hike" 141
-"hiking" 70
-"hilarious" 258
-"hilarity" 73
-"hill" 7088
-"hillier" 94 ("hill")
-"hillman" 55 ("hill")
-"hills" 3111 ("hill")
-"hillside" 603 ("hill" "hills")
-"hillsides" 157 ("hill" "hills" "hillside")
-"hilltop" 100 ("hill")
-"hilly" 145 ("hill")
-"hilt" 151
-"him" 165014
-"him/her" 105 ("him")
-"himself" 31082 ("him")
-"hind" 427
-"hinder" 284 ("hind")
-"hindered" 200 ("hind" "hinder")
-"hindering" 76 ("hind" "hinder")
-"hinders" 53 ("hind" "hinder")
-"hindquarters" 58 ("hind")
-"hindrance" 161 ("hind")
-"hinds" 54 ("hind")
-"hindsight" 427 ("hind")
-"hinge" 292
-"hinged" 196 ("hinge")
-"hinges" 292 ("hinge")
-"hint" 1498
-"hinted" 507 ("hint")
-"hinterland" 171 ("hint")
-"hinting" 156 ("hint")
-"hints" 715 ("hint")
-"hip" 1104
-"hippie" 169 ("hip")
-"hippies" 169 ("hip" "hippie")
-"hippo" 89 ("hip")
-"hippocampus" 89 ("hip" "hippo")
-"hippopotamus" 50 ("hip" "hippo")
-"hips" 821 ("hip")
-"hire" 1704
-"hire-purchase" 75 ("hire")
-"hired" 1287 ("hire")
-"hirer" 65 ("hire")
-"hiring" 476
-"his" 433594
-"his/her" 401
-"hiss" 583
-"hissed" 583 ("hiss")
-"hissing" 256 ("hiss")
-"histamine" 280
-"histogram" 60
-"histological" 398
-"histology" 131
-"historian" 1612
-"historians" 1612 ("historian")
-"historic" 5557
-"historical" 5557 ("historic")
-"historically" 801 ("historic" "historical")
-"historicism" 114 ("historic")
-"historicist" 51 ("historic")
-"historicity" 50 ("historic")
-"histories" 768
-"historiography" 73
-"history" 19308
-"hit" 9953
-"hit man" 60 ("hit")
-"hitch" 339 ("hit")
-"hitched" 114 ("hit" "hitch")
-"hitching" 57 ("hit" "hitch")
-"hither" 71 ("hit")
-"hitherto" 1568 ("hit")
-"hits" 1319 ("hit")
-"hitting" 1145 ("hit")
-"hive" 234
-"hives" 85 ("hive")
-"hiya" 110 ("hi")
+"hi-fi" 228 ("hi")
+"hi-tech" 210 ("hi")
+"hiatus" 116 ("hi")
+"hibernation" 60 ("hi")
+"hiccup" 91 ("hi")
+"hiccups" 80 ("hi" "hiccup")
+"hick" 225 ("hi")
+"hickey" 68 ("hi" "hick")
+"hicks" 224 ("hi" "hick")
+"hid" 3419 ("hi")
+"hidden" 3419 ("hi" "hid")
+"hide" 2517 ("hi" "hid")
+"hideaway" 60 ("hi" "hid" "hide")
+"hideous" 437 ("hi" "hid" "hide")
+"hideously" 85 ("hi" "hid" "hide" "hideous")
+"hides" 307 ("hi" "hid" "hide")
+"hiding" 1395 ("hi" "hid")
+"hiding-place" 51 ("hi" "hid" "hiding")
+"hierarchical" 646 ("hi")
+"hierarchically" 62 ("hi" "hierarchical")
+"hierarchies" 308 ("hi")
+"hierarchy" 1670 ("hi")
+"high" 38925 ("hi")
+"high-backed" 52 ("hi")
+"high-bay" 63 ("hi")
+"high-ceilinged" 52 ("hi")
+"high-class" 97 ("hi")
+"high-end" 261 ("hi")
+"high-energy" 68 ("hi")
+"high-fibre" 67 ("hi")
+"high-flying" 73 ("hi")
+"high-grade" 52 ("hi")
+"high-handed" 71 ("hi")
+"high-heeled" 101 ("hi")
+"high-level" 334 ("hi")
+"high-minded" 50 ("hi")
+"high-performance" 172 ("hi")
+"high-pitched" 238 ("hi")
+"high-powered" 145 ("hi")
+"high-pressure" 66 ("hi")
+"high-profile" 129 ("hi")
+"high-quality" 277 ("hi")
+"high-ranking" 165 ("hi")
+"high-rise" 130 ("hi")
+"high-risk" 153 ("hi")
+"high-speed" 359 ("hi")
+"high-spirited" 54 ("hi")
+"high-tech" 294 ("hi")
+"high-technology" 91 ("hi" "high-tech")
+"highbrow" 70 ("hi")
+"higher" 16273 ("hi")
+"higher-level" 87 ("hi" "higher")
+"highest" 4858 ("hi" "high")
+"highland" 765 ("hi" "high")
+"highlander" 167 ("hi" "high" "highland")
+"highlanders" 116 ("hi" "high" "highland" "highlander")
+"highlands" 765 ("hi" "high" "highland")
+"highlight" 1193 ("hi" "high")
+"highlighted" 1174 ("hi" "high" "highlight")
+"highlighting" 301 ("hi" "high" "highlight")
+"highlights" 1131 ("hi" "high" "highlight")
+"highly" 9152 ("hi" "high")
+"highness" 263 ("hi" "high")
+"highs" 84 ("hi" "high")
+"highway" 955 ("hi" "high")
+"highwayman" 52 ("hi" "high" "highway")
+"highways" 462 ("hi" "high" "highway")
+"hijack" 145 ("hi")
+"hijacked" 145 ("hi" "hijack")
+"hijackers" 58 ("hi" "hijack")
+"hijacking" 65 ("hi" "hijack")
+"hike" 141 ("hi")
+"hiking" 70 ("hi")
+"hilarious" 258 ("hi")
+"hilarity" 73 ("hi")
+"hill" 7088 ("hi")
+"hillier" 94 ("hi" "hill")
+"hillman" 55 ("hi" "hill")
+"hills" 3111 ("hi" "hill")
+"hillside" 603 ("hi" "hill" "hills")
+"hillsides" 157 ("hi" "hill" "hills" "hillside")
+"hilltop" 100 ("hi" "hill")
+"hilly" 145 ("hi" "hill")
+"hilt" 151 ("hi")
+"him" 165014 ("hi")
+"him/her" 105 ("hi" "him")
+"himself" 31082 ("hi" "him")
+"hind" 427 ("hi")
+"hinder" 284 ("hi" "hind")
+"hindered" 200 ("hi" "hind" "hinder")
+"hindering" 76 ("hi" "hind" "hinder")
+"hinders" 53 ("hi" "hind" "hinder")
+"hindquarters" 58 ("hi" "hind")
+"hindrance" 161 ("hi" "hind")
+"hinds" 54 ("hi" "hind")
+"hindsight" 427 ("hi" "hind")
+"hinge" 292 ("hi")
+"hinged" 196 ("hi" "hinge")
+"hinges" 292 ("hi" "hinge")
+"hint" 1498 ("hi")
+"hinted" 507 ("hi" "hint")
+"hinterland" 171 ("hi" "hint")
+"hinting" 156 ("hi" "hint")
+"hints" 715 ("hi" "hint")
+"hip" 1104 ("hi")
+"hippie" 169 ("hi" "hip")
+"hippies" 169 ("hi" "hip" "hippie")
+"hippo" 89 ("hi" "hip")
+"hippocampus" 89 ("hi" "hip" "hippo")
+"hippopotamus" 50 ("hi" "hip" "hippo")
+"hips" 821 ("hi" "hip")
+"hire" 1704 ("hi")
+"hire-purchase" 75 ("hi" "hire")
+"hired" 1287 ("hi" "hire")
+"hirer" 65 ("hi" "hire")
+"hiring" 476 ("hi")
+"his" 433594 ("hi")
+"his/her" 401 ("hi")
+"hiss" 583 ("hi")
+"hissed" 583 ("hi" "hiss")
+"hissing" 256 ("hi" "hiss")
+"histamine" 280 ("hi")
+"histogram" 60 ("hi")
+"histological" 398 ("hi")
+"histology" 131 ("hi")
+"historian" 1612 ("hi")
+"historians" 1612 ("hi" "historian")
+"historic" 5557 ("hi")
+"historical" 5557 ("hi" "historic")
+"historically" 801 ("hi" "historic" "historical")
+"historicism" 114 ("hi" "historic")
+"historicist" 51 ("hi" "historic")
+"historicity" 50 ("hi" "historic")
+"histories" 768 ("hi")
+"historiography" 73 ("hi")
+"history" 19308 ("hi")
+"hit" 9953 ("hi")
+"hit man" 60 ("hi" "hit")
+"hitch" 339 ("hi" "hit")
+"hitched" 114 ("hi" "hit" "hitch")
+"hitching" 57 ("hi" "hit" "hitch")
+"hither" 71 ("hi" "hit")
+"hitherto" 1568 ("hi" "hit")
+"hits" 1319 ("hi" "hit")
+"hitting" 1145 ("hi" "hit")
+"hive" 234 ("hi")
+"hives" 85 ("hi" "hive")
+"hiya" 110 ("hi" "hi")
 "ho" 1043
-"hoard" 186
-"hoarding" 113 ("hoard")
-"hoardings" 78 ("hoard" "hoarding")
-"hoards" 121 ("hoard")
-"hoarse" 240
-"hoarsely" 169 ("hoarse")
-"hoax" 156
-"hob" 145
-"hobbies" 294
-"hobbit" 50 ("hob")
-"hobbled" 107 ("hob")
-"hobbling" 65 ("hob")
-"hobby" 612
-"hoc" 52
-"hockey" 601
-"hodge" 284
-"hodges" 117 ("hodge")
-"hoe" 90
-"hog" 145
-"hoist" 224
-"hoisted" 224 ("hoist")
-"hold" 13596
-"holdall" 99 ("hold")
-"holden" 214 ("hold")
-"holder" 2922 ("hold")
-"holders" 1216 ("hold" "holder")
-"holding" 8322 ("hold")
-"holdings" 1194 ("hold" "holding")
-"holds" 2759 ("hold")
-"hole" 4572
-"holed" 185 ("hole")
-"holes" 2665 ("hole")
-"holiday" 7783
-"holiday-makers" 60 ("holiday")
-"holidaying" 56 ("holiday")
-"holidaymakers" 182 ("holiday")
-"holidays" 2900 ("holiday")
-"holiness" 179
-"holistic" 254
-"hollow" 1095
-"hollowed" 67 ("hollow")
-"hollows" 145 ("hollow")
-"holly" 995
-"holm" 65
-"holocaust" 173
-"holster" 107
-"holt" 286
-"holy" 3025
-"homage" 446
-"home" 52458
-"home-grown" 150
-"home-made" 389
-"home-school" 59
-"homecoming" 93 ("home")
-"homeland" 435 ("home")
-"homelands" 95 ("home" "homeland")
-"homeless" 1066 ("home")
-"homelessness" 345 ("home" "homeless")
-"homely" 264 ("home")
-"homemade" 92 ("home")
-"homeowners" 96 ("home")
-"homes" 6074 ("home")
-"homesick" 145 ("home" "homes")
-"homesickness" 56 ("home" "homes" "homesick")
-"homespun" 52 ("home" "homes")
-"homeward" 86 ("home")
-"homework" 830 ("home")
-"homicide" 163
-"homing" 86
-"hominid" 50
-"homo" 147
-"homo sapiens" 76 ("homo")
-"homoeopathic" 213
-"homoeopathy" 206
-"homogenates" 53 ("homo")
-"homogeneity" 147 ("homo")
-"homogeneous" 488
-"homologous" 173
-"homology" 167
-"homophobia" 73 ("homo")
-"homophobic" 57 ("homo")
-"homosexual" 841
-"homosexuality" 618 ("homosexual")
-"homosexuals" 256 ("homosexual")
-"hon." 10375
-"honed" 101
-"honest" 2960
-"honestly" 1434 ("honest")
-"honesty" 724 ("honest")
-"honey" 1478
-"honeymoon" 568 ("honey")
-"honeysuckle" 89 ("honey")
-"hong" 2812
-"honorary" 765
-"honour" 2756
-"honourable" 886 ("honour")
-"honourably" 63 ("honour")
-"honourary" 53 ("honour")
-"honoured" 664 ("honour")
-"honouring" 106 ("honour")
-"honours" 1399 ("honour")
-"hons" 118
-"hood" 984
-"hooded" 277 ("hood")
-"hoods" 107 ("hood")
-"hoof" 113
-"hoofs" 51 ("hoof")
-"hook" 1452
-"hooked" 632 ("hook")
-"hooker" 395 ("hook")
-"hooking" 81 ("hook")
-"hooks" 460 ("hook")
-"hooligan" 260
-"hooliganism" 199 ("hooligan")
-"hooligans" 260 ("hooligan")
-"hoop" 150
-"hooper" 321
-"hoops" 150 ("hoop")
-"hooray" 150
-"hoot" 83
-"hooted" 69 ("hoot")
-"hooting" 58 ("hoot")
-"hoots" 64 ("hoot")
-"hoover" 314
-"hooves" 225
-"hop" 17713
-"hope" 17713 ("hop")
-"hoped" 5088 ("hop" "hope")
-"hoped-for" 64 ("hop" "hope" "hoped")
-"hopeful" 1903 ("hope")
-"hopefully" 1903 ("hope" "hopeful")
-"hopefuls" 114 ("hop" "hope" "hopeful")
-"hopeless" 756 ("hop" "hope")
-"hopelessly" 433 ("hop" "hope" "hopeless")
-"hopelessness" 179 ("hop" "hope" "hopeless")
-"hopes" 4253 ("hop" "hope")
-"hoping" 3518 ("hop")
-"hopped" 165 ("hop")
-"hopper" 342 ("hop")
-"hoppers" 63 ("hop" "hopper")
-"hopping" 216 ("hop")
-"hops" 225 ("hop")
-"horde" 227
-"hordes" 227 ("horde")
-"horizon" 1357
-"horizons" 456 ("horizon")
-"horizontal" 1228 ("horizon")
-"horizontally" 263 ("horizon" "horizontal")
-"hormonal" 158
-"hormone" 433
-"hormones" 366 ("hormone")
-"horn" 1011
-"horned" 105 ("horn")
-"hornet" 53 ("horn")
-"horns" 673 ("horn")
-"horny" 86 ("horn")
-"horoscope" 71
-"horoscopes" 65 ("horoscope")
-"horrendous" 303
-"horrible" 1681
-"horribly" 348
-"horrid" 238
-"horrific" 453
-"horrified" 722
-"horrifying" 190
-"horror" 2118
-"horrors" 435 ("horror")
-"horse" 7761
-"horse-drawn" 143 ("horse")
-"horse-riding" 85 ("horse")
-"horseback" 211 ("horse")
-"horseman" 191 ("horse")
-"horsemen" 253 ("horse")
-"horsepower" 74 ("horse")
-"horses" 4897 ("horse")
-"horseshoe" 154 ("horse" "horses")
-"horticultural" 310
-"horticulture" 121
-"hosanna" 52
-"hose" 315
-"hosepipe" 63 ("hose")
-"hoses" 65 ("hose")
-"hosiery" 86
-"hospice" 369
-"hospitable" 121
-"hospital" 15104
-"hospitalised" 57 ("hospital")
-"hospitality" 906 ("hospital")
-"hospitals" 2932 ("hospital")
-"host" 3154
-"hostage" 663 ("host")
-"hostages" 663 ("host" "hostage")
-"hosted" 350 ("host")
-"hostel" 532 ("host")
-"hostelry" 66 ("host" "hostel")
-"hostels" 328 ("host" "hostel")
-"hostess" 400 ("host")
-"hostile" 1644 ("host")
-"hostilities" 327 ("host")
-"hostility" 1361 ("host")
-"hosting" 174 ("host")
-"hosts" 710 ("host")
-"hot" 11447
-"hot air" 52 ("hot")
-"hot water" 64 ("hot")
-"hotel" 11447 ("hot")
-"hotelier" 116 ("hot" "hotel")
-"hoteliers" 116 ("hot" "hotel" "hotelier")
-"hotels" 2365 ("hot" "hotel")
-"hothouse" 60 ("hot")
-"hotline" 50 ("hot")
-"hotly" 243 ("hot")
-"hotplate" 50 ("hot")
-"hotter" 189 ("hot")
-"hottest" 175 ("hot")
-"hough" 53
-"hound" 350
-"hounded" 100 ("hound")
-"hounds" 350 ("hound")
-"hour" 18884
-"hour-long" 71 ("hour")
-"hourly" 301 ("hour")
-"hours" 18884 ("hour")
-"house" 50925
-"house-building" 77 ("house")
-"house-to-house" 56 ("house")
-"housebound" 89 ("house")
-"housebuilding" 72 ("house")
-"housed" 906 ("house")
-"household" 3943 ("house")
-"householder" 243 ("house" "household")
-"householders" 243 ("house" "household" "householder")
-"households" 1781 ("house" "household")
-"housekeeper" 574 ("house")
-"housekeeping" 356 ("house")
-"housemaid" 61 ("house")
-"houses" 10043 ("house")
-"housewife" 642 ("house")
-"housewives" 358 ("house")
-"housework" 728 ("house")
-"housing" 9450
-"hove" 412
-"hover" 412 ("hove")
-"hovercraft" 68 ("hove" "hover")
-"hovered" 305 ("hove" "hover")
-"hovering" 412 ("hove" "hover")
-"hovers" 61 ("hove" "hover")
-"how" 101508
-"however" 60498 ("how")
-"howl" 303 ("how")
-"howled" 186 ("how" "howl")
-"howling" 303 ("how" "howl")
-"howls" 114 ("how" "howl")
-"hoy" 76 ("ho")
-"hub" 295
-"hubbub" 87 ("hub")
-"hubby" 69 ("hub")
-"hubris" 52 ("hub")
-"hubs" 59 ("hub")
+"hoard" 186 ("ho")
+"hoarding" 113 ("ho" "hoard")
+"hoardings" 78 ("ho" "hoard" "hoarding")
+"hoards" 121 ("ho" "hoard")
+"hoarse" 240 ("ho")
+"hoarsely" 169 ("ho" "hoarse")
+"hoax" 156 ("ho")
+"hob" 145 ("ho")
+"hobbies" 294 ("ho")
+"hobbit" 50 ("ho" "hob")
+"hobbled" 107 ("ho" "hob")
+"hobbling" 65 ("ho" "hob")
+"hobby" 612 ("ho")
+"hoc" 52 ("ho")
+"hockey" 601 ("ho")
+"hodge" 284 ("ho")
+"hodges" 117 ("ho" "hodge")
+"hoe" 90 ("ho")
+"hog" 145 ("ho")
+"hoist" 224 ("ho")
+"hoisted" 224 ("ho" "hoist")
+"hold" 13596 ("ho")
+"holdall" 99 ("ho" "hold")
+"holden" 214 ("ho" "hold")
+"holder" 2922 ("ho" "hold")
+"holders" 1216 ("ho" "hold" "holder")
+"holding" 8322 ("ho" "hold")
+"holdings" 1194 ("ho" "hold" "holding")
+"holds" 2759 ("ho" "hold")
+"hole" 4572 ("ho")
+"holed" 185 ("ho" "hole")
+"holes" 2665 ("ho" "hole")
+"holiday" 7783 ("ho")
+"holiday-makers" 60 ("ho" "holiday")
+"holidaying" 56 ("ho" "holiday")
+"holidaymakers" 182 ("ho" "holiday")
+"holidays" 2900 ("ho" "holiday")
+"holiness" 179 ("ho")
+"holistic" 254 ("ho")
+"hollow" 1095 ("ho")
+"hollowed" 67 ("ho" "hollow")
+"hollows" 145 ("ho" "hollow")
+"holly" 995 ("ho")
+"holm" 65 ("ho")
+"holocaust" 173 ("ho")
+"holster" 107 ("ho")
+"holt" 286 ("ho")
+"holy" 3025 ("ho")
+"homage" 446 ("ho")
+"home" 52458 ("ho")
+"home-grown" 150 ("ho")
+"home-made" 389 ("ho")
+"home-school" 59 ("ho")
+"homecoming" 93 ("ho" "home")
+"homeland" 435 ("ho" "home")
+"homelands" 95 ("ho" "home" "homeland")
+"homeless" 1066 ("ho" "home")
+"homelessness" 345 ("ho" "home" "homeless")
+"homely" 264 ("ho" "home")
+"homemade" 92 ("ho" "home")
+"homeowners" 96 ("ho" "home")
+"homes" 6074 ("ho" "home")
+"homesick" 145 ("ho" "home" "homes")
+"homesickness" 56 ("ho" "home" "homes" "homesick")
+"homespun" 52 ("ho" "home" "homes")
+"homeward" 86 ("ho" "home")
+"homework" 830 ("ho" "home")
+"homicide" 163 ("ho")
+"homing" 86 ("ho")
+"hominid" 50 ("ho")
+"homo" 147 ("ho")
+"homo sapiens" 76 ("ho" "homo")
+"homoeopathic" 213 ("ho")
+"homoeopathy" 206 ("ho")
+"homogenates" 53 ("ho" "homo")
+"homogeneity" 147 ("ho" "homo")
+"homogeneous" 488 ("ho")
+"homologous" 173 ("ho")
+"homology" 167 ("ho")
+"homophobia" 73 ("ho" "homo")
+"homophobic" 57 ("ho" "homo")
+"homosexual" 841 ("ho")
+"homosexuality" 618 ("ho" "homosexual")
+"homosexuals" 256 ("ho" "homosexual")
+"hon." 10375 ("ho")
+"honed" 101 ("ho")
+"honest" 2960 ("ho")
+"honestly" 1434 ("ho" "honest")
+"honesty" 724 ("ho" "honest")
+"honey" 1478 ("ho")
+"honeymoon" 568 ("ho" "honey")
+"honeysuckle" 89 ("ho" "honey")
+"hong" 2812 ("ho")
+"honorary" 765 ("ho")
+"honour" 2756 ("ho")
+"honourable" 886 ("ho" "honour")
+"honourably" 63 ("ho" "honour")
+"honourary" 53 ("ho" "honour")
+"honoured" 664 ("ho" "honour")
+"honouring" 106 ("ho" "honour")
+"honours" 1399 ("ho" "honour")
+"hons" 118 ("ho")
+"hood" 984 ("ho")
+"hooded" 277 ("ho" "hood")
+"hoods" 107 ("ho" "hood")
+"hoof" 113 ("ho")
+"hoofs" 51 ("ho" "hoof")
+"hook" 1452 ("ho")
+"hooked" 632 ("ho" "hook")
+"hooker" 395 ("ho" "hook")
+"hooking" 81 ("ho" "hook")
+"hooks" 460 ("ho" "hook")
+"hooligan" 260 ("ho")
+"hooliganism" 199 ("ho" "hooligan")
+"hooligans" 260 ("ho" "hooligan")
+"hoop" 150 ("ho")
+"hooper" 321 ("ho")
+"hoops" 150 ("ho" "hoop")
+"hooray" 150 ("ho")
+"hoot" 83 ("ho")
+"hooted" 69 ("ho" "hoot")
+"hooting" 58 ("ho" "hoot")
+"hoots" 64 ("ho" "hoot")
+"hoover" 314 ("ho")
+"hooves" 225 ("ho")
+"hop" 17713 ("ho")
+"hope" 17713 ("ho" "hop")
+"hoped" 5088 ("ho" "hop" "hope")
+"hoped-for" 64 ("ho" "hop" "hope" "hoped")
+"hopeful" 1903 ("ho" "hope")
+"hopefully" 1903 ("ho" "hope" "hopeful")
+"hopefuls" 114 ("ho" "hop" "hope" "hopeful")
+"hopeless" 756 ("ho" "hop" "hope")
+"hopelessly" 433 ("ho" "hop" "hope" "hopeless")
+"hopelessness" 179 ("ho" "hop" "hope" "hopeless")
+"hopes" 4253 ("ho" "hop" "hope")
+"hoping" 3518 ("ho" "hop")
+"hopped" 165 ("ho" "hop")
+"hopper" 342 ("ho" "hop")
+"hoppers" 63 ("ho" "hop" "hopper")
+"hopping" 216 ("ho" "hop")
+"hops" 225 ("ho" "hop")
+"horde" 227 ("ho")
+"hordes" 227 ("ho" "horde")
+"horizon" 1357 ("ho")
+"horizons" 456 ("ho" "horizon")
+"horizontal" 1228 ("ho" "horizon")
+"horizontally" 263 ("ho" "horizon" "horizontal")
+"hormonal" 158 ("ho")
+"hormone" 433 ("ho")
+"hormones" 366 ("ho" "hormone")
+"horn" 1011 ("ho")
+"horned" 105 ("ho" "horn")
+"hornet" 53 ("ho" "horn")
+"horns" 673 ("ho" "horn")
+"horny" 86 ("ho" "horn")
+"horoscope" 71 ("ho")
+"horoscopes" 65 ("ho" "horoscope")
+"horrendous" 303 ("ho")
+"horrible" 1681 ("ho")
+"horribly" 348 ("ho")
+"horrid" 238 ("ho")
+"horrific" 453 ("ho")
+"horrified" 722 ("ho")
+"horrifying" 190 ("ho")
+"horror" 2118 ("ho")
+"horrors" 435 ("ho" "horror")
+"horse" 7761 ("ho")
+"horse-drawn" 143 ("ho" "horse")
+"horse-riding" 85 ("ho" "horse")
+"horseback" 211 ("ho" "horse")
+"horseman" 191 ("ho" "horse")
+"horsemen" 253 ("ho" "horse")
+"horsepower" 74 ("ho" "horse")
+"horses" 4897 ("ho" "horse")
+"horseshoe" 154 ("ho" "horse" "horses")
+"horticultural" 310 ("ho")
+"horticulture" 121 ("ho")
+"hosanna" 52 ("ho")
+"hose" 315 ("ho")
+"hosepipe" 63 ("ho" "hose")
+"hoses" 65 ("ho" "hose")
+"hosiery" 86 ("ho")
+"hospice" 369 ("ho")
+"hospitable" 121 ("ho")
+"hospital" 15104 ("ho")
+"hospitalised" 57 ("ho" "hospital")
+"hospitality" 906 ("ho" "hospital")
+"hospitals" 2932 ("ho" "hospital")
+"host" 3154 ("ho")
+"hostage" 663 ("ho" "host")
+"hostages" 663 ("ho" "host" "hostage")
+"hosted" 350 ("ho" "host")
+"hostel" 532 ("ho" "host")
+"hostelry" 66 ("ho" "host" "hostel")
+"hostels" 328 ("ho" "host" "hostel")
+"hostess" 400 ("ho" "host")
+"hostile" 1644 ("ho" "host")
+"hostilities" 327 ("ho" "host")
+"hostility" 1361 ("ho" "host")
+"hosting" 174 ("ho" "host")
+"hosts" 710 ("ho" "host")
+"hot" 11447 ("ho")
+"hot air" 52 ("ho" "hot")
+"hot water" 64 ("ho" "hot")
+"hotel" 11447 ("ho" "hot")
+"hotelier" 116 ("ho" "hot" "hotel")
+"hoteliers" 116 ("ho" "hot" "hotel" "hotelier")
+"hotels" 2365 ("ho" "hot" "hotel")
+"hothouse" 60 ("ho" "hot")
+"hotline" 50 ("ho" "hot")
+"hotly" 243 ("ho" "hot")
+"hotplate" 50 ("ho" "hot")
+"hotter" 189 ("ho" "hot")
+"hottest" 175 ("ho" "hot")
+"hough" 53 ("ho")
+"hound" 350 ("ho")
+"hounded" 100 ("ho" "hound")
+"hounds" 350 ("ho" "hound")
+"hour" 18884 ("ho")
+"hour-long" 71 ("ho" "hour")
+"hourly" 301 ("ho" "hour")
+"hours" 18884 ("ho" "hour")
+"house" 50925 ("ho")
+"house-building" 77 ("ho" "house")
+"house-to-house" 56 ("ho" "house")
+"housebound" 89 ("ho" "house")
+"housebuilding" 72 ("ho" "house")
+"housed" 906 ("ho" "house")
+"household" 3943 ("ho" "house")
+"householder" 243 ("ho" "house" "household")
+"householders" 243 ("ho" "house" "household" "householder")
+"households" 1781 ("ho" "house" "household")
+"housekeeper" 574 ("ho" "house")
+"housekeeping" 356 ("ho" "house")
+"housemaid" 61 ("ho" "house")
+"houses" 10043 ("ho" "house")
+"housewife" 642 ("ho" "house")
+"housewives" 358 ("ho" "house")
+"housework" 728 ("ho" "house")
+"housing" 9450 ("ho")
+"hove" 412 ("ho")
+"hover" 412 ("ho" "hove")
+"hovercraft" 68 ("ho" "hove" "hover")
+"hovered" 305 ("ho" "hove" "hover")
+"hovering" 412 ("ho" "hove" "hover")
+"hovers" 61 ("ho" "hove" "hover")
+"how" 101508 ("ho")
+"however" 60498 ("ho" "how")
+"howl" 303 ("ho" "how")
+"howled" 186 ("ho" "how" "howl")
+"howling" 303 ("ho" "how" "howl")
+"howls" 114 ("ho" "how" "howl")
+"hoy" 76 ("ho" "ho")
+"hub" 295 ("hub")
+"hubbub" 87 ("hub" "hub")
+"hubby" 69 ("hub" "hub")
+"hubris" 52 ("hub" "hub")
+"hubs" 59 ("hub" "hub")
 "huddle" 379
 "huddled" 379 ("huddle")
 "hue" 215
@@ -16748,7 +16748,7 @@
 "hullo" 166 ("hull")
 "hulls" 69 ("hull")
 "hum" 587
-"human" 19584
+"human" 19584 ("hum")
 "humane" 363 ("hum" "human")
 "humanism" 171 ("hum" "human")
 "humanist" 212 ("hum" "human")
@@ -16759,7 +16759,7 @@
 "humankind" 139 ("hum" "human")
 "humanly" 89 ("hum" "human")
 "humans" 2043 ("human")
-"humble" 806
+"humble" 806 ("hum")
 "humbled" 61 ("hum" "humble")
 "humbler" 67 ("hum" "humble")
 "humbly" 131 ("hum")
@@ -16778,7 +16778,7 @@
 "hummingbird" 98 ("hum" "humming")
 "humorous" 438 ("hum")
 "humorously" 51 ("hum" "humorous")
-"humour" 2241
+"humour" 2241 ("hum")
 "humourless" 78 ("hum" "humour")
 "hump" 164 ("hum")
 "humped" 61 ("hum" "hump")
@@ -20422,279 +20422,279 @@
 "mays" 51 ("may")
 "maze" 469
 "me" 139025
-"mead" 502
-"meadow" 670
-"meadows" 502 ("mead" "meadow")
-"meagre" 422
-"meal" 4263
-"meals" 2391 ("meal")
-"mealtimes" 76 ("meal")
-"mean" 44093
-"meander" 108 ("mean")
-"meandering" 108 ("mean" "meander")
-"meanders" 79 ("mean" "meander")
-"meanest" 52 ("mean")
-"meaning" 8140 ("mean")
-"meaningful" 999 ("mean" "meaning")
-"meaningfully" 133 ("mean" "meaning" "meaningful")
-"meaningfulness" 51 ("mean" "meaning" "meaningful")
-"meaningless" 658 ("mean" "meaning")
-"meanings" 1457 ("mean" "meaning")
-"meanness" 68 ("mean")
-"means" 23450 ("mean")
-"means-tested" 142 ("mean" "means")
-"meant" 11329 ("mean")
-"meantime" 1438 ("mean" "meant")
-"meanwhile" 4813 ("mean")
-"measles" 250
-"measurable" 276
-"measure" 6905
-"measured" 3317 ("measure")
-"measurement" 1676 ("measure")
-"measurements" 1380 ("measure" "measurement")
-"measures" 6905 ("measure")
-"measuring" 1492
-"meat" 3598
-"meats" 174 ("meat")
-"meaty" 89 ("meat")
-"mecca" 195
-"mechanic" 1994
-"mechanical" 1994 ("mechanic")
-"mechanically" 264 ("mechanic" "mechanical")
-"mechanics" 881 ("mechanic")
-"mechanisation" 89
-"mechanised" 62
-"mechanism" 2931
-"mechanisms" 2007 ("mechanism")
-"mechanistic" 119
-"med" 106
-"medal" 1115
-"medallion" 103 ("medal")
-"medallions" 68 ("medal" "medallion")
-"medallist" 157 ("medal")
-"medals" 527 ("medal")
-"meddle" 76
-"meddling" 100
-"media" 7977
-"medial" 54 ("media")
-"median" 916 ("media")
-"mediate" 500 ("media")
-"mediated" 500 ("media" "mediate")
-"mediating" 117 ("media")
-"mediation" 303 ("media")
-"mediator" 180 ("media")
-"mediators" 127 ("media" "mediator")
-"medic" 9343
-"medical" 9343 ("medic")
-"medically" 147 ("medic" "medical")
-"medication" 482 ("medic")
-"medications" 56 ("medic" "medication")
-"medicinal" 260 ("medic")
-"medicine" 2785 ("medic")
-"medicines" 617 ("medic" "medicine")
-"medics" 127 ("medic")
-"medieval" 2484
-"mediocre" 177
-"mediocrity" 92
-"meditate" 69
-"meditation" 490
-"meditations" 107 ("meditation")
-"meditative" 74
-"medium" 3441
-"medium-sized" 378 ("medium")
-"medium-term" 142 ("medium")
-"mediums" 63 ("medium")
-"medley" 148
-"meek" 170
-"meekly" 170 ("meek")
-"meet" 20801
-"meeting" 20801 ("meet")
-"meetings" 5349 ("meet" "meeting")
-"meets" 1418 ("meet")
-"meg" 868
-"mega" 208 ("meg")
-"megabytes" 65 ("meg" "mega")
-"megawatts" 51 ("meg" "mega")
-"melancholy" 405
-"melanoma" 90
-"melee" 54
-"mellow" 233
-"mellowed" 76 ("mellow")
-"melodic" 259
-"melodies" 200
-"melodrama" 160
-"melodramatic" 122 ("melodrama")
-"melody" 648
-"melon" 199
-"melons" 90 ("melon")
-"melt" 659
-"melted" 556 ("melt")
-"melting" 619 ("melt")
-"melts" 120 ("melt")
-"member" 29677
-"members" 29677 ("member")
-"membership" 5268 ("member" "members")
-"memberships" 54 ("member" "members" "membership")
-"membrane" 885
-"membranes" 394 ("membrane")
-"memento" 108
-"mementos" 52 ("memento")
-"memo" 485
-"memoir" 485 ("memo")
-"memoirs" 485 ("memo" "memoir")
-"memorabilia" 162 ("memo")
-"memorable" 852
-"memorably" 81 ("memo")
-"memoranda" 158 ("memo")
-"memorandum" 903
-"memorial" 1526
-"memorials" 145 ("memo" "memorial")
-"memories" 2633
-"memorise" 70 ("memo")
-"memory" 7604
-"memos" 125 ("memo")
-"men" 38887
-"men's" 259
-"men-at-arms" 84
-"menace" 514
-"menaces" 64 ("menace")
-"menacing" 329
-"menacingly" 103 ("menacing")
-"menagerie" 52
-"mend" 335 ("men")
-"mended" 171 ("men" "mend")
-"mending" 185 ("men" "mend")
-"menfolk" 61
-"menial" 110
-"meningitis" 225
-"menopause" 214
-"mens" 187
-"menstrual" 144 ("mens")
-"menstruation" 136 ("mens")
-"menswear" 74 ("mens")
-"mental" 5803
-"mentality" 366 ("mental")
-"mentally" 1978 ("mental")
-"mention" 6985
-"mentioned" 6985 ("mention")
-"mentioning" 507 ("mention")
-"mentions" 495 ("mention")
-"mentor" 259
-"mentors" 52 ("mentor")
-"menu" 1595 ("men")
-"menus" 451 ("men" "menu")
-"mercantile" 231
-"mercenaries" 166
-"mercenary" 143
-"mercer" 227
-"merchandise" 247
-"merchandising" 102
-"merchant" 1841
-"merchantable" 111 ("merchant")
-"merchants" 1039 ("merchant")
-"mercies" 52
-"merciful" 202
-"mercifully" 202 ("merciful")
-"merciless" 131
-"mercilessly" 118 ("merciless")
-"mercurial" 94
-"mercury" 1137
-"mercy" 1112
-"mere" 7596
-"merely" 7596 ("mere")
-"merest" 128 ("mere")
-"merge" 1407
-"merged" 602 ("merge")
-"merger" 1407 ("merge")
-"mergers" 722 ("merge" "merger")
-"merges" 63 ("merge")
-"merging" 296
-"meridian" 96
-"meringue" 61
-"merit" 1177
-"merited" 102 ("merit")
-"merits" 1058 ("merit")
-"merlin" 215
-"mermaid" 91
-"mermaids" 51 ("mermaid")
-"merrily" 163
-"merriment" 66
-"merry" 533
-"mesa" 61
-"mesh" 416
-"mesmerised" 112
-"mesozoic" 124
-"mess" 2251
-"message" 6958
-"messages" 1980 ("mess" "message")
-"messaging" 57 ("mess")
-"messed" 160 ("mess")
-"messenger" 531 ("mess")
-"messengers" 159 ("mess" "messenger")
-"messes" 53 ("mess")
-"messiah" 396 ("mess")
-"messianic" 104 ("mess")
-"messing" 294 ("mess")
-"messy" 357 ("mess")
-"met" 14223
-"metabolic" 352
-"metabolism" 493
-"metabolites" 58
-"metal" 4625
-"metallic" 444 ("metal")
-"metallurgical" 65 ("metal")
-"metallurgy" 76 ("metal")
-"metals" 999 ("metal")
-"metalwork" 140 ("metal")
-"metamorphic" 66
-"metamorphosed" 53
-"metamorphosis" 110
-"metaphor" 904
-"metaphoric" 196 ("metaphor")
-"metaphorical" 196 ("metaphor" "metaphoric")
-"metaphorically" 122 ("metaphor" "metaphoric" "metaphorical")
-"metaphors" 323 ("metaphor")
-"metaphysical" 373
-"metaphysics" 142
-"metastases" 70
-"metastatic" 50
-"meted" 96
-"meteor" 116
-"meteoric" 69 ("meteor")
-"meteorite" 116 ("meteor")
-"meteorites" 116 ("meteor" "meteorite")
-"meteorological" 230
-"meteorology" 71 ("meteor")
-"meter" 482
-"metering" 69 ("meter")
-"meters" 224 ("meter")
-"methadone" 73
-"methane" 331
-"methanol" 124
-"methinks" 61
-"method" 9091
-"methodical" 147 ("method")
-"methodically" 96 ("method" "methodical")
-"methodism" 91 ("method")
-"methodist" 531 ("method")
-"methodists" 133 ("method" "methodist")
-"methodological" 454 ("method")
-"methodologies" 113 ("method")
-"methodology" 957 ("method")
-"methods" 8953 ("method")
-"methyl" 175
-"meticulous" 297
-"meticulously" 197 ("meticulous")
-"metre" 3387
-"metres" 3387 ("metre")
-"metric" 381
-"metrical" 79 ("metric")
-"metro" 409
-"metropolis" 221 ("metro")
-"metropolitan" 1679
-"mettle" 74
-"mews" 107
-"mezzanine" 69
+"mead" 502 ("me")
+"meadow" 670 ("me")
+"meadows" 502 ("me" "mead" "meadow")
+"meagre" 422 ("me")
+"meal" 4263 ("me")
+"meals" 2391 ("me" "meal")
+"mealtimes" 76 ("me" "meal")
+"mean" 44093 ("me")
+"meander" 108 ("me" "mean")
+"meandering" 108 ("me" "mean" "meander")
+"meanders" 79 ("me" "mean" "meander")
+"meanest" 52 ("me" "mean")
+"meaning" 8140 ("me" "mean")
+"meaningful" 999 ("me" "mean" "meaning")
+"meaningfully" 133 ("me" "mean" "meaning" "meaningful")
+"meaningfulness" 51 ("me" "mean" "meaning" "meaningful")
+"meaningless" 658 ("me" "mean" "meaning")
+"meanings" 1457 ("me" "mean" "meaning")
+"meanness" 68 ("me" "mean")
+"means" 23450 ("me" "mean")
+"means-tested" 142 ("me" "mean" "means")
+"meant" 11329 ("me" "mean")
+"meantime" 1438 ("me" "mean" "meant")
+"meanwhile" 4813 ("me" "mean")
+"measles" 250 ("me")
+"measurable" 276 ("me")
+"measure" 6905 ("me")
+"measured" 3317 ("me" "measure")
+"measurement" 1676 ("me" "measure")
+"measurements" 1380 ("me" "measure" "measurement")
+"measures" 6905 ("me" "measure")
+"measuring" 1492 ("me")
+"meat" 3598 ("me")
+"meats" 174 ("me" "meat")
+"meaty" 89 ("me" "meat")
+"mecca" 195 ("me")
+"mechanic" 1994 ("me")
+"mechanical" 1994 ("me" "mechanic")
+"mechanically" 264 ("me" "mechanic" "mechanical")
+"mechanics" 881 ("me" "mechanic")
+"mechanisation" 89 ("me")
+"mechanised" 62 ("me")
+"mechanism" 2931 ("me")
+"mechanisms" 2007 ("me" "mechanism")
+"mechanistic" 119 ("me")
+"med" 106 ("me")
+"medal" 1115 ("me")
+"medallion" 103 ("me" "medal")
+"medallions" 68 ("me" "medal" "medallion")
+"medallist" 157 ("me" "medal")
+"medals" 527 ("me" "medal")
+"meddle" 76 ("me")
+"meddling" 100 ("me")
+"media" 7977 ("me")
+"medial" 54 ("me" "media")
+"median" 916 ("me" "media")
+"mediate" 500 ("me" "media")
+"mediated" 500 ("me" "media" "mediate")
+"mediating" 117 ("me" "media")
+"mediation" 303 ("me" "media")
+"mediator" 180 ("me" "media")
+"mediators" 127 ("me" "media" "mediator")
+"medic" 9343 ("me")
+"medical" 9343 ("me" "medic")
+"medically" 147 ("me" "medic" "medical")
+"medication" 482 ("me" "medic")
+"medications" 56 ("me" "medic" "medication")
+"medicinal" 260 ("me" "medic")
+"medicine" 2785 ("me" "medic")
+"medicines" 617 ("me" "medic" "medicine")
+"medics" 127 ("me" "medic")
+"medieval" 2484 ("me")
+"mediocre" 177 ("me")
+"mediocrity" 92 ("me")
+"meditate" 69 ("me")
+"meditation" 490 ("me")
+"meditations" 107 ("me" "meditation")
+"meditative" 74 ("me")
+"medium" 3441 ("me")
+"medium-sized" 378 ("me" "medium")
+"medium-term" 142 ("me" "medium")
+"mediums" 63 ("me" "medium")
+"medley" 148 ("me")
+"meek" 170 ("me")
+"meekly" 170 ("me" "meek")
+"meet" 20801 ("me")
+"meeting" 20801 ("me" "meet")
+"meetings" 5349 ("me" "meet" "meeting")
+"meets" 1418 ("me" "meet")
+"meg" 868 ("me")
+"mega" 208 ("me" "meg")
+"megabytes" 65 ("me" "meg" "mega")
+"megawatts" 51 ("me" "meg" "mega")
+"melancholy" 405 ("me")
+"melanoma" 90 ("me")
+"melee" 54 ("me")
+"mellow" 233 ("me")
+"mellowed" 76 ("me" "mellow")
+"melodic" 259 ("me")
+"melodies" 200 ("me")
+"melodrama" 160 ("me")
+"melodramatic" 122 ("me" "melodrama")
+"melody" 648 ("me")
+"melon" 199 ("me")
+"melons" 90 ("me" "melon")
+"melt" 659 ("me")
+"melted" 556 ("me" "melt")
+"melting" 619 ("me" "melt")
+"melts" 120 ("me" "melt")
+"member" 29677 ("me")
+"members" 29677 ("me" "member")
+"membership" 5268 ("me" "member" "members")
+"memberships" 54 ("me" "member" "members" "membership")
+"membrane" 885 ("me")
+"membranes" 394 ("me" "membrane")
+"memento" 108 ("me")
+"mementos" 52 ("me" "memento")
+"memo" 485 ("me")
+"memoir" 485 ("me" "memo")
+"memoirs" 485 ("me" "memo" "memoir")
+"memorabilia" 162 ("me" "memo")
+"memorable" 852 ("me")
+"memorably" 81 ("me" "memo")
+"memoranda" 158 ("me" "memo")
+"memorandum" 903 ("me")
+"memorial" 1526 ("me")
+"memorials" 145 ("me" "memo" "memorial")
+"memories" 2633 ("me")
+"memorise" 70 ("me" "memo")
+"memory" 7604 ("me")
+"memos" 125 ("me" "memo")
+"men" 38887 ("me")
+"men's" 259 ("me")
+"men-at-arms" 84 ("me")
+"menace" 514 ("me")
+"menaces" 64 ("me" "menace")
+"menacing" 329 ("me")
+"menacingly" 103 ("me" "menacing")
+"menagerie" 52 ("me")
+"mend" 335 ("me" "men")
+"mended" 171 ("me" "men" "mend")
+"mending" 185 ("me" "men" "mend")
+"menfolk" 61 ("me")
+"menial" 110 ("me")
+"meningitis" 225 ("me")
+"menopause" 214 ("me")
+"mens" 187 ("me")
+"menstrual" 144 ("me" "mens")
+"menstruation" 136 ("me" "mens")
+"menswear" 74 ("me" "mens")
+"mental" 5803 ("me")
+"mentality" 366 ("me" "mental")
+"mentally" 1978 ("me" "mental")
+"mention" 6985 ("me")
+"mentioned" 6985 ("me" "mention")
+"mentioning" 507 ("me" "mention")
+"mentions" 495 ("me" "mention")
+"mentor" 259 ("me")
+"mentors" 52 ("me" "mentor")
+"menu" 1595 ("me" "men")
+"menus" 451 ("me" "men" "menu")
+"mercantile" 231 ("me")
+"mercenaries" 166 ("me")
+"mercenary" 143 ("me")
+"mercer" 227 ("me")
+"merchandise" 247 ("me")
+"merchandising" 102 ("me")
+"merchant" 1841 ("me")
+"merchantable" 111 ("me" "merchant")
+"merchants" 1039 ("me" "merchant")
+"mercies" 52 ("me")
+"merciful" 202 ("me")
+"mercifully" 202 ("me" "merciful")
+"merciless" 131 ("me")
+"mercilessly" 118 ("me" "merciless")
+"mercurial" 94 ("me")
+"mercury" 1137 ("me")
+"mercy" 1112 ("me")
+"mere" 7596 ("me")
+"merely" 7596 ("me" "mere")
+"merest" 128 ("me" "mere")
+"merge" 1407 ("me")
+"merged" 602 ("me" "merge")
+"merger" 1407 ("me" "merge")
+"mergers" 722 ("me" "merge" "merger")
+"merges" 63 ("me" "merge")
+"merging" 296 ("me")
+"meridian" 96 ("me")
+"meringue" 61 ("me")
+"merit" 1177 ("me")
+"merited" 102 ("me" "merit")
+"merits" 1058 ("me" "merit")
+"merlin" 215 ("me")
+"mermaid" 91 ("me")
+"mermaids" 51 ("me" "mermaid")
+"merrily" 163 ("me")
+"merriment" 66 ("me")
+"merry" 533 ("me")
+"mesa" 61 ("me")
+"mesh" 416 ("me")
+"mesmerised" 112 ("me")
+"mesozoic" 124 ("me")
+"mess" 2251 ("me")
+"message" 6958 ("me")
+"messages" 1980 ("me" "mess" "message")
+"messaging" 57 ("me" "mess")
+"messed" 160 ("me" "mess")
+"messenger" 531 ("me" "mess")
+"messengers" 159 ("me" "mess" "messenger")
+"messes" 53 ("me" "mess")
+"messiah" 396 ("me" "mess")
+"messianic" 104 ("me" "mess")
+"messing" 294 ("me" "mess")
+"messy" 357 ("me" "mess")
+"met" 14223 ("me")
+"metabolic" 352 ("me")
+"metabolism" 493 ("me")
+"metabolites" 58 ("me")
+"metal" 4625 ("me")
+"metallic" 444 ("me" "metal")
+"metallurgical" 65 ("me" "metal")
+"metallurgy" 76 ("me" "metal")
+"metals" 999 ("me" "metal")
+"metalwork" 140 ("me" "metal")
+"metamorphic" 66 ("me")
+"metamorphosed" 53 ("me")
+"metamorphosis" 110 ("me")
+"metaphor" 904 ("me")
+"metaphoric" 196 ("me" "metaphor")
+"metaphorical" 196 ("me" "metaphor" "metaphoric")
+"metaphorically" 122 ("me" "metaphor" "metaphoric" "metaphorical")
+"metaphors" 323 ("me" "metaphor")
+"metaphysical" 373 ("me")
+"metaphysics" 142 ("me")
+"metastases" 70 ("me")
+"metastatic" 50 ("me")
+"meted" 96 ("me")
+"meteor" 116 ("me")
+"meteoric" 69 ("me" "meteor")
+"meteorite" 116 ("me" "meteor")
+"meteorites" 116 ("me" "meteor" "meteorite")
+"meteorological" 230 ("me")
+"meteorology" 71 ("me" "meteor")
+"meter" 482 ("me")
+"metering" 69 ("me" "meter")
+"meters" 224 ("me" "meter")
+"methadone" 73 ("me")
+"methane" 331 ("me")
+"methanol" 124 ("me")
+"methinks" 61 ("me")
+"method" 9091 ("me")
+"methodical" 147 ("me" "method")
+"methodically" 96 ("me" "method" "methodical")
+"methodism" 91 ("me" "method")
+"methodist" 531 ("me" "method")
+"methodists" 133 ("me" "method" "methodist")
+"methodological" 454 ("me" "method")
+"methodologies" 113 ("me" "method")
+"methodology" 957 ("me" "method")
+"methods" 8953 ("me" "method")
+"methyl" 175 ("me")
+"meticulous" 297 ("me")
+"meticulously" 197 ("me" "meticulous")
+"metre" 3387 ("me")
+"metres" 3387 ("me" "metre")
+"metric" 381 ("me")
+"metrical" 79 ("me" "metric")
+"metro" 409 ("me")
+"metropolis" 221 ("me" "metro")
+"metropolitan" 1679 ("me")
+"mettle" 74 ("me")
+"mews" 107 ("me")
+"mezzanine" 69 ("me")
 "mic" 60
 "mica" 73
 "mice" 1028
@@ -35640,8 +35640,8 @@
 "wrist" 1047
 "wrists" 461 ("wrist")
 "wristwatch" 68 ("wrist")
-"writ" 13672
-"write" 10877 ("writ")
+"writ" 3672
+"write" 10877
 "write-off" 84 ("writ" "write")
 "writer" 3740 ("writ" "write")
 "writers" 3581 ("writ" "write" "writer")

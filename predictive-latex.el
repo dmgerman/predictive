@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5.5
+;; Version: 0.5.6
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,8 +31,13 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.5.6
+;; * fixed some variables that were set globally instead of locally by the
+;;   setup function, add added kill-local-variable lines to the hook function
+;;   to restore the default values when predictive mode is disabled
+;;
 ;; Version 0.5.5
-;; * minor bug fixes
+;; * minor enhancements and bug fixes
 ;;
 ;; Version 0.5.4
 ;; * updated to reflect changes in completion-ui.el
@@ -82,12 +87,18 @@
 (require 'auto-overlay-stack)
 ;;(require 'auto-overlay-stack-sync)
 
+(require 'dict-latex)
+(require 'dict-latex-math)
+(require 'dict-latex-env)
+(require 'dict-latex-docclass)
+(require 'dict-latex-bibstyle)
+
 (provide 'predictive-latex)
 
 
 ;; variable to store identifier from call to `auto-overlay-init'
 (defvar predictive-latex-regexps nil)
-(make-local-variable 'predictive-latex-regexps)
+(make-variable-buffer-local 'predictive-latex-regexps)
 
 ;; set up 'predictive-latex-word to be a `thing-at-point' symbol
 (put 'predictive-latex-word 'forward-op 'predictive-latex-forward-word)
@@ -122,9 +133,14 @@
 	    (completion-construct-browser-menu prefix completions))
 	  ))
   
-  ;; clear overlays when predictive mode is disabled
+  ;; clear overlays and reset variables when predictive mode is disabled
   (add-hook 'predictive-mode-disable-hook
-	    (lambda () (auto-overlay-clear predictive-latex-regexps)))
+	    (lambda ()
+	      (auto-overlay-clear predictive-latex-regexps)
+	      (kill-local-variable 'predictive-main-dict)
+	      (kill-local-variable 'completion-override-syntax-alist)
+	      (kill-local-variable 'completion-browser-menu)
+	      (kill-local-variable 'words-include-escapes)))
   
   ;; setup regexps defining switch-dict regions
   (setq predictive-latex-regexps
@@ -150,6 +166,18 @@
 	   ;; All are ended by } but not by \}. The { is included to ensure
 	   ;; all { and } match, but \{ is excluded.
 	   (stack
+	    (start "\\\\label{" (dict . t) (priority . 2)
+		   (face . (background-color
+			    . ,predictive-latex-debug-color)))
+	    (start "\\\\ref{" (dict . t) (priority . 2)
+		   (face . (background-color
+			    . ,predictive-latex-debug-color)))
+	    (start "\\\\eqref{" (dict . t) (priority . 2)
+		   (face . (background-color
+			    . ,predictive-latex-debug-color)))
+	    (start "\\\\cite{" (dict . t) (priority . 2)
+		   (face . (background-color
+			    . ,predictive-latex-debug-color)))	    
 	    (start "\\\\begin{" (dict . dict-latex-env) (priority . 2)
 		   (completion-browser-menu
 		    . predictive-latex-construct-browser-menu)
@@ -221,29 +249,159 @@
 	   )))
   
   ;; remove AUCTeX bindings so completion ones work
-  (local-unset-key [$?])
-  (local-unset-key [$\"])
+  (local-unset-key [?$])
+  (local-unset-key [?\"])
+  (local-unset-key [?_])
+  (local-unset-key [?^])
+  (local-unset-key [?\\])
+  (local-unset-key [?-])
   
   ;; make "\", "$", "{" and "}" do the right thing
+  (make-local-variable 'completion-override-syntax-alist)
   (setq completion-override-syntax-alist
 	'((?\\ . ((lambda ()
 		    (if (and (char-before) (= (char-before) ?\\))
 			'add 'accept))
-		  . word))
-	  
+		  t word))
+	  (?$  . (accept t none))
+	  (?_ . (accept t none))
+	  (?^ . (accept t none))
 	  (?{ . ((lambda ()
 		   (if (and (char-before) (= (char-before) ?\\))
 		       'add 'accept))
-		 . (lambda ()
-		     (if (auto-overlays-at-point nil
-						 '(eq dict dict-latex-env))
-			 (complete "") 'none))))
-	  
-	  (?}  . (accept . word))
-	  (?\( . (accept . word))
-	  (?\) . (accept . word))
-	  (?$  . (accept . none))
-	  (?\" . (accept . (lambda () (TeX-insert-quote nil) nil)))
+		 t
+		 (lambda ()
+		   (cond
+		    ((auto-overlays-at-point nil
+					     '(eq dict dict-latex-env))
+		     (complete ""))
+		    ((and (char-before) (= (char-before) ?\\))
+		     'word)
+		    (t 'none)))))
+	  (?} . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'word 'none))))
+	  (?\" . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  (lambda ()
+		    (if (or (and (char-before) (= (char-before) ?\\))
+			    (not (fboundp 'TeX-insert-quote)))
+			t
+		      (TeX-insert-quote nil)
+		      nil))
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	  (?' . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?( . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?) . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?+ . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?, . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?- . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?\; . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	  (?< . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?= . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?> . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?[ . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?] . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
+	  (?` . ((lambda ()
+		   (if (and (char-before) (= (char-before) ?\\))
+		       'add 'accept))
+		 t
+		 (lambda ()
+		   (if (and (char-before (1- (point)))
+			    (= (char-before (1- (point))) ?\\))
+		       'word 'none))))
 	  ))
 
   

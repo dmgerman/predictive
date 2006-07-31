@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.3
+;; Version: 0.3.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -94,6 +94,14 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.3.4
+;; * added function to `after-change-functions' to hide tooltip
+;; * made self-insert behaviour alists more flexible
+;; * minor fix to `compeltion-cycle' to leave point at end of word if dynamic
+;;   completion is disabled
+;; * `completion-hotkey-list' no longer a customization option, since it must
+;;    be set *before* completion-ui.el is loaded
+;;
 ;; Version 0.3.3
 ;; * minor bug-fix to `completion-self-insert'
 ;; * removed cl dependency
@@ -131,45 +139,6 @@
 (provide 'completion-ui)
 (require 'auto-overlay-common nil t)
 
-
-
-
-;;; ================================================================
-;;;                Replacements for CL functions
-
-(defun completion--sublist (list start &optional end)
-  "Return the sub-list of LIST from START to END.
-If END is omitted, it defaults to the length of the list
-If START or END is negative, it counts from the end."
-  (let (len)
-    ;; sort out arguments
-    (if end
-	(when (< end 0) (setq end (+ end (setq len (length list)))))
-      (setq end (or len (setq len (length list)))))
-    (when (< start 0)
-      (setq start (+ start (or len (length list)))))
-    
-    ;; construct sub-list
-    (let (res)
-      (while (< start end)
-	(push (nth start list) res)
-	(setq start (1+ start)))
-      (nreverse res)))
-)
-
-
-
-(defun completion--position (item list)
-  "Find the first occurrence of ITEM in LIST.
-Return the index of the matching item, or nil of not found.
-Comparison is done with 'equal."
-  (let (el (i 0))
-    (catch 'found
-      (while (setq el (nth i list))
-	(when (equal item el) (throw 'found i))
-	(setq i (1+ i))
-	nil)))
-)
 
 
 
@@ -296,35 +265,38 @@ progress elsewhere in the buffer:
 (defcustom completion-syntax-alist
   '(
     ;; word constituents add to current completion
-    (?w . (add . word))
-    (?_ . (accept . none))
+    (?w . (add t word))
+    (?_ . (accept t none))
     ;; whitespace and punctuation chars accept current completion
-    (?  . (accept . none))
-    (?. . (accept . none))
+    (?  . (accept t none))
+    (?. . (accept t none))
     ;; anything else rejects the current completion
-    (t  . (reject . none)))
+    (t  . (reject t none)))
   "*Alist associating character syntax with completion behaviour.
 Used by the `completion-self-insert' function to decide what to
 do based on a typed character's syntax. The car should be a
-syntax descriptor, the cdr a cons cell, BEHAVIOUR, whose car
+syntax descriptor, the cdr a list, BEHAVIOUR, whose first entry
 defines the behaviour before a character is inserted, and whose
-cdr defines the completion behaviour after inserting.
+last entry defines the completion behaviour after inserting. (The
+second entry determines whether the typed character is inserted
+or not, but this can only be modified by lisp packages.)
 
-If the car of BEHAVIOUR contains 'accept or 'reject, characters
+If the FIRST ENTRY of BEHAVIOUR is 'accept or 'reject, characters
 with the associated syntax accept or reject any provisional
 completion candidate at the point. 'add causes the character to
 be added to the any completion prefix at the point.
 
-If the cdr of BEHAVIOUR contains 'basic, the prefix at the point
-will be completed. If it contains 'word, it will produce more
-advanced completion behaviour that tries to do the right thing
-with the word at the point. If it is null, no completion will
-take place."
+If the last entry of BEHAVIOUR is 'basic, the prefix at the point
+will be completed. If it is 'word, it will produce more advanced
+completion behaviour that tries to do the right thing with the
+word at the point. If it is 'none, no completion will take
+place."
   :group 'completion-ui
   :type '(alist :key-type (choice character (const :tag "default" t))
-		:value-type (cons (choice (const :tag "accept" accept)
+		:value-type (list (choice (const :tag "accept" accept)
 					  (const :tag "reject" reject)
 					  (const :tag "add" add))
+				  (const t)
 				  (choice (const :tag "basic" basic)
 					  (const :tag "word" word)
 					  (const :tag "none" none))))
@@ -348,12 +320,13 @@ characters rather than syntax descriptors."
 )
 
 
-(defcustom completion-hotkey-list
+;; not a defcustom, since setting it after loading completion-ui.el (as
+;; defcustom typically will ) does not work
+(defvar completion-hotkey-list
   '([?0] [?1] [?2] [?3] [?4] [?5] [?6] [?7] [?8] [?9])
-  "*List of keys (vectors) to use for selecting completions when
-`completion-use-hotkeys' is enabled."
-  :group 'completion-ui
-  :type '(repeat (vector character)))
+  "*List of keys (vectors) to use for selecting completions
+when `completion-use-hotkeys' is enabled. This variable must be
+set *before* completion-ui.el is laoded to take effect.")
 
 
 (defface completion-dynamic-face
@@ -379,6 +352,7 @@ characters rather than syntax descriptors."
 ;; position."
 ;;   :group 'completion-ui
 ;;   :type 'integer)
+
 
 
 
@@ -457,7 +431,6 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 
 
-
 ;;; ============================================================
 ;;;                     Internal variables
 
@@ -482,6 +455,14 @@ in calls to `thing-at-point'.  See `thing-at-point' for more
 details.")
 (make-variable-buffer-local 'completion-word-thing)
 
+
+
+
+;;; =================================================================
+;;;                       Setup hook functions
+
+(add-hook 'after-change-functions
+	  (lambda (&rest unused) (completion-cancel-tooltip)))
 
 
 
@@ -731,6 +712,47 @@ bound to the key sequence."
 
 
 
+
+;;; ================================================================
+;;;                Replacements for CL functions
+
+(defun completion--sublist (list start &optional end)
+  "Return the sub-list of LIST from START to END.
+If END is omitted, it defaults to the length of the list
+If START or END is negative, it counts from the end."
+  (let (len)
+    ;; sort out arguments
+    (if end
+	(when (< end 0) (setq end (+ end (setq len (length list)))))
+      (setq end (or len (setq len (length list)))))
+    (when (< start 0)
+      (setq start (+ start (or len (length list)))))
+    
+    ;; construct sub-list
+    (let (res)
+      (while (< start end)
+	(push (nth start list) res)
+	(setq start (1+ start)))
+      (nreverse res)))
+)
+
+
+
+(defun completion--position (item list)
+  "Find the first occurrence of ITEM in LIST.
+Return the index of the matching item, or nil of not found.
+Comparison is done with 'equal."
+  (let (el (i 0))
+    (catch 'found
+      (while (setq el (nth i list))
+	(when (equal item el) (throw 'found i))
+	(setq i (1+ i))
+	nil)))
+)
+
+
+
+
 ;;; ========================================================
 ;;;                Completion minor mode macro
 
@@ -739,10 +761,10 @@ bound to the key sequence."
   "Define a new completion minor mode MODE.
 FUNCTION should take two arguments, PREFIX and MAXNUM, and return
 at most MAXNUM completion candidates for the PREFIX string. If
-MAXNUM is nil, it should return all completino candidates for
+MAXNUM is nil, it should return all completion candidates for
 PREFIX.
 
-The other arguments are as for `defnie-minor-mode'."
+The other arguments are as for `define-minor-mode'."
 
   `(define-minor-mode ,mode ,doc ,init-value ,lighter ,keymap
     (if ,mode
@@ -1059,31 +1081,32 @@ unless you know what you are doing, it only bind
 		(cdr (assq (char-syntax last-input-event)
 			   completion-syntax-alist))
 		(cdr (assq t completion-syntax-alist))))
-	   (before-insert (car behaviour))
-	   (complete-after (cdr behaviour))
+	   (resolve-behaviour (nth 0 behaviour))
+	   (insert-behaviour (nth 1 behaviour))
+	   (complete-behaviour (nth 2 behaviour))
 	   (overlay (completion-overlay-at-point))
 	   (wordstart (completion-beginning-of-word-p))
 	   prefix)
       
       
       ;; if behaviour alist entry is a function, call it
-      (when (functionp before-insert)
-	(setq before-insert (funcall before-insert)))
+      (when (functionp resolve-behaviour)
+	(setq resolve-behaviour (funcall resolve-behaviour)))
 
       ;; do whatever is specified in alists
       (cond
        ;; no-op
-       ((null before-insert))
+       ((null resolve-behaviour))
        ;; accept
-       ((or (eq before-insert 'accept))
+       ((eq resolve-behaviour 'accept)
 	(completion-accept overlay)
 	(setq prefix (string last-input-event)))
        ;; reject
-       ((eq before-insert 'reject)
+       ((eq resolve-behaviour 'reject)
 	(completion-reject overlay)
 	(setq prefix (string last-input-event)))
        ;; add to prefix
-       ((eq before-insert 'add)
+       ((eq resolve-behaviour 'add)
 	(if (null overlay)
 	    (setq prefix (string last-input-event))
 	  (delete-region (overlay-start overlay)
@@ -1093,25 +1116,31 @@ unless you know what you are doing, it only bind
        ;; error
        (t (error "Invalid entry in `completion-syntax-alist' or\
  `completion-override-syntax-alist', %s"
-		 (prin1-to-string before-insert))))
-      
-      
-      ;; insert typed character and move overlay
-      (self-insert-command 1)
-      (when overlay (move-overlay overlay (point) (point)))
+		 (prin1-to-string resolve-behaviour))))
       
       
       ;; if behaviour alist entry is a function, call it
-      (when (functionp complete-after)
-	(setq complete-after (funcall complete-after)))
+      (when (functionp insert-behaviour)
+	(setq insert-behaviour (funcall insert-behaviour)))
+      ;; insert typed character and move overlay, unless told not to
+      ;; by return value of complete-after function
+      (when insert-behaviour
+	(self-insert-command 1)
+	(when overlay (move-overlay overlay (point) (point))))
+      
+      
+      ;; if behaviour alist entry is a function, call it
+      (when (functionp complete-behaviour)
+	(setq complete-behaviour (funcall complete-behaviour)))
       
       (cond
        ;; no-op
-       ((null complete-after))
+       ((null complete-behaviour))
        
        ;; if not using automatic completion or not completing after
        ;; inserting, resolve any overlay
-       ((or (not completion-auto-complete) (eq complete-after 'none))
+       ((or (not completion-auto-complete)
+	    (eq complete-behaviour 'none))
 	(when overlay
 	  (delete-overlay overlay)
 	  (setq completion-overlay-list
@@ -1120,17 +1149,17 @@ unless you know what you are doing, it only bind
 
        ;; if doing basic completion, or we're in a completion overlay
        ;; or at the beginning of a word, do normal completion
-       ((or (eq complete-after 'basic) overlay wordstart)
+       ((or (eq complete-behaviour 'basic) overlay wordstart)
 	(complete prefix overlay))
        
        ;; if completing word at point, do so
-       ((eq complete-after 'word)
+       ((eq complete-behaviour 'word)
 	(complete-word-at-point overlay))
 
        ;; error
        (t (error "Invalid entry in `completion-syntax-alist' or\
  `completion-override-syntax-alist', %s"
-		 (prin1-to-string complete-after))))
+		 (prin1-to-string complete-behaviour))))
       ))
 )
 
@@ -1440,7 +1469,8 @@ lightening."
       (move-overlay overlay (overlay-start overlay)
 		    (+ (overlay-start overlay) (length string)))
       (overlay-put overlay 'completion-num i)
-      (goto-char (overlay-start overlay))
+      (when completion-use-dynamic
+	(goto-char (overlay-start overlay)))
       ;; display echo text and tooltip if using them
       (when completion-use-echo	(complete-echo overlay))
       (when completion-use-tooltip
@@ -1804,10 +1834,11 @@ inserted dynamic completion."
 (defun completion-cancel-tooltip ()
   "Hide any displayed tooltip and cancel any tooltip timer."
   (interactive)
-  (when (string= window-system "x")
-    (tooltip-hide)
-    (when (timerp completion-tooltip-timer)
-      (cancel-timer completion-tooltip-timer)))
+  (and completion-function
+       (string= window-system "x")
+       (tooltip-hide)
+       (timerp completion-tooltip-timer)
+       (cancel-timer completion-tooltip-timer))
 )
 
 

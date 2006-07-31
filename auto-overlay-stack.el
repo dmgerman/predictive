@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: automatic, overlays, stack
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.2
+;; * bug fix to `auto-o-suicide' behaviour, require change to `auto-o-stack'
 ;;
 ;; Version 0.1.1
 ;; * bug fixes
@@ -204,7 +207,10 @@
 (defun auto-o-stack (o-match)
   ;; Return a list of the overlays that overlap and are of same type as match
   ;; overlay O-MATCH, ordered from innermost to outermost. (Assumes overlays
-  ;; are correctly stacked.)
+  ;; are correctly stacked.) The parent of O-MATCH is guaranteed to come
+  ;; before any other overlay that has exactly the same length (which implies
+  ;; they cover identical regions if overlays are correctly stacked). For
+  ;; other overlays with identical lengths, the order is undefined.
   
   ;; find overlays of same type overlapping O-MATCH
   (let ((overlay-stack (auto-overlays-at-point
@@ -213,12 +219,17 @@
 			  (overlay-get o-match 'delim-start))
 			(list '(eq auto-overlay t)
 			      (list '= 'set (overlay-get o-match 'set))
-			      (list '= 'type (overlay-get o-match 'type))))))
+			      (list '= 'type (overlay-get o-match 'type)))))
+	(o-parent (overlay-get o-match 'parent)))
     ;; sort the list by overlay length, i.e. from innermost to outermose
     (sort overlay-stack
 	  (lambda (a b)
-	    (< (- (overlay-end a) (overlay-start a))
-	       (- (overlay-end b) (overlay-start b))))))
+	    (let ((len-a (- (overlay-end a) (overlay-start a)))
+		  (len-b (- (overlay-end b) (overlay-start b))))
+	      ;; parent of O-MATCH comes before any other overlay with
+	      ;; identical length, otherwise sort by length
+	      (if (= len-a len-b) (eq o-parent a) (< len-a len-b)))))
+    )
 )
 
 
