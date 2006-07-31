@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.3
+;; Version: 0.4
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,6 +43,9 @@
 
 
 ;;; Change log:
+;;
+;; Version 0.4
+;; * fixed bug in dict-read-line
 ;;
 ;; Version 0.3
 ;; * added dict-map function
@@ -858,32 +861,23 @@ that has side-effects."
 
 
 
-
+;;; FIXME: doesn't fail gracefully if file has invalid format
 (defun dict-read-line ()
   ;; Return a cons containing the word and data (if any, otherwise 0) at the
   ;; current line of the current buffer. Returns nil if line is in wrong
   ;; format.
   
   (save-excursion
-    ;; search for text between quotes "", ignoring escaped quotes \"
-    (beginning-of-line)
-    (let ((limit (line-end-position)))
-      (if (null (search-forward "\"" limit t))
-	  nil   ; return nil if line was not in correct format
-	(let ((mark (point)) _word data)
-	  (if (null (re-search-forward "[^\\]\"" limit t))
-	      nil  ; return nil if line was not in correct format
-	    ;; if we've found some text, store it
-	    (setq _word (buffer-substring mark (1- (point))))
-	    ;; skip forward over whitespace
-	    (skip-syntax-forward " " limit)
-	    ;; if there is anything after the quoted text, use it as data
-	    (if (eq (line-end-position) (point))
-		(cons _word nil)
-	      (setq data (eval (read (current-buffer))))
-	      ;; return the word and data
-	      (cons _word data)))
-	))))
+    (let (data)
+      ;; search for text between quotes "", ignoring escaped quotes \"
+      (beginning-of-line)
+      (setq _word (read (current-buffer)))
+      ;; if there is anything after the quoted text, use it as data
+      (if (eq (line-end-position) (point))
+	  (cons _word nil)
+	(setq data (eval (read (current-buffer))))
+	;; return the word and data
+	(cons _word data))))
 )
 
 
