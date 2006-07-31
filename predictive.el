@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.3
+;; Version: 0.3.1
 ;; Keywords: predictive, completion
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -27,6 +27,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.1
+;; * fixed bugs in switch-dictionary regions
 ;;
 ;; Version 0.3
 ;; * added significantly more powerful dictionary switching features
@@ -1145,6 +1148,10 @@ that was automatically accepted or abandoned because the had point moved."
 				 (match-beginning 0))
 			      (+ (- point (length predictive-typed-string))
 				 (match-end 0))
+			      (+ (- point (length predictive-typed-string))
+				 (match-beginning group))
+			      (+ (- point (length predictive-typed-string))
+				 (match-end group))
 			      regexp sequence))
 	    (unless (predictive-matched-p
 		     (length predictive-switch-dict-regexps)
@@ -1162,18 +1169,14 @@ that was automatically accepted or abandoned because the had point moved."
 	    ;; look for matches in current line
 	    (forward-line 0)
 	    (while (re-search-forward regexp (line-end-position) t)
-	      (setq match (list (match-beginning group)
-				(match-end group) regexp sequence))
-	      ;; if match is part of an existing match overlay, check if new
-	      ;; match should take precedence
-	      (if (setq o (predictive-matched-p type (nth 0 match)
-						(nth 1 match)))
-		  (when (< sequence (overlay-get o 'sequence))
-		    (move-overlay o (nth match 0) (nth match 1))
-		    (overlay-put o 'regexp (nth match 2))
-		    (overlay-put o 'sequence sequence))
-		
-		;; if match isn't part of an existing match overlay...
+	      (setq match (list (match-beginning 0) (match-end 0)
+				(match-beginning group) (match-end group)
+				regexp sequence))
+	      ;; ignore match if it is already part of an existing match
+	      ;; overlay
+	      (unless (setq o (predictive-matched-p type
+						    (match-beginning group)
+						    (match-end group)))
 		(setq beg (match-beginning group))
 		(setq end (match-end group))
 		(setq overlay-stack (predictive-overlay-stack type beg))
@@ -1190,7 +1193,7 @@ that was automatically accepted or abandoned because the had point moved."
 			     (overlay-get (setq o (car overlay-stack))
 					  'end-match)))
 		       (>= beg (overlay-start o)))
-		  (predictive-match-overlay o 'end beg match))
+		  (predictive-match-overlay o 'end match))
 		  
 		  ;; otherwise, have to sort out overlay stack...
 		  (t
@@ -1216,11 +1219,16 @@ that was automatically accepted or abandoned because the had point moved."
 				 props)))
 		     (push o1 overlay-stack)
 		     ;; match the existing one with the new delimiter
-		     (predictive-match-overlay o 'end beg match))
+		     (predictive-match-overlay o 'end match))
 		   
 		   ;; sort out the overlay stack
-		   (predictive-cascade-overlays overlay-stack)))
-		 ))))
+		   (predictive-cascade-overlays overlay-stack))))
+	      
+	      ;; go to character one beyond the start of the match, to make
+	      ;; sure we don't miss the next match (if we find the same one
+	      ;; again, it will just be ignored)
+	      (goto-char (+ (match-beginning 0) 1))
+	      )))
 	 
 	 
 	 ;; if delimiter starts a dict-switch region...
@@ -1229,16 +1237,25 @@ that was automatically accepted or abandoned because the had point moved."
 	    ;; look for matches in current line
 	    (forward-line 0)
 	    (while (re-search-forward regexp (line-end-position) t)
-	      (setq match (list (match-beginning group)
-				(match-end group) regexp sequence))
-	      ;; if match is part of an existing match overlay, check if new
-	      ;; match should take precedence
-	      (if (setq o (predictive-matched-p type (nth 0 match)
-						(nth 1 match)))
-		  (when (< sequence (overlay-get o 'sequence))
-		    (move-overlay o (nth match 0) (nth match 1))
-		    (overlay-put o 'regexp (nth match 2))
-		    (overlay-put o 'sequence sequence))
+	      (setq match (list (match-beginning 0) (match-end 0)
+				(match-beginning group) (match-end group)
+				regexp sequence))
+	      
+	      ;; if match is part of an existing match overlay...
+	      (if (setq o (predictive-matched-p type (match-beginning group)
+						(match-end group)))
+		  (cond
+		   ;; if existing match overlay is not a start overlay, throw
+		   ;; an error since start and end regexps are not allowed to
+		   ;; match overlapping text
+		   ((not (eq (overlay-get o 'edge) 'start))
+		    (error "'start and 'end regexps of same type matched\
+ overlapping text"))
+		   ;; check if new match should take precedence
+		   ((< sequence (overlay-get o 'sequence))
+		    (predictive-match-overlay (overlay-get o 'parent)
+					      (overlay-get o 'edge)
+					      match)))
 		
 		;; if match isn't part of an existing match overlay...
 		(setq beg (match-beginning group))
@@ -1257,7 +1274,7 @@ that was automatically accepted or abandoned because the had point moved."
 		 ((not (overlay-start
 			(overlay-get (setq o (car overlay-stack))
 				     'start-match)))
-		  (predictive-match-overlay o 'start end match)
+		  (predictive-match-overlay o 'start match)
 		  ;; start delimiter's properties override those of end
 		  ;; delimiter
 		  (dolist (p props) (overlay-put o (car p) (cdr p))))
@@ -1268,8 +1285,13 @@ that was automatically accepted or abandoned because the had point moved."
 						 match nil props)
 			overlay-stack)
 		  ;; sort out the overlay stack
-		  (predictive-cascade-overlays overlay-stack)))
-		))))
+		  (predictive-cascade-overlays overlay-stack))))
+	      
+	      ;; go to character one beyond the start of the match, to make
+	      ;; sure we don't miss the next match (if we find the same one
+	      ;; again, it will just be ignored)
+	      (goto-char (+ (match-beginning 0) 1))
+	      )))
 	   
 	   
 	   ;; if delimiter ends a switch-dict-region...
@@ -1278,16 +1300,25 @@ that was automatically accepted or abandoned because the had point moved."
 	    ;; look for matches in current line
 	    (forward-line 0)
 	    (while (re-search-forward regexp (line-end-position) t)
-	      (setq match (list (match-beginning group)
-				(match-end group) regexp sequence))
-	      ;; if match is part of an existing match overlay, check if new
-	      ;; match should take precedence
-	      (if (setq o (predictive-matched-p type (nth 0 match)
-						(nth 1 match)))
-		  (when (< sequence (overlay-get o 'sequence))
-		    (move-overlay o (nth match 0) (nth match 1))
-		    (overlay-put o 'regexp (nth match 2))
-		    (overlay-put o 'sequence sequence))
+	      (setq match (list (match-beginning 0) (match-end 0)
+				(match-beginning group) (match-end group)
+				regexp sequence))
+
+	      ;; if match is part of an existing match overlay...
+	      (if (setq o (predictive-matched-p type (match-beginning group)
+						(match-end group)))
+		  (cond
+		   ;; if existing match overlay is not an end overlay, throw
+		   ;; an error since start and end regexps are not allowed to
+		   ;; match overlapping text
+		   ((not (eq (overlay-get o 'edge) 'end))
+		    (error "'start and 'end regexps of same type matched\
+ overlapping text"))
+		   ;; check if new match should take precedence
+		   ((< sequence (overlay-get o 'sequence))
+		    (predictive-match-overlay (overlay-get o 'parent)
+					      (overlay-get o 'edge)
+					      match)))
 		
 		;; if match isn't part of an existing match overlay...
 		(setq beg (match-beginning group))
@@ -1305,7 +1336,7 @@ that was automatically accepted or abandoned because the had point moved."
 		 ;; match it and we're done
 		 ((not (overlay-start
 			(overlay-get (setq o (car overlay-stack)) 'end-match)))
-		  (predictive-match-overlay o 'end beg match))
+		  (predictive-match-overlay o 'end match))
 		 
 		 (t ; if innermost overlay is already end-matched...
 		  ;; create new innermost overlay ending at the new delimiter,
@@ -1314,16 +1345,23 @@ that was automatically accepted or abandoned because the had point moved."
 						 nil match props)
 			overlay-stack)
 		;; sort out the overlay stack
-		(predictive-cascade-overlays overlay-stack)))
-		))))
+		(predictive-cascade-overlays overlay-stack))))
+	      
+	      ;; go to character one beyond the start of the match, to make
+	      ;; sure we don't miss the next match (if we find the same one
+	      ;; again, it will just be ignored)
+	      (goto-char (+ (match-beginning 0) 1))
+	      )))
 	 ))))
 )
 
 
 
 (defun predictive-make-overlay (type start end start-match end-match props)
-  ;; Create a switch-dict overlay with the appropriate settings, and add it to
-  ;; the predictive-switch-dict-overlays list.
+  ;; Create a switch-dict overlay of type TYPE from START to END, and add it
+  ;; to the predictive-switch-dict-overlays list. (See
+  ;; `predictive-make-match-overlay' for the format of START-MATCH and
+  ;; END-MATCH.)
   
   (let (o-new marker)
     ;; create the new overlay
@@ -1332,11 +1370,9 @@ that was automatically accepted or abandoned because the had point moved."
     (overlay-put o-new 'type type)
     
     ;; create overlay's start-match overlay
-    (overlay-put o-new 'start-match
-	(predictive-make-match-overlay 'start type start start-match))
+    (predictive-make-match-overlay o-new 'start type start-match)
     ;; create overlay's end-match overlay
-    (overlay-put o-new 'end-match
-	(predictive-make-match-overlay 'end type end end-match))
+    (predictive-make-match-overlay o-new 'end type end-match)
     
     ;; give new overlay the supplied properties
     (dolist (p props) (overlay-put o-new (car p) (cdr p)))
@@ -1348,29 +1384,54 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
-(defun predictive-make-match-overlay (edge type boundary match)
-  ;; Create a switch-dict match overlay.
-  (let (o-match marker)
+(defun predictive-make-match-overlay (overlay edge type match)
+  ;; Create a switch-dict match overlay for edge EDGE ('start or 'end) of
+  ;; switch-dict overlay OVERLAY, with properties given by MATCH. If MATCH is
+  ;; nil, the overlay is created as a lisp object but not in the
+  ;; buffer. Otherwise, MATCH should be a list of the form:
+  ;;
+  ;;   (START END DELIM-START DELIM-END REGEXP SEQUENCE).
+  ;;
+  ;; START and END specify the start and end of the overlay, DELIM-START and
+  ;; DELIM-END specify the start and end of the text within the overlay that
+  ;; forms the delimiter, REGEXP is the regexp that the overlay matches, and
+  ;; SEQUENCE is it's position in the list of regexps of type TYPE.
+  
+  (let ((type (overlay-get overlay 'type))
+	(start (nth 0 match))
+	(end (nth 1 match))
+	(delim-start (nth 2 match))
+	(delim-end (nth 3 match))
+	(regexp (nth 4 match))
+	(sequence (nth 5 match))
+	o-match marker)
+    
     ;; if it's matched, create it with the appropriate properties
     (if match
 	(progn
-	  (setq o-match (make-overlay (nth 0 match) (nth 1 match) nil t nil))
-	  (overlay-put o-match 'regexp (nth 2 match))
-	  (overlay-put o-match 'sequence (nth 3 match)))
+	  (setq o-match (make-overlay start end nil t nil))
+	  (overlay-put o-match 'regexp regexp)
+	  (overlay-put o-match 'sequence sequence)
+	  (overlay-put o-match 'delim-start
+		       (set-marker (make-marker) delim-start))
+	  (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
+	  (overlay-put o-match 'delim-end
+		       (set-marker (make-marker) delim-end))
+	  (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
       ;; otherwise, create an empty overlay
       (setq o-match (make-overlay (point-min) (point-min) nil t nil))
       (delete-overlay o-match))
+    
+    ;; set the invariant match-overlay properties
     (overlay-put o-match 'predictive-switch-dict-match t)
+    (overlay-put o-match 'parent overlay)
     (overlay-put o-match 'type type)
-    ;; create the marker marking the boundary of it's parent switch-dict
-    ;; region overlay
-    (setq marker (set-marker (make-marker) boundary))
-    (if (eq edge 'start)
-	(set-marker-insertion-type marker nil)
-      (set-marker-insertion-type marker t))
-    (overlay-put o-match 'boundary marker)
+    (overlay-put o-match 'edge edge)
     (overlay-put o-match 'modification-hooks
 		 (list 'predictive-overlay-suicide))
+    ;; assign the match-overlay to the appropriate edge of OVERLAY
+    (overlay-put overlay (if (eq edge 'start) 'start-match 'end-match)
+		 o-match)
     ;; return the new overlay
     o-match)
 )
@@ -1394,9 +1455,11 @@ that was automatically accepted or abandoned because the had point moved."
 				     (overlay-end o-self)))))
     (delete-overlay o-self)
     (predictive-cascade-overlays
-     (predictive-overlay-stack (overlay-get o-self 'type)
-			       (overlay-get o-self 'boundary)))
-    (predictive-switch-dict (overlay-get o-self 'boundary)))
+     (predictive-overlay-stack
+      (overlay-get o-self 'type)
+      (overlay-get o-self (if (eq (overlay-get o-self 'edge) 'start)
+			      'delim-end 'delim-end))))
+    (predictive-switch-dict (overlay-get o-self 'delim-start)))
 )
 
 
@@ -1436,24 +1499,43 @@ that was automatically accepted or abandoned because the had point moved."
 
 
 
-(defun predictive-match-overlay (overlay edge boundary match)
+(defun predictive-match-overlay (overlay edge match)
   ;; Matches the start (if EDGE is 'start) or end (if it's 'end) of
-  ;; switch-dict overlay OVERLAY, setting the appropriate edge of the overlay
-  ;; to boundary, and setting the appropriate match-overlay's properties
-  ;; according to MATCH,which should be a list of the form
-  ;; (START END REGEXP SEQUENCE).
-  (let ((o-match
-	 (overlay-get overlay (if (eq edge 'start) 'start-match 'end-match))))
-    (move-overlay overlay
-		  (if (eq edge 'start) (if boundary boundary (point-min))
-		    (overlay-start overlay))
-		  (if (eq edge 'end) (if boundary boundary (point-max))
-		    (overlay-end overlay)))
+  ;; switch-dict overlay OVERLAY, setting the position of the appropriate edge
+  ;; of the overlay, and setting the corresponding match-overlay's properties
+  ;; according to MATCH (see `predictive-make-match-overlay' for details). If
+  ;; MATCH is nil, unmatches the appropriate edge instead.
+  
+  (let ((start (nth 0 match))
+	(end (nth 1 match))
+	(delim-start (nth 2 match))
+	(delim-end (nth 3 match))
+	(regexp (nth 4 match))
+	(sequence (nth 5 match))
+	(o-match (overlay-get
+		  overlay (if (eq edge 'start) 'start-match 'end-match))))
+    
+    ;; move appropriate edge of the overlay to the new position
+    (if (eq edge 'start)
+	(move-overlay overlay (if delim-end delim-end (point-min))
+		      (overlay-end overlay))
+      (move-overlay overlay (overlay-start overlay)
+		    (if delim-start delim-start (point-max))))
+    
+    ;; if we're unmatching the overlay, delete it
     (if (not match)
 	(delete-overlay o-match)
-      (move-overlay o-match (nth 0 match) (nth 1 match))
-      (overlay-put o-match 'regexp (nth 2 match))
-      (overlay-put o-match 'sequence (nth 3 match))))
+      ;; otherwise, update its properties according to MATCH
+      (move-overlay o-match start end)
+      (overlay-put o-match 'regexp regexp)
+      (overlay-put o-match 'sequence sequence)
+      (overlay-put o-match 'delim-start
+		   (set-marker (make-marker) delim-start))
+      (set-marker-insertion-type (overlay-get o-match 'delim-start) t)
+      (overlay-put o-match 'delim-end
+		   (set-marker (make-marker) delim-end))
+      (set-marker-insertion-type (overlay-get o-match 'delim-end) nil))
+    )
 )
 
 
@@ -1491,14 +1573,17 @@ that was automatically accepted or abandoned because the had point moved."
       (save-excursion
 	;; prevent match overlays from deleting themselves
 	(with-predictive-block-overlay-suicide
-	 (goto-char point)
-	 (insert " ")
-	 (mapc (lambda (o)
-		 (when (and (overlay-get o 'predictive-switch-dict-region)
-			    (= (overlay-get o 'type) type))
-		   (push o overlay-stack)))
-	       (overlays-in (- (point) 1) (point)))
-	 (delete-backward-char 1)))
+	 (let ((modified (buffer-modified-p)))
+	   (goto-char point)
+	   (insert " ")
+	   (mapc (lambda (o)
+		   (when (and (overlay-get o 'predictive-switch-dict-region)
+			      (= (overlay-get o 'type) type))
+		     (push o overlay-stack)))
+		 (overlays-in (- (point) 1) (point)))
+	   (delete-backward-char 1)
+	   ;; restore buffer's modified flag
+	   (set-buffer-modified-p modified))))
       ;; sort the list by overlay length, i.e. from innermost to outermose
       (sort overlay-stack
 	    (lambda (a b)
@@ -1517,7 +1602,9 @@ that was automatically accepted or abandoned because the had point moved."
     (catch 'match
       (mapc (lambda (o)
 	      (when (and (overlay-get o 'predictive-switch-dict-match)
-			 (= (overlay-get o 'type) type))
+			 (= (overlay-get o 'type) type)
+			 (>= beg (overlay-get o 'delim-start))
+			 (<= end (overlay-get o 'delim-end)))
 		(setq o-match o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
@@ -1554,7 +1641,8 @@ that was automatically accepted or abandoned because the had point moved."
 	    (setq n (- (overlay-end (overlay-get o 'start-match))
 		       (overlay-start (overlay-get o 'start-match))))
 	    (move-overlay o (point-min) (- (overlay-start o) n))
-	    (overlay-put o 'end-match (overlay-get o 'start-match)))
+	    (overlay-put o 'end-match (overlay-get o 'start-match))
+	    (overlay-put (overlay-get o 'end-match) 'edge 'end))
 	  
 	  ;; "flip" overlays until one is left
 	  (dotimes (i (- (length overlay-stack) 1))
@@ -1568,11 +1656,10 @@ that was automatically accepted or abandoned because the had point moved."
 	    ;; flip current overlay
 	    (move-overlay o (+ (overlay-end o) n) (- (overlay-start o1) n1))
 	    (overlay-put o 'start-match (overlay-get o 'end-match))
-	    (overlay-put (overlay-get o 'start-match)
-			 'boundary (overlay-start o))
+	    (overlay-put (overlay-get o 'start-match) 'edge 'start)
 	    (overlay-put o 'end-match (overlay-get o1 'start-match))
-	    (overlay-put (overlay-get o 'end-match)
-			 'boundary (overlay-end o)))
+	    (overlay-put (overlay-get o 'end-match) 'parent o)
+	    (overlay-put (overlay-get o 'end-match) 'edge 'end))
 	  
 	  ;; if final overlay is end-unmatched, delete it
 	  (setq o (car (last overlay-stack)))
@@ -1585,8 +1672,10 @@ that was automatically accepted or abandoned because the had point moved."
 		       (overlay-start (overlay-get o 'end-match))))
 	    (move-overlay o (+ (overlay-end o) n) (point-max))
 	    (overlay-put o 'start-match (overlay-get o 'end-match))
-	    (overlay-put o 'end-match (predictive-make-match-overlay
-				       'end type (point-max) nil)))
+	    (overlay-put (overlay-get o 'start-match) 'edge 'start)
+	    ;; need to create new end match-overlay since existing one is now
+	    ;; used by previous flipped overlay
+	    (predictive-make-match-overlay o 'end type nil))
 	  ))
        
        
@@ -1598,7 +1687,8 @@ that was automatically accepted or abandoned because the had point moved."
 	  (setq o (nth i overlay-stack))
 	  (setq o1 (nth (+ i 1) overlay-stack))
 	  (move-overlay o (overlay-start o) (overlay-end o1))
-	  (overlay-put o 'end-match (overlay-get o1 'end-match)))
+	  (overlay-put o 'end-match (overlay-get o1 'end-match))
+	  (overlay-put (overlay-get o 'end-match) 'parent o))
 	
 	;; if final overlay is start-unmatched, delete it
 	(if (not (overlay-start
@@ -1609,7 +1699,7 @@ that was automatically accepted or abandoned because the had point moved."
 	    (predictive-delete-overlay o nil t)
 	  ;; otherwise, make it end-unmatched
 	  (move-overlay o (overlay-start o) (point-max))
-	  (predictive-match-overlay o 'end nil nil)))
+	  (predictive-make-match-overlay o 'end type nil)))
        
        
        ;; if innermost overlay is start-unmatched...
@@ -1641,6 +1731,7 @@ that was automatically accepted or abandoned because the had point moved."
 	    (setq o1 (nth (- i 1) overlay-stack))
 	    (move-overlay o (overlay-start o) (overlay-end o1))
 	    (overlay-put o 'end-match (overlay-get o1 'end-match))
+	    (overlay-put (overlay-get o 'end-match) 'parent o)
 	    (setq i (- i 1))))
 	;; delete the innermost overlay, protecting its end-match overlay
 	;; since the next overlay down the stack now uses it
@@ -1659,12 +1750,15 @@ that was automatically accepted or abandoned because the had point moved."
     ;; find overlays at point
     (save-excursion
       (with-predictive-block-overlay-suicide
-       (goto-char point)
-       (insert " ")
-       (mapc (lambda (o) (when (overlay-get o 'predictive-switch-dict-region)
-			   (push o overlay-list)))
-	     (overlays-in (- (point) 1) (point)))
-       (delete-backward-char 1)))
+       (let ((modified (buffer-modified-p)))
+	 (goto-char point)
+	 (insert " ")
+	 (mapc (lambda (o) (when (overlay-get o 'predictive-switch-dict-region)
+			     (push o overlay-list)))
+	       (overlays-in (- (point) 1) (point)))
+	 (delete-backward-char 1)
+	 ;; restore buffer's modified flag
+	 (set-buffer-modified-p modified))))
     
     ;; search for highest priority overlay
     (setq overlay (pop overlay-list))
@@ -2135,13 +2229,19 @@ intrusive you want it to be. See variables `predictive-dynamic-completion' and
       (push nil predictive-switch-dict-overlays))
     
     ;; re-establish the switch-dictionary overlays
-    (message "Scanning for switch-dictionary regions...")
-    (save-excursion
-      (goto-char (point-min))
-      (while (< (point) (point-max))
-	(predictive-switch-dict)
-	(forward-line 1)))
-    (message "Scanning for switch-dictionary regions...done")
+    (let ((lines (count-lines (point-min) (point-max))))
+      (save-excursion
+	(goto-char (point-min))
+	(message "Scanning for switch-dictionary regions (line 1 of %d)..."
+		 lines)
+	(dotimes (i lines)
+	  (when (= 9 (mod i 10))
+	    (message
+	     "Scanning for switch-dictionary regions (line %d of %d)..."
+	     (+ i 1) lines))
+	  (predictive-switch-dict)
+	  (forward-line 1)))
+      (message "Scanning for switch-dictionary regions...done"))
     
     ;; initialise internal variables
     (predictive-reset-state))
