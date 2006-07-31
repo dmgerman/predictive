@@ -1,29 +1,31 @@
 
 ;;; tstree.el --- ternary search tree package
 
-;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
-;; Author: Toby Cubitt
-;; Version: 0.4
+;; Copyright (C) 2004-2006 Toby Cubitt
+
+;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Version: 0.5
 ;; Keywords: ternary search tree, tstree
+;; URL: http://www.dr-qubit.org/emacs.php
 
-;; This file is part of the Emacs Predictive Completion package.
+
+;; This file is NOT part of Emacs.
 ;;
-;; The Emacs Predicive Completion package is free software; you can
-;; redistribute it and/or modify it under the terms of the GNU
-;; General Public License as published by the Free Software
-;; Foundation; either version 2 of the License, or (at your option)
-;; any later version.
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
 ;;
-;; The Emacs Predicive Completion package is distributed in the hope
-;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;; PURPOSE.  See the GNU General Public License for more details.
-;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
 ;; You should have received a copy of the GNU General Public License
-;; along with the Emacs Predicive Completion package; if not, write
-;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;; Boston, MA 02111-1307 USA
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
 
 
 ;;; Commentary:
@@ -41,6 +43,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5
+;; * completion functions now return lists instead of vectors
 ;;
 ;; Version 0.4
 ;; * removed elib dependency by replacing elib stacks with lists
@@ -250,7 +255,7 @@ The optional RANK-FUNCTION takes two arguments, each a cons whose
 car is an array (vector or string) referencing data in the tree,
 and whose cdr is the data at that reference. It should return
 non-nil if the first argument is \"better than\" the second, nil
-otherwise. It defaults numerical comparison of the data using
+otherwise. It defaults to numerical comparison of the data using
 \"greater than\". Used by `tstree-complete-ordered' to rank
 completions."
 
@@ -262,10 +267,10 @@ completions."
 		    (cond ((and (null a) (null b)) 0) ((null a) -1)
 			  ((null b) 1) (t (,cmpfun a b)))))
 	 ;; insert-function defaults to "replace".
-	 (insfun (if insert-function insert-function '(lambda (a b) a)))
+	 (insfun (if insert-function insert-function (lambda (a b) a)))
 	 ;; rank function defaults to >
 	 (rankfun (if rank-function rank-function
-		    '(lambda (a b) (> (cdr a) (cdr b))))))
+		    (lambda (a b) (> (cdr a) (cdr b))))))
   
     (cons 'TSTREE
 	  (cons (tst-node-create nil nil nil t)
@@ -507,18 +512,17 @@ reference the tree can not be converted to a string by the
 
 
 (defun tstree-complete (tree string &optional maxnum all filter)
-  "Return a vector containing all completions of STRING found in
-ternary searh tree TREE, in \"lexical\" order (i.e. the order
-defined by the tree's comparison function). Each element of the
-returned vector is a cons containing the completed \"string\" and
-its associated data. If no completions are found, return nil.
+  "Return an alist containing all completions of STRING found in
+ternary searh tree TREE along with their associated data, in
+\"lexical\" order (i.e. the order defined by the tree's
+comparison function). If no completions are found, return nil.
 
 STRING must either be an array (vector or string) containing
 elements of the type used to reference data in the tree, or a
 list of such arrays. (Thus if the tree stores real strings,
 STRING can be a string or a list of strings.) If a list is
 supplied, completions of all elements of the list are included in
-the returned vector.
+the returned alist.
 
 The optional numerical argument MAXNUM limits the results to the
 first MAXNUM completions. If it is absent or nil, all completions
@@ -534,7 +538,7 @@ completion with two arguments: the completion, and its associated
 data. If the filter function returns nil, the completion is not
 included in the results."
   
-  (let (stack (completions []))
+  (let (stack completions)
     
     ;; ----- initialise the stack -----
     (let ((strlist (if (listp string) (reverse (sort string 'string<))
@@ -578,8 +582,7 @@ included in the results."
 	  (when (or (null filter)
 		    (funcall filter str (tst-node-equal node)))
 	    (setq completions
-		  (vconcat completions
-			   (vector (cons str (tst-node-equal node)))))
+		  (cons (cons str (tst-node-equal node)) completions))
 	    (setq num (1+ num))))
 	  
         ;; add the low child to the stack, if it exists
@@ -589,9 +592,8 @@ included in the results."
 	))
 
     
-    ;; return nil if no completions were found, otherwise return the vector of
-    ;; completions
-    (if (= 0 (length completions)) nil completions))
+    ;; return the list of completions
+    (nreverse completions))
 )
 
 
@@ -599,10 +601,9 @@ included in the results."
 
 (defun tstree-complete-ordered
   (tree string &optional maxnum all rank-function filter)
-  "Return a vector containing all completions of STRING found in
-ternary search tree TREE. Each element of the returned vector is
-a cons containing the completed \"string\" and its associated
-data. If no completions are found, return nil.
+  "Return an alist containing all completions of STRING found in
+ternary search tree TREE, along with their associated data. If no
+completions are found, return nil.
 
 Note that `tstree-complete' is significantly more efficient than
 `tstree-complete-ordered', especially when a maximum number of
@@ -618,7 +619,7 @@ elements of the type used to reference data in the tree, or a
 list of such arrays. (Thus if the tree stores real strings,
 STRING can be a string or a list of strings.) If a list is
 supplied, completions of all elements of the list are included in
-the returned vector.
+the returned alist.
 
 The optional numerical argument MAXNUM limits the results to the
 \"best\" MAXNUM completions. If nil, all completions are
@@ -633,7 +634,7 @@ rank function. It should take two arguments, each a cons whose
 car is a vector referencing data in the tree, and whose cdr is
 the data at that reference. It should return non-nil if the first
 argument is \"better than\" the second, nil otherwise. The
-elements of the returned vector are sorted according to this
+elements of the returned alist are sorted according to this
 rank-function, in descending order.
 
 The FILTER argument sets a filter function for the
@@ -642,7 +643,7 @@ completion with two arguments: the completion, and its associated
 data. If the filter function returns nil, the completion is not
 included in the results."
   
-  (let* (stack heap (completions []))
+  (let* (stack heap completions)
     
     
     ;; ----- initialise the stack and heap -----
@@ -709,16 +710,13 @@ included in the results."
       
       
     ;; ----- create the completions vector -----
-    (setq completions [])
     ;; repeatedly transfer the worst completion left in the heap to the
     ;; front of the completions vector
     (while (not (heap-empty heap))
-      (setq completions
-	    (vconcat (vector (heap-delete-root heap)) completions)))
+      (setq completions (cons (heap-delete-root heap) completions)))
     
-    ;; return nil if no completions were found, otherwise return the vector of
-    ;; completions
-    (if (= 0 (length completions)) nil completions))
+    ;; return the list of completions
+    completions)
 )
 
 

@@ -1,33 +1,34 @@
 
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
-;; Copyright (C) 2004 2005 2006 Toby Cubitt
 
-;; Author: Toby Cubitt
-;; Version: 0.9.1
+;; Copyright (C) 2004-2006 Toby Cubitt
+
+;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Version: 0.9.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
+
 ;; This file is part of the Emacs Predictive Completion package.
 ;;
-;; The Emacs Predicive Completion package is free software; you can
-;; redistribute it and/or modify it under the terms of the GNU
-;; General Public License as published by the Free Software
-;; Foundation; either version 2 of the License, or (at your option)
-;; any later version.
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
 ;;
-;; The Emacs Predicive Completion package is distributed in the hope
-;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;; PURPOSE.  See the GNU General Public License for more details.
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with the Emacs Predicive Completion package; if not, write
-;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;; Boston, MA 02111-1307 USA
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
 
 
-;;; Install
+;;; Install:
 ;;
 ;; Put the Predictive Completion package files in your load-path, and add the
 ;; following to your .emacs:
@@ -36,17 +37,27 @@
 ;;
 ;; Alternatively, you can use autoload instead to save memory:
 ;;
-;;     (autoload 'predictive-mode "/path/to/predictive.elc")
+;;     (autoload 'predictive-mode "/path/to/predictive.elc" t)
 
 
 ;;; Change Log:
+;;
+;; Version 0.10
+;; * added back `predictive-scoot-ahead' function
+;; * documented keys in mode function's docstring (thanks to Mark Zonzon for
+;;   patch)
+;; * `predictive-completion' package renamed to `completion-ui'
+;; * dictionaries can now store list of prefices for each word, whose weights
+;;   are automatically kept at least as large as word's
+;; * modified `predictive-add-to-dict' to take prefices into acount, and added
+;;   `predictive-define-prefix' and `predictive-undefine-prefix' functions
 ;;
 ;; Version 0.9.1
 ;; * moved defmacros before their first use so byte-compilation works (thanks
 ;;   to Dan Nicolaescu for pointing out this problem)
 ;;
 ;; Version 0.9
-;; * modified to use new completion package
+;; * modified to use new `predictive-completion' package
 ;; * tweaked auto-learn caching (again)
 ;; * now uses command remapping for main keymap if available
 ;;
@@ -116,8 +127,8 @@
 ;;; Code:
 
 (provide 'predictive)
-(require 'predictive-completion)
-(require 'dict)
+(require 'completion-ui)
+(require 'dict-tree)
 (require 'auto-overlays)
 (require 'timerfunctions)
 (require 'easy-mmode)
@@ -136,7 +147,7 @@
 ;;; ================================================================
 ;;;          Customization variables controling predictive mode 
 
-(defgroup predictive nil
+(defgroup predictive '((completion-ui custom-group))
   "Predictive completion."
   :group 'convenience)
 
@@ -610,9 +621,32 @@ mode. Use the command `predictive-mode' instead.
 Predictive Completion mode implements predictive text completion,
 in an attempt to save on typing. It looks up completions for the
 word currently being typed in a dictionary. See the `predictive'
-customization group for documentation on the various
-configuration options, and the Predictive Completion mode manual
-for fuller information."
+and `completion-ui' customization groups for documentation on the
+various configuration options, and the Predictive Completion mode
+manual for fuller information.
+
+If the `completion-use-dynamic' customization option is enabled,
+typing a character in predictive mode will either add to, accept
+or reject the current dynamic completion, depending on the
+character's syntax.
+
+You can also use the following keys when completing a word:
+\\<completion-dynamic-map>
+\\[completion-accept] \t\t Accept current dynamic completion.
+\\[completion-reject] \t\t Reject current dynamic completion.
+\\[completion-cycle] \t\t Cycle through available completion candidates.
+\\[completion-tab-complete] \t\t Insert longest common prefix.
+\\[completion-show-menu] \t Show the completion menu below the point.
+\\<completion-menu-map>
+If `completion-use-menu' is enabled, you can also display the
+completion menu with M-down.
+
+If the `completion-use-hotkeys' customization option is enabled,
+you can select from a list of completions (displayed in the echo
+area if `completion-use-echo' is enabled) by typing a single key.
+Enabling the `completion-use-tooltip' customization option will
+cause completions to be displayed in a tooltip below the point."
+  
   (interactive "P")
   
   (cond
@@ -624,7 +658,10 @@ for fuller information."
    ;; if we're enabling predictive mode...
    ((not predictive-mode)
     ;; make sure main dictionary is loaded
-    (when predictive-main-dict (predictive-load-dict predictive-main-dict))
+    (when predictive-main-dict
+      (if (atom predictive-main-dict)
+	  (predictive-load-dict predictive-main-dict)
+	(mapc 'predictive-load-dict predictive-main-dict)))
     ;; create the buffer-local dictionary
     (predictive-create-buffer-dict)
     ;; make sure auto-learn/add caches are flushed if buffer is killed
@@ -766,10 +803,15 @@ unless you know what you are doing, it is best to only bind
   (unless overlay
     (setq overlay (completion-overlay-at-point))
     (when (and (null overlay) (predictive-within-word-p))
-      (save-excursion
-	(forward-word 1)
-	(setq overlay (completion-overlay-at-point)))))
-  
+      (let ((pos (point)))
+	(save-excursion
+	  (forward-thing predictive-word-thing)
+	  (setq overlay
+		(car (sort (auto-overlays-in
+			    pos (point) '(identity completion-overlay))
+			   (lambda (o1 o2)
+			     (< (overlay-start o1) (overlay-start o2))))))
+	  ))))
   
   (let (pos str)
     ;; delete current completion if we're within one
@@ -777,24 +819,30 @@ unless you know what you are doing, it is best to only bind
       (delete-region (overlay-start overlay) (overlay-end overlay)))
     
     (cond
-     ;; if point is within a word, delete part of word after point and
-     ;; complete remainder
+     ;; if adding to existing prefix, complete new prefix
+     ((and overlay (= (point) (overlay-start overlay)))
+      (predictive-complete (overlay-get overlay 'prefix) overlay))
+
+     ;; if point is at end of a word, complete it
+     ((predictive-end-of-word-p)
+      (let ((pos (point))
+	    str)
+	(save-excursion
+	  (forward-thing predictive-word-thing -1)
+	  (setq str (buffer-substring-no-properties (point) pos)))
+	(predictive-complete str overlay)))
+     
+     ;; if point is within a word, delete part of word after point (up to
+     ;; overlay, if there is one) and complete remainding prefix
      ((predictive-within-word-p)
       (save-excursion
 	(setq pos (point))
 	(forward-thing predictive-word-thing)
-	(delete-region pos (point))
+	(delete-region pos (if overlay (overlay-start overlay) (point)))
 	(forward-thing predictive-word-thing -1)
 	(setq str (buffer-substring-no-properties (point) pos)))
       (predictive-complete str overlay))
-
-     ;; if point is at end of a word, complete it
-     ((predictive-end-of-word-p)
-      (save-excursion
-	(setq pos (point))
-	(forward-thing predictive-word-thing -1)
-	(setq str (buffer-substring-no-properties (point) pos)))
-      (predictive-complete str overlay))))
+     ))
 )
 
 
@@ -840,7 +888,7 @@ The last input event should be a printable character. This function is
 intended to be bound to printable characters in a keymap."
   (interactive)
   
-  ;; note: we could use `completion-reject' here to clear the dynamic
+  ;; Note: we could use `completion-reject' here to clear the dynamic
   ;; completion, but this way we avoid deleting and recreating a completion
   ;; overlay
   (unless overlay (setq overlay (completion-overlay-at-point)))
@@ -885,6 +933,28 @@ keymap."
     (when overlay (completion-reject overlay))
     ;; insert typed character
     (self-insert-command 1))
+)
+
+
+
+(defun predictive-scoot-ahead (&optional overlay)
+  "Accept the characters from the current completion, and recomplete
+the resulting string.
+
+If OVERLAY is supplied, use that instead of finding or creating one."
+  (interactive)
+
+  (unless overlay (setq overlay (completion-overlay-at-point)))
+  
+  ;; if within a completion overlay, accept characters and recomplete
+  (when (and overlay (/= (point) (overlay-end overlay)))
+    (goto-char (overlay-end overlay))
+    (move-overlay overlay (point) (point))
+    (predictive-complete
+     (concat (overlay-get overlay 'prefix)
+	     (nth (overlay-get overlay 'completion-num)
+		  (overlay-get overlay 'completions)))
+     overlay))
 )
 
   
@@ -932,41 +1002,59 @@ is the prefix argument."
 If this deletes into a word, complete what remains of that word."
   (interactive "p")
   (when (null n) (setq n 1))
-  
-  ;; reject completion if there was one at point
-  (when (completion-overlay-at-point) (completion-reject))
-  
-  ;; delete backwards
-  (combine-after-change-calls
-    (backward-delete-char-untabify n)
+
+  (let ((overlay (completion-overlay-at-point))
+	(wordstart (predictive-beginning-of-word-p))
+	pos)
     
-    (cond
-     ;; if we've deleted into a word, and there's no existing timer, setup a
-     ;; timer to complete remainder of word after some idle time
-     ((and (predictive-end-of-word-p)
-	   (not (timerp predictive-backward-delete-timer)))
-      (setq predictive-backward-delete-timer
-	    (run-with-idle-timer
-	     0.1 nil
-	     (lambda ()
-	       (let ((completion-tooltip-delay nil))
-		 (predictive-complete-word-at-point))
-	       (setq predictive-backward-delete-timer nil)))))
-     
-     ;; if we haven't deleted into a word but a timer has been setup, cancel
-     ;; the timer
-     ((and (not (predictive-end-of-word-p))
-	   (timerp predictive-backward-delete-timer))
-      (cancel-timer predictive-backward-delete-timer)
-      (setq predictive-backward-delete-timer nil))
-     
-     ;; we should always fall into one of the above cases, but in case we
-     ;; don't, we'd better set the timer to nil to try to avoid future errors
-     (t
-      (when (timerp predictive-backward-delete-timer)
-	(cancel-timer predictive-backward-delete-timer))
-      (setq predictive-backward-delete-timer nil))
-     ))
+    (combine-after-change-calls
+      ;; delete any existing completion
+      (when overlay
+	(delete-region (overlay-start overlay) (overlay-end overlay)))
+      
+      ;; delete backwards
+      (backward-delete-char-untabify n)
+      
+      ;; if point was at start of word before deleting, and we've deleted into
+      ;; a word, setup overlay to prevent word after point being deleted
+      (let ((pos (point)) prefix)
+	(save-excursion
+	  (forward-thing predictive-word-thing -1)
+	  (setq prefix (buffer-substring-no-properties (point) pos)))
+	
+	;; if we're not in or at the end of a word, reject any completion and
+	;; cancel any timer that's been set up
+	(if (string= prefix "")
+	    (progn
+	      (completion-reject)
+	      (when (timerp predictive-backward-delete-timer)
+		(cancel-timer predictive-backward-delete-timer))
+	      (setq predictive-backward-delete-timer nil))
+	  
+	  ;; otherwise...
+	  (completion-setup-overlay prefix nil nil overlay)
+	  (cond
+	   ;; if we've deleted into a word and there's no existing timer,
+	   ;; setup a timer to complete remainder of word after some idle time
+	   ((and (or (predictive-within-word-p) (predictive-end-of-word-p))
+		 (not (timerp predictive-backward-delete-timer)))
+	    (setq predictive-backward-delete-timer
+		  (run-with-idle-timer
+		   0.1 nil
+		   (lambda ()
+		     ;; FIXME: the 'let seems to be necessary or tooltip never
+		     ;; gets displayed if delay is enabled - why?
+		     (let ((completion-tooltip-delay nil))
+		       (predictive-complete-word-at-point))
+		     (setq predictive-backward-delete-timer nil)))))
+	   
+	   ;; we should always fall into one of the above cases, but if we
+	   ;; don't we'd better cancel the timer to avoid future problems
+	   (t
+	    (when (timerp predictive-backward-delete-timer)
+	      (cancel-timer predictive-backward-delete-timer))
+	    (setq predictive-backward-delete-timer nil)))
+	  ))))
 )
 
 
@@ -977,21 +1065,26 @@ If this deletes into a word, complete what remains of that word."
   (interactive)
   
   (let ((dict (predictive-current-dict))
-	found)
+	found dic)
     
     ;; if there is a current dict...
     (unless (eq dict t)     
-      (when (dict-p dict) (setq dict (list dict)))
-      (when (and predictive-ignore-initial-caps
+      (let ((dictlist dict)  wordlist)
+	;; if ignoring initial caps, look for uncapitalized word too
+	(when (dict-p dict) (setq dictlist (list dict)))
+	(if (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p word))
-	(setq word (downcase word)))
+	    (setq wordlist (list (downcase word) word))
+	  (setq wordlist (list word)))
+	;; look for word in all dictionaries in list
+	(setq found
+	      (catch 'found
+		(while dictlist
+		  (setq dic (pop dictlist))
+		  (dolist (w wordlist)
+		    (when (dict-lookup dic w) (throw 'found t)))))))
       
-      ;; look for word in all dictionaries in list
-      (let ((dictlist dict) dic)
-	(while (and dictlist (not found))
-	  (setq dic (pop dictlist))
-	  (setq found (dict-lookup dic word))))
-    
+      
       ;; if the completion was not in the dictionary, `auto-add-to-dict' is
       ;; enabled, and either add-to-dict-ask is disabled or user responded "y"
       ;; when asked, then add the new word to the appropriate dictionary
@@ -1009,7 +1102,7 @@ If this deletes into a word, complete what remains of that word."
 	      (if predictive-use-auto-learn-cache
 		  (push (cons word (car dict)) predictive-auto-add-cache)
 		;; otherwise, add it to the dictionary
-		(dict-insert (car dict) word)))
+		(predictive-add-to-dict (car dict) word)))
 	   
 	     ;; if adding to the buffer dictionary, add to the word list in
 	     ;; the buffer, as well as to the buffer dictionary
@@ -1028,7 +1121,7 @@ If this deletes into a word, complete what remains of that word."
 	      (if (dict-p dict)
 		  (if (not predictive-use-auto-learn-cache)
 		      ;; if caching is off, add word to the dictionary
-		      (dict-insert dict word)
+		      (predictive-add-to-dict dict word)
 		    ;; if caching is on, cache word
 		    (push (cons word dict) predictive-auto-add-cache))
 		;; display error message if not a dictionary
@@ -1041,14 +1134,10 @@ If this deletes into a word, complete what remains of that word."
 	(when predictive-auto-learn
 	  ;; if caching auto-learned words, do so
 	  (if predictive-use-auto-learn-cache
-	      (push (cons word dict) predictive-auto-learn-cache)
-	    ;; if not caching, search for the first dictionary containing the
-	    ;; completion and increment its weight
-	    (catch 'learned
-	      (dotimes (i (length dict))
-		(when (dict-member-p (nth i dict) word)
-		  (dict-insert (nth i dict) word)
-		  (throw 'learned t))))))
+	      (push (cons word dic) predictive-auto-learn-cache)
+	    ;; if not caching, increment its weight in the dictionary it was
+	    ;; found in
+	    (predictive-add-to-dict dic word)))
 	)))
 )
 
@@ -1079,7 +1168,7 @@ completion overlay."
       (setq filter (auto-overlay-local-binding 'completion-filter)))
     (when filter
       (unless (functionp filter)
-	(error "Wrong type in compeltion-filter: functionp %s"
+	(error "Wrong type in completion-filter: functionp %s"
 	       (prin1-to-string filter)))
       (setq filter (funcall filter prefix)))
     
@@ -1092,7 +1181,7 @@ completion overlay."
       ;; complete the prefix using the current dictionary
       (setq completions
 	    (dict-complete-ordered dict str predictive-max-completions
-				   filter))
+				   nil filter))
       (when completions (setq completions (mapcar 'car completions)))
       (complete prefix completions overlay)))
 )
@@ -1384,7 +1473,7 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
       (catch 'learned
 	(dolist (dic dict)
 	  (when (dict-member-p dic word)
-	    (dict-insert dic word)
+	    (predictive-add-to-dict dic word)
 	    (throw 'learned t)))))
     
     ;; flush words from auto-add cache
@@ -1395,9 +1484,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
       (unless idle
 	(message "Flushing predictive mode auto-learn caches...(word\
  %d of %d)" i count))
+      
       ;; add word to whichever dictionary is in the cache
-      (dict-insert dict word))
-    )
+      (predictive-add-to-dict dict word)))
   
   (unless idle (message "Flushing predictive mode auto-learn caches...done"))
 )
@@ -1408,6 +1497,18 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
+
+(defun predictive-set-main-dict (dict)
+  "Set the main dictionary for the current buffer.
+To set it permanently, you should customize
+`predictive-main-dict' instead."
+  (interactive (list (read-dict "Dictionary: ")))
+  
+  (make-local-variable predictive-main-dict)
+  (setq predictive-main-dict dict)
+)
+
+
 
 (defun predictive-load-dict (dict)
   "Load the dictionary DICTNAME and associate it with the current buffer.
@@ -1449,18 +1550,24 @@ specified by the prefix argument."
   (when (interactive-p)
     ;; throw error if no dict supplied
     (unless dict (error "No dictionary supplied"))
-    
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
 	(if str
 	    (setq word str)
 	  (error "No word supplied"))))
-    
     ;; sort out weight argument
     (unless (null weight) (setq weight (prefix-numeric-value weight))))
   
-  (dict-insert dict word weight)
+  ;; insert word
+  (let ((newweight (dict-insert dict word weight))
+	pweight)
+    ;; if word has associated prefices, make sure weight of each prefix is at
+    ;; least as great as word's new weight
+    (dolist (prefix (dict-lookup-meta-data dict word))
+      (setq pweight (dict-lookup dict prefix))
+      (when (and pweight (< pweight newweight))
+	(dict-insert dict prefix newweight (lambda (a b) a)))))
 )
 
 
@@ -1546,7 +1653,7 @@ is read from the mini-buffer and weight is specified by the prefix argument."
   (interactive "sString to add: \nP")
   
   ;; add string and weight to dictionary
-  (dict-insert predictive-buffer-dict string weight)
+  (predictive-add-to-dict predictive-buffer-dict string weight)
   
   (save-excursion
     ;; look for comment marking location of buffer word list, and create it if
@@ -1658,7 +1765,7 @@ See also `predictive-fast-learn-from-buffer'."
 			 (eq dict currdict))
 		 (setq weight (1+ weight)))))
 	   ;; increment word's weight
-	   (dict-insert dict word weight)
+	   (predictive-add-to-dict dict word weight)
 	   (when (= 0 (mod (setq i (1+ i)) 10))
 	     (if (> numdicts 1)
 		 (message "Learning words for dictionary %s...(dict %d of %d,\
@@ -1766,7 +1873,7 @@ symbol-constituent characters according to the buffer's syntax table."
 	 ;; if ALL was specified, learn current word
 	 (all
 	  (when (dict-member-p dict (match-string 0))
-	    (dict-insert dict (match-string 0))))
+	    (predictive-add-to-dict dict (match-string 0))))
 	 ;; if ALL was not specified and a dictionary has been specified, only
 	 ;; increment the current word's weight if dictionary is active there
 	 (dict
@@ -1774,7 +1881,7 @@ symbol-constituent characters according to the buffer's syntax table."
 	  (when (and (or (and (listp currdict) (memq dict currdict))
 			 (eq dict currdict))
 		     (dict-member-p dict word))
-	    (dict-insert dict word)))
+	    (predictive-add-to-dict dict word)))
 	 ;; if ALL is not specified and no dictionary was specified, increment
 	 ;; its weight in first dictionary active there that contains the word
 	 ;; (unless no dictionary is active, indicated by t)
@@ -1785,7 +1892,7 @@ symbol-constituent characters according to the buffer's syntax table."
 	    (catch 'learned
 	      (dotimes (i (length currdict))
 		(when (dict-member-p (nth i currdict) word)
-		  (dict-insert (nth i currdict) word)
+		  (predictive-add-to-dict (nth i currdict) word)
 		  (throw 'learned t)))))))
 	
 	(when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
@@ -1846,6 +1953,47 @@ entirely of word- or symbol-constituent characters."
 
 
 
+(defun predictive-define-prefix (dict word prefix)
+  "Add PREFIX to the list of prefices for WORD in dictionary DICT.
+The weight of PREFIX will automatically be kept at least as large
+as the weight of WORD."
+  (interactive (list (read-dict "Dictionary: ")
+		     (setq word (read-string
+				 (format "Word (default \"%s\"): "
+					 (thing-at-point 'word))))
+		     (read-string (format "Add prefix for \"%s\": " word))))
+  
+  ;; when called interactively, sort out arguments
+  (when (interactive-p)
+    (when (null word) (setq word (thing-at-point 'word))))
+  
+  (let ((prefices (dict-lookup-meta-data dict word)))
+    (unless (member prefix prefices)
+      (dict-set-meta-data dict word (cons prefix prefices))))
+)
+
+
+
+(defun predictive-undefine-prefix (dict word prefix)
+  "Remove PREFIX from list of prefices for WORD in dictionary DICT.
+The weight of PREFIX will no longer automatically be kept at
+least as large as the weight of WORD."
+  (interactive (list (read-dict "Dictionary: ")
+		     (setq word (read-string
+				 (format "Word (default \"%s\"): "
+					 (thing-at-point 'word))))
+		     (read-string (format "Remove prefix of \"%s\": "
+					  word))))
+  
+  ;; when called interactively, sort out arguments
+  (when (interactive-p)
+    (when (null word) (setq word (thing-at-point 'word))))
+  
+  (let ((prefices (dict-lookup-meta-data dict word)))
+    (dict-set-meta-data dict word (delete prefix prefices)))
+)
+
+
 
 (defun predictive-boost-prefix-weight (dict &optional prefix)
   "Increase the weight of any word in dictionary DICT that is
@@ -1890,7 +2038,7 @@ supplied."
   
   ;; if neither length nor prefix was supplied, throw error
   (unless (or (stringp prefix) (numberp prefix))
-    (error "Wrong type argument in `predictive-add-to-dict:\
+    (error "Wrong type argument in `predictive-boost-prefix-weight':\
  stringp or numberp %s" (prin1-to-string prefix)))
   
   
@@ -1968,15 +2116,16 @@ there's only one."
   (let ((overlay (auto-overlay-highest-priority-at-point
 		  point '(identity dict)))
 	dict generate)
-    (if overlay
-	(setq dict (overlay-get overlay 'dict))
-      (setq dict predictive-main-dict))
+    (if (null overlay)
+	(setq dict predictive-main-dict)
+      (setq dict (overlay-get overlay 'dict))
+      (when (symbolp dict) (setq dict (eval dict))))
     
     ;; t indicates no active dictionary, so return nil
     (if (eq dict t) nil
       ;; otherwise bundle the dictionary inside a list for mapcar
-      (unless (listp dict) (setq dict (list dict)))
-     
+      (unless (and (listp dict) (not (dict-p dict))) (setq dict (list dict)))
+      
       (mapcar
        (lambda (dic)
 	 ;; if element is a function or symbol, evaluate it
@@ -2051,7 +2200,7 @@ there's only one."
       (forward-line)
       (let (entry)
 	(while (setq entry (dict-read-line))
-	  (dict-insert predictive-buffer-dict (car entry) (cdr entry))
+	  (predictive-add-to-dict predictive-buffer-dict (car entry) (cdr entry))
 	  (forward-line)))))
 )
 

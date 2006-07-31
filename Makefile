@@ -1,8 +1,8 @@
 
-all: core dicts
+all: core dict-english dicts
 
 clean:
-	rm dict-english.el *.elc latex/*.elc ams-latex/*.elc html/*.elc f90/*.elc
+	rm dict-english.el *.elc latex/*.elc html/*.elc f90/*.elc
 
 EMACS = emacs
 
@@ -16,7 +16,7 @@ core_files := $(shell ls *.el | sed 's:\.el:\.elc:g')
 
 # lists of dictionaries
 latex_dicts := $(shell ls latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
-ams_latex_dicts := $(shell ls ams-latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
+#ams_latex_dicts := $(shell ls ams-latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 html_dicts := $(shell ls html/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 
@@ -26,18 +26,23 @@ f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 # byte-compilation target
 core: $(core_files)
 
+
 # overrides implicit rule for dictionaries
+dict-english: dict-english.elc
+
 dict-english.elc: dict-english.el
 	$(EMACS) --batch -L ./ -f batch-byte-compile $<
 
+dict-english.el: dict-english.word-list
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dict-write dict-english \"dict-english\" t t))"
 
 
 # dictionary targets
-dicts: latex_dicts ams_latex_dicts html_dicts f90_dicts
+dicts: latex_dicts html_dicts f90_dicts
 
 latex_dicts: $(latex_dicts) 
 
-ams_latex_dicts: $(ams_latex_dicts) 
+#ams_latex_dicts: $(ams_latex_dicts) 
 
 html_dicts: $(html_dicts) 
 

@@ -1,34 +1,46 @@
 "abstract"
+"align"
+"align*" nil ("align")
+"alignat"
+"alignat*" nil ("alignat")
+"aligned"
+"alignedat"
 "array"
 "center"
 "description"
 "displaymath"
 "document"
 "enumerate"
-"eqnarray"
-"eqnarray*"
 "equation"
 "equation*"
 "figure"
-"figure*"
+"figure*" nil ("figure")
+"flalign"
+"flalign*" nil ("flalign")
 "flushleft"
 "flushright"
+"gather"
+"gather*" nil ("gather")
+"gathered"
 "itemize"
 "list"
-"math"
 "minipage"
+"multline"
+"multline*" nil ("multline")
 "picture"
 "quotation"
 "quote"
+"split"
+"subequations"
 "tabbing"
 "table"
-"table*"
+"table*" nil ("table")
 "tabular"
-"tabular*"
+"tabular*" nil ("tabular")
 "thebibliography"
 "theorem"
 "titlepage"
 "trivlist"
 "verbatim"
-"verbatim*"
+"verbatim*" nil ("verbatim")
 "verse"

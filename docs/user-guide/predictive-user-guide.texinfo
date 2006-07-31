@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.9
+0.10
 @c --version--
 
 Copyright @copyright{} 2005 2006 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.9
+@subtitle Version 0.10
 @c --version--
 @author Toby Cubitt
 
@@ -106,6 +106,7 @@ Dictionary Learning
 
 * Learning from Buffers and Files::  
 * Automatic Learning::          
+* Relationships Between Words::  
 
 Bugs and Future Improvements
 
@@ -213,7 +214,7 @@ from @uref{http://www.dr-qubit.org/emacs.php}.
 To install the package, extract the files using @kbd{tar -xvzf
 predictive.tar.gz}. This will put the files in a new subdirectory called
 @file{predictive/}. You're strongly encouraged to byte-compile all the
-Lisp files by running @kbd{make} in the @file{predictive/} directory.
+Lisp files by running @kbd{make} in the @file{predictive/} subdirectory.
 
 Finally, move the Lisp files (files with extension @file{.el} or
 @file{.elc}) to a directory in your Emacs load-path (@pxref{Lisp
@@ -235,7 +236,7 @@ they're needed (i.e. when you first run the @command{predictive-mode}
 command), by putting the following in your @file{.emacs} instead:
 
 @lisp
-(autoload 'predictive-mode "@var{/path/to/predictive.elc}")
+(autoload 'predictive-mode "@var{/path/to/predictive.elc}" t)
 @end lisp
 @cindex .emacs file
 @cindex startup file
@@ -271,16 +272,17 @@ What if you don't want to use the most likely completion? As you type, a
 list of the ten most likely completions is displayed in the echo area,
 and after a short delay in a tooltip, ranked according to
 likelihood. Typing a number 0--9 will insert the corresponding
-completion. @xref{Completion Hotkeys}, @ref{Displaying a List of Candidates} and
-@ref{Displaying a List of Candidates} for details.
+completion. @xref{Completion Hotkeys}, @ref{Displaying a List of
+Candidates} and @ref{Displaying a List of Candidates} for details.
 @findex completion-select
 
 Typing @kbd{M-Down} will display a menu from which you can select a
-completion (@pxref{Completion Menu and Browser}). From this menu, you can also bring
-up the completion browser menu, which hierarchically lists all possible
-completions (@pxref{Completion Menu and Browser}. (It can sometimes take a while
-to construct the completion browser, but you can always hit @kbd{C-g} to
-cancel it). @xref{Completion Menu and Browser}, for details.
+completion (@pxref{Completion Menu and Browser}). From this menu, you
+can also bring up the completion browser menu, which hierarchically
+lists all possible completions (@pxref{Completion Menu and Browser}. (It
+can sometimes take a while to construct the completion browser, but you
+can always hit @kbd{C-g} to cancel it). @xref{Completion Menu and
+Browser}, for details.
 @findex completion-show-menu
 
 You can cycle through the available completions using @kbd{M-TAB} and
@@ -324,13 +326,13 @@ Predictive mode can work completely unobtrusively, so that using it has
 no discernible effect until you issue a command to insert a completion
 (@pxref{Basic Completion Commands}). It can be slightly more intrusive,
 so that you always see which completions are available, but can still
-ignore them and type normally (@pxref{Displaying a List of Candidates}) and
-@ref{Displaying a List of Candidates}). It can let you select a completion candidate
-by hitting a hotkey (@pxref{Completion Hotkeys}). Or it can work more
-intrusively still, by always provisionally inserting the most likely
-completion (@pxref{Dynamic Completion}). This is probably the most
-effective way to use predictive mode, but it does mean slightly changing
-the way you type.
+ignore them and type normally (@pxref{Displaying a List of Candidates})
+and @ref{Displaying a List of Candidates}). It can let you select a
+completion candidate by hitting a hotkey (@pxref{Completion
+Hotkeys}). Or it can work more intrusively still, by always
+provisionally inserting the most likely completion (@pxref{Dynamic
+Completion}). This is probably the most effective way to use predictive
+mode, but it does mean slightly changing the way you type.
 
 
 
@@ -375,16 +377,22 @@ convenience for use in hooks.
 candidates. When supplied with a prefix argument, it will jump that many
 completions forwards (or backwards if the prefix argument is negative).
 
+@item completion-tab-complete
+(@kbd{TAB}) Do ``traditional'' tab-completion, i.e. insert the longest
+common prefix of all candidate completions, and re-complete the
+resulting longer string.
+@findex completion-tab-complete
+
 @item predictive-complete-word-at-point
 Find completions for the word at or next to the point.
 @end ftable
 
-@command{completion-cycle} is the most useful completion command if
-dynamic completion and the completion list are disabled. It cycles
-through the available completions for the current word, provisionally
-inserting them after the point and highlighting them to indicate they
-have not been accepted yet. In the default key bindings, @kbd{M-TAB}
-cycles forwards and @kbd{M-SHIFT-TAB} cycles backwards.
+@command{completion-cycle} is probably the most useful completion
+command if dynamic completion and completion hotkeys are disabled. It
+cycles through the available completions for the current word,
+provisionally inserting them after the point and highlighting them to
+indicate they have not been accepted yet. In the default key bindings,
+@kbd{M-TAB} cycles forwards and @kbd{M-SHIFT-TAB} cycles backwards.
 
 To accept a completion, simply type any end-of-word character
 (@pxref{Character Syntax and Key Bindings}).
@@ -462,17 +470,6 @@ Completions}.
 @findex predictive-complete-word-at-point
 
 @ftable @command
-@item completion-cycle
-(@kbd{M-TAB}, @kbd{M-SHIFT-TAB})) Cycle through the available completion
-candidates. When supplied with a prefix argument, it will jump that many
-completions forwards (or backwards if the prefix argument is negative).
-
-@item completion-tab-complete
-(@kbd{TAB}) Do ``traditional'' tab-completion, i.e. insert the longest
-common prefix of all candidate completions, and re-complete the
-resulting longer string.
-@findex completion-tab-complete
-
 @item completion-scoot-ahead
 (@kbd{C-TAB}) Insert the characters from the current completion as
 though typed manually, and look for completions of the resulting, longer
@@ -501,10 +498,10 @@ The following variables affect the behaviour of the completion hotkeys:
 
 @vtable @env
 @item completion-hotkey-list
-List of characters to use for selecting completions. Default is
-numerical characters 0 to 9. Note that this variable must be set
-@emph{before} loading the predictive mode libraries, e.g. in your
-@file{.emacs} file. @xref{Keymaps and Key Bindings}.
+List of keys to use for selecting completions. Default is numerical
+characters 0 to 9. Note that this variable must be set @emph{before}
+loading the predictive mode libraries, e.g. in your @file{.emacs}
+file. @xref{Keymaps and Key Bindings}.
 @end vtable
 
 However many characters are in @env{completion-hotkey-list}, there
@@ -612,7 +609,18 @@ Only the @emph{first} capital letter of a string is ignored. Thus typing
 @samp{ANSI}, whilst typing @kbd{a} would only find @samp{and}.
 
 @vtable @env
-@item predictive-resolve-old-method
+@item completion-min-chars
+Minimum number of characters that must be typed before the various
+completion mechanisms are activated. Note that you can still explicitly
+invoke completion on a shorter prefix using the
+@command{completion-tab-complete} or @command{completion-cycle}
+commands (@pxref{Inserting Completions}).
+
+@item completion-delay
+Number of seconds Emacs must be idle before the various completion
+mechanisms are activated.
+
+@item completion-resolve-old-method
 Determines what to do with a provisional completion if you move the
 point away from it and start typing elsewhere. The options are:
 @code{'leave}, which just leaves the old provisional completion in place
@@ -684,7 +692,8 @@ zero length, as they can do in predictive mode}. Use
 @env{completion-map} instead. @xref{Dynamic Completion}.
 
 @item completion-menu-map
-Keymap used when the completion menu is enabled. @xref{Completion Menu and Browser}.
+Keymap used when the completion menu is enabled. @xref{Completion Menu
+and Browser}.
 @end vtable
 
 @findex predictive-self-insert.
@@ -921,13 +930,21 @@ examples to base your own on.
 Predictive completion is only as good as the dictionary it uses. The
 dictionary doesn't only list the words themselves, it also ranks them
 according to how likely they are, so that predictive mode can offer the
-most likely completions first. As you type, predictive mode can learn
-which words you use more frequently, so that the predictions improve. It
-is not restricted to using one dictionary at a time; it can use many
+most likely completions first.
+
+As you type, predictive mode can learn which words you use more
+frequently, so that the predictions improve. It can automatically ensure
+certain words are always ranked higher than others (useful when one word
+is a prefix for another).
+
+It is not restricted to using one dictionary at a time; it can use many
 dictionaries in parallel, and can automatically switch dictionaries in
-regions of text defined by regular expressions. And it attempts to find
-the completions faster than you type, so that your typing is not slowed
-down even when using very large dictionaries.
+regions of text defined by regular expressions.
+
+And it attempts to do all of that faster than you type, so that your
+typing is not slowed down even when using very large dictionaries. (As
+soon as Emacs becomes sentient -- surely not far off -- it will probably
+go on strike!)
 
 @menu
 * Creating Dictionaries::       
@@ -947,7 +964,9 @@ down even when using very large dictionaries.
 Predictive mode dictionaries store words along with their associated
 weights, used to rank the words in order of likelihood. The weight is
 just an integer value, which can be thought of as the relative frequency
-of a word (relative to the other words in the dictionary).
+of a word (relative to the other words in the dictionary). (A dictionary
+can also store prefix relationships between words, @pxref{Relationships
+Between Words}.)
 
 @noindent
 The following commands are used to manually create and update
@@ -1187,6 +1206,7 @@ learning from existing files, and automatic learning as you type.
 @menu
 * Learning from Buffers and Files::  
 * Automatic Learning::          
+* Relationships Between Words::  
 @end menu
 
 
@@ -1295,6 +1315,39 @@ duplicate any words.
 @cindex dictionary, buffer
 
 
+@node Relationships Between Words
+@subsection Relationships Between Words
+@cindex relationship between words
+@cindex prefix words
+@cindex words, relationships
+@cindex words, prefices
+
+As well as word frequencies, predictive mode dictionaries can store
+certain relationships between words, to make learning more
+effective. With each word in a dictionary, a list of other words can be
+associated. Predictive mode automatically ensures that the weights of
+the words in this list are always at least as large as that of the word
+they are associated with.
+
+This is most useful when one word is a prefix for another. For example,
+you may want to ensure that, however frequently @samp{learning} is used,
+@samp{learn} always has at least as large a weight.
+
+The following functions allow you to define and undefine word
+relationships (note that despite the command names, the two words can be
+arbitrary; there is no requirement that one be a prefix for the other):
+
+@ftable @command
+@item predictive-define-prefix
+Define a relationship between two words, usually a prefix
+relationship. Predictive mode will ensure that the weight of the
+``prefix'' word is always at least as large as that of the other.
+
+@item predictive-undefine-prefix
+Remove a relationship between two words.
+@end ftable
+
+
 
 
 @node Bugs and Future Improvements
@@ -1307,14 +1360,14 @@ duplicate any words.
 
 The predictive completion package has been tested on Emacs versions 21.3
 and the multi-tty CVS branch, and is known to work reasonably well. It
-has not been tested under older versions, or under any version of
-X-Emacs.
+will not work tested under older versions, and currently doesn't work
+under any version of XEmacs.
 
 Report bugs and feature requests to
 @email{toby-predictive@@dr-qubit.org}. Even reports of which versions of
 Emacs it runs under are useful at this stage (though check the web-site
-@uref{http://www.dr-qubit.org/predictive.html} first to make sure your
-version is not already listed).
+@uref{http://www.dr-qubit.org/emacs.php} first to make sure your version
+is not already listed).
 
 
 @menu
@@ -1334,6 +1387,10 @@ Known bugs (in no particular order):
 
 @enumerate
 @item
+Predictive mode does not work under XEmacs. Making it work will take
+some compatibility work, but should be possible.
+
+@item
 No @command{predictive-remove-from-dict} command exists to remove a word
 from a dictionary. However, it it unlikely ever to exist unless there is
 huge demand (because removing entries from a ternary search tree is
@@ -1349,7 +1406,7 @@ recreate the dictionary.
 There are probably still bugs remaining in the @code{auto-overlay} code,
 used in some major modes to set up region-local dictionaries. If you
 find one, please report it along with precise instructions on how to
-reproduce it.
+reproduce it. They're fiendishly difficult to track down!
 @end enumerate
 
 
@@ -1360,17 +1417,26 @@ reproduce it.
 @cindex future improvements
 
 @noindent
-Possible future improvements (in no particular order):
+Possible future improvements to predictive completion (in no particular
+order):
 
 @enumerate
 @item
-Predictive mode should probably not find completions as you type if both
-dynamic completion and the completion list are disabled. It might as
-well just wait until asked, instead of wasting processor cycles.
+Rework buffer-local dictionaries so that they rapidly give large weights
+to words used in the buffer, whilst the main dictionary used in
+conjunction with the buffer-local one ensures that words are available
+even if they haven't been used yet. This could be achieved, for example,
+by making auto-learn increment buffer-local dictionary weights by a much
+larger value. (It should also probably increment weights in @emph{all}
+other active dictionaries containing the word.)
+
+@item
+Allow the learning rate (i.e. increment added each time a word is
+learnt) to be set buffer-locally and/or separately for each dictionary?
 
 @item
 More dictionaries and setup functions. (This one will probably be here
-for ever, since new major modes are probably being created faster than
+for ever. I suspect new major modes are being created faster than
 predictive mode setup functions!)
 
 @item
@@ -1379,11 +1445,32 @@ More predictive mode configuration variables could be allowed to have
 completion-menu function.
 
 @item
-A @code{flat} regexp class is missing from the @dfn{auto-overlay}
+Predictive mode should be integrated with the @dfn{semantic} package, to
+make it more useful for writing programs. At the moment, it works best
+with plain text and markup languages.
+@end enumerate
+
+
+@noindent
+Possible future improvements to auto overlays (in no particular order):
+
+@enumerate
+@item
+A ``@code{flat}'' regexp class is missing from the @dfn{auto-overlay}
 package, i.e. regions that start at a @code{start} delimiter and ignore
 any further @code{start} delimiters until the first following @code{end}
-delimiter (like block comments in c++). This just requires adding a new
-class to the @dfn{auto-overlay} package.
+delimiter (c.f. block comments in c++).
+
+@item
+Currently, it's difficult to deal with @code{stack} class regexps for
+which the @code{end} regexps match some @code{start} regexps of interest
+but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
+La@TeX{} when you're only interested in @samp{\somecommand@{}
+@code{start} regexps. Or matching parens in LISP, when you're only
+interested in function bodies, say. The only solution is to include all
+@code{start} regexps and give the irrelevant ones a null @code{dict}
+property. This can end up creating a lot of overlays! A variant of the
+@code{stack} class that avoids this problem is needed.
 
 @item
 The @command{auto-overlay-init} command takes a long time to create all
@@ -1393,11 +1480,13 @@ an auxiliary file when killing the buffer or Emacs, and reloaded from
 there to speed up subsequent invocations.
 
 @item
-Predictive mode should be integrated with the @dfn{semantic} package, to
-make it more useful for writing programs. At the moment, it only really
-works well with plain text and markup languages.
+It would be nice to automatically load La@TeX{} dictionaries based on
+@code{\includepackage} commands. It would also be nice to be able to
+select the main dictionary automatically based on the
+@code{\documentclass}. This could be done fairly easily by deriving a
+couple of new auto-overlay classes from the @code{word} class, with
+modified parse and suicide functions to do the dictionary loading.
 @end enumerate
-
 
 
 

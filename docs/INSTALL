@@ -21,7 +21,10 @@ strongly encouraged to byte-compile all the Lisp files by running
 
   make
 
-in the predictive/ directory (see also below).
+in the predictive/ directory (see also below). You can specify where your
+emacs resides with
+
+  make EMACS=/path/to/emacs
 
 Finally, move the Lisp files (files with extension .el or .elc) to a directory
 in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual). You can view

@@ -1,34 +1,40 @@
 
-;;; predictive-completion.el --- completion functions for predictive package
+;;; completion-ui.el --- in-buffer completion user interface
+
 
 ;; Copyright (C) 2006 Toby Cubitt
 
-;; Author: Toby Cubitt
-;; Version: 0.1
-;; Keywords: predictive, completion
+;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Version: 0.2
+;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
-;; This file is part of the Emacs Predictive Completion package.
+
+;; This file is NOT part of Emacs.
 ;;
-;; The Emacs Predicive Completion package is free software; you can
-;; redistribute it and/or modify it under the terms of the GNU
-;; General Public License as published by the Free Software
-;; Foundation; either version 2 of the License, or (at your option)
-;; any later version.
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
 ;;
-;; The Emacs Predicive Completion package is distributed in the hope
-;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;; PURPOSE.  See the GNU General Public License for more details.
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with the Emacs Predicive Completion package; if not, write
-;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;; Boston, MA 02111-1307 USA
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
 
 
 ;;; Change Log:
 ;;
+;; Version 0.2
+;; * bug fixes (thanks to Mark Zonzon for patch)
+;; * added `completion-min-chars' and `completion-delay' options
+;; * renamed to `completion-ui.el'
+;; 
 ;; Version 0.1
 ;; * initial release
 
@@ -37,48 +43,95 @@
 
 (require 'auto-overlay-common)
 (require 'cl)
-(provide 'predictive-completion)
+(provide 'completion-ui)
 
 
 
-(defgroup predictive-completion nil
-  "Completion methods."
-  :group 'predictive)
+(defgroup completion-ui nil
+  "Completion user interface."
+  :group 'convenience)
 
 
 (defcustom completion-use-dynamic t
   "Enable dynamic completion."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-echo t
   "Display completions in echo area."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-tooltip nil
   "Display completions in a tooltip."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-hotkeys t
   "Enable completion hotkeys (single-key selection of completions)."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
 
 
 (defcustom completion-use-menu t
   "Enable completion menu."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
+
+
+(defcustom completion-delay nil
+  "Number of seconds to wait before activating completion mechanisms."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (float :tag "On")))
+
+
+(defcustom completion-min-chars nil
+  "Minimum number of characters before completions are offered."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (integer :tag "On")))
+
+
+(defface completion-dynamic-face
+  '((((class color) (background dark))
+     (:background "blue"))
+    (((class color) (background light))
+     (:background "orange1")))
+  "Face used for provisional completions during dynamic completion."
+  :group 'completion-ui)
+
+
+(defcustom completion-tooltip-delay 2
+  "Number of seconds to wait after activating completion
+mechanisms before displaying completions in a tooltip."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (float :tag "On")))
+
+
+(defcustom completion-tooltip-timeout 15
+  "Number of seconds to display completions in a tooltip
+\(not relevant if help-echo text is displayed in echo area\)."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (integer :tag "On")))
+
+
+(defcustom completion-hotkey-list
+  '([?0] [?1] [?2] [?3] [?4] [?5] [?6] [?7] [?8] [?9])
+  "List of keys (vectors) to use for selecting completions when
+`completion-use-hotkeys' is enabled."
+  :group 'completion-ui
+  :type '(repeat (vector character)))
 
 
 (defcustom completion-auto-show-menu nil
   "Display completion menu automatically."
-  :group 'predictive-completion
+  :group 'completion-ui
   :type 'boolean)
 
 
@@ -90,41 +143,18 @@ progress elsewhere in the buffer:
   'accept:  automatically accept the old completion
   'reject:  automatically reject the old completion
   'ask:     ask what to do with the old completion"
-  :group 'predictive-completion
+  :group 'completion-ui
   :type '(choice (const :tag "leave" leave)
 		 (const :tag "accept" accept)
 		 (const :tag "reject" reject)
-		 (const :tag "ask" ask))
-)
-
-
-(defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)
-  "List of characters to use for selecting completions when
-`completion-use-hotkeys' is enabled."
-  :group 'predictive-completion
-  :type '(repeat :character)
-)
-
-
-(defcustom completion-tooltip-delay 1
-  "Number of seconds to wait before displaying completions in a tooltip
-\(not relevant if help-echo text is displayed in echo area\)."
-  :group 'predictive-completion
-  :type 'float)
-
-
-(defcustom completion-tooltip-timeout 15
-  "Number of seconds to display completions in a tooltip
-\(not relevant if help-echo text is displayed in echo area\)."
-  :group 'predictive-completion
-  :type 'integer)
+		 (const :tag "ask" ask)))
 
 
 ;; (defcustom completion-tooltip-x-offset 4
 ;;   "Horizontal pixel offset for tooltip.
 ;; Unfortunately, needs to be set manually to get tooltip in correct
 ;; position."
-;;   :group 'predictive-completion
+;;   :group 'completion-ui
 ;;   :type 'integer)
 
 
@@ -132,13 +162,8 @@ progress elsewhere in the buffer:
 ;;   "Vertical pixel offset for tooltip.
 ;; Unfortunately, needs to be set manually to get tooltip in correct
 ;; position."
-;;   :group 'predictive-completion
+;;   :group 'completion-ui
 ;;   :type 'integer)
-
-
-(defface completion-dynamic-face '((t :background "blue"))
-  "Face used for provisional completions during dynamic completion."
-  :group 'predictive-completion)
 
 
 (defvar completion-menu nil
@@ -177,7 +202,12 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 (defvar completion-hotkey-map nil
   "Keymap used for hotkey completion (single-key selection of
-  completions).")
+  completions).
+
+  Do NOT bind keys in this keymap directly. The keymap is
+  constructed automatically from `completion-hotkey-list'. You
+  should modify that instead, before `completion-ui.el' is
+  loaded.")
 
 
 (defvar completion-dynamic-map nil
@@ -218,7 +248,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 ;; construct the keymap used for hotkey selection from completion-hotkey-list
 (let ((map (make-sparse-keymap)) key)
   (dolist (key completion-hotkey-list)
-    (define-key map (vector key)
+    (define-key map key
       (lambda ()
 	"Select a completion to insert if there is one, otherwise
 run whatever command would normally be bound to the key sequence."
@@ -329,37 +359,62 @@ run whatever command would normally be bound to the key sequence."
 ;;; ===============================================================
 ;;;                  Public completion functions
 
-(defun complete (prefix completions &optional overlay)
+(defun complete (prefix completions &optional overlay position)
   "Complete whatever's at point.
 
-COMPLETIONS should be a list of possible completions, excluding
-the PREFIX that's being completed. If OVERLAY is supplied, use
-that instead of finding or creating one."
+COMPLETIONS should be a list of possible completions,
+i.e. strings which do not not include the PREFIX that's being
+completed. If OVERLAY is supplied, use that instead of finding or
+creating one.
+
+If POSITION is supplied, activate completion mechanisms
+immediately, irrespective of the setting of `completion-delay',
+if point is at POSITION."
 
   ;; set overlay properties, getting completion overlay at point or creating a
   ;; new one if we haven't been passed one
   (setq overlay (completion-setup-overlay prefix completions nil overlay))
   ;; get rid of any existing tooltip
   (tooltip-hide)
+  ;; cancel any timer so that we don't have two running at once
+  (cancel-timer completion-tooltip-timer)
   
-  ;; activate dynamic completion
-  (when completion-use-dynamic
-    (complete-dynamic prefix completions overlay))
   
-  ;; display completion echo text
-  (when completion-use-echo
-    (complete-echo prefix completions overlay))
+  ;; only activate completion mechanisms if prefix has requisite number of
+  ;; characters
+  (unless (and completion-min-chars
+	       (< (length prefix) completion-min-chars))
 
-  ;; display completion tooltip
-  (when completion-use-tooltip
-    (complete-tooltip prefix completions overlay))
+    ;; delay activating completion mechanisms if `completion-delay' is set
+    (cond
+     ((and completion-delay (null position))
+      (setq completion-tooltip-timer
+	    (run-with-idle-timer
+	     completion-delay nil
+	     'complete prefix completions overlay (point))))
 
-  ;; activate completion menu
-  (when completion-use-menu
-    (complete-menu prefix completions overlay))
-  
-  ;; no need to run `complete-hotkeys' since all it does is create an
-  ;; overlay, which we do anyway above
+     ;; if POSITION was supplied, only activate completion mechanisms if point
+     ;; is there
+     ((or (null position) (= position (point)))
+      ;; activate dynamic completion
+      (when completion-use-dynamic
+	(complete-dynamic prefix completions overlay))
+      
+      ;; display completion echo text
+      (when completion-use-echo
+	(complete-echo prefix completions overlay))
+      
+      ;; display completion tooltip
+      (when completion-use-tooltip
+	(complete-tooltip prefix completions overlay))
+      
+      ;; activate completion menu
+      (when completion-use-menu
+	(complete-menu prefix completions overlay))
+      
+      ;; no need to run `complete-hotkeys' since all it does is create an
+      ;; overlay, which we do anyway above
+      )))
 )
 
 
@@ -399,9 +454,11 @@ If OVERLAY is supplied, use that instead of finding or creating one."
 
 
 
-(defun complete-tooltip (prefix completions &optional overlay)
+(defun complete-tooltip (prefix completions &optional overlay nodelay)
   "Display list of completions in a tooltip.
-If OVERLAY is supplied, use that instead of finding or creating one."
+If OVERLAY is supplied, use that instead of finding or creating one. If
+NODELAY is non-nil, display tooltip immediately, irrespective of the setting
+of `completion-tooltip-delay'."
 
   ;; set overlay properties, getting completion overlay at point or creating a
   ;; new one if we haven't been passed one
@@ -413,8 +470,9 @@ If OVERLAY is supplied, use that instead of finding or creating one."
   ;; cancel any running timer so we don't have two running at the same time
   (cancel-timer completion-tooltip-timer)
   
-  ;; if `completion-tooltip-delay' is unset, display tooltip immediately
-  (if (null completion-tooltip-delay)
+  ;; if `completion-tooltip-delay' is unset or NODELAY supplied, display
+  ;; tooltip immediately
+  (if (or (null completion-tooltip-delay) nodelay)
       (completion-show-tooltip overlay)
     ;; otherwise, postpone displaying tooltip until there's a pause in typing
     (setq completion-tooltip-timer
@@ -682,7 +740,7 @@ If OVERLAY is supplied, use that instead of finding or creating one."
       (when completion-use-tooltip
 	(complete-tooltip (overlay-get overlay 'prefix)
 			  (overlay-get overlay 'completions)
-			  overlay))))
+			  overlay 'no-delay))))
 )
 
 
@@ -701,7 +759,7 @@ Intended to be bound to keys in `completion-hotkey-map'."
   (unless overlay (setq overlay (completion-overlay-at-point)))
   ;; find completion index corresponding to last input event
   (unless n
-    (setq n (position last-input-event completion-hotkey-list
+    (setq n (position (this-command-keys-vector) completion-hotkey-list
 		      :test 'equal)))
   
   ;; if within a completion overlay...
@@ -927,11 +985,14 @@ completion."
       (cond
        ((and completion-use-hotkeys (< i (length completion-hotkey-list)))
 	(setq str
-	      (concat (format "(%c) " (nth i completion-hotkey-list)) str)))
+	      (concat
+	       (format "(%s) "
+		       (key-description
+			(nth i completion-hotkey-list))) str)))
        (completion-use-hotkeys
 	(setq str (concat "() " str))))
       (setq text (concat text str "  ")))
-
+    
     ;; return constructed text
     text)
 )
@@ -953,7 +1014,9 @@ completion."
 	  ;; it next to completion text
 	  (if (and completion-use-hotkeys
 		   (< i (length completion-hotkey-list)))
-	      (setq str (format "(%c)" (nth i completion-hotkey-list)))
+	      (setq str
+		    (format "(%c)"
+			    (key-description (nth i completion-hotkey-list))))
 	    (setq str "    "))
 	  ;; add completion to text
 	  (setq str (concat str " " prefix (nth i completions)))

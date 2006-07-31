@@ -1,28 +1,31 @@
+
 ;;; auto-overlay-stack.el --- stacked start/end-delimited automatic overlays
+
 
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
-;; Author: Toby Cubitt
+;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1.1
 ;; Keywords: automatic, overlays, stack
+;; URL: http://www.dr-qubit.org/emacs.php
+
 
 ;; This file is part of the Emacs Automatic Overlays package.
 ;;
-;; The Emacs Automatic Overlays package is free software; you can
-;; redistribute it and/or modify it under the terms of the GNU
-;; General Public License as published by the Free Software
-;; Foundation; either version 2 of the License, or (at your option)
-;; any later version.
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License
+;; as published by the Free Software Foundation; either version 2
+;; of the License, or (at your option) any later version.
 ;;
-;; The Emacs Automatic Overlays package is distributed in the hope
-;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;; PURPOSE.  See the GNU General Public License for more details.
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 ;;
 ;; You should have received a copy of the GNU General Public License
-;; along with the Emacs Automatic Overlays package; if not, write
-;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;; Boston, MA 02111-1307 USA
+;; along with this program; if not, write to the Free Software
+;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
 
 
 ;;; Change Log:
@@ -90,28 +93,27 @@
   (let* ((overlay-stack (auto-o-stack o-self))
 	(o-parent (car overlay-stack)))
     
-    ;; if parent is the only overlay in the stack...
-    (if (= (length overlay-stack) 1)
-	;; if we're a start match...
-	(if (eq (auto-o-edge o-self) 'start)
-	    (if (auto-o-end-matched-p o-parent)
-		;; if parent is end-matched, make it start-unmatched
-		(auto-o-match-overlay o-parent 'unmatched nil)
-	      ;; if parent is end-unmatched delete it
-	      (auto-o-delete-overlay o-parent))
-	    
-	  ;; if we're an end match...
-	  (if (auto-o-start-matched-p o-parent)
-	      ;; if parent is start matched, make it end-unmatched
-	      (auto-o-match-overlay o-parent nil 'unmatched)
-	    ;; if parent is start-unmatched, delete it
-	    (auto-o-delete-overlay o-parent)))
-      
-      
+    (cond
+     ;; if other end of parent is unmatched, just delete parent
+     ((not (auto-o-edge-matched-p
+	    o-parent
+	    (if (eq (auto-o-edge o-self) 'start) 'end 'start)))
+      (auto-o-delete-overlay o-parent))
+
+     ;; if parent is the only overlay in the stack...
+     ((= (length overlay-stack) 1)
+      ;; if we're a start match, make parent start-unmatched
+      (if (eq (auto-o-edge o-self) 'start)
+	  (auto-o-match-overlay o-parent 'unmatched nil)
+	    ;; if we're an end match, make parent end-unmatched
+	(auto-o-match-overlay o-parent nil 'unmatched)))
+     
       ;; otherwise, unmatch ourselves from parent and cascade the stack
+     (t
       (overlay-put o-parent (auto-o-edge o-self) nil)
       (overlay-put o-self 'parent nil)
-      (auto-o-stack-cascade overlay-stack)))
+      (auto-o-stack-cascade overlay-stack))
+     ))
 )
 
       
