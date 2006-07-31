@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.8.
+0.8.1
 @c --version--
 
 Copyright @copyright{} 2005 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.8
+@subtitle Version 0.8.1
 @c --version--
 @author Toby Cubitt
 
@@ -767,7 +767,7 @@ to it with that initial weight (or 0 if none is supplied). If the word
 is already in the dictionary, its weight will be incremented by the
 weight value (or by 1 if none is supplied).
 
-@item predictive-boost-prefix-weights
+@item predictive-boost-prefix-weight
 Inrease the weight of a word that is also a prefix for other words
 (e.g. @samp{boost} is a prefix for @samp{boosting}, so @samp{boosting}
 is a completion of @samp{boost}). Specifically, if the weight of the
@@ -805,7 +805,7 @@ be significant.
 It is often more useful for words that are prefices for others to have
 higher weights, especially when using dynamic completion and the
 @command{predictive-scoot-ahead} command (@pxref{Dynamic
-Completion}). The @command{predictive-boost-prefix-weights} command
+Completion}). The @command{predictive-boost-prefix-weight} command
 manipulates word weights to ensure that this is the case.
 
 @noindent
@@ -856,7 +856,8 @@ dictionary will be included when learning from the buffer, see
 
 @item dict-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
-also save it (@pxref{Creating Dictionaries}).
+also save it (@pxref{Creating Dictionaries}), unless overridden by
+supplying a prefix argument.
 
 @item dict-save
 Save a dictionary to its associated file. Prompt for a file name if
@@ -1703,8 +1704,8 @@ has no effect unless @env{predictive-auto-add-to-dict} is also set.
 @item predictive-use-auto-learn-cache
 If non-nil (the default), auto-learned and auto-added words are cached,
 and only actually added to the dictionary when Emacs has been idle for
-@env{predictive-flush-auto-learn-delay} seconds (it has no effect unless
-at least one of @env{predictive-auto-learn} or
+@env{predictive-flush-auto-learn-delay} seconds or the buffer is killed
+(it has no effect unless at least one of @env{predictive-auto-learn} or
 @env{predictive-auto-add-to-dict} is also set). This avoids small but
 sometimes noticeable delays when typing. New words or word weights will
 not be taken into account until the cache is fully flushed.

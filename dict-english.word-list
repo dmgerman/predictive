@@ -63,7 +63,7 @@
 "Alcuin" 86
 "Aldous" 56
 "Alec" 818
-"Alex" 2560
+"Alex" 1895
 "Alexander" 2560
 "Alexandra" 937
 "Alexandria" 213
@@ -91,9 +91,9 @@
 "Alsace" 112
 "Alvin" 71
 "Alzheimer's" 207
-"Amal" 296
+"Amal" 80
 "Amanda" 632
-"Amazonia" 108
+"Amazonia" 90
 "Amazonian" 108
 "Amelia" 204
 "Amelie" 67
@@ -141,6 +141,7 @@
 "Anne" 4384
 "Annette" 147
 "Annie" 1052
+"Antarctic" 496
 "Antarctica" 280
 "Anthea" 160
 "Anthony" 2369
@@ -217,7 +218,7 @@
 "Attila" 51
 "Attlee" 336
 "Auckland" 701
-"Audi" 5480
+"Audi" 151
 "Augusta" 182
 "Augustine" 319
 "Augustinian" 55
@@ -272,7 +273,7 @@
 "Barclays" 642
 "Barnabas" 64
 "Barry" 1890
-"Bart" 306
+"Bart" 172
 "Bartholomew" 306
 "Basel" 71
 "Bashir" 63
@@ -315,6 +316,7 @@
 "Benjamin" 1700
 "Bentley" 412
 "Beowulf" 74
+"Bergen" 66
 "Berkeley" 562
 "Berkshire" 657
 "Berlin" 2742
@@ -322,7 +324,7 @@
 "Berliners" 85
 "Berlioz" 58
 "Bermuda" 186
-"Bern" 2077
+"Bern" 55
 "Bernard" 2077
 "Bernie" 334
 "Bernstein" 191
@@ -384,7 +386,7 @@
 "Boswell" 466
 "Botswana" 221
 "Bournemouth" 434
-"Brad" 1202
+"Brad" 115
 "Bradford" 1202
 "Bradley" 417
 "Bragg" 359
@@ -403,7 +405,7 @@
 "Bridget" 506
 "Brighton" 1510
 "Brisbane" 150
-"Brit" 35793
+"Brit" 135
 "Britain" 25101
 "Britannia" 277
 "Britannica" 55
@@ -446,7 +448,7 @@
 "CDs" 308
 "CEO" 95
 "CERN" 81
-"CFC" 140
+"CFC" 347
 "CFCs" 347
 "CIA" 588
 "CNN" 64
@@ -496,7 +498,7 @@
 "Carlisle" 686
 "Carmen" 244
 "Carnegie" 137
-"Carol" 1878
+"Carol" 1165
 "Caroline" 1878
 "Carolingian" 142
 "Cartesian" 118
@@ -538,8 +540,8 @@
 "Chinese" 4190
 "Chomsky" 148
 "Chopin" 134
-"Chris" 8851
-"Christ" 8851
+"Chris" 4484
+"Christ" 4716
 "Christchurch" 161
 "Christendom" 166
 "Christian" 6876
@@ -568,7 +570,7 @@
 "Cleopatra" 135
 "Cleveland" 1697
 "Clifford" 464
-"Clint" 1978
+"Clint" 214
 "Clint Eastwood" 208
 "Clinton" 1978
 "Clive" 1040
@@ -596,7 +598,7 @@
 "Copenhagen" 308
 "Copernican" 129
 "Copernicus" 83
-"Cora" 276
+"Cora" 148
 "Corfu" 79
 "Corinth" 165
 "Corinthian" 156
@@ -614,7 +616,7 @@
 "Crete" 263
 "Crimea" 145
 "Crimean" 145
-"Croat" 814
+"Croat" 190
 "Croatia" 814
 "Croatian" 472
 "Croats" 281
@@ -636,7 +638,7 @@
 "Cyprus" 697
 "Cyril" 387
 "Czech" 1112
-"Czechoslovak" 1112
+"Czechoslovak" 267
 "Czechoslovakia" 1112
 "Czechoslovakian" 87
 "Czechs" 129
@@ -680,6 +682,7 @@
 "December" 9367
 "Declan" 139
 "Defoe" 114
+"Degas" 104
 "Deirdre" 140
 "Del" 795
 "Delaware" 50
@@ -728,9 +731,10 @@
 "Dorothea" 270
 "Dorothy" 1180
 "Dorset" 818
-"Doug" 2402
+"Doug" 828
 "Dougal" 353
 "Douglas" 2402
+"Dover" 470
 "Dr." 1237
 "Dracula" 116
 "Dresden" 241
@@ -747,9 +751,10 @@
 "Dutchman" 132
 "Dylan" 291
 "E. coli" 110
+"EN" 713
 "ESA" 125
 "EU" 1170
-"Easter" 5915
+"Easter" 1794
 "Ebenezer" 54
 "Ecuador" 264
 "Ed" 1654
@@ -778,9 +783,9 @@
 "Elgar" 151
 "Elinor" 549
 "Eliot" 1901
-"Elisa" 274
+"Elisa" 163
 "Elisabeth" 274
-"Eliza" 3610
+"Eliza" 166
 "Elizabeth" 3610
 "Elizabethan" 396
 "Ellen" 1006
@@ -826,7 +831,7 @@
 "Euclid" 61
 "Eugene" 200
 "Euripides" 63
-"Euro" 20353
+"Euro" 601
 "Europa" 174
 "Europe" 20353
 "European" 20353
@@ -888,7 +893,7 @@
 "Frazer" 204
 "Fred" 2129
 "Freddie" 528
-"Frederic" 804
+"Frederic" 70
 "Frederica" 189
 "Frederick" 804
 "Freiburg" 79
@@ -901,7 +906,7 @@
 "Friday" 5540
 "Fridays" 255
 "Fuerta Ventura" 120
-"Fuji" 371
+"Fuji" 93
 "Fujitsu" 371
 "GB" 161
 "GCHQ" 96
@@ -944,14 +949,14 @@
 "Geneva" 1037
 "Genoa" 187
 "Genoese" 90
-"Geoff" 1702
+"Geoff" 1208
 "Geoffrey" 1702
 "Geordie" 167
 "George" 11087
 "Georgia" 795
 "Georgian" 795
 "Georgians" 64
-"Georgie" 107
+"Georgie" 321
 "Georgina" 343
 "Gerald" 987
 "Geraldine" 179
@@ -1000,7 +1005,7 @@
 "Greenland" 266
 "Greenpeace" 627
 "Greenwich" 387
-"Greg" 1002
+"Greg" 826
 "Gregorian" 58
 "Gregory" 1002
 "Greig" 90
@@ -1114,7 +1119,7 @@
 "Honduran" 59
 "Honduras" 208
 "Hongkong" 93
-"Hooke" 395
+"Hooke" 75
 "Horace" 251
 "Houston" 390
 "Howard" 2653
@@ -1133,7 +1138,7 @@
 "Huxley" 193
 "Hyde" 564
 "Hyundai" 83
-"I" 1883290
+"I" 905318
 "I'd" 10549
 "I'll" 24436
 "I'm" 51994
@@ -1157,7 +1162,7 @@
 "Idaho" 69
 "Igor" 119
 "Illinois" 179
-"Inca" 845
+"Inca" 130
 "India" 4724
 "Indian" 4157
 "Indiana" 149
@@ -1165,8 +1170,8 @@
 "Indians" 1189
 "Indonesia" 857
 "Indonesian" 374
-"Indus" 19835
-"Intel" 3525
+"Indus" 63
+"Intel" 1187
 "Inuit" 76
 "Ionian" 89
 "Iowa" 80
@@ -1260,7 +1265,7 @@
 "Jordanian" 210
 "Joseph" 2986
 "Josephine" 184
-"Josh" 423
+"Josh" 353
 "Joshua" 423
 "Josiah" 89
 "Jovian" 56
@@ -1295,7 +1300,7 @@
 "Kasparov" 377
 "Katarina" 51
 "Kate" 2350
-"Kath" 1117
+"Kath" 235
 "Katharine" 174
 "Katherine" 1117
 "Kathleen" 670
@@ -1304,7 +1309,7 @@
 "Katie" 465
 "Katy" 174
 "Kay" 455
-"Kazakh" 289
+"Kazakh" 66
 "Kazakhstan" 289
 "Keats" 114
 "Keith" 2846
@@ -1380,13 +1385,13 @@
 "Latin" 2760
 "Latvia" 337
 "Latvian" 162
-"Lauren" 320
+"Lauren" 134
 "Laurence" 320
 "Laurie" 200
 "Lawrence" 2156
 "Lazarus" 94
 "Leah" 60
-"Lear" 9229
+"Lear" 387
 "Lebanese" 576
 "Lebanon" 1099
 "Leeds" 4912
@@ -1400,7 +1405,7 @@
 "Lennon" 200
 "Lenny" 137
 "Leo" 890
-"Leon" 1011
+"Leon" 540
 "Leonard" 1011
 "Leonardo da Vinci" 60
 "Leonids" 50
@@ -1415,7 +1420,7 @@
 "Liam" 442
 "Liberia" 244
 "Liberian" 57
-"Libra" 8231
+"Libra" 82
 "Libya" 718
 "Libyan" 431
 "Libyans" 115
@@ -1506,12 +1511,12 @@
 "Mainz" 94
 "Majorca" 141
 "Malawi" 298
-"Malay" 689
+"Malay" 95
 "Malaysia" 689
 "Malaysian" 238
 "Malcolm" 1828
 "Maldives" 68
-"Mali" 389
+"Mali" 166
 "Malibu" 62
 "Malta" 622
 "Maltese" 143
@@ -1524,7 +1529,7 @@
 "Mao" 323
 "Maoist" 62
 "Maori" 146
-"Marc" 1063
+"Marc" 675
 "Marconi" 121
 "Marcus" 1063
 "Margaret" 3800
@@ -1537,7 +1542,7 @@
 "Marion" 581
 "Marjorie" 466
 "Markov" 62
-"Mars" 1621
+"Mars" 620
 "Marseille" 202
 "Marshall plan" 1621
 "Martha" 815
@@ -1553,7 +1558,7 @@
 "Mastercard" 51
 "Matilda" 674
 "Matisse" 273
-"Matt" 20235
+"Matt" 1064
 "Matthew" 2594
 "Maureen" 786
 "Maurice" 1052
@@ -1565,10 +1570,10 @@
 "Mayfair" 152
 "Mazda" 107
 "McCartney" 196
-"McDonald" 400
+"McDonald" 96
 "McDonald's" 400
 "McGregor" 204
-"Medici" 2785
+"Medici" 63
 "Mediterranean" 1288
 "Medusa" 54
 "Mel" 345
@@ -1589,7 +1594,7 @@
 "Miami" 372
 "Michael" 9516
 "Michaelmas" 94
-"Michel" 607
+"Michel" 542
 "Michelangelo" 125
 "Michelin" 136
 "Michelle" 607
@@ -1618,7 +1623,7 @@
 "Miriam" 307
 "Mississippi" 169
 "Missouri" 127
-"Mitch" 1014
+"Mitch" 410
 "Mitchell" 1014
 "Mitsubishi" 189
 "Mitterrand" 609
@@ -1638,8 +1643,8 @@
 "Monaco" 221
 "Monday" 5286
 "Mondays" 329
-"Monet" 2833
-"Mongol" 224
+"Monet" 157
+"Mongol" 61
 "Mongolia" 224
 "Mongolian" 148
 "Monica" 387
@@ -1684,7 +1689,7 @@
 "NATO" 1483
 "NCO" 67
 "NCOs" 50
-"NGO" 50
+"NGO" 66
 "NGOs" 66
 "NHS" 2458
 "NMR" 117
@@ -1740,7 +1745,7 @@
 "Nicola" 794
 "Nietzsche" 327
 "Nigel" 3391
-"Niger" 759
+"Niger" 127
 "Nigeria" 759
 "Nigerian" 263
 "Nike" 58
@@ -1821,8 +1826,9 @@
 "Oxfam" 357
 "Oxford" 8571
 "Oxfordshire" 1572
+"Oz" 1063
 "PC" 2260
-"PCB" 66
+"PCB" 117
 "PCBs" 117
 "PCR" 355
 "POSIX" 87
@@ -1884,11 +1890,11 @@
 "Perthshire" 101
 "Peru" 772
 "Peruvian" 213
-"Pete" 12410
+"Pete" 1267
 "Peter" 12410
 "Peugeot" 326
 "Ph.D." 281
-"Phil" 3961
+"Phil" 1966
 "Philadelphia" 351
 "Philip" 3961
 "Philippa" 460
@@ -1915,7 +1921,7 @@
 "Poe" 75
 "Poisson" 82
 "Poland" 2079
-"Polaris" 127
+"Polaris" 117
 "Pollock" 296
 "Polly" 914
 "Polynesia" 55
@@ -2126,7 +2132,7 @@
 "Scipio" 54
 "Scorpio" 99
 "Scorsese" 61
-"Scot" 13092
+"Scot" 471
 "Scotland" 13092
 "Scots" 1812
 "Scotsman" 469
@@ -2142,7 +2148,7 @@
 "Senegal" 191
 "Seoul" 287
 "September" 10408
-"Serb" 861
+"Serb" 380
 "Serbia" 861
 "Serbian" 861
 "Serbs" 736
@@ -2191,7 +2197,7 @@
 "Siobhan" 103
 "Sirius" 76
 "Skye" 287
-"Slav" 779
+"Slav" 140
 "Slavonic" 97
 "Slavs" 130
 "Slovak" 365
@@ -2209,7 +2215,7 @@
 "Soho" 354
 "Solent" 117
 "Solomon" 352
-"Somali" 584
+"Somali" 295
 "Somalia" 584
 "Somalis" 63
 "Somme" 130
@@ -2242,7 +2248,7 @@
 "Stalingrad" 79
 "Stalinism" 79
 "Stalinist" 195
-"Stan" 12750
+"Stan" 621
 "Stanley" 1356
 "Stansted" 175
 "Stella" 783
@@ -2325,7 +2331,7 @@
 "Texan" 135
 "Texas" 1004
 "Thackeray" 61
-"Thai" 880
+"Thai" 504
 "Thailand" 880
 "Thames" 1841
 "Thatcher" 3363
@@ -2333,7 +2339,7 @@
 "Thatcherite" 206
 "The Hague" 589
 "Thebes" 83
-"Theo" 13129
+"Theo" 294
 "Theodora" 448
 "Theodore" 213
 "Theresa" 306
@@ -2350,7 +2356,7 @@
 "Timothy" 730
 "Tina" 535
 "Tirana" 104
-"Titan" 157
+"Titan" 118
 "Tobago" 96
 "Tobias" 66
 "Toby" 803
@@ -2380,14 +2386,14 @@
 "Tuesday" 3568
 "Tuesdays" 164
 "Tuileries" 52
-"Tunis" 235
+"Tunis" 149
 "Tunisia" 235
 "Tunisian" 85
 "Turin" 157
-"Turk" 1404
+"Turk" 169
 "Turkish" 1404
 "Turkmenistan" 77
-"Tuscan" 191
+"Tuscan" 126
 "Tuscany" 191
 "Tutankhamun" 57
 "Twickenham" 340
@@ -2424,7 +2430,7 @@
 "Uruguay" 387
 "Utah" 218
 "Uttar Pradesh" 198
-"Uzbek" 172
+"Uzbek" 71
 "Uzbekistan" 172
 "VCR" 65
 "VHF" 75
@@ -2448,7 +2454,7 @@
 "Venice" 1022
 "Venus" 533
 "Vera" 311
-"Verdi" 182
+"Verdi" 122
 "Verona" 140
 "Veronica" 385
 "Versailles" 229
@@ -2460,7 +2466,7 @@
 "Victorians" 195
 "Vienna" 1322
 "Viennese" 207
-"Viet" 1834
+"Viet" 81
 "Vietnam" 1834
 "Vietnamese" 785
 "Vincent" 836
@@ -2514,7 +2520,7 @@
 "Whitsun" 59
 "Wickham" 261
 "Wigan" 655
-"Wilde" 678
+"Wilde" 347
 "William" 8389
 "Willie" 1294
 "Willoughby" 147
@@ -2553,7 +2559,7 @@
 "York" 9903
 "Yorkshire" 4389
 "Yorkshireman" 93
-"Yugoslav" 1398
+"Yugoslav" 619
 "Yugoslavia" 1398
 "Yugoslavian" 69
 "Yugoslavs" 164
@@ -2604,7 +2610,7 @@
 "abandoning" 485
 "abandonment" 494
 "abandons" 85
-"abate" 131
+"abate" 61
 "abated" 99
 "abatement" 131
 "abattoir" 62
@@ -2653,7 +2659,7 @@
 "abomination" 51
 "aboriginal" 219
 "aborigines" 148
-"abort" 1246
+"abort" 103
 "aborted" 156
 "abortion" 1246
 "abortions" 268
@@ -2782,9 +2788,9 @@
 "accomplishing" 50
 "accomplishment" 134
 "accomplishments" 91
-"accord" 15722
+"accord" 1159
 "accorded" 502
-"according" 15722
+"according" 108
 "according to" 15722
 "accordingly" 2307
 "accordion" 88
@@ -2860,11 +2866,11 @@
 "acorns" 59
 "acoustic" 662
 "acoustics" 117
-"acquaint" 615
+"acquaint" 58
 "acquaintance" 615
 "acquaintances" 305
 "acquainted" 310
-"acquiesce" 172
+"acquiesce" 67
 "acquiesced" 69
 "acquiescence" 172
 "acquire" 4039
@@ -2875,7 +2881,7 @@
 "acquisition" 2618
 "acquisitions" 695
 "acquisitive" 67
-"acquit" 371
+"acquit" 55
 "acquittal" 125
 "acquitted" 371
 "acre" 1589
@@ -2891,7 +2897,7 @@
 "acrylics" 87
 "act" 27467
 "acted" 2293
-"actin" 4851
+"actin" 70
 "acting" 4851
 "action" 22096
 "actionable" 87
@@ -2943,12 +2949,12 @@
 "adaptor" 227
 "adaptors" 77
 "adapts" 72
-"add" 8235
+"add" 15375
 "add-on" 119
 "added" 15375
 "addendum" 84
 "adder" 56
-"addict" 579
+"addict" 203
 "addicted" 277
 "addiction" 579
 "addictions" 61
@@ -3008,7 +3014,7 @@
 "adjustments" 702
 "adjusts" 91
 "adjutant" 175
-"admin" 6631
+"admin" 137
 "administer" 989
 "administered" 989
 "administering" 312
@@ -3082,7 +3088,7 @@
 "advantaged" 59
 "advantageous" 375
 "advantages" 2946
-"advent" 1518
+"advent" 804
 "adventure" 1518
 "adventurer" 475
 "adventurers" 475
@@ -3097,8 +3103,8 @@
 "adverse" 1184
 "adversely" 418
 "adversity" 165
-"advert" 4478
-"advertise" 1151
+"advert" 446
+"advertise" 505
 "advertised" 772
 "advertisement" 1151
 "advertisements" 1032
@@ -3282,7 +3288,7 @@
 "aided" 633
 "aides" 218
 "aiding" 161
-"ail" 66
+"ail" 260
 "ailing" 260
 "ailment" 205
 "ailments" 205
@@ -3389,7 +3395,7 @@
 "aliens" 360
 "alight" 384
 "alighted" 96
-"align" 396
+"align" 130
 "aligned" 394
 "alignment" 396
 "alignments" 135
@@ -3460,7 +3466,7 @@
 "allocation" 1831
 "allocations" 474
 "allocative" 53
-"allot" 342
+"allot" 70
 "allotment" 276
 "allotments" 141
 "allotted" 342
@@ -3509,7 +3515,7 @@
 "alt" 169
 "altar" 893
 "altars" 92
-"alter" 8650
+"alter" 1907
 "alteration" 843
 "alterations" 843
 "altercation" 59
@@ -3528,18 +3534,18 @@
 "although" 43635
 "altitude" 491
 "altitudes" 124
-"alto" 3218
+"alto" 174
 "altogether" 3218
 "altos" 53
 "altruism" 191
 "altruistic" 143
-"alum" 1042
+"alum" 72
 "aluminium" 1042
 "alumni" 147
 "alveolar" 59
 "always" 46228
 "am" 26867
-"amalgam" 296
+"amalgam" 136
 "amalgamate" 296
 "amalgamated" 296
 "amalgamation" 249
@@ -3564,7 +3570,7 @@
 "ambiguities" 219
 "ambiguity" 855
 "ambiguous" 837
-"ambit" 1541
+"ambit" 179
 "ambition" 1340
 "ambitions" 1001
 "ambitious" 1541
@@ -3580,9 +3586,9 @@
 "ambushed" 118
 "ameliorate" 57
 "amelioration" 77
-"amen" 1808
+"amen" 322
 "amenable" 325
-"amend" 1808
+"amend" 1224
 "amended" 1091
 "amending" 140
 "amendment" 1808
@@ -3616,7 +3622,7 @@
 "amounted" 948
 "amounting" 392
 "amounts" 3017
-"amp" 679
+"amp" 822
 "amphetamines" 74
 "amphibian" 151
 "amphibians" 151
@@ -3641,7 +3647,7 @@
 "amusing" 807
 "amylase" 100
 "amyloid" 60
-"an" 344045
+"an" 2682874
 "an awful lot" 254
 "anachronism" 102
 "anachronistic" 128
@@ -3653,7 +3659,7 @@
 "anaesthetics" 51
 "anaesthetised" 71
 "anaesthetist" 57
-"anal" 13239
+"anal" 524
 "analgesia" 78
 "analgesics" 51
 "analogies" 166
@@ -3701,13 +3707,6 @@
 "and so forth" 551
 "and so on" 4840
 "and/or" 1948
-"andersen" 181
-"anderson" 1471
-"andre" 812
-"andrea" 318
-"andreas" 143
-"andrei" 187
-"andrews" 812
 "android" 112
 "androids" 112
 "anecdotal" 164
@@ -3716,7 +3715,7 @@
 "anemone" 118
 "anemones" 118
 "anew" 191
-"ange" 3881
+"ange" 83
 "angel" 1516
 "angelfish" 50
 "angelic" 90
@@ -3805,14 +3804,13 @@
 "antagonist" 160
 "antagonistic" 160
 "antagonists" 135
-"antarctic" 496
 "ante" 201
 "ante-natal" 53
 "antecedent" 160
 "antecedents" 160
 "antelope" 98
 "antenatal" 152
-"antenna" 159
+"antenna" 73
 "antennae" 159
 "anterior" 201
 "anthem" 304
@@ -3824,7 +3822,7 @@
 "anthropologists" 453
 "anthropology" 687
 "anthropomorphic" 53
-"anti" 1624
+"anti" 239
 "anti-Semitic" 158
 "anti-Semitism" 252
 "anti-abortion" 67
@@ -3902,14 +3900,14 @@
 "anywhere" 4105
 "apace" 105
 "apache" 130
-"apart" 6534
+"apart" 3506
 "apart from" 6534
 "apartheid" 371
 "apartment" 1312
 "apartments" 633
 "apathetic" 99
 "apathy" 273
-"ape" 214
+"ape" 309
 "aperture" 156
 "apes" 261
 "apex" 309
@@ -3964,7 +3962,7 @@
 "appellants" 212
 "appellate" 145
 "appellation" 59
-"append" 1756
+"append" 65
 "appendages" 87
 "appended" 99
 "appendices" 128
@@ -4022,7 +4020,7 @@
 "apprehensively" 102
 "apprentice" 511
 "apprenticed" 216
-"apprentices" 497
+"apprentices" 342
 "apprenticeship" 497
 "apprenticeships" 63
 "approach" 16217
@@ -4063,7 +4061,7 @@
 "aptitude" 189
 "aptitudes" 63
 "aptly" 238
-"aqua" 856
+"aqua" 61
 "aquamarine" 50
 "aquaria" 76
 "aquarium" 856
@@ -4086,7 +4084,7 @@
 "arcade" 344
 "arcades" 110
 "arcane" 114
-"arch" 2840
+"arch" 962
 "archaeological" 875
 "archaeologist" 347
 "archaeologists" 347
@@ -4149,13 +4147,13 @@
 "arises" 1779
 "arising" 2207
 "aristocracy" 508
-"aristocrat" 519
+"aristocrat" 141
 "aristocratic" 519
 "aristocrats" 187
 "arithmetic" 549
 "arithmetical" 64
 "ark" 325
-"arm" 9189
+"arm" 11441
 "armada" 120
 "armament" 195
 "armaments" 195
@@ -4183,7 +4181,7 @@
 "aroused" 909
 "arouses" 55
 "arousing" 170
-"arrange" 5780
+"arrange" 2271
 "arranged" 4064
 "arrangement" 5780
 "arrangements" 5780
@@ -4209,7 +4207,7 @@
 "arrogantly" 63
 "arrow" 1040
 "arrows" 596
-"arse" 1374
+"arse" 553
 "arse-hole" 80
 "arsenal" 1374
 "arsenals" 58
@@ -4274,7 +4272,7 @@
 "as though" 5368
 "as to" 8086
 "as usual" 1370
-"as well" 16462
+"as well" 11985
 "as well as" 16462
 "as yet" 1422
 "asbestos" 296
@@ -4304,7 +4302,7 @@
 "aside" 3613
 "aside from" 305
 "asides" 54
-"ask" 19399
+"ask" 33420
 "askance" 55
 "asked" 33420
 "askew" 85
@@ -4358,8 +4356,8 @@
 "assertive" 314
 "assertiveness" 170
 "asserts" 323
-"asses" 6704
-"assess" 6704
+"asses" 56
+"assess" 2672
 "assessable" 51
 "assessed" 2218
 "assesses" 136
@@ -4474,7 +4472,7 @@
 "atmospheres" 78
 "atmospheric" 648
 "atoll" 56
-"atom" 1106
+"atom" 543
 "atomic" 1106
 "atomistic" 53
 "atoms" 1054
@@ -4538,7 +4536,7 @@
 "attitudinal" 125
 "attorney" 688
 "attorney-general" 465
-"attract" 5152
+"attract" 2544
 "attracted" 2847
 "attracting" 809
 "attraction" 1502
@@ -4607,7 +4605,7 @@
 "authentically" 62
 "authenticated" 69
 "authenticity" 362
-"author" 18345
+"author" 4346
 "authorial" 95
 "authorisation" 265
 "authorise" 1041
@@ -4623,7 +4621,7 @@
 "authors" 2510
 "authorship" 170
 "autistic" 70
-"auto" 2787
+"auto" 253
 "autobahn" 67
 "autobiographical" 190
 "autobiographies" 70
@@ -4817,7 +4815,7 @@
 "baiting" 70
 "baits" 134
 "baize" 75
-"bake" 2226
+"bake" 494
 "baked" 662
 "baker" 2226
 "bakers" 157
@@ -4910,7 +4908,7 @@
 "baptist" 456
 "baptists" 95
 "bar" 8005
-"barb" 432
+"barb" 51
 "barbarian" 237
 "barbarians" 237
 "barbaric" 174
@@ -4976,7 +4974,7 @@
 "barrows" 79
 "bars" 2436
 "barter" 169
-"bas" 88
+"bas" 18640
 "basal" 547
 "basalt" 110
 "basaltic" 83
@@ -4999,7 +4997,7 @@
 "basing" 171
 "basins" 319
 "basis" 14439
-"bask" 1342
+"bask" 82
 "basket" 1342
 "basketball" 208
 "baskets" 479
@@ -5105,7 +5103,7 @@
 "beating" 1874
 "beatings" 101
 "beats" 581
-"beau" 8670
+"beau" 126
 "beauties" 212
 "beautiful" 8670
 "beautifully" 1241
@@ -5140,7 +5138,7 @@
 "bedsit" 85
 "bedspread" 65
 "bedtime" 275
-"bee" 522
+"bee" 268723
 "beech" 430
 "beef" 1520
 "beefy" 91
@@ -5151,7 +5149,7 @@
 "beers" 464
 "bees" 761
 "beeswax" 62
-"beet" 285
+"beet" 122
 "beetle" 285
 "beetles" 285
 "beetroot" 59
@@ -5280,7 +5278,6 @@
 "beret" 121
 "berets" 84
 "berg" 291
-"bergen" 66
 "berger" 291
 "berries" 333
 "berry" 471
@@ -5405,7 +5402,7 @@
 "binding" 2567
 "bindings" 119
 "binds" 284
-"bing" 346
+"bing" 53
 "binge" 140
 "bingo" 346
 "binocular" 553
@@ -5583,7 +5580,7 @@
 "bloated" 163
 "blob" 188
 "blobs" 121
-"bloc" 4388
+"bloc" 506
 "block" 4388
 "blockade" 380
 "blockage" 129
@@ -5686,7 +5683,7 @@
 "bob" 4514
 "bobbed" 151
 "bobbies" 60
-"bobbin" 209
+"bobbin" 53
 "bobbing" 209
 "bobby" 1093
 "bobs" 93
@@ -5857,7 +5854,7 @@
 "bottomless" 97
 "bottoms" 323
 "boudoir" 63
-"bough" 9073
+"bough" 105
 "boughs" 86
 "bought" 9073
 "boulder" 319
@@ -5891,7 +5888,7 @@
 "bouts" 220
 "bovine" 217
 "bovril" 50
-"bow" 1470
+"bow" 2435
 "bowed" 850
 "bowel" 1251
 "bowels" 214
@@ -5951,7 +5948,7 @@
 "braking" 185
 "bramble" 153
 "brambles" 153
-"bran" 5484
+"bran" 175
 "branch" 5484
 "branched" 110
 "branches" 3260
@@ -6039,7 +6036,7 @@
 "breezy" 88
 "brethren" 159
 "brevity" 132
-"brew" 750
+"brew" 360
 "brewed" 157
 "brewer" 750
 "breweries" 262
@@ -6069,7 +6066,7 @@
 "bridges" 1041
 "bridging" 271
 "bridle" 245
-"brie" 5370
+"brie" 57
 "brief" 5370
 "briefcase" 374
 "briefed" 283
@@ -6078,7 +6075,7 @@
 "briefings" 135
 "briefly" 3280
 "briefs" 147
-"brig" 5536
+"brig" 136
 "brig." 126
 "brigade" 1179
 "brigades" 94
@@ -6161,7 +6158,7 @@
 "brooms" 58
 "broomstick" 54
 "bros." 212
-"broth" 8529
+"broth" 145
 "brothel" 162
 "brothels" 88
 "brother" 8529
@@ -6204,7 +6201,7 @@
 "bubbles" 482
 "bubbling" 349
 "bubbly" 126
-"buck" 997
+"buck" 507
 "bucked" 102
 "bucket" 997
 "buckets" 404
@@ -6218,7 +6215,7 @@
 "buddies" 56
 "budding" 233
 "buddy" 262
-"budge" 8317
+"budge" 151
 "budget" 8317
 "budgetary" 468
 "budgeted" 182
@@ -6226,7 +6223,7 @@
 "budgets" 1303
 "budgie" 112
 "buds" 413
-"buff" 699
+"buff" 262
 "buffalo" 309
 "buffaloes" 53
 "buffer" 699
@@ -6235,7 +6232,7 @@
 "buffet" 570
 "buffeted" 77
 "buffs" 98
-"bug" 370
+"bug" 608
 "bugged" 83
 "bugger" 608
 "buggered" 81
@@ -6301,7 +6298,7 @@
 "bundle" 746
 "bundled" 371
 "bundles" 270
-"bung" 558
+"bung" 97
 "bungalow" 558
 "bungalows" 195
 "bungled" 54
@@ -6313,7 +6310,7 @@
 "bunny" 406
 "buns" 209
 "bunting" 112
-"buoy" 360
+"buoy" 77
 "buoyancy" 150
 "buoyant" 360
 "buoyed" 72
@@ -6325,7 +6322,7 @@
 "bureau" 1440
 "bureaucracies" 217
 "bureaucracy" 1312
-"bureaucrat" 927
+"bureaucrat" 86
 "bureaucratic" 927
 "bureaucrats" 500
 "bureaus" 56
@@ -6355,7 +6352,7 @@
 "burns" 1342
 "burnt" 1295
 "burnt-out" 53
-"burr" 547
+"burr" 132
 "burroughs" 102
 "burrow" 547
 "burrowed" 60
@@ -6399,13 +6396,13 @@
 "but" 456071
 "but for" 3134
 "butane" 69
-"butch" 876
+"butch" 151
 "butcher" 876
 "butchered" 52
 "butchers" 232
 "butler" 1348
 "buts" 51
-"butt" 2130
+"butt" 447
 "butted" 56
 "butter" 2130
 "buttered" 144
@@ -6472,7 +6469,7 @@
 "cabaret" 316
 "cabbage" 365
 "cabbages" 133
-"cabin" 6536
+"cabin" 1116
 "cabinet" 6536
 "cabinets" 364
 "cabins" 168
@@ -6490,7 +6487,7 @@
 "caddie" 235
 "caddies" 97
 "caddis" 51
-"cade" 207
+"cade" 51
 "cadet" 207
 "cadets" 207
 "cadmium" 128
@@ -6568,7 +6565,7 @@
 "camomile" 56
 "camouflage" 268
 "camouflaged" 117
-"camp" 9514
+"camp" 3470
 "campaign" 9514
 "campaigned" 353
 "campaigner" 457
@@ -6600,7 +6597,7 @@
 "cancerous" 82
 "cancers" 479
 "candelabra" 53
-"candid" 4018
+"candid" 155
 "candidacy" 154
 "candidate" 4018
 "candidates" 4018
@@ -6639,12 +6636,12 @@
 "canopies" 77
 "canopy" 507
 "cans" 577
-"cant" 564
+"cant" 97
 "cantata" 57
 "canteen" 564
 "canteens" 94
 "canter" 121
-"canto" 170
+"canto" 74
 "canton" 170
 "cantons" 55
 "cantos" 73
@@ -6689,7 +6686,7 @@
 "capsized" 60
 "capsule" 216
 "capsules" 169
-"capt" 5403
+"capt" 227
 "captain" 5403
 "captaincy" 179
 "captained" 142
@@ -6771,7 +6768,7 @@
 "carnivorous" 72
 "carols" 91
 "carousel" 83
-"carp" 2409
+"carp" 422
 "carpenter" 475
 "carpenters" 154
 "carpentry" 67
@@ -6861,7 +6858,7 @@
 "casuals" 110
 "casualties" 985
 "casualty" 751
-"cat" 3945
+"cat" 5119
 "cat-o'-nine-tails" 50
 "cataclysmic" 61
 "catalogue" 2448
@@ -6998,16 +6995,16 @@
 "cements" 114
 "cemeteries" 200
 "cemetery" 765
-"censor" 684
+"censor" 107
 "censored" 97
 "censorious" 52
-"censors" 684
+"censors" 54
 "censorship" 684
 "censure" 172
 "censured" 55
 "census" 1036
 "censuses" 155
-"cent" 23175
+"cent" 125
 "centenary" 523
 "centigrade" 108
 "centimetre" 400
@@ -7043,7 +7040,7 @@
 "ceremonial" 462
 "ceremonies" 417
 "ceremony" 1767
-"cert" 21626
+"cert" 187
 "certain" 21626
 "certainly" 18647
 "certainties" 154
@@ -7091,17 +7088,17 @@
 "chamberlain" 792
 "chambers" 1179
 "chameleon" 95
-"champ" 3400
+"champ" 195
 "champagne" 1931
 "champion" 3400
 "championed" 100
-"champions" 3380
+"champions" 1481
 "championship" 3380
 "championships" 1506
 "champs" 80
 "chance" 13303
 "chanced" 94
-"chancel" 3701
+"chancel" 144
 "chancellery" 59
 "chancellor" 3701
 "chancellors" 73
@@ -7128,7 +7125,7 @@
 "chants" 139
 "chaos" 1637
 "chaotic" 469
-"chap" 14904
+"chap" 1566
 "chapel" 2159
 "chapels" 284
 "chaplain" 445
@@ -7137,7 +7134,7 @@
 "chaps" 419
 "chapter" 14904
 "chapters" 1984
-"char" 10368
+"char" 121
 "character" 8626
 "characterisation" 237
 "characterise" 952
@@ -7233,7 +7230,7 @@
 "cheekily" 51
 "cheeks" 1619
 "cheeky" 342
-"cheer" 1154
+"cheer" 773
 "cheered" 441
 "cheerful" 1154
 "cheerfully" 586
@@ -7254,7 +7251,7 @@
 "chemically" 223
 "chemicals" 2168
 "chemiluminescence" 75
-"chemist" 2030
+"chemist" 698
 "chemistry" 2030
 "chemists" 528
 "chemotherapy" 267
@@ -7280,7 +7277,7 @@
 "chewing" 482
 "chez" 53
 "chianti" 64
-"chic" 2084
+"chic" 316
 "chick" 2084
 "chicken" 2084
 "chickens" 486
@@ -7292,7 +7289,7 @@
 "chieftain" 97
 "chieftains" 68
 "chiffon" 101
-"child" 46604
+"child" 24396
 "childbearing" 243
 "childbirth" 365
 "childcare" 311
@@ -7303,7 +7300,7 @@
 "children" 46604
 "chill" 849
 "chilled" 362
-"chilli" 361
+"chilli" 193
 "chilling" 361
 "chilly" 357
 "chime" 98
@@ -7312,11 +7309,11 @@
 "chimes" 98
 "chimney" 673
 "chimneys" 291
-"chimp" 199
+"chimp" 57
 "chimpanzee" 199
 "chimpanzees" 199
 "chimps" 111
-"chin" 5524
+"chin" 1611
 "china" 5524
 "chink" 100
 "chins" 67
@@ -7423,7 +7420,7 @@
 "chutney" 53
 "cicadas" 60
 "cider" 465
-"cigar" 2287
+"cigar" 486
 "cigarette" 2287
 "cigarettes" 1322
 "cigars" 212
@@ -7464,7 +7461,7 @@
 "cirrhosis" 164
 "cistern" 266
 "cisterns" 89
-"cit" 75
+"cit" 23247
 "citadel" 209
 "citation" 451
 "citations" 193
@@ -7495,7 +7492,7 @@
 "claimed" 8335
 "claiming" 2246
 "claims" 8957
-"clam" 310
+"clam" 68
 "clamber" 225
 "clambered" 225
 "clambering" 97
@@ -7595,7 +7592,7 @@
 "cleavage" 341
 "cleaved" 56
 "cleaver" 67
-"clef" 160
+"clef" 71
 "cleft" 160
 "clematis" 84
 "clemency" 54
@@ -7692,13 +7689,13 @@
 "closely" 5521
 "closeness" 331
 "closer" 4645
-"closes" 1075
+"closes" 511
 "closest" 1075
 "closet" 213
 "closing" 2728
 "closure" 1927
 "closures" 590
-"clot" 7321
+"clot" 111
 "cloth" 7321
 "clothe" 7321
 "clothed" 288
@@ -7792,9 +7789,9 @@
 "cobra" 229
 "cobweb" 129
 "cobwebs" 129
-"coca" 668
+"coca" 219
 "cocaine" 668
-"cock" 714
+"cock" 525
 "cocked" 247
 "cocker" 72
 "cockerel" 71
@@ -7805,7 +7802,7 @@
 "cocktail" 714
 "cocktails" 117
 "cocky" 124
-"coco" 514
+"coco" 65
 "cocoa" 514
 "coconut" 326
 "cocoon" 97
@@ -7866,7 +7863,7 @@
 "coined" 247
 "coins" 1412
 "coke" 609
-"col" 364
+"col" 12220
 "cola" 209
 "cold" 12220
 "cold-blooded" 115
@@ -7875,10 +7872,10 @@
 "coldly" 561
 "coldness" 240
 "colds" 131
-"coli" 1006
+"coli" 220
 "colic" 124
 "colitis" 1006
-"coll" 10239
+"coll" 53
 "collaborate" 215
 "collaborated" 198
 "collaborating" 152
@@ -7896,14 +7893,14 @@
 "collapsing" 352
 "collar" 1420
 "collars" 230
-"collate" 213
+"collate" 65
 "collated" 85
 "collateral" 213
 "collating" 64
 "collation" 52
 "colleague" 5552
 "colleagues" 5552
-"collect" 7837
+"collect" 2839
 "collectable" 56
 "collected" 3532
 "collecting" 1689
@@ -7925,7 +7922,7 @@
 "collide" 301
 "collided" 301
 "colliding" 179
-"collie" 403
+"collie" 101
 "collier" 403
 "collieries" 130
 "colliery" 403
@@ -7936,7 +7933,7 @@
 "colloquial" 108
 "collusion" 256
 "collusive" 57
-"colon" 1961
+"colon" 781
 "colonel" 1961
 "colonels" 61
 "colonial" 1537
@@ -7968,7 +7965,7 @@
 "columnists" 57
 "columns" 1615
 "coma" 254
-"comb" 4449
+"comb" 420
 "combat" 1577
 "combatants" 97
 "combating" 179
@@ -8009,7 +8006,7 @@
 "comics" 232
 "coming" 20373
 "comings" 85
-"comma" 4171
+"comma" 201
 "command" 4171
 "commandant" 138
 "commanded" 758
@@ -8061,7 +8058,7 @@
 "commissioners" 898
 "commissioning" 351
 "commissions" 812
-"commit" 18976
+"commit" 1383
 "commitment" 5670
 "commitments" 1320
 "commits" 197
@@ -8105,7 +8102,7 @@
 "communities" 4143
 "community" 23085
 "community-based" 115
-"commute" 280
+"commute" 86
 "commuted" 82
 "commuter" 280
 "commuters" 280
@@ -8141,7 +8138,7 @@
 "compatible" 1163
 "compatriot" 81
 "compatriots" 81
-"compel" 776
+"compel" 223
 "compelled" 776
 "compelling" 604
 "compels" 57
@@ -8250,7 +8247,7 @@
 "comprehensive" 3606
 "comprehensively" 194
 "comprehensiveness" 56
-"compress" 576
+"compress" 108
 "compressed" 418
 "compression" 576
 "compressor" 69
@@ -8271,7 +8268,7 @@
 "computation" 321
 "computational" 321
 "computations" 79
-"compute" 13841
+"compute" 115
 "computed" 303
 "computer" 13841
 "computer-aided" 147
@@ -8348,7 +8345,7 @@
 "concordance" 86
 "concourse" 140
 "concrete" 2700
-"concur" 370
+"concur" 116
 "concurred" 97
 "concurrence" 62
 "concurrent" 370
@@ -8397,7 +8394,7 @@
 "coney" 50
 "confectionery" 113
 "confederation" 511
-"confer" 10065
+"confer" 382
 "conference" 10065
 "conferences" 1189
 "conferred" 578
@@ -8414,7 +8411,7 @@
 "confetti" 59
 "confidant" 98
 "confidante" 57
-"confide" 7002
+"confide" 173
 "confided" 319
 "confidence" 7002
 "confidences" 99
@@ -8515,7 +8512,7 @@
 "conjures" 97
 "conjuring" 105
 "conker" 62
-"connect" 3496
+"connect" 748
 "connected" 3356
 "connecting" 648
 "connection" 3496
@@ -8539,7 +8536,7 @@
 "conquerors" 80
 "conquest" 640
 "conquests" 120
-"cons" 13527
+"cons" 306
 "conscience" 1353
 "consciences" 109
 "conscientious" 336
@@ -8547,7 +8544,7 @@
 "conscious" 3063
 "consciously" 640
 "consciousness" 2576
-"conscript" 190
+"conscript" 50
 "conscription" 190
 "conscripts" 119
 "consecrated" 195
@@ -8593,7 +8590,7 @@
 "consignee" 64
 "consignment" 264
 "consignments" 90
-"consist" 3104
+"consist" 1235
 "consisted" 1343
 "consistency" 972
 "consistent" 3104
@@ -8610,7 +8607,7 @@
 "consoling" 97
 "consonant" 266
 "consonants" 187
-"consort" 901
+"consort" 204
 "consortia" 123
 "consortium" 901
 "conspicuous" 754
@@ -8648,14 +8645,14 @@
 "constitutionally" 188
 "constitutions" 192
 "constitutive" 129
-"constrain" 1934
+"constrain" 180
 "constrained" 749
 "constraining" 101
 "constraint" 1934
 "constraints" 1934
 "constricted" 85
 "constriction" 63
-"construct" 6312
+"construct" 1408
 "constructed" 2534
 "constructing" 520
 "construction" 6312
@@ -8669,11 +8666,11 @@
 "construe" 527
 "construed" 527
 "construing" 81
-"consul" 2431
+"consul" 208
 "consular" 116
 "consulate" 129
 "consuls" 57
-"consult" 2431
+"consult" 1195
 "consultancies" 125
 "consultancy" 782
 "consultant" 1629
@@ -8683,7 +8680,7 @@
 "consultative" 752
 "consulted" 1209
 "consulting" 811
-"consume" 4373
+"consume" 523
 "consumed" 840
 "consumer" 4373
 "consumerism" 186
@@ -8766,14 +8763,14 @@
 "continuing" 5306
 "continuities" 92
 "continuity" 1276
-"continuo" 2649
+"continuo" 57
 "continuous" 2649
 "continuously" 889
 "continuum" 415
 "contorted" 146
 "contour" 345
 "contours" 345
-"contra" 11930
+"contra" 198
 "contraband" 55
 "contraception" 392
 "contraceptive" 238
@@ -8789,7 +8786,7 @@
 "contracts" 4532
 "contractual" 874
 "contractually" 54
-"contradict" 789
+"contradict" 280
 "contradicted" 207
 "contradicting" 71
 "contradiction" 789
@@ -8800,7 +8797,7 @@
 "contraption" 93
 "contrary" 1638
 "contrary to" 1335
-"contras" 6539
+"contras" 234
 "contrast" 6539
 "contrasted" 537
 "contrasting" 703
@@ -8847,13 +8844,13 @@
 "convenient" 2027
 "conveniently" 636
 "convening" 94
-"convent" 3927
+"convent" 550
 "convention" 3927
 "conventional" 3927
 "conventionalism" 115
 "conventionally" 302
 "conventions" 1187
-"converge" 539
+"converge" 208
 "converged" 125
 "convergence" 539
 "convergent" 93
@@ -8886,7 +8883,7 @@
 "conveying" 297
 "conveyor" 117
 "conveys" 273
-"convict" 2051
+"convict" 243
 "convicted" 1507
 "conviction" 2051
 "convictions" 760
@@ -8941,7 +8938,7 @@
 "coordination" 471
 "coordinator" 351
 "coordinators" 127
-"cop" 465
+"cop" 5998
 "cope" 4188
 "coped" 252
 "copes" 77
@@ -8979,7 +8976,7 @@
 "corks" 90
 "corkscrew" 90
 "cormorants" 53
-"corn" 7493
+"corn" 1196
 "cornea" 59
 "corned" 78
 "corner" 7493
@@ -8992,7 +8989,7 @@
 "corning" 67
 "corny" 54
 "corollary" 278
-"corona" 830
+"corona" 71
 "coronary" 540
 "coronation" 830
 "coroner" 832
@@ -9000,7 +8997,7 @@
 "coronet" 76
 "corp" 5123
 "corp." 147
-"corpora" 4579
+"corpora" 107
 "corporal" 653
 "corporals" 66
 "corporate" 4579
@@ -9041,7 +9038,7 @@
 "corrosion" 273
 "corrosive" 135
 "corrugated" 184
-"corrupt" 1439
+"corrupt" 614
 "corrupted" 160
 "corrupting" 84
 "corruption" 1439
@@ -9051,7 +9048,7 @@
 "cortex" 363
 "cortical" 136
 "corticosteroids" 59
-"cos" 16345
+"cos" 20612
 "cosmetic" 392
 "cosmetics" 240
 "cosmic" 408
@@ -9097,7 +9094,7 @@
 "counsellor" 619
 "counsellors" 358
 "counsels" 59
-"count" 31905
+"count" 4213
 "countdown" 121
 "counted" 1278
 "countenance" 311
@@ -9130,7 +9127,7 @@
 "countrywide" 62
 "counts" 1831
 "county" 11353
-"coup" 12432
+"coup" 1693
 "coupe" 107
 "couple" 12432
 "coupled" 1271
@@ -9171,7 +9168,7 @@
 "cousins" 742
 "couture" 83
 "covalent" 75
-"cove" 11118
+"cove" 283
 "covenant" 960
 "covenants" 547
 "cover" 11118
@@ -9226,7 +9223,7 @@
 "crag" 400
 "craggy" 121
 "crags" 224
-"cram" 447
+"cram" 140
 "crammed" 446
 "cramming" 60
 "cramp" 447
@@ -9332,7 +9329,7 @@
 "crewmen" 54
 "crews" 1050
 "crib" 70
-"crick" 3306
+"crick" 100
 "cricket" 3306
 "cricketer" 277
 "cricketers" 267
@@ -9458,13 +9455,13 @@
 "cruisers" 80
 "cruises" 210
 "cruising" 423
-"crumb" 489
+"crumb" 66
 "crumble" 249
 "crumbled" 176
 "crumbles" 51
 "crumbling" 489
 "crumbs" 282
-"crump" 433
+"crump" 125
 "crumpled" 433
 "crunch" 371
 "crunched" 97
@@ -9538,7 +9535,7 @@
 "culpable" 70
 "culprit" 191
 "culprits" 145
-"cult" 8567
+"cult" 903
 "cultivate" 634
 "cultivated" 634
 "cultivating" 131
@@ -9613,7 +9610,7 @@
 "cursive" 69
 "cursor" 341
 "cursory" 167
-"curt" 2015
+"curt" 166
 "curtail" 274
 "curtailed" 274
 "curtailing" 50
@@ -9638,7 +9635,7 @@
 "custodian" 132
 "custodians" 104
 "custody" 1496
-"custom" 6757
+"custom" 1470
 "custom-built" 52
 "customarily" 88
 "customary" 811
@@ -9764,7 +9761,7 @@
 "dappled" 109
 "dare" 2149
 "dared" 928
-"dares" 172
+"dares" 93
 "daresay" 172
 "daring" 715
 "dark" 13489
@@ -9943,7 +9940,7 @@
 "declined" 2045
 "declines" 305
 "declining" 1112
-"deco" 1326
+"deco" 92
 "decode" 75
 "decoding" 127
 "decommissioning" 94
@@ -9952,7 +9949,7 @@
 "decomposition" 167
 "decompression" 91
 "deconstruction" 119
-"decor" 1326
+"decor" 349
 "decorate" 1326
 "decorated" 1326
 "decorating" 383
@@ -9977,7 +9974,7 @@
 "dedication" 628
 "deduce" 303
 "deduced" 303
-"deduct" 408
+"deduct" 155
 "deducted" 346
 "deductible" 67
 "deducting" 59
@@ -9991,7 +9988,7 @@
 "deems" 83
 "deep" 10699
 "deep-rooted" 110
-"deep-sea" 146
+"deep-sea" 75
 "deep-seated" 146
 "deepen" 320
 "deepened" 320
@@ -10001,7 +9998,6 @@
 "deepest" 498
 "deeply" 3741
 "deer" 930
-"def" 85
 "defamation" 141
 "defamatory" 109
 "default" 1019
@@ -10036,7 +10032,7 @@
 "defensible" 95
 "defensive" 1288
 "defensively" 211
-"defer" 610
+"defer" 212
 "deference" 307
 "deferential" 101
 "deferred" 610
@@ -10084,8 +10080,7 @@
 "defused" 74
 "defy" 313
 "defying" 154
-"deg" 52
-"degas" 104
+"deg." 52
 "degeneracy" 94
 "degenerate" 292
 "degenerated" 108
@@ -10122,7 +10117,7 @@
 "deletion" 352
 "deletions" 117
 "delft" 55
-"deli" 3609
+"deli" 50
 "deliberate" 2789
 "deliberately" 2789
 "deliberation" 244
@@ -10175,14 +10170,14 @@
 "demented" 168
 "dementia" 671
 "demesne" 116
-"demi" 686
+"demi" 60
 "demise" 686
 "demised" 145
-"demo" 5951
+"demo" 223
 "demobilisation" 62
 "democracies" 352
 "democracy" 4215
-"democrat" 5951
+"democrat" 988
 "democratic" 5951
 "democratically" 162
 "democratisation" 71
@@ -10193,9 +10188,9 @@
 "demolished" 719
 "demolishing" 103
 "demolition" 586
-"demon" 2723
+"demon" 300
 "demonic" 105
-"demons" 2723
+"demons" 308
 "demonstrable" 88
 "demonstrably" 109
 "demonstrate" 2723
@@ -10236,7 +10231,7 @@
 "denounce" 548
 "denounced" 548
 "denouncing" 146
-"dens" 1609
+"dens" 59
 "dense" 928
 "densely" 253
 "denser" 106
@@ -10255,7 +10250,7 @@
 "deny" 2265
 "denying" 821
 "deodorant" 52
-"depart" 17714
+"depart" 446
 "departed" 675
 "departing" 316
 "department" 17714
@@ -10274,7 +10269,7 @@
 "dependency" 845
 "dependent" 3816
 "dependents" 112
-"depending" 2278
+"depending" 452
 "depending on" 2278
 "depends" 4980
 "depict" 681
@@ -10312,7 +10307,7 @@
 "depreciated" 50
 "depreciation" 505
 "depredations" 74
-"depress" 2248
+"depress" 147
 "depressed" 1637
 "depressing" 684
 "depressingly" 75
@@ -10325,7 +10320,7 @@
 "deprived" 1145
 "deprives" 59
 "depriving" 216
-"dept" 3047
+"dept." 281
 "depth" 3047
 "depths" 1091
 "deputation" 111
@@ -10465,7 +10460,7 @@
 "detectors" 342
 "detects" 110
 "detention" 872
-"deter" 7730
+"deter" 543
 "detergent" 248
 "detergents" 149
 "deteriorate" 451
@@ -10511,7 +10506,7 @@
 "devastating" 832
 "devastatingly" 75
 "devastation" 271
-"develop" 32409
+"develop" 8630
 "developed" 12384
 "developer" 1168
 "developers" 1168
@@ -10572,7 +10567,7 @@
 "diagram" 1262
 "diagrammatic" 81
 "diagrams" 548
-"dial" 1699
+"dial" 444
 "dialect" 482
 "dialectic" 203
 "dialectical" 177
@@ -10602,7 +10597,7 @@
 "dick" 1484
 "dickhead" 61
 "dicks" 116
-"dicta" 586
+"dicta" 104
 "dictate" 586
 "dictated" 586
 "dictates" 299
@@ -10610,9 +10605,9 @@
 "dictation" 109
 "dictator" 427
 "dictatorial" 107
-"dictators" 427
+"dictators" 62
 "dictatorship" 427
-"diction" 1851
+"diction" 107
 "dictionaries" 397
 "dictionary" 1851
 "dictum" 172
@@ -10620,7 +10615,7 @@
 "didactic" 112
 "diddle" 70
 "didn't" 107571
-"die" 5552
+"die" 13974
 "die-hard" 54
 "died" 13974
 "dielectric" 59
@@ -10632,8 +10627,7 @@
 "dieter" 226
 "dieting" 220
 "diets" 508
-"diff" 48373
-"differ" 48373
+"differ" 1818
 "differed" 525
 "difference" 11335
 "differences" 7803
@@ -10659,7 +10653,7 @@
 "diffuse" 340
 "diffused" 147
 "diffusion" 330
-"dig" 1094
+"dig" 1956
 "digest" 490
 "digested" 330
 "digestible" 51
@@ -10691,7 +10685,7 @@
 "dilute" 403
 "diluted" 403
 "dilution" 261
-"dim" 808
+"dim" 1616
 "dimension" 1616
 "dimensional" 191
 "dimensions" 1364
@@ -10714,7 +10708,7 @@
 "dined" 192
 "diner" 146
 "diners" 146
-"ding" 341
+"ding" 113
 "dinghies" 107
 "dinghy" 341
 "dingy" 148
@@ -10735,10 +10729,10 @@
 "dioxins" 88
 "dip" 714
 "diphtheria" 92
-"diploma" 2002
+"diploma" 750
 "diplomacy" 566
 "diplomas" 153
-"diplomat" 2002
+"diplomat" 364
 "diplomatic" 2002
 "diplomatically" 83
 "diplomats" 530
@@ -10746,7 +10740,7 @@
 "dipped" 559
 "dipping" 297
 "dips" 173
-"dire" 12171
+"dire" 497
 "direct" 12171
 "directed" 3512
 "directing" 600
@@ -10806,7 +10800,7 @@
 "disapproved" 274
 "disapproving" 158
 "disapprovingly" 58
-"disarm" 427
+"disarm" 109
 "disarmament" 427
 "disarmed" 96
 "disarming" 145
@@ -10824,7 +10818,7 @@
 "disbelieving" 106
 "disbelievingly" 52
 "disbursements" 84
-"disc" 8521
+"disc" 1618
 "discard" 795
 "discarded" 795
 "discarding" 95
@@ -10853,7 +10847,7 @@
 "disclosing" 133
 "disclosure" 1015
 "disclosures" 203
-"disco" 6402
+"disco" 760
 "discoloured" 101
 "discomfiture" 58
 "discomfort" 685
@@ -10908,7 +10902,7 @@
 "discriminatory" 260
 "discs" 747
 "discursive" 274
-"discus" 8521
+"discus" 95
 "discuss" 8521
 "discussed" 6989
 "discusses" 431
@@ -11078,7 +11072,7 @@
 "disrepute" 144
 "disrespect" 116
 "disrespectful" 55
-"disrupt" 881
+"disrupt" 368
 "disrupted" 432
 "disrupting" 139
 "disruption" 881
@@ -11197,17 +11191,16 @@
 "ditto" 89
 "diuretic" 67
 "diurnal" 122
-"div" 130
 "diva" 98
 "divan" 98
-"dive" 1395
+"dive" 658
 "dived" 446
-"diver" 1395
+"diver" 224
 "diverge" 279
 "diverged" 67
 "divergence" 279
 "divergent" 230
-"divers" 1395
+"divers" 353
 "diverse" 1325
 "diversification" 363
 "diversified" 241
@@ -11284,7 +11277,7 @@
 "dodging" 174
 "dodgy" 312
 "dodo" 51
-"doe" 593
+"doe" 68737
 "does" 68737
 "doesn't" 61004
 "dog" 8074
@@ -11302,7 +11295,7 @@
 "doldrums" 100
 "dole" 590
 "doleful" 62
-"doll" 2023
+"doll" 745
 "dollar" 2023
 "dollars" 1677
 "dolls" 416
@@ -11312,9 +11305,9 @@
 "dolphins" 833
 "domain" 1665
 "domains" 504
-"dome" 6912
+"dome" 652
 "domed" 109
-"domes" 6912
+"domes" 219
 "domestic" 6912
 "domestically" 97
 "domesticated" 164
@@ -11406,8 +11399,7 @@
 "doughty" 82
 "dour" 156
 "doused" 81
-"dove" 470
-"dover" 470
+"dove" 307
 "doves" 148
 "dowager" 94
 "dowdy" 76
@@ -11426,7 +11418,7 @@
 "downloading" 50
 "downpour" 125
 "downright" 279
-"downs" 1916
+"downs" 642
 "downside" 82
 "downsizing" 114
 "downstairs" 1916
@@ -11469,7 +11461,7 @@
 "drainpipe" 53
 "drains" 470
 "drake" 309
-"dram" 3867
+"dram" 79
 "drama" 3867
 "dramas" 198
 "dramatic" 3867
@@ -11501,7 +11493,7 @@
 "drawled" 298
 "drawn" 7520
 "draws" 1282
-"dread" 1447
+"dread" 583
 "dreaded" 406
 "dreadful" 1447
 "dreadfully" 191
@@ -11667,7 +11659,7 @@
 "dumplings" 98
 "dumps" 227
 "dumpy" 69
-"dun" 368
+"dun" 381
 "dune" 381
 "dunes" 381
 "dung" 223
@@ -11675,7 +11667,7 @@
 "dungeon" 125
 "dungeons" 70
 "dunning" 112
-"duo" 372
+"duo" 649
 "duodenal" 649
 "duodenum" 124
 "duopoly" 50
@@ -11714,7 +11706,7 @@
 "dwarf" 621
 "dwarfed" 96
 "dwarfs" 289
-"dwell" 831
+"dwell" 362
 "dwellers" 247
 "dwelling" 831
 "dwellings" 831
@@ -11758,7 +11750,7 @@
 "eagerness" 232
 "eagle" 1283
 "eagles" 506
-"ear" 2876
+"ear" 34043
 "earl" 34043
 "earldom" 83
 "earlier" 16699
@@ -11870,7 +11862,7 @@
 "edible" 203
 "edict" 90
 "edifice" 173
-"edit" 3910
+"edit" 520
 "edited" 1050
 "editing" 739
 "edition" 2534
@@ -11919,7 +11911,7 @@
 "efforts" 5594
 "egalitarian" 294
 "egalitarianism" 110
-"egg" 2514
+"egg" 3722
 "eggs" 3722
 "eggshell" 54
 "ego" 969
@@ -11935,7 +11927,7 @@
 "eight" 17309
 "eight-hour" 53
 "eight-thirty" 59
-"eight-year" 158
+"eight-year" 99
 "eight-year-old" 158
 "eighteen" 2972
 "eighteenth" 2034
@@ -11976,7 +11968,7 @@
 "elderly" 4973
 "elders" 497
 "eldest" 1035
-"elect" 9747
+"elect" 538
 "elected" 5364
 "electing" 132
 "election" 9747
@@ -12004,7 +11996,7 @@
 "electrolyte" 100
 "electrolytes" 66
 "electromagnetic" 326
-"electron" 3422
+"electron" 943
 "electronic" 3422
 "electronically" 242
 "electronics" 1489
@@ -12125,7 +12117,7 @@
 "embryos" 445
 "emerald" 258
 "emeralds" 82
-"emerge" 3973
+"emerge" 2063
 "emerged" 3776
 "emergence" 1242
 "emergencies" 305
@@ -12142,7 +12134,7 @@
 "eminence" 136
 "eminent" 487
 "eminently" 226
-"emir" 141
+"emir" 75
 "emirates" 141
 "emissaries" 59
 "emissary" 105
@@ -12175,7 +12167,7 @@
 "empirically" 202
 "empiricism" 121
 "empiricist" 91
-"employ" 10676
+"employ" 1742
 "employed" 5090
 "employee" 5833
 "employees" 5833
@@ -12205,7 +12197,6 @@
 "emulation" 264
 "emulator" 67
 "emulsion" 132
-"en" 713
 "en masse" 117
 "en route" 535
 "en-suite" 91
@@ -12258,7 +12249,7 @@
 "encourages" 821
 "encouraging" 2886
 "encouragingly" 131
-"encroach" 145
+"encroach" 54
 "encroached" 65
 "encroaching" 93
 "encroachment" 145
@@ -12297,7 +12288,7 @@
 "endoscopic" 485
 "endoscopy" 351
 "endothelial" 130
-"endow" 520
+"endow" 92
 "endowed" 349
 "endowment" 520
 "endowments" 143
@@ -12388,7 +12379,7 @@
 "enriched" 352
 "enriching" 89
 "enrichment" 245
-"enrol" 359
+"enrol" 129
 "enrolled" 359
 "enrolment" 279
 "enrolments" 85
@@ -12421,7 +12412,7 @@
 "enterprises" 1742
 "enterprising" 262
 "enters" 843
-"entertain" 2010
+"entertain" 645
 "entertained" 543
 "entertainer" 136
 "entertainers" 107
@@ -12436,7 +12427,7 @@
 "enthused" 139
 "enthusiasm" 2950
 "enthusiasms" 85
-"enthusiast" 1449
+"enthusiast" 356
 "enthusiastic" 1449
 "enthusiastically" 450
 "enthusiasts" 675
@@ -12501,7 +12492,7 @@
 "enzymatic" 66
 "enzyme" 740
 "enzymes" 484
-"ephemera" 149
+"ephemera" 88
 "ephemeral" 149
 "epic" 594
 "epics" 80
@@ -12536,7 +12527,7 @@
 "epoxy" 61
 "epsilon" 101
 "equal" 6564
-"equalise" 290
+"equalise" 70
 "equalised" 173
 "equaliser" 290
 "equality" 1542
@@ -12556,7 +12547,7 @@
 "equilibria" 72
 "equilibrium" 1659
 "equine" 94
-"equip" 8924
+"equip" 247
 "equipment" 8924
 "equipped" 1609
 "equipping" 72
@@ -12572,7 +12563,7 @@
 "eradicated" 145
 "eradicating" 59
 "eradication" 256
-"eras" 176
+"eras" 63
 "erase" 176
 "erased" 156
 "erasure" 53
@@ -12675,7 +12666,7 @@
 "eternally" 119
 "eternity" 424
 "ethanol" 411
-"ether" 288
+"ether" 137
 "ethereal" 102
 "ethernet" 288
 "ethic" 1140
@@ -12730,7 +12721,7 @@
 "evaporation" 181
 "evasion" 255
 "evasive" 161
-"eve" 1593
+"eve" 72074
 "even" 72074
 "even if" 8757
 "even so" 1462
@@ -12765,7 +12756,7 @@
 "everyone" 13337
 "everything" 18675
 "everywhere" 3215
-"evict" 216
+"evict" 77
 "evicted" 179
 "eviction" 216
 "evidence" 21477
@@ -12789,7 +12780,7 @@
 "evolved" 1292
 "evolves" 81
 "evolving" 369
-"ewe" 132
+"ewe" 226
 "ewes" 226
 "ex" 832
 "ex officio" 63
@@ -12810,7 +12801,7 @@
 "exaggeration" 338
 "exaltation" 57
 "exalted" 200
-"exam" 12572
+"exam" 864
 "examination" 4813
 "examinations" 1419
 "examine" 3699
@@ -12834,7 +12825,7 @@
 "exceeding" 507
 "exceedingly" 413
 "exceeds" 590
-"excel" 6717
+"excel" 242
 "excelled" 150
 "excellence" 733
 "excellency" 88
@@ -12868,7 +12859,7 @@
 "excitable" 134
 "excitation" 352
 "excitatory" 81
-"excite" 2638
+"excite" 218
 "excited" 1909
 "excitedly" 293
 "excitement" 2638
@@ -12900,7 +12891,7 @@
 "excuse" 3089
 "excused" 290
 "excuses" 619
-"exec" 8028
+"exec" 55
 "execute" 1376
 "executed" 1376
 "executing" 135
@@ -12943,7 +12934,7 @@
 "exhaustive" 330
 "exhaustively" 86
 "exhausts" 87
-"exhibit" 5416
+"exhibit" 809
 "exhibited" 734
 "exhibiting" 272
 "exhibition" 5416
@@ -12964,7 +12955,7 @@
 "exist" 9675
 "existed" 2536
 "existence" 6592
-"existent" 214
+"existent" 96
 "existential" 214
 "existing" 9675
 "exists" 3192
@@ -13005,10 +12996,10 @@
 "expedition" 1080
 "expeditionary" 56
 "expeditions" 388
-"expel" 655
+"expel" 131
 "expelled" 655
 "expelling" 63
-"expend" 5509
+"expend" 86
 "expendable" 76
 "expended" 213
 "expenditure" 5509
@@ -13074,7 +13065,7 @@
 "explosions" 490
 "explosive" 821
 "explosives" 415
-"expo" 2705
+"expo" 239
 "exponent" 220
 "exponential" 107
 "exponentially" 54
@@ -13176,7 +13167,7 @@
 "exuded" 72
 "exultant" 54
 "exultation" 57
-"eye" 9571
+"eye" 29702
 "eye-catching" 114
 "eye-witness" 76
 "eyeball" 93
@@ -13242,7 +13233,7 @@
 "factually" 50
 "faculties" 395
 "faculty" 1266
-"fad" 98
+"fad" 1394
 "fade" 1394
 "faded" 1394
 "fades" 144
@@ -13330,7 +13321,7 @@
 "famine" 661
 "famous" 6541
 "famously" 116
-"fan" 1731
+"fan" 3456
 "fanatic" 181
 "fanatical" 177
 "fanaticism" 94
@@ -13383,7 +13374,7 @@
 "farmyard" 163
 "farrier" 72
 "farrow" 118
-"fart" 516
+"fart" 98
 "farther" 516
 "farthest" 91
 "farthing" 72
@@ -13481,7 +13472,7 @@
 "feast" 885
 "feasting" 91
 "feasts" 112
-"feat" 8856
+"feat" 379
 "feather" 832
 "feathered" 130
 "feathers" 832
@@ -13495,7 +13486,7 @@
 "featuring" 924
 "feckless" 69
 "fecundity" 74
-"fed" 2178
+"fed" 3832
 "fed up" 644
 "federal" 3832
 "federalism" 164
@@ -13553,7 +13544,7 @@
 "fenced" 149
 "fences" 568
 "fencing" 424
-"fend" 559
+"fend" 207
 "fender" 559
 "fenland" 62
 "fennel" 78
@@ -13608,7 +13599,6 @@
 "fevers" 70
 "few" 19160
 "fewer" 3101
-"ff" 94
 "fiance" 79
 "fiancee" 68
 "fiasco" 246
@@ -13724,7 +13714,7 @@
 "filth" 692
 "filthy" 692
 "filtration" 430
-"fin" 304
+"fin" 42301
 "final" 15647
 "finale" 349
 "finalise" 254
@@ -13756,7 +13746,7 @@
 "finely" 698
 "finer" 539
 "finery" 88
-"fines" 1763
+"fines" 710
 "finesse" 144
 "finest" 1763
 "finger" 5803
@@ -13862,7 +13852,7 @@
 "fivefold" 58
 "fiver" 500
 "fives" 199
-"fix" 1460
+"fix" 6418
 "fixation" 240
 "fixed" 6418
 "fixed-term" 125
@@ -13898,7 +13888,7 @@
 "flaming" 272
 "flamingo" 80
 "flammable" 74
-"flan" 421
+"flan" 51
 "flank" 421
 "flanked" 421
 "flanker" 210
@@ -13954,7 +13944,7 @@
 "fled" 1353
 "fledged" 119
 "fledgling" 154
-"flee" 2247
+"flee" 461
 "fleece" 215
 "fleeing" 387
 "fleet" 2247
@@ -14025,7 +14015,7 @@
 "floored" 80
 "flooring" 208
 "floors" 1197
-"flop" 506
+"flop" 204
 "flopped" 198
 "flopping" 50
 "floppy" 506
@@ -14068,7 +14058,7 @@
 "fluctuating" 182
 "fluctuation" 776
 "fluctuations" 776
-"flue" 359
+"flue" 165
 "fluency" 181
 "fluent" 359
 "fluently" 110
@@ -14096,7 +14086,7 @@
 "fluttered" 252
 "fluttering" 239
 "flux" 500
-"fly" 3810
+"fly" 4769
 "fly-half" 109
 "flying" 4769
 "flysheet" 73
@@ -14203,7 +14193,7 @@
 "forays" 133
 "forbade" 185
 "forbearance" 68
-"forbid" 925
+"forbid" 304
 "forbidden" 925
 "forbidding" 323
 "forbids" 101
@@ -14218,7 +14208,7 @@
 "forcing" 1485
 "ford" 2611
 "fords" 64
-"fore" 16234
+"fore" 489
 "forearm" 229
 "forearms" 100
 "forebears" 134
@@ -14271,7 +14261,7 @@
 "forfeited" 151
 "forfeiture" 146
 "forgave" 96
-"forge" 6156
+"forge" 464
 "forged" 562
 "forgeries" 88
 "forgery" 208
@@ -14286,8 +14276,8 @@
 "forgiven" 544
 "forgiveness" 432
 "forgiving" 156
-"forgo" 4103
-"forgot" 4103
+"forgo" 131
+"forgot" 1582
 "forgotten" 4103
 "fork" 865
 "forked" 180
@@ -14391,7 +14381,7 @@
 "foundling" 64
 "foundries" 51
 "foundry" 184
-"fount" 682
+"fount" 50
 "fountain" 682
 "fountains" 244
 "four" 46125
@@ -14418,7 +14408,7 @@
 "fourth-century" 92
 "fourthly" 140
 "fourths" 51
-"fowl" 408
+"fowl" 141
 "fowler" 408
 "fox" 2328
 "foxes" 412
@@ -14452,7 +14442,7 @@
 "framework" 3920
 "frameworks" 184
 "framing" 269
-"franc" 764
+"franc" 298
 "franchise" 764
 "franchisee" 68
 "franchisees" 68
@@ -14486,7 +14476,7 @@
 "free-standing" 155
 "free-trade" 66
 "freebie" 68
-"freed" 6048
+"freed" 928
 "freedom" 6048
 "freedoms" 379
 "freehand" 52
@@ -14553,7 +14543,7 @@
 "frieze" 123
 "frigate" 108
 "frigates" 108
-"fright" 2713
+"fright" 426
 "frighten" 2713
 "frightened" 2713
 "frightening" 1047
@@ -14668,7 +14658,7 @@
 "fumed" 92
 "fumes" 585
 "fuming" 140
-"fun" 5118
+"fun" 8663
 "fun-loving" 58
 "function" 8663
 "functional" 1976
@@ -14770,13 +14760,13 @@
 "gains" 2322
 "gait" 155
 "gal" 137
-"gala" 612
+"gala" 422
 "galactic" 121
 "galaxies" 383
 "galaxy" 612
 "gale" 459
 "gales" 199
-"gall" 4307
+"gall" 1150
 "gallant" 259
 "gallantry" 95
 "galleon" 59
@@ -14826,7 +14816,7 @@
 "gaps" 1057
 "garage" 2053
 "garages" 331
-"garb" 271
+"garb" 88
 "garbage" 271
 "garbled" 52
 "garden" 11189
@@ -14915,10 +14905,10 @@
 "gen." 1115
 "gender" 1988
 "gendered" 67
-"gene" 34422
+"gene" 2239
 "genealogical" 73
 "genealogy" 87
-"genera" 34422
+"genera" 188
 "general" 34422
 "general-purpose" 59
 "generalisation" 167
@@ -14962,7 +14952,7 @@
 "genre" 600
 "genres" 171
 "gens" 91
-"gent" 5163
+"gent" 136
 "genteel" 167
 "gentile" 108
 "gentiles" 93
@@ -15050,7 +15040,7 @@
 "gilts" 234
 "gimmick" 97
 "gimmicks" 61
-"gin" 566
+"gin" 639
 "ginger" 639
 "gingerbread" 90
 "gingerly" 224
@@ -15081,7 +15071,7 @@
 "glade" 82
 "gladiators" 63
 "gladly" 299
-"glam" 574
+"glam" 58
 "glamorous" 574
 "glamour" 498
 "glance" 2958
@@ -15114,7 +15104,7 @@
 "glen" 962
 "glens" 108
 "glib" 67
-"glide" 434
+"glide" 215
 "glided" 90
 "glider" 434
 "gliders" 159
@@ -15178,7 +15168,7 @@
 "gnawing" 93
 "gnome" 107
 "gnomes" 107
-"go" 90540
+"go" 93195
 "go-ahead" 303
 "go-between" 77
 "goaded" 71
@@ -15253,7 +15243,7 @@
 "gooseberry" 62
 "gooseneck" 83
 "gore" 278
-"gorge" 627
+"gorge" 358
 "gorgeous" 627
 "gorges" 83
 "gorilla" 132
@@ -15268,7 +15258,7 @@
 "gossiping" 102
 "gossips" 54
 "got" 93195
-"goth" 1192
+"goth" 59
 "gothic" 1192
 "goths" 52
 "gotta" 69
@@ -15278,7 +15268,7 @@
 "gouged" 63
 "gourmet" 130
 "gout" 62
-"govern" 62268
+"govern" 578
 "governance" 175
 "governed" 1067
 "governess" 178
@@ -15329,7 +15319,7 @@
 "grain" 1802
 "grains" 542
 "grainy" 50
-"gram" 2418
+"gram" 223
 "grammar" 2418
 "grammars" 131
 "grammatical" 992
@@ -15337,12 +15327,12 @@
 "grammes" 62
 "gramophone" 229
 "grams" 244
-"gran" 7461
+"gran" 603
 "granary" 69
 "grand" 5688
 "grand prix" 111
 "grand-daughter" 65
-"grandchild" 502
+"grandchild" 108
 "grandchildren" 502
 "granddad" 305
 "granddaughter" 258
@@ -15357,10 +15347,10 @@
 "grandmaster" 75
 "grandmother" 1417
 "grandmothers" 106
-"grandpa" 559
+"grandpa" 150
 "grandparent" 559
 "grandparents" 559
-"grands" 591
+"grands" 102
 "grandson" 591
 "grandsons" 63
 "grandstand" 134
@@ -15403,7 +15393,7 @@
 "grasslands" 123
 "grassroots" 164
 "grassy" 324
-"grate" 2735
+"grate" 282
 "grated" 424
 "grateful" 2735
 "gratefully" 377
@@ -15562,7 +15552,7 @@
 "grout" 74
 "grove" 729
 "groves" 308
-"grow" 12982
+"grow" 5471
 "grower" 296
 "growers" 296
 "growing" 9538
@@ -15738,7 +15728,7 @@
 "haemophilia" 70
 "haemophiliacs" 70
 "haemorrhage" 317
-"hag" 93
+"hag" 163
 "haggard" 163
 "haggis" 50
 "haggle" 57
@@ -15917,7 +15907,7 @@
 "happily" 1785
 "happiness" 1704
 "happy" 11730
-"harass" 608
+"harass" 98
 "harassed" 273
 "harassing" 79
 "harassment" 608
@@ -16014,7 +16004,7 @@
 "hashish" 50
 "hasn't" 13065
 "hassle" 334
-"hast" 868
+"hast" 57
 "haste" 436
 "hasten" 218
 "hastened" 218
@@ -16052,7 +16042,7 @@
 "haunting" 267
 "haunts" 229
 "have" 473691
-"haven" 31054
+"haven" 655
 "haven't" 31054
 "havens" 129
 "having" 35274
@@ -16067,7 +16057,7 @@
 "hazard" 869
 "hazardous" 724
 "hazards" 744
-"haze" 874
+"haze" 362
 "hazel" 874
 "hazy" 238
 "he" 681374
@@ -16118,7 +16108,7 @@
 "headstrong" 57
 "headway" 242
 "heady" 343
-"heal" 24643
+"heal" 519
 "healed" 304
 "healer" 102
 "healers" 68
@@ -16180,7 +16170,7 @@
 "heavenly" 393
 "heavens" 634
 "heavier" 827
-"heavies" 251
+"heavies" 65
 "heaviest" 251
 "heavily" 4079
 "heaviness" 89
@@ -16236,7 +16226,7 @@
 "heller" 56
 "hellish" 82
 "hello" 3847
-"helm" 688
+"helm" 266
 "helmet" 688
 "helmets" 279
 "help" 37969
@@ -16315,7 +16305,7 @@
 "herpes" 116
 "herring" 361
 "herrings" 86
-"hers" 17197
+"hers" 2525
 "herself" 17197
 "hertz" 107
 "hesitancy" 72
@@ -16338,7 +16328,7 @@
 "hexagonal" 130
 "hey" 1757
 "heyday" 240
-"hi" 1023
+"hi" 433594
 "hi-fi" 228
 "hi-tech" 210
 "hiatus" 116
@@ -16433,7 +16423,7 @@
 "hinders" 53
 "hindquarters" 58
 "hindrance" 161
-"hinds" 427
+"hinds" 54
 "hindsight" 427
 "hinge" 292
 "hinged" 196
@@ -16480,7 +16470,7 @@
 "hitch" 339
 "hitched" 114
 "hitching" 57
-"hither" 1568
+"hither" 71
 "hitherto" 1568
 "hits" 1319
 "hitting" 1145
@@ -16558,7 +16548,7 @@
 "homicide" 163
 "homing" 86
 "hominid" 50
-"homo" 841
+"homo" 82
 "homo sapiens" 76
 "homoeopathic" 213
 "homoeopathy" 206
@@ -16603,7 +16593,7 @@
 "hooligan" 260
 "hooliganism" 199
 "hooligans" 260
-"hoop" 321
+"hoop" 126
 "hooper" 321
 "hoops" 150
 "hooray" 150
@@ -16690,7 +16680,7 @@
 "hostility" 1361
 "hosting" 174
 "hosts" 710
-"hot" 9094
+"hot" 11447
 "hot air" 52
 "hot water" 64
 "hotel" 11447
@@ -16729,7 +16719,7 @@
 "housewives" 358
 "housework" 728
 "housing" 9450
-"hove" 412
+"hove" 218
 "hover" 412
 "hovercraft" 68
 "hovered" 305
@@ -16854,10 +16844,10 @@
 "hybridisation" 145
 "hybridise" 50
 "hybrids" 162
-"hydra" 264
+"hydra" 177
 "hydration" 53
 "hydraulic" 264
-"hydro" 1207
+"hydro" 126
 "hydro-electric" 114
 "hydrocarbon" 192
 "hydrocarbons" 192
@@ -16875,7 +16865,7 @@
 "hymns" 357
 "hype" 366
 "hyped" 56
-"hyper" 366
+"hyper" 51
 "hyperactive" 95
 "hyperbole" 86
 "hypersensitive" 74
@@ -16962,7 +16952,7 @@
 "idol" 256
 "idolatry" 58
 "idols" 132
-"idyll" 249
+"idyll" 71
 "idyllic" 249
 "if" 237101
 "ifs" 54
@@ -17009,7 +16999,7 @@
 "illuminating" 356
 "illumination" 337
 "illuminations" 72
-"illus" 2867
+"illus" 59
 "illusion" 910
 "illusions" 338
 "illusory" 208
@@ -17172,7 +17162,7 @@
 "imply" 1477
 "implying" 542
 "impolite" 56
-"import" 39265
+"import" 1389
 "importance" 9712
 "important" 39265
 "importantly" 1329
@@ -17201,7 +17191,7 @@
 "impregnable" 117
 "impregnated" 109
 "impresario" 73
-"impress" 4228
+"impress" 627
 "impressed" 2440
 "impresses" 51
 "impressing" 76
@@ -17217,7 +17207,7 @@
 "imprint" 221
 "imprinted" 104
 "imprinting" 57
-"imprison" 1486
+"imprison" 60
 "imprisoned" 862
 "imprisoning" 51
 "imprisonment" 1486
@@ -17285,7 +17275,7 @@
 "in line with" 1237
 "in need of" 799
 "in order" 12878
-"in part" 6767
+"in part" 1678
 "in particular" 6767
 "in place of" 782
 "in possession of" 334
@@ -17632,7 +17622,7 @@
 "infections" 713
 "infectious" 473
 "infective" 113
-"infer" 860
+"infer" 315
 "inference" 499
 "inferences" 305
 "inferior" 860
@@ -17654,7 +17644,7 @@
 "infinitesimal" 77
 "infinitive" 721
 "infinity" 306
-"infirm" 517
+"infirm" 132
 "infirmary" 517
 "infirmity" 89
 "inflamed" 254
@@ -17683,8 +17673,8 @@
 "influential" 1842
 "influenza" 137
 "influx" 400
-"info" 38659
-"inform" 38659
+"info" 188
+"inform" 1502
 "informal" 2399
 "informality" 96
 "informally" 298
@@ -17704,7 +17694,7 @@
 "infrastructure" 996
 "infrequent" 256
 "infrequently" 236
-"infringe" 378
+"infringe" 125
 "infringed" 127
 "infringement" 378
 "infringements" 67
@@ -17723,7 +17713,7 @@
 "ingratitude" 55
 "ingredient" 1256
 "ingredients" 1256
-"inhabit" 1536
+"inhabit" 251
 "inhabitant" 1536
 "inhabitants" 1536
 "inhabited" 449
@@ -17888,7 +17878,7 @@
 "insolvency" 514
 "insolvent" 215
 "insomnia" 114
-"inspect" 2938
+"inspect" 654
 "inspected" 542
 "inspecting" 260
 "inspection" 1962
@@ -17939,7 +17929,7 @@
 "institutional" 1993
 "institutionalised" 145
 "institutions" 6525
-"instruct" 3568
+"instruct" 364
 "instructed" 1217
 "instructing" 192
 "instruction" 3568
@@ -17997,7 +17987,7 @@
 "integrator" 69
 "integrators" 69
 "integrity" 1493
-"intellect" 3026
+"intellect" 417
 "intellectual" 3026
 "intellectually" 318
 "intellectuals" 667
@@ -18030,7 +18020,7 @@
 "intentions" 1511
 "intently" 427
 "intents" 124
-"inter" 27608
+"inter" 266
 "inter alia" 311
 "inter-agency" 71
 "inter-city" 54
@@ -18116,7 +18106,7 @@
 "interplay" 226
 "interpolation" 60
 "interposed" 83
-"interpret" 4346
+"interpret" 1334
 "interpretation" 4346
 "interpretations" 1057
 "interpretative" 181
@@ -18207,7 +18197,7 @@
 "intriguingly" 50
 "intrinsic" 647
 "intrinsically" 254
-"intro" 8651
+"intro" 84
 "introduce" 8651
 "introduced" 8651
 "introduces" 588
@@ -18268,7 +18258,7 @@
 "invertebrates" 222
 "inverted" 514
 "inverting" 51
-"invest" 10903
+"invest" 1589
 "invested" 1281
 "investigate" 2360
 "investigated" 1542
@@ -18322,7 +18312,7 @@
 "inwards" 316
 "iodide" 53
 "iodine" 93
-"ion" 484
+"ion" 545
 "ionic" 194
 "ions" 545
 "iota" 65
@@ -18494,7 +18484,7 @@
 "jerk" 670
 "jerked" 670
 "jerkily" 56
-"jerkin" 190
+"jerkin" 52
 "jerking" 190
 "jerks" 78
 "jerky" 94
@@ -18507,7 +18497,7 @@
 "jet-lag" 62
 "jets" 474
 "jetty" 228
-"jewel" 1258
+"jewel" 366
 "jewelled" 122
 "jeweller" 1258
 "jewellers" 145
@@ -18516,7 +18506,7 @@
 "jib" 62
 "jibe" 55
 "jig" 109
-"jigs" 279
+"jigs" 52
 "jigsaw" 279
 "jihad" 112
 "jilted" 62
@@ -18527,12 +18517,12 @@
 "jobbing" 58
 "jobless" 254
 "jobs" 9700
-"jock" 783
+"jock" 251
 "jockey" 783
 "jockeys" 226
 "jocular" 61
 "joey" 363
-"jog" 199
+"jog" 290
 "jogged" 137
 "jogger" 82
 "joggers" 50
@@ -18715,7 +18705,7 @@
 "kicked" 1604
 "kicking" 1033
 "kicks" 543
-"kid" 1731
+"kid" 4350
 "kiddies" 113
 "kidding" 279
 "kidnap" 390
@@ -18735,7 +18725,7 @@
 "kills" 548
 "kiln" 176
 "kilns" 116
-"kilo" 1129
+"kilo" 151
 "kilogram" 125
 "kilograms" 125
 "kilometre" 1129
@@ -18743,7 +18733,7 @@
 "kilos" 198
 "kilt" 87
 "kimono" 50
-"kin" 806
+"kin" 23796
 "kind" 23796
 "kind of" 657
 "kinda" 147
@@ -18891,7 +18881,7 @@
 "lactose" 62
 "lacuna" 163
 "lacy" 167
-"lad" 1964
+"lad" 9722
 "ladder" 1319
 "ladders" 239
 "laddie" 99
@@ -18904,7 +18894,7 @@
 "ladybird" 65
 "ladylike" 53
 "ladyship" 120
-"lag" 329
+"lag" 507
 "lager" 507
 "lagged" 179
 "lagging" 97
@@ -18963,7 +18953,7 @@
 "landowner" 814
 "landowners" 814
 "landowning" 75
-"lands" 3302
+"lands" 2127
 "landscape" 3302
 "landscaped" 167
 "landscapes" 653
@@ -18991,7 +18981,7 @@
 "lapses" 155
 "laptop" 64
 "larceny" 98
-"lard" 184
+"lard" 81
 "larder" 184
 "large" 33768
 "large-scale" 1131
@@ -19002,7 +18992,7 @@
 "largo" 51
 "lark" 246
 "larks" 76
-"larva" 565
+"larva" 123
 "larvae" 565
 "larval" 144
 "larynx" 93
@@ -19164,7 +19154,7 @@
 "learning" 9229
 "learns" 459
 "learnt" 2177
-"leas" 5428
+"leas" 684
 "lease" 2208
 "leased" 329
 "leasehold" 192
@@ -19213,7 +19203,7 @@
 "leftist" 128
 "leftover" 57
 "leftovers" 57
-"leg" 5347
+"leg" 13103
 "legacies" 160
 "legacy" 1058
 "legal" 13103
@@ -19372,7 +19362,7 @@
 "libraries" 2150
 "library" 8231
 "libretto" 92
-"lice" 3643
+"lice" 173
 "licence" 3643
 "licence-holder" 55
 "licences" 803
@@ -19391,7 +19381,7 @@
 "lid" 1087
 "lido" 80
 "lids" 278
-"lie" 5245
+"lie" 5267
 "lied" 619
 "liege" 68
 "lien" 127
@@ -19456,7 +19446,7 @@
 "liked" 5638
 "likelihood" 1196
 "likely" 23304
-"liken" 249
+"liken" 52
 "likened" 203
 "likeness" 249
 "likes" 2827
@@ -19479,7 +19469,7 @@
 "limiting" 847
 "limitless" 184
 "limits" 3557
-"limo" 163
+"limo" 55
 "limousine" 163
 "limousines" 56
 "limp" 516
@@ -19501,13 +19491,13 @@
 "liners" 157
 "lines" 10257
 "linesman" 101
-"ling" 2472
+"ling" 198
 "linger" 442
 "lingered" 315
 "lingerie" 75
 "lingering" 442
 "lingers" 94
-"linguist" 2472
+"linguist" 154
 "linguistic" 2472
 "linguistically" 127
 "linguistics" 782
@@ -19530,7 +19520,7 @@
 "lion" 1232
 "lionisers" 52
 "lions" 921
-"lip" 1592
+"lip" 5032
 "lip-service" 59
 "lipase" 50
 "lipid" 264
@@ -19568,7 +19558,7 @@
 "lists" 2797
 "lit" 2475
 "litany" 133
-"lite" 5210
+"lite" 76
 "literacy" 951
 "literal" 1989
 "literally" 1989
@@ -19665,7 +19655,7 @@
 "locket" 72
 "locking" 491
 "locks" 962
-"loco" 755
+"loco" 208
 "locomotion" 91
 "locomotive" 755
 "locomotives" 430
@@ -19740,7 +19730,7 @@
 "longish" 72
 "longitude" 95
 "longitudinal" 318
-"longs" 197
+"longs" 71
 "longstanding" 197
 "longterm" 123
 "loo" 435
@@ -19764,7 +19754,7 @@
 "looping" 81
 "loops" 404
 "loopy" 78
-"loos" 3092
+"loos" 74
 "loose" 3092
 "loose-leaf" 54
 "loosed" 69
@@ -19855,7 +19845,7 @@
 "loyally" 81
 "loyalties" 358
 "loyalty" 1654
-"lt." 121
+"lt." 183
 "lt.-col." 110
 "lt.-gen" 183
 "ltd." 1307
@@ -19949,12 +19939,12 @@
 "lyricism" 58
 "lyrics" 431
 "m.p.h." 51
-"ma" 1839
+"ma" 128513
 "ma'am" 509
 "mac" 980
 "macabre" 156
 "mace" 173
-"mach" 8936
+"mach" 182
 "machinations" 81
 "machine" 8936
 "machine-gun" 123
@@ -19973,7 +19963,7 @@
 "macroeconomic" 274
 "macroeconomics" 102
 "macrophages" 142
-"macros" 106
+"macros" 64
 "macroscopic" 106
 "macs" 102
 "mad" 3149
@@ -19999,7 +19989,7 @@
 "magenta" 75
 "maggot" 228
 "maggots" 145
-"magi" 3191
+"magi" 64
 "magic" 3191
 "magical" 856
 "magically" 150
@@ -20014,7 +20004,7 @@
 "magnate" 210
 "magnates" 210
 "magnesium" 245
-"magnet" 1527
+"magnet" 320
 "magnetic" 1527
 "magnetism" 169
 "magnets" 147
@@ -20052,7 +20042,7 @@
 "mainland" 1053
 "mainline" 79
 "mainly" 7075
-"mains" 1233
+"mains" 912
 "mainstay" 135
 "mainstream" 1233
 "maintain" 5436
@@ -20096,7 +20086,7 @@
 "malice" 320
 "malicious" 343
 "maliciously" 107
-"malign" 389
+"malign" 60
 "malignancy" 117
 "malignant" 389
 "mall" 293
@@ -20114,10 +20104,10 @@
 "mammals" 932
 "mammoth" 209
 "mammy" 136
-"man" 62098
+"man" 89659
 "man's" 1882
 "man-made" 387
-"manage" 21794
+"manage" 4092
 "manageable" 386
 "managed" 7646
 "management" 21794
@@ -20184,7 +20174,7 @@
 "manorial" 81
 "manors" 134
 "manpower" 875
-"mans" 684
+"mans" 156
 "manse" 97
 "manservant" 70
 "mansion" 684
@@ -20245,7 +20235,7 @@
 "marines" 401
 "marital" 721
 "maritime" 566
-"mark" 30078
+"mark" 12492
 "mark-up" 104
 "marked" 5782
 "markedly" 672
@@ -20291,7 +20281,7 @@
 "marshes" 452
 "marshland" 77
 "marshy" 120
-"mart" 5310
+"mart" 86
 "marten" 93
 "martens" 93
 "martial" 505
@@ -20302,14 +20292,14 @@
 "martyrdom" 115
 "martyred" 54
 "martyrs" 204
-"marvel" 1828
+"marvel" 207
 "marvelled" 128
 "marvelling" 64
 "marvellous" 1828
 "marvellously" 155
 "marvels" 65
 "marzipan" 172
-"mas" 375
+"mas" 7327
 "mascara" 164
 "mascot" 105
 "masculine" 706
@@ -20326,7 +20316,7 @@
 "masonic" 93
 "masonry" 340
 "masons" 157
-"masque" 99
+"masque" 51
 "masquerade" 99
 "masquerading" 93
 "mass" 7327
@@ -20344,7 +20334,7 @@
 "massing" 58
 "massive" 4376
 "massively" 332
-"mast" 6576
+"mast" 460
 "master" 6576
 "mastered" 393
 "masterful" 93
@@ -20367,7 +20357,7 @@
 "matching" 1393
 "matchplay" 57
 "matchsticks" 66
-"mate" 13537
+"mate" 1926
 "mated" 84
 "material" 13537
 "materialise" 182
@@ -20420,8 +20410,8 @@
 "maw" 57
 "max" 1373
 "maxillae" 60
-"maxim" 5085
-"maxima" 165
+"maxim" 801
+"maxima" 69
 "maximal" 165
 "maximisation" 128
 "maximise" 482
@@ -20434,7 +20424,7 @@
 "mayday" 61
 "mayer" 154
 "mayhem" 166
-"mayo" 2264
+"mayo" 175
 "mayonnaise" 194
 "mayor" 2264
 "mayoress" 70
@@ -20443,7 +20433,7 @@
 "mays" 51
 "maze" 469
 "me" 139025
-"mead" 670
+"mead" 275
 "meadow" 670
 "meadows" 502
 "meagre" 422
@@ -20560,7 +20550,7 @@
 "membranes" 394
 "memento" 108
 "mementos" 52
-"memo" 7604
+"memo" 343
 "memoir" 485
 "memoirs" 485
 "memorabilia" 162
@@ -20624,7 +20614,7 @@
 "mere" 7596
 "merely" 7596
 "merest" 128
-"merge" 1407
+"merge" 533
 "merged" 602
 "merger" 1407
 "mergers" 722
@@ -20645,7 +20635,7 @@
 "mesh" 416
 "mesmerised" 112
 "mesozoic" 124
-"mess" 6958
+"mess" 2251
 "message" 6958
 "messages" 1980
 "messaging" 57
@@ -20680,7 +20670,7 @@
 "metastases" 70
 "metastatic" 50
 "meted" 96
-"meteor" 230
+"meteor" 74
 "meteoric" 69
 "meteorite" 116
 "meteorites" 116
@@ -20710,7 +20700,7 @@
 "metres" 3387
 "metric" 381
 "metrical" 79
-"metro" 1679
+"metro" 409
 "metropolis" 221
 "metropolitan" 1679
 "mettle" 74
@@ -20741,7 +20731,7 @@
 "microphones" 192
 "microprocessor" 312
 "microprocessors" 137
-"micros" 577
+"micros" 64
 "microscope" 577
 "microscopes" 100
 "microscopic" 252
@@ -20845,7 +20835,7 @@
 "milking" 242
 "milkman" 173
 "milky" 294
-"mill" 24550
+"mill" 3495
 "milled" 63
 "millennia" 131
 "millennium" 246
@@ -20870,7 +20860,7 @@
 "mimicry" 123
 "mimics" 82
 "mimosa" 92
-"min" 682
+"min" 28474
 "mince" 304
 "minced" 85
 "mincemeat" 50
@@ -20894,17 +20884,17 @@
 "miners" 1784
 "mines" 1437
 "mineworkers" 127
-"ming" 306
+"ming" 64
 "mingle" 306
 "mingled" 306
 "mingling" 141
-"mini" 24213
+"mini" 800
 "mini-bar" 88
 "miniature" 878
 "miniatures" 129
 "minibus" 243
 "minicomputer" 56
-"minima" 1385
+"minima" 63
 "minimal" 1385
 "minimalist" 96
 "minimally" 55
@@ -20915,7 +20905,7 @@
 "minimum" 5038
 "mining" 2006
 "minions" 51
-"minis" 24213
+"minis" 72
 "minister" 24213
 "minister-delegate" 63
 "ministerial" 1021
@@ -21011,7 +21001,7 @@
 "missionary" 577
 "missions" 550
 "missus" 182
-"mist" 3865
+"mist" 1132
 "mistake" 3865
 "mistaken" 1142
 "mistakenly" 238
@@ -21041,7 +21031,7 @@
 "mitochondrial" 110
 "mitotic" 65
 "mitre" 103
-"mix" 2681
+"mix" 4304
 "mix-up" 87
 "mixed" 4304
 "mixer" 208
@@ -21076,7 +21066,7 @@
 "mod" 388
 "modal" 214
 "modalities" 52
-"mode" 13334
+"mode" 2734
 "model" 13334
 "modelled" 523
 "modelling" 1100
@@ -21132,12 +21122,12 @@
 "molar" 357
 "molars" 134
 "mold" 126
-"mole" 1499
+"mole" 570
 "molecular" 1339
 "molecule" 1499
 "molecules" 1499
 "moles" 325
-"moll" 178
+"moll" 59
 "mollusc" 178
 "molluscs" 178
 "molten" 257
@@ -21173,7 +21163,7 @@
 "monkey" 572
 "monkeys" 528
 "monks" 784
-"mono" 1643
+"mono" 140
 "monochrome" 168
 "monoclonal" 227
 "monogamous" 85
@@ -21265,7 +21255,7 @@
 "morrow" 177
 "morsel" 95
 "morsels" 53
-"mortal" 2262
+"mortal" 490
 "mortality" 2262
 "mortally" 67
 "mortals" 171
@@ -21294,7 +21284,7 @@
 "mot" 108
 "motel" 142
 "motets" 74
-"moth" 26250
+"moth" 280
 "mother" 26250
 "mother-in-law" 303
 "motherboard" 145
@@ -21345,7 +21335,7 @@
 "moult" 83
 "mound" 482
 "mounds" 243
-"mount" 3961
+"mount" 1739
 "mountain" 3961
 "mountaineer" 227
 "mountaineering" 227
@@ -21384,7 +21374,7 @@
 "movie" 1797
 "movies" 1044
 "moving" 9810
-"mow" 78
+"mow" 152
 "mower" 152
 "mowing" 95
 "mown" 70
@@ -21418,7 +21408,7 @@
 "mule" 182
 "mules" 137
 "mull" 168
-"multi" 2475
+"multi" 179
 "multi-coloured" 127
 "multi-cultural" 71
 "multi-dimensional" 53
@@ -21494,12 +21484,12 @@
 "muscles" 2043
 "muscular" 623
 "musculature" 50
-"muse" 6800
+"muse" 184
 "mused" 343
 "muses" 134
 "museum" 6800
 "museums" 1388
-"mush" 565
+"mush" 66
 "mushroom" 565
 "mushrooms" 565
 "mushy" 68
@@ -21574,7 +21564,7 @@
 "nadir" 126
 "nae" 61
 "naff" 92
-"nag" 119
+"nag" 296
 "nagged" 72
 "nagging" 296
 "nail" 1345
@@ -21592,11 +21582,11 @@
 "names" 7771
 "namesake" 117
 "naming" 467
-"nan" 514
+"nan" 634
 "nana" 190
 "nannies" 80
 "nanny" 634
-"nap" 196
+"nap" 219
 "nape" 214
 "napkin" 195
 "napkins" 120
@@ -21715,7 +21705,7 @@
 "necks" 424
 "necrosis" 114
 "nectar" 146
-"nee" 120
+"nee" 55788
 "need" 55788
 "needed" 16533
 "needing" 986
@@ -21780,7 +21770,7 @@
 "nestled" 98
 "nestling" 138
 "nests" 458
-"net" 6681
+"net" 7257
 "netball" 103
 "nether" 265
 "nets" 690
@@ -21871,7 +21861,7 @@
 "nifty" 55
 "nigger" 194
 "niggling" 109
-"nigh" 36529
+"nigh" 69
 "night" 36529
 "night-time" 183
 "nightclub" 322
@@ -21944,7 +21934,7 @@
 "nobly" 69
 "nobody" 6229
 "nocturnal" 235
-"nod" 771
+"nod" 5141
 "nodded" 5141
 "nodding" 548
 "noddy" 62
@@ -21957,7 +21947,7 @@
 "noises" 928
 "noisily" 265
 "noisy" 1023
-"nomad" 262
+"nomad" 60
 "nomadic" 262
 "nomads" 131
 "nomenclature" 158
@@ -22046,7 +22036,7 @@
 "nondescript" 78
 "none" 8440
 "none other" 166
-"none the" 672
+"none the" 72
 "none the less" 672
 "nonetheless" 1312
 "nonlinear" 81
@@ -22182,7 +22172,7 @@
 "null" 272
 "nullify" 50
 "nullity" 70
-"numb" 49377
+"numb" 275
 "numbed" 90
 "number" 49377
 "numbered" 739
@@ -22196,7 +22186,7 @@
 "numerical" 708
 "numerically" 188
 "numerous" 3230
-"nun" 445
+"nun" 538
 "nunnery" 68
 "nuns" 538
 "nurse" 3397
@@ -22209,7 +22199,7 @@
 "nurture" 219
 "nurtured" 219
 "nurturing" 150
-"nut" 669
+"nut" 903
 "nutcracker" 57
 "nutmeg" 133
 "nutrient" 525
@@ -22229,7 +22219,7 @@
 "o.n.o." 336
 "oak" 1634
 "oaks" 315
-"oar" 77
+"oar" 129
 "oars" 129
 "oases" 67
 "oasis" 260
@@ -22408,7 +22398,7 @@
 "offal" 67
 "offence" 3702
 "offences" 2356
-"offend" 1267
+"offend" 316
 "offended" 537
 "offender" 1267
 "offenders" 1267
@@ -22439,7 +22429,7 @@
 "offside" 253
 "offspring" 958
 "offstage" 66
-"oft" 170
+"oft" 37640
 "often" 37640
 "oh" 68435
 "ohms" 75
@@ -22465,7 +22455,7 @@
 "ole" 166
 "olfactory" 78
 "oligarchy" 94
-"olive" 2271
+"olive" 924
 "oliver" 2271
 "olives" 250
 "om" 58
@@ -22558,7 +22548,7 @@
 "ooze" 94
 "oozed" 74
 "oozing" 147
-"op" 209
+"op" 30284
 "op. cit." 50
 "opacity" 56
 "opal" 74
@@ -22580,7 +22570,7 @@
 "openly" 1234
 "openness" 472
 "opens" 1719
-"opera" 10053
+"opera" 2335
 "operand" 96
 "operands" 84
 "operant" 53
@@ -22625,7 +22615,7 @@
 "oppressive" 459
 "oppressors" 53
 "ops" 86
-"opt" 719
+"opt" 5424
 "opt-out" 124
 "opted" 601
 "optic" 933
@@ -22639,7 +22629,7 @@
 "optimise" 98
 "optimised" 98
 "optimism" 842
-"optimist" 1235
+"optimist" 86
 "optimistic" 1235
 "optimistically" 80
 "optimists" 72
@@ -22694,7 +22684,7 @@
 "ordnance" 395
 "ore" 479
 "ores" 91
-"organ" 8331
+"organ" 1338
 "organic" 2117
 "organically" 112
 "organisation" 8331
@@ -22715,7 +22705,7 @@
 "orgies" 57
 "orgy" 138
 "oriel" 69
-"orient" 1048
+"orient" 301
 "oriental" 707
 "orientated" 278
 "orientation" 1048
@@ -22779,7 +22769,7 @@
 "ounce" 338
 "ounces" 187
 "our" 95001
-"ours" 4515
+"ours" 1717
 "ourselves" 4515
 "oust" 254
 "ousted" 254
@@ -22861,7 +22851,7 @@
 "outrages" 65
 "outreach" 111
 "outright" 741
-"outs" 21125
+"outs" 166
 "outset" 992
 "outside" 21125
 "outside of" 772
@@ -22917,7 +22907,7 @@
 "overcoming" 386
 "overcrowded" 316
 "overcrowding" 301
-"overdo" 292
+"overdo" 112
 "overdone" 88
 "overdose" 292
 "overdraft" 332
@@ -22976,7 +22966,7 @@
 "overrule" 155
 "overruled" 155
 "overrun" 198
-"overs" 3842
+"overs" 557
 "overseas" 3842
 "oversee" 305
 "overseeing" 165
@@ -23019,11 +23009,11 @@
 "overworked" 146
 "ovulation" 90
 "ovum" 80
-"ow" 352
-"owe" 1264
+"ow" 71142
+"owe" 1638
 "owed" 1638
 "owes" 649
-"owing" 788
+"owing" 230
 "owing to" 788
 "owl" 1142
 "owls" 497
@@ -23045,7 +23035,6 @@
 "oxygen" 1902
 "oyster" 235
 "oysters" 141
-"oz" 1063
 "ozone" 1279
 "p.m." 665
 "p.s." 116
@@ -23074,7 +23063,7 @@
 "packs" 704
 "pact" 1066
 "pacts" 93
-"pad" 785
+"pad" 889
 "padded" 540
 "padding" 193
 "paddle" 293
@@ -23165,7 +23154,7 @@
 "panda" 177
 "pandas" 57
 "pandemonium" 83
-"pane" 3688
+"pane" 132
 "panel" 3688
 "panelled" 243
 "panelling" 209
@@ -23202,7 +23191,7 @@
 "papered" 50
 "papers" 6391
 "paperwork" 514
-"papilla" 345
+"papilla" 88
 "papillae" 345
 "papyrus" 56
 "par" 1009
@@ -23249,7 +23238,7 @@
 "parapet" 251
 "paraphernalia" 138
 "paraphrase" 199
-"paras" 426
+"paras" 95
 "parasite" 426
 "parasites" 426
 "parasitic" 244
@@ -23401,12 +23390,12 @@
 "patching" 53
 "patchwork" 217
 "patchy" 314
-"pate" 1001
+"pate" 84
 "patent" 1001
 "patented" 249
 "patently" 217
 "patents" 384
-"pater" 195
+"pater" 83
 "paternal" 195
 "paternalism" 107
 "paternalistic" 123
@@ -23439,7 +23428,7 @@
 "patriarchy" 109
 "patrician" 139
 "patrimony" 98
-"patriot" 582
+"patriot" 185
 "patriotic" 582
 "patriotism" 281
 "patriots" 128
@@ -23471,14 +23460,14 @@
 "paused" 2459
 "pauses" 295
 "pausing" 344
-"pave" 1361
+"pave" 114
 "paved" 372
 "pavement" 1361
 "pavements" 474
 "pavilion" 528
 "pavilions" 96
 "paving" 470
-"paw" 196
+"paw" 262
 "pawn" 262
 "pawnbroker" 50
 "pawns" 97
@@ -23517,12 +23506,12 @@
 "peal" 55
 "peanut" 218
 "peanuts" 218
-"pear" 716
+"pear" 222
 "pearl" 716
 "pearls" 354
 "pearly" 112
 "pears" 492
-"peas" 1702
+"peas" 627
 "peasant" 1702
 "peasantry" 515
 "peasants" 1702
@@ -23585,7 +23574,7 @@
 "pelvic" 190
 "pelvis" 198
 "pen" 2193
-"penal" 2670
+"penal" 719
 "penalise" 158
 "penalised" 158
 "penalties" 1141
@@ -23618,7 +23607,7 @@
 "pennies" 286
 "penniless" 147
 "penny" 1942
-"pens" 4479
+"pens" 497
 "pension" 4479
 "pensionable" 143
 "pensioner" 1356
@@ -23641,8 +23630,7 @@
 "peppered" 82
 "peppermint" 64
 "peppers" 202
-"peps" 107
-"pepsin" 107
+"peps" 93
 "peptic" 237
 "peptide" 332
 "peptides" 268
@@ -23673,7 +23661,6 @@
 "peremptory" 87
 "perennial" 311
 "perennials" 100
-"peres" 200
 "perestroika" 200
 "perfect" 5777
 "perfected" 218
@@ -23684,7 +23671,7 @@
 "perforated" 104
 "perforation" 68
 "perforce" 72
-"perform" 12993
+"perform" 3162
 "performance" 12993
 "performance-related" 60
 "performances" 1627
@@ -23726,7 +23713,7 @@
 "perk" 268
 "perks" 268
 "perky" 58
-"perm" 4530
+"perm" 268
 "permanence" 193
 "permanent" 4530
 "permanently" 1229
@@ -23770,7 +23757,7 @@
 "perseverance" 140
 "persevere" 91
 "persevered" 81
-"persist" 1258
+"persist" 545
 "persisted" 856
 "persistence" 474
 "persistent" 1258
@@ -23778,7 +23765,7 @@
 "persisting" 117
 "persists" 311
 "person" 24982
-"persona" 17622
+"persona" 255
 "personable" 53
 "personage" 51
 "personal" 17622
@@ -23803,7 +23790,7 @@
 "persuasions" 92
 "persuasive" 547
 "persuasively" 90
-"pert" 392
+"pert" 115
 "pertaining to" 129
 "pertinent" 392
 "perturbations" 63
@@ -23832,7 +23819,7 @@
 "pesticide" 511
 "pesticides" 511
 "pests" 336
-"pet" 1422
+"pet" 2358
 "petal" 402
 "petals" 402
 "petered" 99
@@ -23845,7 +23832,7 @@
 "petitioning" 96
 "petitions" 290
 "petits" 56
-"petri" 185
+"petri" 58
 "petrified" 185
 "petrochemical" 112
 "petrochemicals" 84
@@ -23856,7 +23843,7 @@
 "petticoats" 68
 "petty" 815
 "petulant" 91
-"pew" 138
+"pew" 146
 "pews" 138
 "pewter" 146
 "phage" 57
@@ -23927,7 +23914,7 @@
 "phosphate" 460
 "phosphates" 116
 "phosphorus" 185
-"photo" 3322
+"photo" 1254
 "photochemical" 65
 "photocopied" 109
 "photocopier" 131
@@ -23961,7 +23948,7 @@
 "physicist" 288
 "physicists" 288
 "physics" 1862
-"physio" 623
+"physio" 95
 "physiological" 623
 "physiologically" 53
 "physiology" 334
@@ -24025,7 +24012,7 @@
 "pile-up" 76
 "piled" 676
 "piles" 625
-"pilgrim" 487
+"pilgrim" 211
 "pilgrimage" 487
 "pilgrimages" 56
 "pilgrims" 321
@@ -24070,7 +24057,7 @@
 "pinter" 53
 "pinto" 60
 "pints" 509
-"pion" 649
+"pion" 52
 "pioneer" 649
 "pioneered" 402
 "pioneering" 570
@@ -24103,7 +24090,7 @@
 "pistols" 342
 "piston" 174
 "pistons" 65
-"pit" 1804
+"pit" 2839
 "pitch" 2839
 "pitched" 570
 "pitcher" 89
@@ -24242,13 +24229,13 @@
 "playwrights" 64
 "plaza" 174
 "plc." 76
-"plea" 14351
+"plea" 1155
 "plead" 965
 "pleaded" 965
 "pleading" 537
 "pleadings" 120
 "pleads" 81
-"pleas" 14351
+"pleas" 356
 "pleasant" 2708
 "pleasantly" 472
 "pleasantries" 68
@@ -24307,7 +24294,7 @@
 "plugged" 262
 "plugging" 120
 "plugs" 302
-"plum" 578
+"plum" 286
 "plumage" 306
 "plumb" 358
 "plumber" 213
@@ -24338,7 +24325,7 @@
 "plus" 7915
 "plush" 172
 "plutonium" 453
-"ply" 117
+"ply" 170
 "plying" 62
 "plywood" 170
 "pneumatic" 98
@@ -24413,7 +24400,7 @@
 "policyholder" 344
 "policyholders" 159
 "polio" 148
-"polis" 2055
+"polis" 62
 "polish" 2055
 "polished" 1148
 "polishing" 305
@@ -24471,7 +24458,7 @@
 "polythene" 302
 "polyunsaturated" 115
 "polyurethane" 86
-"pomp" 264
+"pomp" 120
 "pomposity" 59
 "pompous" 264
 "pond" 1724
@@ -24582,7 +24569,7 @@
 "positivist" 244
 "positivists" 60
 "positivity" 56
-"posse" 2858
+"posse" 107
 "possess" 2858
 "possessed" 1713
 "possesses" 490
@@ -24652,7 +24639,7 @@
 "potato" 1647
 "potatoes" 1647
 "potency" 381
-"potent" 11210
+"potent" 771
 "potential" 11210
 "potentialities" 102
 "potentiality" 82
@@ -24781,7 +24768,7 @@
 "precaution" 586
 "precautionary" 133
 "precautions" 586
-"precede" 863
+"precede" 222
 "preceded" 754
 "precedence" 367
 "precedent" 863
@@ -24883,7 +24870,7 @@
 "premeditated" 55
 "premier" 2480
 "premiere" 260
-"premiers" 271
+"premiers" 117
 "premiership" 271
 "premise" 3862
 "premised" 64
@@ -24896,7 +24883,7 @@
 "preoccupations" 269
 "preoccupied" 632
 "preoperative" 62
-"prep" 10442
+"prep" 122
 "preparation" 3314
 "preparations" 1018
 "preparatory" 407
@@ -24912,7 +24899,7 @@
 "prerequisites" 91
 "prerogative" 360
 "prerogatives" 91
-"pres" 22312
+"pres" 114
 "pres." 51
 "presbytery" 122
 "preschool" 57
@@ -24944,7 +24931,7 @@
 "preserves" 173
 "preserving" 713
 "preset" 88
-"preside" 16600
+"preside" 108
 "presided" 439
 "presidency" 1168
 "president" 16600
@@ -25036,7 +25023,7 @@
 "priesthood" 228
 "priestly" 120
 "priests" 1152
-"prim" 12254
+"prim" 119
 "prima facie" 324
 "primacy" 384
 "primal" 277
@@ -25079,7 +25066,7 @@
 "printing" 1901
 "printout" 113
 "prints" 1288
-"prior" 3391
+"prior" 1659
 "prior to" 3120
 "prioress" 93
 "priorities" 1990
@@ -25167,7 +25154,7 @@
 "procured" 119
 "procurement" 282
 "procuring" 109
-"prod" 15555
+"prod" 108
 "prodded" 168
 "prodding" 97
 "prodigal" 106
@@ -25186,9 +25173,9 @@
 "productively" 64
 "productivity" 1953
 "products" 10609
-"prof" 11160
+"prof" 426
 "profane" 87
-"profess" 11160
+"profess" 100
 "professed" 193
 "profession" 11160
 "professional" 11160
@@ -25222,7 +25209,7 @@
 "progeny" 123
 "prognosis" 252
 "prognostic" 86
-"program" 19071
+"program" 4057
 "programmable" 85
 "programme" 19071
 "programmed" 485
@@ -25267,7 +25254,7 @@
 "prolongation" 65
 "prolonged" 1169
 "prolonging" 86
-"prom" 4300
+"prom" 87
 "promenade" 436
 "prominence" 611
 "prominent" 2316
@@ -25298,7 +25285,7 @@
 "promulgation" 56
 "prone" 807
 "prongs" 55
-"pronoun" 1285
+"pronoun" 224
 "pronounce" 1285
 "pronounced" 1285
 "pronouncement" 211
@@ -25309,7 +25296,7 @@
 "proof" 2699
 "proofed" 51
 "proofs" 238
-"prop" 12552
+"prop" 605
 "propaganda" 1158
 "propagandist" 61
 "propagate" 161
@@ -25322,7 +25309,7 @@
 "propellers" 93
 "propelling" 60
 "propensity" 293
-"proper" 12552
+"proper" 6504
 "properly" 5667
 "properties" 4107
 "property" 12552
@@ -25363,10 +25350,10 @@
 "propriety" 181
 "props" 293
 "propulsion" 103
-"pros" 3209
+"pros" 343
 "prosaic" 141
 "proscribed" 96
-"prose" 2101
+"prose" 899
 "prosecute" 398
 "prosecuted" 398
 "prosecuting" 459
@@ -25381,7 +25368,7 @@
 "prospects" 2214
 "prospectus" 276
 "prospectuses" 66
-"prosper" 1122
+"prosper" 251
 "prospered" 186
 "prosperity" 1122
 "prosperous" 697
@@ -25464,7 +25451,7 @@
 "provokes" 113
 "provoking" 251
 "provost" 180
-"prow" 280
+"prow" 78
 "prowess" 280
 "prowl" 89
 "prowled" 58
@@ -25481,7 +25468,7 @@
 "pruned" 106
 "prunes" 64
 "pruning" 322
-"pry" 80
+"pry" 149
 "prying" 149
 "psalm" 224
 "psalms" 217
@@ -25496,7 +25483,7 @@
 "psychiatrists" 320
 "psychiatry" 219
 "psychic" 483
-"psycho" 2784
+"psycho" 86
 "psychoanalysis" 445
 "psychoanalytic" 269
 "psycholinguistic" 50
@@ -25542,7 +25529,7 @@
 "puddles" 169
 "puff" 302
 "puffed" 223
-"puffin" 172
+"puffin" 67
 "puffing" 172
 "puffins" 58
 "puffs" 113
@@ -25587,7 +25574,7 @@
 "punctured" 115
 "pundits" 166
 "pungent" 173
-"punish" 2264
+"punish" 479
 "punishable" 129
 "punished" 673
 "punishing" 298
@@ -25597,7 +25584,7 @@
 "punk" 495
 "punks" 99
 "puns" 62
-"punt" 342
+"punt" 138
 "punter" 342
 "punters" 342
 "puny" 100
@@ -25712,7 +25699,7 @@
 "quail" 93
 "quails" 57
 "quaint" 241
-"quake" 284
+"quake" 89
 "quaker" 284
 "quakers" 270
 "qualification" 2321
@@ -25751,7 +25738,7 @@
 "quarries" 302
 "quarry" 985
 "quarrying" 120
-"quart" 7456
+"quart" 50
 "quarter" 7456
 "quarter-final" 220
 "quarter-finals" 186
@@ -25769,7 +25756,7 @@
 "quashed" 197
 "quaternary" 94
 "quay" 464
-"quays" 147
+"quays" 76
 "quayside" 147
 "queasy" 70
 "queen" 8056
@@ -25827,7 +25814,7 @@
 "quirk" 135
 "quirks" 63
 "quirky" 121
-"quit" 41169
+"quit" 910
 "quite" 41169
 "quits" 115
 "quitting" 135
@@ -25851,7 +25838,7 @@
 "quoting" 522
 "r.m.s." 53
 "r.p.m." 205
-"rabbi" 1441
+"rabbi" 245
 "rabbit" 1441
 "rabbits" 1044
 "rabble" 81
@@ -25965,7 +25952,7 @@
 "rally" 1608
 "rallying" 196
 "ram" 1010
-"ramble" 235
+"ramble" 111
 "rambler" 235
 "ramblers" 235
 "rambles" 75
@@ -25985,14 +25972,14 @@
 "ranch" 131
 "rancid" 77
 "rancour" 83
-"rand" 1858
+"rand" 112
 "random" 1858
 "randomisation" 67
 "randomised" 287
 "randomly" 368
 "randomness" 52
 "randy" 253
-"rang" 20427
+"rang" 2698
 "range" 20427
 "ranged" 641
 "ranger" 1248
@@ -26052,7 +26039,7 @@
 "rated" 801
 "ratepayers" 195
 "rates" 11581
-"rather" 21478
+"rather" 21341
 "rather than" 21478
 "ratification" 405
 "ratified" 371
@@ -26182,7 +26169,7 @@
 "realises" 252
 "realising" 736
 "realism" 935
-"realist" 1860
+"realist" 376
 "realistic" 1860
 "realistically" 355
 "realists" 109
@@ -26258,7 +26245,7 @@
 "recalled" 1851
 "recalling" 463
 "recalls" 867
-"recap" 204
+"recap" 57
 "recapture" 204
 "recaptured" 143
 "recast" 68
@@ -26285,7 +26272,7 @@
 "receptive" 347
 "receptor" 529
 "receptors" 465
-"recess" 3775
+"recess" 225
 "recessed" 112
 "recesses" 136
 "recession" 3775
@@ -26405,7 +26392,7 @@
 "rector" 505
 "rectory" 382
 "rectum" 178
-"recur" 705
+"recur" 201
 "recurred" 68
 "recurrence" 511
 "recurrences" 69
@@ -26486,7 +26473,7 @@
 "ref" 3933
 "ref." 411
 "refectory" 126
-"refer" 7906
+"refer" 3799
 "referee" 1164
 "refereeing" 127
 "referees" 346
@@ -26564,7 +26551,7 @@
 "refund" 343
 "refunded" 84
 "refunds" 80
-"refurbish" 372
+"refurbish" 60
 "refurbished" 333
 "refurbishing" 78
 "refurbishment" 372
@@ -26598,7 +26585,7 @@
 "regents" 51
 "reggae" 203
 "regime" 3483
-"regimen" 1174
+"regimen" 128
 "regimens" 53
 "regiment" 1174
 "regimental" 188
@@ -26619,7 +26606,7 @@
 "registration" 2233
 "registrations" 135
 "registry" 526
-"regress" 662
+"regress" 103
 "regression" 662
 "regressive" 137
 "regret" 1630
@@ -26661,7 +26648,7 @@
 "reimburse" 148
 "reimbursed" 90
 "reimbursement" 148
-"rein" 1335
+"rein" 275
 "reincarnation" 118
 "reindeer" 147
 "reined" 84
@@ -26710,7 +26697,7 @@
 "related" 8649
 "relates" 1451
 "relating" 3666
-"relation" 12888
+"relation" 2787
 "relational" 668
 "relations" 12888
 "relationship" 12888
@@ -26866,7 +26853,7 @@
 "renewal" 1055
 "renewed" 1607
 "renewing" 166
-"reno" 678
+"reno" 51
 "renounce" 161
 "renounced" 149
 "renouncing" 58
@@ -26973,7 +26960,7 @@
 "represented" 5354
 "representing" 2314
 "represents" 3331
-"repress" 693
+"repress" 87
 "repressed" 337
 "repression" 693
 "repressive" 281
@@ -27054,7 +27041,7 @@
 "researches" 252
 "researching" 307
 "resection" 196
-"resell" 191
+"resell" 78
 "reseller" 191
 "resellers" 191
 "resemblance" 701
@@ -27063,7 +27050,7 @@
 "resembled" 429
 "resembles" 471
 "resembling" 364
-"resent" 1012
+"resent" 327
 "resented" 509
 "resentful" 262
 "resentfully" 72
@@ -27086,7 +27073,7 @@
 "reshaping" 100
 "reshuffle" 557
 "reshuffled" 61
-"reside" 3466
+"reside" 268
 "resided" 154
 "residence" 1732
 "residences" 141
@@ -27100,7 +27087,7 @@
 "residuals" 130
 "residue" 612
 "residues" 612
-"resign" 2200
+"resign" 983
 "resignation" 2200
 "resignations" 207
 "resigned" 2200
@@ -27197,7 +27184,7 @@
 "restorers" 59
 "restores" 83
 "restoring" 591
-"restrain" 1122
+"restrain" 434
 "restrained" 581
 "restraining" 261
 "restraint" 1122
@@ -27256,7 +27243,7 @@
 "retina" 286
 "retinal" 111
 "retinue" 178
-"retire" 3406
+"retire" 1101
 "retired" 2903
 "retirement" 3406
 "retirements" 71
@@ -27305,7 +27292,7 @@
 "revealed" 5335
 "revealing" 1228
 "reveals" 1578
-"revel" 942
+"revel" 86
 "revelation" 942
 "revelations" 484
 "revelled" 102
@@ -27410,7 +27397,7 @@
 "rhythmical" 134
 "rhythmically" 134
 "rhythms" 557
-"rib" 472
+"rib" 687
 "ribbed" 115
 "ribber" 202
 "ribbon" 668
@@ -27428,7 +27415,7 @@
 "rick" 521
 "rickety" 138
 "ricks" 54
-"rid" 2649
+"rid" 3360
 "ridden" 477
 "riddle" 318
 "riddled" 175
@@ -27496,7 +27483,7 @@
 "rioting" 328
 "riotous" 119
 "riots" 895
-"rip" 430
+"rip" 736
 "ripe" 634
 "ripen" 96
 "ripening" 93
@@ -27562,7 +27549,7 @@
 "roast" 549
 "roasted" 150
 "roasting" 183
-"rob" 1475
+"rob" 2126
 "robbed" 586
 "robber" 783
 "robberies" 146
@@ -27658,8 +27645,8 @@
 "roster" 85
 "rostrum" 148
 "rosy" 315
-"rot" 553
-"rota" 793
+"rot" 807
+"rota" 166
 "rotary" 314
 "rotate" 236
 "rotated" 203
@@ -27700,7 +27687,7 @@
 "rouse" 264
 "roused" 264
 "rousing" 160
-"rout" 5647
+"rout" 137
 "route" 5647
 "routed" 155
 "router" 116
@@ -27738,7 +27725,7 @@
 "rubric" 59
 "rubs" 100
 "ruby" 410
-"ruck" 242
+"ruck" 92
 "rucksack" 242
 "rucksacks" 76
 "rudder" 282
@@ -27751,7 +27738,7 @@
 "rue" 450
 "rueful" 336
 "ruefully" 336
-"ruff" 245
+"ruff" 103
 "ruffians" 64
 "ruffle" 245
 "ruffled" 245
@@ -27866,7 +27853,7 @@
 "saddled" 173
 "saddles" 99
 "sadism" 58
-"sadist" 144
+"sadist" 50
 "sadistic" 144
 "sadly" 1928
 "sadness" 781
@@ -28081,7 +28068,7 @@
 "scam" 110
 "scamp" 110
 "scampered" 110
-"scan" 1466
+"scan" 666
 "scandal" 1466
 "scandalous" 196
 "scandals" 289
@@ -28094,7 +28081,7 @@
 "scanty" 112
 "scapegoat" 167
 "scapegoats" 61
-"scar" 1675
+"scar" 431
 "scarce" 1675
 "scarcely" 1675
 "scarcity" 215
@@ -28269,7 +28256,7 @@
 "scribbling" 105
 "scribe" 157
 "scribes" 127
-"scrip" 1236
+"scrip" 59
 "script" 1236
 "scripts" 368
 "scriptural" 84
@@ -28349,7 +28336,7 @@
 "searchlights" 76
 "searing" 167
 "sears" 113
-"seas" 10976
+"seas" 878
 "seashore" 69
 "seaside" 568
 "season" 10976
@@ -28393,7 +28380,7 @@
 "secondment" 184
 "seconds" 4193
 "secrecy" 670
-"secret" 15588
+"secret" 5760
 "secretarial" 307
 "secretariat" 430
 "secretaries" 816
@@ -28596,7 +28583,7 @@
 "semaphore" 59
 "semblance" 211
 "semen" 163
-"semi" 1168
+"semi" 280
 "semi-automatic" 77
 "semi-autonomous" 53
 "semi-circle" 60
@@ -28684,7 +28671,7 @@
 "sequenced" 120
 "sequences" 1419
 "sequencing" 233
-"sequent" 368
+"sequent" 230
 "sequential" 368
 "sequentially" 96
 "sequestration" 51
@@ -28696,7 +28683,7 @@
 "serenity" 175
 "serfdom" 124
 "serfs" 174
-"serge" 2633
+"serge" 190
 "sergeant" 2633
 "sergeant-major" 95
 "sergeants" 164
@@ -28760,7 +28747,7 @@
 "seven" 17350
 "seven-day" 89
 "seven-thirty" 75
-"seven-year" 161
+"seven-year" 138
 "seven-year-old" 161
 "sevens" 328
 "seventeen" 1797
@@ -28837,7 +28824,7 @@
 "shallower" 97
 "shallows" 113
 "shalt" 113
-"sham" 2075
+"sham" 226
 "shaman" 145
 "shamans" 81
 "shambles" 205
@@ -28996,7 +28983,7 @@
 "shocking" 592
 "shockingly" 58
 "shocks" 353
-"shod" 137
+"shod" 87
 "shoddy" 137
 "shoe" 3655
 "shoemaker" 117
@@ -29183,7 +29170,7 @@
 "sift" 115
 "sifted" 113
 "sifting" 111
-"sigh" 6712
+"sigh" 1170
 "sighed" 2091
 "sighing" 201
 "sighs" 204
@@ -29292,7 +29279,7 @@
 "sinewy" 72
 "sinfonia" 53
 "sinful" 185
-"sing" 18404
+"sing" 2152
 "sing-song" 77
 "singed" 54
 "singer" 1691
@@ -29327,7 +29314,7 @@
 "sinuous" 76
 "sinus" 95
 "sinusoidal" 95
-"sip" 384
+"sip" 560
 "siphon" 72
 "sipped" 560
 "sipping" 308
@@ -29340,7 +29327,7 @@
 "sister" 7461
 "sister-in-law" 223
 "sisters" 2056
-"sit" 8703
+"sit" 15978
 "sitcom" 64
 "site" 9838
 "sited" 407
@@ -29361,7 +29348,7 @@
 "six-foot" 59
 "six-month" 214
 "six-week" 69
-"six-year" 178
+"six-year" 154
 "six-year-old" 178
 "sixes" 150
 "sixpence" 282
@@ -29550,10 +29537,10 @@
 "sliver" 128
 "slivers" 78
 "slob" 55
-"slog" 473
+"slog" 98
 "slogan" 473
 "slogans" 342
-"slop" 1430
+"slop" 57
 "slope" 1430
 "sloped" 137
 "slopes" 1066
@@ -29582,7 +29569,7 @@
 "sluggish" 250
 "slugs" 166
 "sluice" 76
-"slum" 727
+"slum" 303
 "slumber" 112
 "slump" 727
 "slumped" 727
@@ -29809,7 +29796,7 @@
 "socket" 598
 "sockets" 358
 "socks" 991
-"sod" 494
+"sod" 914
 "soda" 366
 "sodden" 203
 "sodding" 72
@@ -29833,7 +29820,7 @@
 "soiling" 84
 "soils" 731
 "sojourn" 99
-"sol" 218
+"sol" 8485
 "solace" 149
 "solar" 1318
 "solarium" 116
@@ -29850,7 +29837,7 @@
 "solemnly" 292
 "solenoid" 60
 "soles" 230
-"solicit" 3155
+"solicit" 70
 "solicited" 55
 "soliciting" 114
 "solicitor" 3155
@@ -29916,7 +29903,7 @@
 "sons" 3487
 "soon" 15903
 "sooner" 1810
-"soot" 408
+"soot" 190
 "soothe" 186
 "soothed" 156
 "soothing" 408
@@ -29963,7 +29950,7 @@
 "soundtrack" 185
 "soup" 1350
 "soups" 121
-"sour" 9088
+"sour" 666
 "source" 9088
 "sourced" 57
 "sources" 6659
@@ -29992,11 +29979,11 @@
 "sovereignty" 1214
 "soviet" 11587
 "soviets" 352
-"sow" 323
+"sow" 336
 "sowing" 187
 "sown" 336
 "sows" 107
-"soy" 105
+"soy" 123
 "soya" 123
 "spa" 520
 "space" 12646
@@ -30020,7 +30007,7 @@
 "spanners" 57
 "spanning" 272
 "spans" 205
-"spar" 2972
+"spar" 182
 "spare" 2972
 "spared" 511
 "spares" 215
@@ -30036,7 +30023,7 @@
 "sparring" 125
 "sparrow" 191
 "sparrows" 100
-"spars" 345
+"spars" 78
 "sparse" 345
 "sparsely" 143
 "spartan" 236
@@ -30047,7 +30034,7 @@
 "spastic" 76
 "spasticity" 76
 "spastics" 54
-"spat" 1227
+"spat" 547
 "spate" 331
 "spatial" 1227
 "spatially" 116
@@ -30065,7 +30052,7 @@
 "spearhead" 99
 "spearheaded" 99
 "spears" 243
-"spec" 22114
+"spec" 110
 "special" 22114
 "specialisation" 261
 "specialise" 1099
@@ -30236,7 +30223,7 @@
 "spoilt" 375
 "spoke" 7023
 "spoken" 3667
-"spokes" 3965
+"spokes" 147
 "spokesman" 3965
 "spokesmen" 267
 "spokesperson" 252
@@ -30247,7 +30234,7 @@
 "sponsor" 1593
 "sponsored" 1593
 "sponsoring" 237
-"sponsors" 1205
+"sponsors" 790
 "sponsorship" 1205
 "spontaneity" 175
 "spontaneous" 1029
@@ -30393,7 +30380,7 @@
 "squirrels" 156
 "squirt" 101
 "squirted" 52
-"stab" 3414
+"stab" 422
 "stabbed" 735
 "stabbing" 278
 "stabilisation" 99
@@ -30419,7 +30406,7 @@
 "staffing" 779
 "staffroom" 89
 "staffs" 227
-"stag" 16565
+"stag" 306
 "stage" 16565
 "stagecoach" 74
 "staged" 955
@@ -30496,7 +30483,7 @@
 "stanzas" 64
 "staple" 344
 "staples" 192
-"star" 23718
+"star" 6637
 "star-studded" 53
 "starboard" 181
 "starch" 124
@@ -30659,7 +30646,7 @@
 "steroid" 216
 "steroids" 216
 "stethoscope" 68
-"stew" 770
+"stew" 342
 "steward" 770
 "stewardess" 62
 "stewards" 596
@@ -30970,7 +30957,7 @@
 "strut" 98
 "struts" 94
 "strutting" 52
-"stub" 424
+"stub" 91
 "stubbed" 79
 "stubble" 195
 "stubbly" 50
@@ -31028,7 +31015,7 @@
 "styling" 393
 "stylised" 79
 "stylish" 500
-"stylist" 543
+"stylist" 122
 "stylistic" 543
 "stylistically" 85
 "stylistics" 118
@@ -31040,7 +31027,7 @@
 "sub-committees" 105
 "sub-community" 50
 "sub-continent" 101
-"sub-contract" 164
+"sub-contract" 64
 "sub-contracting" 64
 "sub-contractor" 164
 "sub-contractors" 164
@@ -31102,7 +31089,7 @@
 "subordinates" 416
 "subordination" 256
 "subroutine" 72
-"subs" 6222
+"subs" 325
 "subscribe" 444
 "subscribed" 219
 "subscriber" 444
@@ -31302,7 +31289,7 @@
 "summoning" 165
 "summons" 701
 "summonses" 121
-"sump" 225
+"sump" 56
 "sumptuous" 225
 "sums" 1794
 "sun" 11526
@@ -31322,7 +31309,7 @@
 "sunny" 996
 "sunrise" 252
 "sunroof" 56
-"suns" 1313
+"suns" 82
 "sunset" 566
 "sunsets" 61
 "sunshine" 1313
@@ -31381,7 +31368,7 @@
 "suppers" 72
 "supplant" 91
 "supplanted" 91
-"supple" 1434
+"supple" 180
 "supplement" 1434
 "supplemental" 68
 "supplementary" 982
@@ -31426,7 +31413,7 @@
 "surely" 6352
 "surest" 56
 "surety" 206
-"surf" 9022
+"surf" 267
 "surface" 9022
 "surfaced" 360
 "surfaces" 1368
@@ -31435,7 +31422,7 @@
 "surfer" 155
 "surfers" 155
 "surfing" 204
-"surge" 2670
+"surge" 811
 "surged" 272
 "surgeon" 1051
 "surgeons" 613
@@ -31673,7 +31660,7 @@
 "syndromes" 77
 "synergy" 94
 "synod" 300
-"synonym" 374
+"synonym" 152
 "synonymous" 374
 "synonyms" 208
 "synopsis" 97
@@ -31681,7 +31668,7 @@
 "syntactic" 881
 "syntactically" 86
 "syntax" 581
-"synth" 1199
+"synth" 53
 "synthesis" 1199
 "synthesise" 94
 "synthesised" 94
@@ -31724,7 +31711,7 @@
 "tacit" 299
 "tacitly" 132
 "taciturn" 68
-"tack" 2125
+"tack" 525
 "tacked" 138
 "tacking" 78
 "tackle" 2125
@@ -31732,7 +31719,7 @@
 "tackles" 213
 "tackling" 725
 "tacky" 117
-"tact" 1423
+"tact" 243
 "tactful" 179
 "tactfully" 162
 "tactic" 1423
@@ -31822,7 +31809,7 @@
 "tanks" 1469
 "tanned" 315
 "tanner" 253
-"tannin" 106
+"tannin" 55
 "tanning" 106
 "tannoy" 74
 "tans" 84
@@ -31857,7 +31844,7 @@
 "tariff" 669
 "tariffs" 568
 "tarmac" 401
-"tarn" 160
+"tarn" 89
 "tarnished" 160
 "tarot" 73
 "tarpaulin" 84
@@ -31879,7 +31866,7 @@
 "tastes" 1002
 "tasting" 241
 "tasty" 373
-"tat" 170
+"tat" 190
 "tattered" 190
 "tatters" 98
 "tattoo" 182
@@ -31917,7 +31904,7 @@
 "tea" 8614
 "tea-time" 81
 "tea/coffee" 89
-"teach" 11566
+"teach" 2818
 "teacher" 11566
 "teacher-training" 97
 "teachers" 11566
@@ -31948,7 +31935,7 @@
 "teaspoonful" 65
 "teaspoons" 85
 "teatime" 104
-"tech" 11785
+"tech" 294
 "technical" 6811
 "technicalities" 103
 "technicality" 90
@@ -31957,7 +31944,7 @@
 "technicians" 428
 "technique" 5932
 "techniques" 5932
-"techno" 11785
+"techno" 151
 "technocratic" 64
 "technocrats" 56
 "technological" 1649
@@ -31972,7 +31959,7 @@
 "tedium" 125
 "tee" 496
 "teeming" 126
-"teen" 1134
+"teen" 122
 "teenage" 1134
 "teenager" 936
 "teenagers" 936
@@ -32015,7 +32002,7 @@
 "tells" 3667
 "telly" 839
 "temerity" 75
-"temper" 4379
+"temper" 1272
 "temperament" 556
 "temperamental" 138
 "temperaments" 80
@@ -32030,7 +32017,7 @@
 "templates" 158
 "temple" 2108
 "temples" 648
-"tempo" 3833
+"tempo" 349
 "temporal" 549
 "temporarily" 1287
 "temporary" 3833
@@ -32079,7 +32066,7 @@
 "tenner" 123
 "tennis" 2863
 "tenor" 392
-"tens" 3282
+"tens" 708
 "tense" 1304
 "tensed" 196
 "tensile" 107
@@ -32201,7 +32188,7 @@
 "that is" 4308
 "that is to say" 727
 "that's" 62201
-"thatch" 3363
+"thatch" 151
 "thatched" 236
 "thatcher" 3363
 "thaw" 239
@@ -32291,7 +32278,7 @@
 "thieving" 89
 "thigh" 785
 "thighs" 761
-"thin" 91851
+"thin" 5257
 "thine" 65
 "thing" 42426
 "things" 42426
@@ -32347,7 +32334,7 @@
 "thoroughly" 2107
 "thoroughness" 121
 "those" 88862
-"thou" 56876
+"thou" 761
 "though" 56876
 "thought" 56876
 "thought-provoking" 67
@@ -32467,7 +32454,7 @@
 "thyself" 56
 "ti" 525
 "tic" 65
-"tick" 2619
+"tick" 603
 "ticked" 220
 "ticket" 2619
 "tickets" 2619
@@ -32542,7 +32529,7 @@
 "timidly" 63
 "timing" 1779
 "timings" 143
-"tin" 2026
+"tin" 5463
 "tinder" 52
 "tinge" 193
 "tinged" 193
@@ -32586,7 +32573,6 @@
 "tissue" 2048
 "tissues" 824
 "tit" 208
-"titan" 157
 "titanic" 157
 "titanium" 98
 "titans" 62
@@ -32615,7 +32601,7 @@
 "today" 26342
 "toddler" 389
 "toddlers" 198
-"toe" 659
+"toe" 1039
 "toenails" 63
 "toes" 1039
 "toffee" 143
@@ -32623,7 +32609,7 @@
 "together with" 5844
 "togetherness" 79
 "toggle" 53
-"toil" 1577
+"toil" 181
 "toiled" 65
 "toilet" 1577
 "toiletries" 101
@@ -32641,7 +32627,6 @@
 "toleration" 138
 "toll" 814
 "tolls" 153
-"tom" 5610
 "tomato" 754
 "tomatoes" 754
 "tomb" 624
@@ -32662,7 +32647,7 @@
 "toned" 81
 "toner" 103
 "tones" 919
-"tong" 2466
+"tong" 87
 "tongs" 91
 "tongue" 2466
 "tongue-tied" 67
@@ -32713,7 +32698,7 @@
 "toppling" 74
 "tops" 1003
 "topsoil" 93
-"tor" 223
+"tor" 1301
 "torch" 929
 "torches" 236
 "torchlight" 95
@@ -32733,7 +32718,7 @@
 "torrid" 52
 "torsion" 65
 "torso" 230
-"tort" 875
+"tort" 416
 "tortoise" 175
 "tortoises" 101
 "tortoiseshell" 72
@@ -32746,7 +32731,7 @@
 "toss" 761
 "tossed" 761
 "tossing" 253
-"tot" 172
+"tot" 17567
 "total" 17567
 "totalitarian" 157
 "totalitarianism" 62
@@ -32755,14 +32740,14 @@
 "totalling" 475
 "totally" 5815
 "totals" 311
-"tote" 135
+"tote" 79
 "totem" 135
 "tots" 63
 "tottered" 56
 "tottering" 77
 "touch" 6675
 "touchdown" 96
-"touche" 3040
+"touche" 205
 "touched" 3040
 "touches" 736
 "touching" 1405
@@ -32814,7 +32799,7 @@
 "toxicity" 175
 "toxin" 218
 "toxins" 218
-"toy" 976
+"toy" 1157
 "toyed" 142
 "toying" 113
 "toys" 1157
@@ -32837,7 +32822,7 @@
 "tractor" 541
 "tractors" 184
 "tracts" 337
-"trad" 19981
+"trad" 56
 "trade" 19981
 "trade-off" 144
 "trade-offs" 58
@@ -32901,7 +32886,7 @@
 "tranquil" 319
 "tranquillisers" 73
 "tranquillity" 319
-"trans" 8580
+"trans" 103
 "trans-Atlantic" 57
 "transacted" 53
 "transaction" 2274
@@ -33039,7 +33024,7 @@
 "treasurers" 66
 "treasures" 581
 "treasury" 2623
-"treat" 12198
+"treat" 3779
 "treated" 7039
 "treaties" 665
 "treating" 1326
@@ -33159,11 +33144,11 @@
 "triumphantly" 270
 "triumphed" 156
 "triumphs" 252
-"trivia" 897
+"trivia" 124
 "trivial" 897
 "trod" 191
 "trodden" 129
-"troll" 718
+"troll" 97
 "trolley" 718
 "trolleys" 177
 "trolls" 102
@@ -33391,7 +33376,7 @@
 "twisted" 1546
 "twisting" 620
 "twists" 220
-"twit" 238
+"twit" 76
 "twitch" 238
 "twitched" 238
 "twitching" 213
@@ -33713,7 +33698,7 @@
 "undistinguished" 86
 "undisturbed" 273
 "undivided" 118
-"undo" 2410
+"undo" 316
 "undoing" 152
 "undone" 281
 "undoubted" 2410
@@ -34225,7 +34210,7 @@
 "usable" 314
 "usage" 1172
 "usages" 136
-"use" 62932
+"use" 66970
 "used" 66970
 "useful" 10071
 "usefully" 433
@@ -34324,7 +34309,7 @@
 "vampire" 139
 "vampires" 55
 "van" 4286
-"vandal" 341
+"vandal" 66
 "vandalised" 93
 "vandalism" 341
 "vandals" 237
@@ -34424,7 +34409,7 @@
 "venom" 247
 "venomous" 132
 "venous" 205
-"vent" 2370
+"vent" 361
 "ventilated" 132
 "ventilation" 589
 "ventilator" 144
@@ -34434,7 +34419,7 @@
 "venture" 2370
 "ventured" 418
 "ventures" 789
-"venturi" 127
+"venturi" 59
 "venturing" 127
 "venturous" 86
 "venue" 1189
@@ -34492,7 +34477,7 @@
 "vestments" 99
 "vestry" 177
 "vests" 105
-"vet" 685
+"vet" 967
 "vetch" 70
 "veteran" 967
 "veterans" 440
@@ -34529,7 +34514,7 @@
 "vice versa" 674
 "vice-admiral" 55
 "vice-captain" 76
-"vice-chair" 352
+"vice-chair" 50
 "vice-chairman" 352
 "vice-chancellor" 171
 "vice-chancellors" 66
@@ -34581,7 +34566,7 @@
 "viking" 478
 "vikings" 165
 "vile" 274
-"villa" 11340
+"villa" 2090
 "village" 11340
 "villager" 872
 "villagers" 872
@@ -34601,7 +34586,7 @@
 "vineyards" 339
 "vintage" 719
 "vinyl" 314
-"viola" 478
+"viola" 379
 "violas" 50
 "violate" 310
 "violated" 310
@@ -34665,7 +34650,7 @@
 "visualised" 85
 "visually" 578
 "visuals" 71
-"vita" 5098
+"vita" 178
 "vitae" 106
 "vital" 5098
 "vitality" 460
@@ -34716,7 +34701,7 @@
 "volley" 266
 "volleyball" 86
 "vols." 114
-"volt" 912
+"volt" 128
 "voltage" 912
 "voltages" 90
 "volts" 175
@@ -34743,10 +34728,10 @@
 "votes" 3164
 "voting" 2198
 "votive" 63
-"vouch" 479
+"vouch" 82
 "voucher" 479
 "vouchers" 479
-"vow" 240
+"vow" 481
 "vowed" 481
 "vowel" 400
 "vowels" 277
@@ -34770,13 +34755,13 @@
 "wade" 435
 "waded" 117
 "waders" 133
-"wadi" 114
+"wadi" 69
 "wading" 114
 "wafer" 75
 "waffle" 83
 "wafted" 102
 "wafting" 61
-"wag" 100
+"wag" 3705
 "wage" 3705
 "wage-earners" 52
 "waged" 240
@@ -34846,7 +34831,7 @@
 "walrus" 64
 "waltz" 177
 "wan" 2770
-"wand" 957
+"wand" 146
 "wander" 957
 "wandered" 957
 "wanderer" 146
@@ -34879,7 +34864,7 @@
 "wardrobes" 166
 "wards" 726
 "wardship" 133
-"ware" 988
+"ware" 243
 "warehouse" 988
 "warehouses" 387
 "warehousing" 127
@@ -35056,7 +35041,7 @@
 "webbing" 82
 "weber" 532
 "webs" 133
-"wed" 556
+"wed" 3335
 "wedded" 102
 "wedding" 3335
 "weddings" 305
@@ -35080,7 +35065,7 @@
 "weeks" 15461
 "weep" 654
 "weeping" 654
-"weigh" 8569
+"weigh" 658
 "weighed" 815
 "weighing" 775
 "weighs" 312
@@ -35143,7 +35128,7 @@
 "wellbeing" 149
 "welled" 112
 "wellies" 108
-"welling" 598
+"welling" 95
 "wellington" 598
 "wellingtons" 103
 "wells" 1486
@@ -35207,7 +35192,7 @@
 "whereupon" 278
 "wherever" 2285
 "wherewithal" 63
-"whet" 33169
+"whet" 51
 "whether" 33169
 "whether or not" 2881
 "whey" 82
@@ -35255,7 +35240,7 @@
 "whistler" 96
 "whistles" 167
 "whistling" 395
-"whit" 24554
+"whit" 124
 "white" 24554
 "white-collar" 231
 "white-faced" 93
@@ -35285,7 +35270,7 @@
 "wholeheartedly" 183
 "wholemeal" 254
 "wholeness" 128
-"wholes" 719
+"wholes" 65
 "wholesale" 719
 "wholesaler" 156
 "wholesalers" 156
@@ -35334,14 +35319,14 @@
 "wielded" 135
 "wielding" 166
 "wife" 17102
-"wig" 337
+"wig" 414
 "wiggle" 50
 "wight" 414
 "wigs" 122
 "wild" 5525
 "wild-type" 189
 "wildcat" 67
-"wilder" 678
+"wilder" 254
 "wilderness" 678
 "wildest" 145
 "wildfowl" 149
@@ -35370,11 +35355,11 @@
 "wilts" 120
 "wily" 103
 "wimp" 78
-"win" 10581
+"win" 10584
 "wince" 260
 "winced" 260
-"winch" 804
-"winches" 804
+"winch" 174
+"winches" 57
 "winchester" 804
 "wincing" 67
 "wind" 10584
@@ -35525,7 +35510,7 @@
 "wonders" 843
 "wondrous" 112
 "wont" 167
-"woo" 301
+"woo" 7357
 "wood" 7357
 "woodbine" 63
 "woodcock" 80
@@ -35664,7 +35649,7 @@
 "wrench" 263
 "wrenched" 263
 "wrenching" 73
-"wrest" 370
+"wrest" 60
 "wrestle" 120
 "wrestled" 108
 "wrestler" 60
@@ -35752,7 +35737,7 @@
 "yearning" 287
 "years" 90224
 "yeast" 381
-"yell" 4553
+"yell" 232
 "yelled" 751
 "yelling" 304
 "yellow" 4553
@@ -35799,7 +35784,7 @@
 "youngster" 1748
 "youngsters" 1748
 "your" 138334
-"yours" 10746
+"yours" 4239
 "yourself" 10746
 "yourselves" 572
 "yous" 108
@@ -35809,7 +35794,7 @@
 "yow" 80
 "yuk" 81
 "yum" 124
-"yup" 58
+"yup" 103
 "yuppie" 103
 "yuppies" 73
 "zany" 51

@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.8
+;; Version: 0.8.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -40,6 +40,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.1
+;; * minor bug fixes
 ;;
 ;; Version 0.8
 ;; * bug fixes
@@ -1707,6 +1710,8 @@ See also `predictive-fast-learn-from-buffer'."
       
       ;; loop over all dictionaries in dictionary list
       (dolist (dict dict-list)
+	(message "Learning words for dictionary %s...(dict %d of %d)"
+		 dictname d numdicts)
 	;;initialise counters etc. for messages
 	(setq dictname (dic-name dict))
 	(setq dictsize (dict-size dict))
@@ -1928,7 +1933,7 @@ entirely of word- or symbol-constituent characters."
 
 
 
-(defun predictive-boost-prefix-weights (dict &optional prefix length)
+(defun predictive-boost-prefix-weight (dict &optional prefix length)
   "Increase the weight of any word in dictionary DICT that is
 also a prefix for other words. The weight of the prefix will be
 increased so that it is equal to or greater than the weight of
@@ -1981,9 +1986,12 @@ LENGTH is the prefix argument."
     ;; if there's a single prefix, boost its weight
     (if prefix
 	(when (dict-member-p dict prefix)
-	  (funcall boost-fun prefix (dict-lookup dict prefix)))
+	  (message "Boosting weight of \"%s\"..." prefix)
+	  (funcall boost-fun prefix (dict-lookup dict prefix))
+	  (message "Boosting weight of \"%s\"...done" prefix))
       
       ;; otherwise, boost weights of all prefices
+      (message "Boosting prefix weights...")
       (let ((i 0) (count (dict-size dict)))
 	(message "Boosting prefix weights...(word 1 of %d)" count)
 	;; Note: relies on dict-map traversing in alphabetical order, so that

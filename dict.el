@@ -4,7 +4,7 @@
 ;; Copyright (C) 2004 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5
+;; Version: 0.6.1
 ;; Keywords: dictionary
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -43,6 +43,9 @@
 
 
 ;;; Change log:
+;;
+;; Version 0.6.1
+;; * minor bug fixes
 ;;
 ;; Version 0.6
 ;; * added dict-size function
@@ -1065,7 +1068,7 @@ is the prefix argument."
 	  (progn
 	    (when (or (not (file-exists-p filename))
 		      overwrite
-		      (yes-or-no-p
+		      (y-or-n-p
 		       (format "File %s already exists. Overwrite? "
 			       filename)))
 	      (if uncompiled
@@ -1139,12 +1142,17 @@ otherwise."
 
 
 
-(defun dict-unload (dict)
-  "Unload dictionary DICT."
-  (interactive (list (read-dict "Dictionary to unload: ")))
+(defun dict-unload (dict &optional dont-save)
+  "Unload dictionary DICT.
+If optional argument DONT-SAVE is non-nil, the dictionary will
+NOT be saved even if its autosave flag is set."
+  (interactive (list (read-dict "Dictionary to unload: ")
+		     current-prefix-arg))
   
-  ;; if dictionary has been modified and autosave is set, save it first
+  ;; if dictionary has been modified, autosave is set and not overidden, save
+  ;; it first
   (when (and (dic-modified dict)
+	     (null dont-save)
 	     (or (eq (dic-autosave dict) t)
 		 (and (eq (dic-autosave dict) 'ask)
 		      (y-or-n-p
@@ -1187,6 +1195,7 @@ used to recreate the dictionary using `dict-populate-from-file'."
     (insert "\n"))
   
   ;; dump words
+  (message "Dumping words from %s to %s..." (dic-name dict) (buffer-name buffer))
   (let ((count 0) (dictsize (dict-size dict)))
     (message "Dumping words from %s to %s...(word 1 of %d)"
 	     (dic-name dict) (buffer-name buffer) dictsize)
@@ -1219,15 +1228,17 @@ used to recreate the dictionary using `dict-populate-from-file'."
   (let (buff)
     ;; create temporary buffer and dump words to it
     (setq buff (generate-new-buffer filename))
-    (save-window-excursion (dict-dump-words-to-buffer dict buff))
-
-    ;; save file, prompting to overwrite if necessary
-    (if (and (file-exists-p filename)
-	     (not overwrite)
-	     (not (yes-or-no-p
-		   (format "File %s already exists. Overwrite? " filename))))
-	(message "Word dump cancelled")
-      (write-file filename t)))
+    (save-window-excursion
+      (dict-dump-words-to-buffer dict buff)
+      
+      ;; save file, prompting to overwrite if necessary
+      (if (and (file-exists-p filename)
+	       (not overwrite)
+	       (not (y-or-n-p
+		     (format "File %s already exists. Overwrite? " filename))))
+	  (message "Word dump cancelled")
+	(write-file filename))
+      (kill-buffer buff)))
 )
 
 
