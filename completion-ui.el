@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.6
+;; Version: 0.3.7
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.7
+;; * fixed M-<space> binding so it's only active within an overlay
 ;;
 ;; Version 0.3.6
 ;; * fixed bug in `completion-define-minor-mode'
@@ -618,7 +621,13 @@ otherwise complete the word at point."
 	  (complete-word-at-point -1))))
 
     ;; M-<space> rejects
-    (define-key map "\M- " 'completion-reject)
+    (define-key map "\M- "
+      (lambda()
+	"Reject the current completion if there is one, otherwise
+run whatever would normally be bound to the key sequence."
+	(interactive)
+	(completion-run-if-within-overlay 'completion-reject
+					  'completion-function)))
     
     ;; DEL deletes backwards and removes characters from the current
     ;; completion, if any
