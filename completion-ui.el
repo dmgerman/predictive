@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.7
+;; Version: 0.3.8
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.8
+;; * fixed `completion-run-if-within-overlay' so it doesn't error if there's
+;;   no "normal" binding for the key sequence used to invoke it
+;; * defined a new `completion-trap-recursion' variable in case the symbol
+;;   trap-recursion is bound outside `completion-run-if-within-overlay'
 ;;
 ;; Version 0.3.7
 ;; * fixed M-<space> binding so it's only active within an overlay
@@ -1780,6 +1786,10 @@ OVERLAY will be left alone."
 
 
 
+;; used to trap recursive calls to completion-run-if-within-overlay
+(defvar completion-trap-recursion nil)
+
+
 (defun completion-run-if-within-overlay
   (command variable &optional when)
   "Run COMMAND if within a completion overlay.
@@ -1797,7 +1807,7 @@ Intended to be bound to a key sequence in a keymap."
   (interactive)
 
   ;; throw and error if executing recursively
-  (when (and (boundp 'trap-recursion) trap-recursion)
+  (when completion-trap-recursion
     (error "Recursive call to `completion-run-if-within-overlay';\
  supplied variable probably doesn't disable keymap"))
 
@@ -1811,14 +1821,16 @@ Intended to be bound to a key sequence in a keymap."
     ;; run whatever would normally be bound to the key sequence,
     ;; unless running instead and we're within an overlay
     (unless (and (or (null when) (eq when 'instead)) overlay)
-      (let ((trap-recursion t)
-	    (restore (eval variable)))
+      (let ((completion-trap-recursion t)
+	    (restore (eval variable))
+	    command)
 	(set variable nil)
+	(setq command
+	      (key-binding (this-command-keys) 'accept-default))
 	(unwind-protect
-	    (command-execute (key-binding (this-command-keys)
-					  'accept-default))
+	    (when (commandp command) (command-execute command))
 	  (set variable restore))))
-
+    
     ;; run command if running after
     (when (eq when 'after) (command-execute command)))
 )
