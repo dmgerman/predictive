@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7
+;; Version: 0.7.1
 ;; Keywords: ternary search tree, tstree
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -58,6 +58,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.1
+;; * fixed bugs in `tstree-map', `tstree-complete' and
+;;   `tstree-complete-ordered' that resulted in the tree not being
+;;   traversed "alphabetically"
 ;;
 ;; Version 0.7
 ;; * finally wrote a `tstree-delete' function!
@@ -583,14 +588,12 @@ function calls is returned. Don't use this. Use the
 	(while (not (null stack))
 	  (setq str (pop stack))
 	  (setq node (pop stack))
+	  
 	  ;; add the high child to the stack, if it exists
 	  (when (tstree--node-high node)
 	    (push (tstree--node-high node) stack)
 	    (push str stack))
-	  ;; add the low child to the stack, if it exists
-	  (when (tstree--node-low node)
-	    (push (tstree--node-low node) stack)
-	    (push str stack))
+	  
 	  ;; if we're at a data node call FUNCTION, otherwise add the
 	  ;; equal child to the stack
 	  (if (null (tstree--node-split node))
@@ -607,6 +610,11 @@ function calls is returned. Don't use this. Use the
 		      (append str (list (tstree--node-split node))))
 		     (t (vconcat str (vector (tstree--node-split node)))))
 		    stack)))
+	  
+	  ;; add the low child to the stack, if it exists
+	  (when (tstree--node-low node)
+	    (push (tstree--node-low node) stack)
+	    (push str stack))
 	  )))
     
     ;; return accumulated list of results (nil if MAPCAR was nil)
@@ -711,11 +719,6 @@ included in the results."
 	  (push (tstree--node-high node) stack)
 	  (push seq stack))
 	
-        ;; add the low child to the stack, if it exists
-	(when (tstree--node-low node)
-	  (push (tstree--node-low node) stack)
-	  (push seq stack))
-	
         ;; if we're not at a data node, add the equal child to the stack
 	(if (tstree--node-split node)
 	    (when (tstree--node-equal node)
@@ -727,10 +730,8 @@ included in the results."
 		      (append seq (list (tstree--node-split node))))
 		     (t (vconcat seq (vector (tstree--node-split node)))))
 		    stack))
-	  
-	  ;; ----- if we're at a data node, we've found a completion -----
-	  ;; if no filter was supplied, or the completion passes the
-	  ;; filter...
+	  ;; if we're at a data node that passes the filter, we've found
+	  ;; a completion
 	  (when (or (null filter)
 		    (funcall filter seq (tstree--node-equal node)))
 	    ;; skip completion if we've already found it in a previous
@@ -751,7 +752,13 @@ included in the results."
 	      ;; add the completion to the list
 	      (setq completions (cons (cons seq data) completions))
 	      (setq num (1+ num))))
-	  )))
+	  )
+	
+	;; add the low child to the stack, if it exists
+	(when (tstree--node-low node)
+	  (push (tstree--node-low node) stack)
+	  (push seq stack))
+	))
     
     
     ;; ----- construct the list of completions -----
@@ -865,11 +872,6 @@ results."
 	    (push (tstree--node-high node) stack)
 	    (push seq stack))
 	  
-	  ;; add the low child to the stack, if it exists
-	  (when (tstree--node-low node)
-	    (push (tstree--node-low node) stack)
-	    (push seq stack))
-	  
 	  ;; if we're not at a data node, add the equal child to the stack
 	  (if (tstree--node-split node)
 	      (when (tstree--node-equal node)
@@ -882,11 +884,8 @@ results."
 		       (t
 			(vconcat seq (vector (tstree--node-split node)))))
 		      stack))
-
-	    
-	    ;; ---- if we're at a data node, we've found a completion ----
-	    ;; if no filter was supplied, or the completion passes the
-	    ;; filter...
+	    ;; if we're at a data node that passes the filter, we've
+	    ;; found a completion
 	    (when (or (null filter)
 		      (funcall filter seq (tstree--node-equal node)))
 	      ;; skip completion if we've already found it in a previous
@@ -911,7 +910,13 @@ results."
 		;; one from the heap.
 		(when (and maxnum (> num maxnum))
 		  (heap-delete-root heap))))
-	    ))))
+	    )
+
+	  ;; add the low child to the stack, if it exists
+	  (when (tstree--node-low node)
+	    (push (tstree--node-low node) stack)
+	    (push seq stack))
+	  )))
     
     
     ;; ----- create the completions vector -----
