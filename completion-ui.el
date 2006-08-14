@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.8
+;; Version: 0.3.9
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.9
+;; * `completion-select' now uses the `completion-trap-recursion' variable,
+;;   instead of testing if 'trap-recursion is bound
 ;;
 ;; Version 0.3.8
 ;; * fixed `completion-run-if-within-overlay' so it doesn't error if there's
@@ -442,6 +446,10 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 (defvar completion-menu-map nil
   "Keymap active when `completion-use-menu' is enabled.")
+
+
+;; used to trap recursive calls to certain completion functions
+(defvar completion-trap-recursion nil)
 
 
 
@@ -1268,10 +1276,10 @@ Intended to be bound to keys in `completion-hotkey-map'."
        ;; if there are no completions, run whatever would otherwise be
        ;; bound to the key
        ((null completions)
-	(when (and (boundp 'trap-recursion) trap-recursion)
+	(when completion-trap-recursion
 	  (error "Recursive call to `completion-select'"))
 	(setq completion-use-hotkeys nil)
-	(let ((trap-recursion t))
+	(let ((completion-trap-recursion t))
 	  (unwind-protect
 	      (command-execute
 	       (key-binding (this-command-keys) 'accept-default))
@@ -1784,10 +1792,6 @@ OVERLAY will be left alone."
   (when (overlayp overlay) (push overlay completion-overlay-list))
 )
 
-
-
-;; used to trap recursive calls to completion-run-if-within-overlay
-(defvar completion-trap-recursion nil)
 
 
 (defun completion-run-if-within-overlay
