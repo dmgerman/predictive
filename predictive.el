@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.13
+;; Version: 0.13.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.13.1
+;; * Fixed minor bug in `predictive-define-prefix'
 ;;
 ;; Version 0.13
 ;; * finally wrote a `predictive-remove-from-dict' function!
@@ -1483,8 +1486,8 @@ as the weight of WORD."
 	      (setq word (thing-at-point 'word)))
      ;; word not in dict
      (when (not (dictree-member-p dict word))
-       (message "\"%s\" not found in dictionary %s"
-		word (dictree-name dict))) )
+       (error "\"%s\" not found in dictionary %s"
+	      word (dictree-name dict))))
   
   (let ((prefices (dictree-lookup-meta-data dict word)))
     ;; unless prefix is already defined, define it
