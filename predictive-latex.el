@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6
+;; Version: 0.6.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.1
+;; * added missing overlay-local `completion-override-syntax-alist' binding
 ;;
 ;; Version 0.6
 ;; * \usepackage commands now cause dictionaries and regexps to be
@@ -374,6 +377,9 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 				       (?  . (accept t none))
 				       (?. . (add t word))
 				       (t  . (reject t none))))
+	   (completion-override-syntax-alist
+	    . ((?: . (predictive-latex-label-add-to-colon t word))
+	       (?} . (accept t none))))			       
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp

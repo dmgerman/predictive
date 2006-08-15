@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: predictive, latex, package, smartref, sref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2
+;; * added overlay-local `completion-override-syntax-alist' bindings
 ;;
 ;; Version 0.1
 ;; * initial version
@@ -59,6 +62,9 @@
 				       (?  . (accept t none))
 				       (?. . (add t word))
 				       (t  . (reject t none))))
+	   (completion-override-syntax-alist
+	    . ((?: . (predictive-latex-label-add-to-colon t word))
+	       (?} . (accept t none))))			       
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace t 'sref)
   (auto-overlay-load-compound-regexp
@@ -70,6 +76,9 @@
 				       (?  . (accept t none))
 				       (?. . (add t word))
 				       (t  . (reject t none))))
+	   (completion-override-syntax-alist
+	    . ((?: . (predictive-latex-label-add-to-colon t word))
+	       (?} . (accept t none))))			       
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace t 'Sref)
 )
