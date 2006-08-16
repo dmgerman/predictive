@@ -1080,20 +1080,39 @@ for cross-reference overlays."
     (if (and n (< n 0))
 	(unless (bobp)
 	  (setq m (- n))
-	  (when (= ?\\ (char-before))
-	    (while (and (not (bobp)) (= ?\\ (char-before))) (backward-char))
-	    (setq m (1- m)))
 	  (dotimes (i m)
-	    (backward-word 1)  ; argument not optional in Emacs 21
-	    (while (and (not (bobp)) (char-before) (= ?\\ (char-before)))
-	      (backward-char))))
+	    ;; make sure we're at the end of a word
+	    (re-search-backward "\\\\\\|\\w")
+	    (forward-char)
+	    ;; if point is within or just after a sequence of \'s, go
+	    ;; backwards for the correct number of \'s
+	    (if (= (char-before) ?\\)
+		(let ((pos (point)))
+		  (save-excursion
+		    (while (= (char-before) ?\\) (backward-char))
+		    (setq pos (- pos (point))))
+		  (if (= (mod pos 2) 1) (backward-char) (backward-char 2)))
+	      ;; otherwise, go back one word, plus one \ if there is one
+	      (backward-word 1)  ; argument not optional in Emacs 21
+	      (when (and (not (bobp)) (= ?\\ (char-before)))
+		(backward-char)))))
+      
       ;; going forwards...
       (unless (eobp)
-	(setq m (if n n 1))
+	(setq m (or n 1))
+	;; deal with point within sequence of \'s
+	(when (and (= (char-after) ?\\)
+		   (= (char-after (1+ (point))) ?\\))
+	  (let ((pos (point)))
+	    (save-excursion
+	      (while (= (char-before) ?\\) (backward-char))
+	      (setq pos (- pos (point))))
+	    (when (= (mod pos 2) 1) (backward-char))))
+	;; go forward, counting \ as part of word, \\ as entire word
 	(dotimes (i m)
 	  (re-search-forward "\\\\\\|\\w" nil t)
 	  (backward-char)
-	  (re-search-forward "\\\\+\\w*\\|\\w+" nil t)))
+	  (re-search-forward "\\\\\\\\\\|\\\\\\w+\\|\\w+" nil t)))
       ))
 )
 
