@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.9
+;; Version: 0.3.10
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.10
+;; * fixed start-of-word behaviour in `completion-self-insert'
 ;;
 ;; Version 0.3.9
 ;; * `completion-select' now uses the `completion-trap-recursion' variable,
@@ -1121,8 +1124,7 @@ unless you know what you are doing, it only bind
 	   (insert-behaviour (nth 1 behaviour))
 	   (complete-behaviour (nth 2 behaviour))
 	   (overlay (completion-overlay-at-point))
-	   (wordstart (completion-beginning-of-word-p))
-	   prefix)
+	   wordstart prefix)
       
       
       ;; if behaviour alist entry is a function, call it
@@ -1136,11 +1138,13 @@ unless you know what you are doing, it only bind
        ;; accept
        ((eq resolve-behaviour 'accept)
 	(completion-accept overlay)
-	(setq prefix (string last-input-event)))
+	(setq prefix (string last-input-event))
+	(setq wordstart t))
        ;; reject
        ((eq resolve-behaviour 'reject)
 	(completion-reject overlay)
-	(setq prefix (string last-input-event)))
+	(setq prefix (string last-input-event))
+	(setq wordstart t))
        ;; add to prefix
        ((eq resolve-behaviour 'add)
 	(if (null overlay)
@@ -1148,7 +1152,10 @@ unless you know what you are doing, it only bind
 	  (delete-region (overlay-start overlay)
 			 (overlay-end overlay))
 	  (setq prefix (concat (overlay-get overlay 'prefix)
-			       (string last-input-event)))))
+			       (string last-input-event))))
+	(setq wordstart (or (completion-beginning-of-word-p)
+			    (and (not (completion-within-word-p))
+				 (not (completion-end-of-word-p))))))
        ;; error
        (t (error "Invalid entry in `completion-syntax-alist' or\
  `completion-override-syntax-alist', %s"
