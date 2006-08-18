@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.2
+;; * rewrote `predictive-latex-forward-word'
 ;;
 ;; Version 0.6.1
 ;; * added missing overlay-local `completion-override-syntax-alist' binding
@@ -1101,8 +1104,7 @@ for cross-reference overlays."
       (unless (eobp)
 	(setq m (or n 1))
 	;; deal with point within sequence of \'s
-	(when (and (= (char-after) ?\\)
-		   (= (char-after (1+ (point))) ?\\))
+	(when (= (char-after) ?\\)
 	  (let ((pos (point)))
 	    (save-excursion
 	      (while (= (char-before) ?\\) (backward-char))
@@ -1112,7 +1114,8 @@ for cross-reference overlays."
 	(dotimes (i m)
 	  (re-search-forward "\\\\\\|\\w" nil t)
 	  (backward-char)
-	  (re-search-forward "\\\\\\\\\\|\\\\\\w+\\|\\w+" nil t)))
+	  (re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
+	  (when (= (char-before) ?\n) (backward-char))))
       ))
 )
 
