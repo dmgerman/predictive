@@ -33,6 +33,7 @@
 ;;
 ;; Version 0.6.2
 ;; * rewrote `predictive-latex-forward-word'
+;; * prevented label dictionary being clobbered if it's already loaded
 ;;
 ;; Version 0.6.1
 ;; * added missing overlay-local `completion-override-syntax-alist' binding
@@ -509,7 +510,10 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   (make-local-variable 'completion-override-syntax-alist)
   (setq completion-override-syntax-alist
 	'((?\\ . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
+		    (if (and (char-before) (= (char-before) ?\\)
+			     (or (not (char-before (1- (point))))
+				 (not (= (char-before (1- (point)))
+					 ?\\))))
 			'add 'accept))
 		  t word))
 	  (?$  . (accept t none))
@@ -920,15 +924,17 @@ for LaTeX package PACKAGE."
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
 		    (symbol-name dictname) ".elc"))
-      ;; if a label dictionary exists, load it, otherwise create it
-      (if (not (file-exists-p filename))
-	  (predictive-create-dict dictname filename)
-	(load filename)
-	(predictive-load-dict dictname)
-	;; FIXME: probably shouldn't be using an internal dict-tree.el
-	;;        function
-	(dictree--set-filename (eval (predictive-latex-label-dict-name))
-			       filename))
+      ;; if a label dictionary isn't loaded, load it if it exists, otherwise
+      ;; create it
+      (unless (featurep dictname)
+	(if (not (file-exists-p filename))
+	    (predictive-create-dict dictname filename)
+	  (load filename)
+	  (predictive-load-dict dictname)
+	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
+	  ;;        function
+	  (dictree--set-filename (eval (predictive-latex-label-dict-name))
+				 filename)))
       ;; set the label dictionary to the loaded/new dictionary
       (setq predictive-latex-label-dict dictname))
      
