@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.10
+;; Version: 0.3.11
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.11
+;; * finally figured out how to prevent list of completions displayed in echo
+;;   area from being logged
 ;;
 ;; Version 0.3.10
 ;; * fixed start-of-word behaviour in `completion-self-insert'
@@ -920,7 +924,8 @@ irrespective of the setting of `completion-tooltip-delay'."
 
 (defun complete-echo (overlay)
   "Display completion candidates in the echo-area."
-  (message (completion-construct-echo-text overlay)))
+  (let ((message-log-max nil))
+    (message (completion-construct-echo-text overlay))))
   
 
 
