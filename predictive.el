@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.13.1
+;; Version: 0.13.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,15 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.13.2
+;; * `predictive-define-prefix' now ensures prefix weight is at least as big
+;;   as the word it's a prefix of
+;; * added `predictive-dict-autosave-on-kill-buffer/disable-mode'
+;;   customization options to allow more control over when modified
+;;   dictionaries are saved
+;; * `predictive-unload-dict' now features completion on names of dictionaries
+;;   associated with current buffer
 ;;
 ;; Version 0.13.1
 ;; * Fixed minor bug in `predictive-define-prefix'
@@ -227,11 +236,33 @@ memory."
   "*Default autosave flag for new predictive mode dictionaries.
 
 A value of t means modified dictionaries will be saved
-automatically when unloaded. The symbol 'ask' means you will be
-prompted to save modified dictionaries. A value of nil means
-dictionaries will not be saved automatically, and unless you save
-the dictionary manually all changes will be lost when the
-dictionary is unloaded. See also `dict-save'."
+automatically when unloaded (or when quitting Emacs). The symbol
+'ask' means you will be prompted to save modified dictionaries. A
+value of nil means dictionaries will not be saved automatically,
+and unless you save the dictionary manually all changes will be
+lost when the dictionary is unloaded. See also `dictree-save'."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-dict-autosave-on-kill-buffer t
+  "*Whether to save dictionaries when a buffer is killed.
+
+If non-nil, modifications to dictionaries that are used by a
+buffer will automatically be saved when the buffer is killed, for
+dictionaries that have their autosave flag set (see
+`predictive-dict-autosave')."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-dict-autosave-on-mode-disable t
+  "*Whether to save dictionaries when predictive mode is disabled.
+
+If non-nil, modifications to dictionaries that are used by a
+buffer will automatically be saved when predictive mode is
+disabled in that buffer, for dictionaries that have their
+autosave flag set (see `predictive-dict-autosave')."
   :group 'predictive
   :type 'boolean)
 
@@ -296,9 +327,9 @@ directory as the buffer's associated file, and is loaded from
 there the next time predictive mode is enabled in the same
 buffer.
 
-The dictionary is initially empty, but if `predictive-auto-learn'
-or `predictive-auto-add-to-dict' are enabled, words will be added
-to it as you type. The learning rate for the word weights is
+The dictionary is initially empty, if `predictive-auto-learn' or
+`predictive-auto-add-to-dict' are enabled, words will be added to
+it as you type. The learning rate for the word weights is
 `predictive-local-learn-multiplier' times higher than that for
 `predictive-main-dict', so the buffer-local dictionary will
 quickly adapt to the vocabulary used in specific buffers.
@@ -591,9 +622,10 @@ do: emails, academic research articles, letters...)"
 	(mapc 'predictive-load-dict predictive-main-dict)))
     ;; make sure modified dictionaries used in the buffer are saved when the
     ;; bufer is killed
-    (add-hook 'kill-buffer-hook
-	      (lambda () (dictree-save-modified predictive-used-dict-list))
-	      nil 'local)
+    (when predictive-dict-autosave-on-kill-buffer
+      (add-hook 'kill-buffer-hook
+		(lambda () (dictree-save-modified predictive-used-dict-list))
+		nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
     (when predictive-use-buffer-local-dict
@@ -637,7 +669,8 @@ do: emails, academic research articles, letters...)"
     (cancel-timer predictive-flush-auto-learn-timer)
     (predictive-flush-auto-learn-caches)
     ;; save the dictionaries
-    (dictree-save-modified predictive-used-dict-list)
+    (when predictive-dict-autosave-on-mode-disable
+      (dictree-save-modified predictive-used-dict-list))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
     ;; remove hooks
@@ -898,19 +931,25 @@ load. Interactively, it is read from the mini-buffer."
 
 
 (defun predictive-unload-dict (dict)
-  "Unload the dictionary DICT from the current buffer.
+  "Remove DICT from the list of dictionaries used by the current buffer.
 Interactively, DICT is read from the mini-buffer.
 
-\(Note that this does not unload the dictionary from Emacs. See
-`dictree-unload'.\)"
+Note that this does not unload the dictionary from Emacs (see
+`dictree-unload'), nor does it prevent the dictionary being used
+in the buffer. It only affects which dictionaries are included
+when learning from the buffer (see `predictive-learn-from-buffer'
+and `predictive-fast-learn-from-buffer'), and which dictionaries
+are auto-saved when the buffer is killed or predictive mode is
+disabled (see `predictive-dict-autosave-on-kill-buffer' and
+`predictive-dict-autosave-on-disable-mode')."
   
-  (interactive "sDictionary to unload: \n")
-  (unless (stringp dict) (setq dict (symbol-name dict)))
+  (interactive (list (read-dict "Dictionary: "
+				nil predictive-used-dict-list)))
+  
   ;; remove dictionary from buffer's used dictionary list
-  (when (setq dict (condition-case
-		       error (eval (intern-soft dict))
-		     (void-variable nil)))
-    (setq predictive-used-dict-list (delq dict predictive-used-dict-list)))
+  (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
+  (message "Dictionary %s unloaded from buffer %s"
+	   (dictree--name dict) (buffer-name (current-buffer)))
 )
 
 
@@ -1493,6 +1532,12 @@ as the weight of WORD."
     ;; unless prefix is already defined, define it
     (unless (member prefix prefices)
      (dictree-set-meta-data dict word (cons prefix prefices))))
+
+  ;; make sure prefix's weight is at least as large as word's
+  (let ((weight (dictree-lookup dict word))
+	(pweight (dictree-lookup dict prefix)))
+      (when (and weight (or (null pweight) (< pweight weight)))
+	(dictree-insert dict prefix weight (lambda (a b) a))))
 )
 
 
