@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.13.2
+;; Version: 0.13.3
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.13.3
+;; * fixed bug in `predictive-which-dict-mode' that assumed dict names were at
+;;   least 10 chars long
+;; * fixed bug in `predictive-auto-learn' that prevented capitalized words
+;;   being learned
 ;;
 ;; Version 0.13.2
 ;; * `predictive-define-prefix' now ensures prefix weight is at least as big
@@ -713,8 +719,8 @@ do: emails, academic research articles, letters...)"
     ;; if there is a current dict...
     (unless (eq dict t)     
       (let ((dictlist dict)  wordlist)
-	;; if ignoring initial caps, look for uncapitalized word too
 	(when (dictree-p dict) (setq dictlist (list dict)))
+	;; if ignoring initial caps, look for uncapitalized word too
 	(if (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p word))
 	    (setq wordlist (list (downcase word) word))
@@ -724,13 +730,14 @@ do: emails, academic research articles, letters...)"
 	      (catch 'found
 		(while dictlist
 		  (setq dic (pop dictlist))
-		  (dolist (w wordlist)
-		    (when (dictree-lookup dic w) (throw 'found t)))))))
+		  (dolist (wrd wordlist)
+		    (when (dictree-member-p dic wrd) (throw 'found wrd)))))))
       
       
-      ;; if the completion was not in the dictionary, `auto-add-to-dict' is
-      ;; enabled, and either add-to-dict-ask is disabled or user responded "y"
-      ;; when asked, then add the new word to the appropriate dictionary
+      ;; if the completion was not in the dictionary,
+      ;; `predictive-auto-add-to-dict' is enabled, and either
+      ;; `predictive-add-to-dict-ask' is disabled or user responded "y" when
+      ;; asked, then add the new word to the appropriate dictionary
       (if (null found)
 	  (when (and predictive-auto-add-to-dict
 		     (or (not predictive-add-to-dict-ask)
@@ -765,10 +772,10 @@ do: emails, academic research articles, letters...)"
 	(when predictive-auto-learn
 	  ;; if caching auto-learned words, do so
 	  (if predictive-use-auto-learn-cache
-	      (push (cons word dic) predictive-auto-learn-cache)
+	      (push (cons found dic) predictive-auto-learn-cache)
 	    ;; if not caching, increment its weight in the dictionary it was
 	    ;; found in
-	    (predictive-add-to-dict dic word)))
+	    (predictive-add-to-dict dic found)))
 	)))
 )
 
@@ -1912,7 +1919,8 @@ predictive mode."
        ((dictree-p dict)
 	;; if dict is the buffer-local meta-dictioary, display name of main
 	;; dictionary it's based on instead
-	(if (and (string= (substring (dictree-name dict) 0 10) "dict-meta-")
+	(if (and (>= (length (dictree-name dict)) 10)
+		 (string= (substring (dictree-name dict) 0 10) "dict-meta-")
 		 (dictree--meta-dict-p dict))
 	    (setq name (dictree-name (nth 1 (dictree--dict-list dict))))
 	  (setq name (dictree-name dict))))
@@ -1920,9 +1928,9 @@ predictive mode."
        (t
 	(setq name (mapconcat
 		    (lambda (dic)
-		      (if (and (string=
-				(substring (dictree-name dic) 0 10)
-				"dict-meta-")
+		      (if (and (>= (length (dictree-name dict)) 10)
+			       (string= (substring (dictree-name dic) 0 10)
+					"dict-meta-")
 			       (dictree--meta-dict-p dic))
 			  (dictree-name (nth 1 (dictree--dict-list dic)))
 			(dictree-name dic)))
