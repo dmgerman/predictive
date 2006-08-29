@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.11
+;; Version: 0.3.12
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.12
+;; * added `completion-backward-delete-delay' customization option
 ;;
 ;; Version 0.3.11
 ;; * finally figured out how to prevent list of completions displayed in echo
@@ -255,6 +258,13 @@ mininize: minimize number of buckets, maximize size of contents"
   :group 'completion-ui
   :type '(choice (const :tag "Off" nil)
 		 (float :tag "On")))
+
+
+(defcustom completion-backward-delete-delay 0.1
+  "*Number of seconds to wait before activating completion mechanisms
+after deleting backwards."
+  :group 'completion-ui
+  :type 'float)
 
 
 (defcustom completion-tooltip-delay 3
@@ -1387,7 +1397,7 @@ If this deletes into a word, complete what remains of that word."
 	    (cancel-timer completion-backward-delete-timer))
 	  (setq completion-backward-delete-timer
 		(run-with-idle-timer
-		 0.1 nil
+		 completion-backward-delete-delay nil
 		 (lambda ()
 		   ;; FIXME: tooltip doesn't seem to be displayed -
 		   ;; why?
