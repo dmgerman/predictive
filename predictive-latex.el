@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.3
+;; * generalised label-specific function for adding part of a completion
+;;   candidate and re-completing to `predictive-completion-add-to-regexp'
 ;;
 ;; Version 0.6.2
 ;; * rewrote `predictive-latex-forward-word'
@@ -368,7 +372,12 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 				       (?. . (add t word))
 				       (t  . (reject t none))))
 	   (completion-override-syntax-alist
-	    . ((?: . (predictive-latex-label-add-to-colon t word))
+	    . ((?: . ((lambda ()
+			(predictive-latex-completion-add-to-regexp ":"))
+		      t word))
+	       (?_ . ((lambda ()
+			(predictive-latex-completion-add-to-regexp "\\W"))
+		      t word))
 	       (?} . (accept t none))))			       
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
@@ -382,8 +391,11 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 				       (?. . (add t word))
 				       (t  . (reject t none))))
 	   (completion-override-syntax-alist
-	    . ((?: . (predictive-latex-label-add-to-colon t word))
-	       (?} . (accept t none))))			       
+	    . ((?: . ((lambda ()
+			(predictive-latex-completion-add-to-regexp
+			 ":"))
+		      t word))
+	       (?} . (accept t none))))
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
@@ -959,26 +971,30 @@ for LaTeX package PACKAGE."
 
 
 
-(defun predictive-latex-label-add-to-colon ()
-  "Add characters up to colon from a label completion candidate.
-Used in the overlay-local binding of `completion-override-syntax-alist'
-for cross-reference overlays."
+(defun predictive-latex-completion-add-to-regexp (regexp)
+  "Add characters up to REGEXP from a completion candidate,
+then cause `completion-self-insert' to add the last typed
+character and re-complete.
+
+Intended to be used as the \"resolve\" entry in
+`completion-syntax-alist' or `completion-override-syntax-alist'."
   
   (let (overlay completion)
     ;; if completion characters contain a colon, insert characters up to first
-    ;; colon, and add them to the completion overlay prefix
+    ;; regexp match, and add them to the completion overlay prefix
     (when (and (setq overlay (completion-overlay-at-point))
 	       (setq completion (buffer-substring-no-properties
 				 (overlay-start overlay)
 				 (overlay-end overlay)))
-	       (string-match ":" completion))
+	       (string-match regexp completion))
       
       (insert (setq completion (substring completion 0 (match-beginning 0))))
       (move-overlay overlay (point) (overlay-end overlay))
       (overlay-put overlay 'prefix
 		   (concat (overlay-get overlay 'prefix) completion)))
 
-    ;; return 'add to make `completion-self-insert' add colon to the prefix
+    ;; return 'add to make `completion-self-insert' add last typed character
+    ;; to the prefix
     'add)
 )
 
