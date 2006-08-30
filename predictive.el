@@ -932,6 +932,8 @@ load. Interactively, it is read from the mini-buffer."
 	    (cons dict predictive-used-dict-list)))
     
     ;; indicate successful loading
+    (message "Dictionary %s loaded in buffer %s"
+	     (dictree--name dict) (buffer-name (current-buffer)))
     t)
 )
 
