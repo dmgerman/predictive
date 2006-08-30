@@ -75,8 +75,8 @@
 "\\bullet"
 "\\cap"
 "\\cdot"
-"\\cdotp"
-"\\cdots"
+"\\cdotp" nil ("\\cdot")
+"\\cdots" nil ("\\cdot")
 "\\check"
 "\\chi"
 "\\circ"
@@ -85,16 +85,16 @@
 "\\cong"
 "\\coprod"
 "\\cos"
-"\\cosh"
+"\\cosh" nil ("\\cos")
 "\\cot"
-"\\coth"
+"\\coth" nil ("\\cot")
 "\\csc"
 "\\cup"
 "\\dagger"
 "\\dashv"
 "\\ddagger"
 "\\ddot"
-"\\ddots"
+"\\ddots" nil ("\\ddot")
 "\\deg"
 "\\delta"
 "\\det"
@@ -104,7 +104,7 @@
 "\\dim"
 "\\div"
 "\\dot"
-"\\doteq"
+"\\doteq" nil ("\\dot")
 "\\downarrow"
 "\\ell"
 "\\emptyset"
@@ -134,9 +134,9 @@
 "\\iiiint"
 "\\imath"
 "\\in"
-"\\inf"
-"\\infty"
-"\\int"
+"\\inf" nil ("\\in")
+"\\infty" nil ("\\in" "\\inf")
+"\\int"  nil ("\\in")
 "\\iota"
 "\\jmath"
 "\\kappa"
@@ -150,18 +150,18 @@
 "\\ldots"
 "\\leadsto"
 "\\left"
-"\\leftarrow"
-"\\leftharpoondown"
-"\\leftharpoonup"
-"\\leftrightarrow"
+"\\leftarrow" nil ("\\left")
+"\\leftharpoondown" nil ("\\left")
+"\\leftharpoonup" nil ("\\left")
+"\\leftrightarrow" nil ("\\left")
 "\\leq"
 "\\lfloor"
 "\\lg"
-"\\lgroup"
+"\\lgroup" nil ("\\lg")
 "\\lhd"
 "\\lim"
-"\\liminf"
-"\\limsup"
+"\\liminf" nil ("\\lim")
+"\\limsup" nil ("\\lim")
 "\\ll"
 "\\lmoustache"
 "\\ln"
@@ -229,10 +229,10 @@
 "\\rhd"
 "\\rho"
 "\\right"
-"\\rightarrow"
-"\\rightharpoondown"
-"\\rightharpoonup"
-"\\rightleftharpoons"
+"\\rightarrow" nil ("\\right")
+"\\rightharpoondown" nil ("\\right")
+"\\rightharpoonup" nil ("\\right")
+"\\rightleftharpoons" nil ("\\right")
 "\\rmoustache"
 "\\rvert"
 "\\searrow"
@@ -241,41 +241,41 @@
 "\\sharp"
 "\\sigma"
 "\\sim"
-"\\simeq"
+"\\simeq" nil ("\\sim")
 "\\sin"
-"\\sinh"
+"\\sinh" nil ("\\sin")
 "\\smile"
 "\\spadesuit"
 "\\sqcap"
 "\\sqcup"
 "\\sqrt"
 "\\sqsubset"
-"\\sqsubseteq"
+"\\sqsubseteq" nil ("\\sqsubset")
 "\\sqsupset"
-"\\sqsupseteq"
+"\\sqsupseteq" nil ("\\sqsupset")
 "\\star"
 "\\subset"
-"\\subseteq"
+"\\subseteq" nil ("\\subset")
 "\\succ"
-"\\succeq"
+"\\succeq" nil ("\\succ")
 "\\sum"
 "\\sup"
 "\\supset"
-"\\supseteq"
+"\\supseteq" nil ("\\supset")
 "\\surd"
 "\\swarrow"
 "\\tan"
-"\\tanh"
+"\\tanh" nil ("\\tan")
 "\\tau"
 "\\tfrac"
 "\\theta"
 "\\tilde"
 "\\times"
 "\\to"
-"\\top"
+"\\top" nil ("\\to")
 "\\triangle"
-"\\triangleleft"
-"\\triangleright"
+"\\triangleleft" nil ("\\triangle")
+"\\triangleright" nil ("\\triangle")
 "\\underbrace"
 "\\underline"
 "\\unlhd"
