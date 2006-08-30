@@ -920,9 +920,8 @@ for LaTeX package PACKAGE."
   ;; Return the label dictionary name
   '(intern
     (concat "dict-latex-label-"
-	    (replace-regexp-in-string
-	     "\\." "-"
-	     (file-name-nondirectory (buffer-file-name))))))
+	     (file-name-sans-extension
+	      (file-name-nondirectory (buffer-file-name))))))
 
 
 
