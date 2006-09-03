@@ -117,6 +117,10 @@
 "\\newpage"
 "\\newsavebox"
 "\\newtheorem"
+"\\nobreakdash"
+"\\nobreakdash-" ("\\nobreakdash")
+"\\nobreakdash--" ("\\nobreakdash" "\\nobreakdash-")
+"\\nobreakdash---" ("\\nobreakdash" "\\nobreakdash-" "nobreakdash--")
 "\\nocite"
 "\\nofiles"
 "\\noindent"
