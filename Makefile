@@ -2,7 +2,7 @@
 all: core dict-english dicts
 
 clean:
-	rm dict-english.el *.elc latex/*.elc html/*.elc f90/*.elc
+	rm dict-english.el *.elc latex/*.elc # html/*.elc f90/*.elc
 
 EMACS = emacs
 
@@ -17,8 +17,8 @@ core_files := $(shell ls *.el | grep -v 'dict-english.el' | sed 's:\.el:\.elc:g'
 # lists of dictionaries
 latex_dicts := $(shell ls latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 #ams_latex_dicts := $(shell ls ams-latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
-html_dicts := $(shell ls html/dict-*.word-list | sed 's:\.word-list:\.elc:g')
-f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
+#html_dicts := $(shell ls html/dict-*.word-list | sed 's:\.word-list:\.elc:g')
+#f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 
 
 
@@ -44,7 +44,7 @@ dict-english.el: dict-english.word-list dict-tree.el
 
 
 # dictionary targets
-dicts: latex_dicts html_dicts f90_dicts
+dicts: latex_dicts # html_dicts f90_dicts
 
 latex_dicts: $(latex_dicts)
 

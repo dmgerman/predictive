@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.12
+;; Version: 0.3.13
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.13
+;; * Tried to work around annoying `completion-select' bug
 ;;
 ;; Version 0.3.12
 ;; * added `completion-backward-delete-delay' customization option
