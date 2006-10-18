@@ -1288,8 +1288,10 @@ Intended to be bound to keys in `completion-hotkey-map'."
   (unless overlay (setq overlay (completion-overlay-at-point)))
   ;; find completion index corresponding to last input event
   (unless n
-    (setq n (completion--position (this-command-keys-vector)
-				  completion-hotkey-list)))
+    (let ((key (this-command-keys-vector)))
+      ;; work around apparent bug where keys are doubled in vector
+      (when (> (length key) 1) (setq key (vector (aref key 0))))
+      (setq n (completion--position key completion-hotkey-list))))
   
   ;; if within a completion overlay...
   (when overlay
