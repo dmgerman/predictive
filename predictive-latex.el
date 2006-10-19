@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.3
+;; Version: 0.6.4
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.4
+;; * overlays are no longer deleted unnecessarily when a buffer is killed
 ;;
 ;; Version 0.6.3
 ;; * generalised label-specific function for adding part of a completion
@@ -176,8 +179,9 @@
   
   ;; clear overlays and reset variables when predictive mode is disabled
   (add-hook 'predictive-mode-disable-hook 'predictive-latex-disable nil t)
-  ;; disable predictive mode before killing buffer, to cleanup various things
-  (add-hook 'kill-buffer-hook (lambda () (predictive-mode -1)) nil t)
+  ;; save overlays before killing buffer
+  (add-hook 'kill-buffer-hook
+	    (lambda () (auto-overlay-save-overlays 'predictive)) nil t)
   
   ;; use latex browser menu if first character of prefix is "\"
   (make-local-variable 'completion-menu)
@@ -301,7 +305,8 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   ;; remove this function from the predictive mode disable hook
   (remove-hook 'predictive-mode-disable-hook 'predictive-latex-disable t)
   ;; remove hook function that saves overlays
-  (remove-hook 'kill-buffer-hook (lambda () (predictive-mode -1)) t)
+  (remove-hook 'kill-buffer-hook
+	       (lambda () (auto-overlay-save-overlays 'predictive)) t)
 )
 
 
