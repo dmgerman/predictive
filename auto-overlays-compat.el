@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: auto-overlay, automatic, overlays, compatability
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.3
+;; * fixed bug in line-number-at-pos compatibility function
+;;
 ;; Version 0.2
 ;; * added replace-regexps-in-string compatibility function
 ;;
@@ -42,9 +45,10 @@
 (provide 'auto-overlays-compat)
 
 
-(defun auto-overlays-compat-line-number-at-pos (pos)
+(defun auto-overlays-compat-line-number-at-pos (&optional pos)
   "Return (narrowed) buffer line number at position POS.
 \(Defaults to the point.\)"
+  (unless pos (setq pos (point)))
   (1+ (count-lines (point-min) pos))
 )
 
