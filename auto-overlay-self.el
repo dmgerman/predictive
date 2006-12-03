@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.3
+;; Version: 0.2.4
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.4
+;; * fixed(?) bug in auto-o-self-list that caused it to
+;;   sometimes miss out the parent overlay itself from the list
 ;;
 ;; Version 0.2.3
 ;; * updated to reflect changes in `auto-overlays.el'
@@ -322,11 +326,12 @@
     ;; create list of all overlays corresponding to same entry between O-START
     ;; and END
     (setq overlay-list
-	  ;; Note: We add 1 to end to catch overlays that start at end. This
-	  ;;       seems to give same results as the old version of
-	  ;;       `auto-o-self-list' (above) in all circumstances.
+	  ;; Note: We subtract 1 from start and add 1 to end to catch overlays
+	  ;;       that end at start or start at end. This seems to give the
+	  ;;       same results as the old version of `auto-o-self-list'
+	  ;;       (above) in all circumstances.
 	  (auto-overlays-in
-	   (overlay-get o-start 'delim-start) (1+ end)
+	   (1- (overlay-get o-start 'delim-start)) (1+ end)
 	   (list
 	    '(identity auto-overlay)
 	    (list 'eq 'set-id (overlay-get o-start 'set-id))
