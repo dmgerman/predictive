@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.1
+;; Version: 0.7.2
 ;; Keywords: ternary search tree, tstree
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -58,6 +58,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.2
+;; * fixed `tstree-complete' and `tstree-complete-ordered' so they work
+;;   when tree contains deleted data nodes
 ;;
 ;; Version 0.7.1
 ;; * fixed bugs in `tstree-map', `tstree-complete' and
@@ -436,7 +440,9 @@ the insersion function of the first tree in the list."
       (setq node (tstree--node-find (nth i tree) key))
       
       ;; keep following the low branch until we find the data node, or
-      ;; can't go any further
+      ;; can't go any further (Note: no need to deal with deleted data
+      ;; nodes specially, since they have null equal nodes anyway and will
+      ;; return the right thing, namely nil)
       (while (tstree--node-p node)
 	(setq node (if (tstree--node-split node) (tstree--node-low node)
 		     (tstree--node-equal node))))
@@ -462,9 +468,7 @@ the insersion function of the first tree in the list."
 	    (if (tstree--node-split node) (tstree--node-low node)
 	      ;; data nodes flagged as deleted don't count (they have a
 	      ;; non-nil, atomic low child)
-	      (if (and (tstree--node-low node)
-		       (not (tstree--node-p (tstree--node-low node))))
-		  nil t))))
+	      (if (eq (tstree--node-low node) 'deleted) nil t))))
     node)
 )
 
@@ -689,7 +693,7 @@ included in the results."
     ;;        type is itself a sequence (actually, there might be no way
     ;;        to fully fix this...)
     (if (or (atom sequence)
-	      (and (listp sequence) (not (sequencep (car sequence)))))
+	    (and (listp sequence) (not (sequencep (car sequence)))))
 	(setq sequence (list sequence))
       ;; sort sequences in list
       (setq sequence (sort sequence sortfun)))
@@ -730,10 +734,11 @@ included in the results."
 		      (append seq (list (tstree--node-split node))))
 		     (t (vconcat seq (vector (tstree--node-split node)))))
 		    stack))
-	  ;; if we're at a data node that passes the filter, we've found
-	  ;; a completion
-	  (when (or (null filter)
-		    (funcall filter seq (tstree--node-equal node)))
+	  ;; if we're at a data node that hasn't been flagged as deleted,
+	  ;; and passes the filter, we've found a completion
+	  (when (and (not (eq (tstree--node-low node) 'deleted))
+		     (or (null filter)
+			 (funcall filter seq (tstree--node-equal node))))
 	    ;; skip completion if we've already found it in a previous
 	    ;; tree
 	    (unless (catch 'found
@@ -755,7 +760,8 @@ included in the results."
 	  )
 	
 	;; add the low child to the stack, if it exists
-	(when (tstree--node-low node)
+	(when (and (tstree--node-low node)
+		   (not (eq (tstree--node-low node) 'deleted)))
 	  (push (tstree--node-low node) stack)
 	  (push seq stack))
 	))
@@ -884,10 +890,12 @@ results."
 		       (t
 			(vconcat seq (vector (tstree--node-split node)))))
 		      stack))
-	    ;; if we're at a data node that passes the filter, we've
-	    ;; found a completion
-	    (when (or (null filter)
-		      (funcall filter seq (tstree--node-equal node)))
+	    ;; if we're at a data node that hasn't been flagged as
+	    ;; deleted, and passes the filter, we've found a completion
+	    (when (and (not (eq (tstree--node-low node) 'deleted))
+		       (or (null filter)
+			   (funcall filter seq
+				    (tstree--node-equal node))))
 	      ;; skip completion if we've already found it in a previous
 	      ;; tree
 	      (unless (catch 'found
@@ -913,7 +921,8 @@ results."
 	    )
 
 	  ;; add the low child to the stack, if it exists
-	  (when (tstree--node-low node)
+	  (when (and (tstree--node-low node)
+		     (not (eq (tstree--node-low node) 'deleted)))
 	    (push (tstree--node-low node) stack)
 	    (push seq stack))
 	  )))

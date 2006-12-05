@@ -57,7 +57,7 @@
 ;;
 ;; Version 0.5.6
 ;; * fixed some variables that were set globally instead of locally by the
-;;   setup function, add added kill-local-variable lines to the hook function
+;;   setup function, and added kill-local-variable lines to the hook function
 ;;   to restore the default values when predictive mode is disabled
 ;;
 ;; Version 0.5.5
@@ -984,7 +984,7 @@ Intended to be used as the \"resolve\" entry in
 `completion-syntax-alist' or `completion-override-syntax-alist'."
   
   (let (overlay completion)
-    ;; if completion characters contain a colon, insert characters up to first
+    ;; if completion characters contain REGEXP, insert characters up to first
     ;; regexp match, and add them to the completion overlay prefix
     (when (and (setq overlay (completion-overlay-at-point))
 	       (setq completion (buffer-substring-no-properties
@@ -997,8 +997,8 @@ Intended to be used as the \"resolve\" entry in
       (overlay-put overlay 'prefix
 		   (concat (overlay-get overlay 'prefix) completion)))
 
-    ;; return 'add to make `completion-self-insert' add last typed character
-    ;; to the prefix
+    ;; return 'add, causing `completion-self-insert' to add last typed
+    ;; character to the prefix
     'add)
 )
 
