@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Keywords: automatic, overlays, stack
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.4
+;; * removed `auto-overlay-functions' and changed to use new interface
+;;
 ;; Version 0.1.3
 ;; * updated to reflect changes in `auto-overlays.el'
 ;;
@@ -51,10 +54,9 @@
 (provide 'auto-overlay-stack)
 
 
-;; register stack overlay parsing and suicide functions
-(assq-delete-all 'stack auto-overlay-functions)
-(push '(stack auto-o-parse-stack-match auto-o-stack-suicide)
-      auto-overlay-functions)
+;; set stack overlay parsing and suicide functions
+(put 'stack 'auto-overlay-parse-function 'auto-o-parse-stack-match)
+(put 'stack 'auto-overlay-suicide-function 'auto-o-stack-suicide)
 
 
 

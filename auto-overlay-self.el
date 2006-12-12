@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.4
+;; Version: 0.2.5
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.5
+;; * removed `auto-overlay-functions' and changed to use new interface
 ;;
 ;; Version 0.2.4
 ;; * fixed(?) bug in auto-o-self-list that caused it to
@@ -60,10 +63,9 @@
 
 (defvar auto-o-pending-self-cascade nil)
 
-;; register self overlay parsing, suicide, initialisation and clear functions
-(assq-delete-all 'self auto-overlay-functions)
-(push '(self auto-o-parse-self-match auto-o-self-suicide)
-      auto-overlay-functions)
+;; set self overlay parsing and suicide functions
+(put 'self 'auto-overlay-parse-function 'auto-o-parse-self-match)
+(put 'self 'auto-overlay-suicide-function 'auto-o-self-suicide)
 
 ;; add initialisation and clear functions to hooks
 (add-hook 'auto-overlay-load-hook 'auto-o-self-load)

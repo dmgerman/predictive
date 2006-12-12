@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.4
+;; Version: 0.6.5
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.5
+;; * removed `auto-overlay-functions' and changed to use new interface
+;; * renamed "stack" regexps to "nest" regexps
 ;;
 ;; Version 0.6.4
 ;; * overlays are no longer deleted unnecessarily when a buffer is killed
@@ -104,12 +108,10 @@
 ;;; Code:
 
 (require 'predictive)
-(require 'auto-overlays)
 (require 'auto-overlay-word)
 (require 'auto-overlay-line)
 (require 'auto-overlay-self)
-(require 'auto-overlay-stack)
-;;(require 'auto-overlay-stack-sync)
+(require 'auto-overlay-nest)
 
 (provide 'predictive-latex)
 
@@ -329,7 +331,7 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
    'predictive)
   
   ;; ...as do \[ and \], but not \\[ and \\]
-  (auto-overlay-load-regexp '(stack) 'predictive nil 'inline-math)
+  (auto-overlay-load-regexp '(nest) 'predictive nil 'inline-math)
   (auto-overlay-load-compound-regexp
    `(start ("[^\\]\\(\\\\\\[\\)" . 1)
 	   (dict . predictive-latex-math-dict) (priority . 40)
@@ -358,7 +360,7 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
   ;; included to ensure all { and } match, but \{ is excluded.
-  (auto-overlay-load-regexp '(stack) 'predictive nil 'brace)
+  (auto-overlay-load-regexp '(nest) 'predictive nil 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\usepackage{" (dict . t) (priority . 30)
 	   (face . (background-color . ,predictive-latex-debug-color)))
@@ -454,7 +456,7 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   
   
   ;; preamble lives between \documentclass{...} and \begin{document}
-  (auto-overlay-load-regexp '(stack) 'predictive nil 'preamble)
+  (auto-overlay-load-regexp '(nest) 'predictive nil 'preamble)
   (auto-overlay-load-compound-regexp
    '(start "\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
 	   (dict . predictive-latex-preamble-dict) (priority . 20)
@@ -468,7 +470,7 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 	   
   
   ;; \begin{...} and \end{...} start and end LaTeX environments
-  (auto-overlay-load-regexp '(stack) 'predictive nil 'environment)
+  (auto-overlay-load-regexp '(nest) 'predictive nil 'environment)
   (auto-overlay-load-compound-regexp
    `(start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 	    0 1)
@@ -681,11 +683,10 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 ;;;=======================================================================
 ;;;  Automatic loading and unloading of LaTeX package dictionaries etc.
 
-(assq-delete-all 'predictive-latex-usepackage auto-overlay-functions)
-(push (list 'predictive-latex-usepackage
-	    'predictive-latex-parse-usepackage-match
-	    'predictive-latex-usepackage-suicide)
-      auto-overlay-functions)
+(put 'predictive-latex-usepackage 'auto-overlay-parse-function
+     'predictive-latex-parse-usepackage-match)
+(put 'predictive-latex-usepackage 'auto-overlay-suicide-function
+     'predictive-latex-usepackage-suicide)
 
 
 (defun predictive-latex-parse-usepackage-match (o-match)
@@ -825,11 +826,10 @@ for LaTeX package PACKAGE."
 ;;;============================================================
 ;;;        Automatically generated dictionary of labels
 
-(assq-delete-all 'predictive-latex-label auto-overlay-functions)
-(push (list 'predictive-latex-label
-	    'predictive-latex-parse-label-match
-	    'predictive-latex-label-suicide)
-      auto-overlay-functions)
+(put 'predictive-latex-label 'auto-overlay-parse-function
+     'predictive-latex-parse-label-match)
+(put 'predictive-latex-label 'auto-overlay-suicide-function
+     'predictive-latex-label-suicide)
 
 
 (defun predictive-latex-parse-label-match (o-match)

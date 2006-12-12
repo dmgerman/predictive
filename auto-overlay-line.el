@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Keywords: automatic, overlays, line
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.2
+;; * removed `auto-overlay-functions' and changed to use new interface
 ;;
 ;; Version 0.3.1
 ;; * updated to reflect changes in `auto-overlays.el'
@@ -57,11 +60,10 @@
 (provide 'auto-overlay-line)
 
 
-;; register line overlay parsing and suicide funtions
-(assq-delete-all 'line auto-overlay-functions)
-(push (list 'line 'auto-o-parse-line-match
-	    (lambda (o) (auto-o-delete-overlay (overlay-get o 'parent))))
-      auto-overlay-functions)
+;; set line overlay parsing and suicide funtions
+(put 'line 'auto-overlay-parse-function 'auto-o-parse-line-match)
+(put 'line 'auto-overlay-suicide-function
+     (lambda (o) (auto-o-delete-overlay (overlay-get o 'parent))))
 
 
 
