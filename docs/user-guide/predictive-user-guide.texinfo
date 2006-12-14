@@ -90,19 +90,19 @@ Advanced Customisation
 
 * Character Syntax and Key Bindings::  
 * Dictionaries::                
+* Major Modes::                 
 
 Character Syntax and Key Bindings
 
 * Keymaps and Key Bindings::    
 * Syntax::                      
-* Working with Major Modes::    
 
 Dictionaries
 
 * Creating Dictionaries::       
 * Loading and Saving Dictionaries::  
 * Basic Dictionary Usage::      
-* Dictionaries Local to a Region of Text::  
+* Region-Local Dictionaries::   
 * Dictionary Learning::         
 
 Dictionary Learning
@@ -110,6 +110,12 @@ Dictionary Learning
 * Learning from Buffers and Files::  
 * Automatic Learning::          
 * Relationships Between Words::  
+
+Major Modes
+
+* LaTeX Support::               
+* LaTeX Packages::              
+* Automatically Created Files::  
 
 Bugs and Future Improvements
 
@@ -128,6 +134,8 @@ Copying this Manual
 
 @c table of contents
 @contents
+
+
 
 
 
@@ -205,6 +213,7 @@ sentences preceding it.)
 
 
 
+
 @node Obtaining and Installing
 @chapter Obtaining and Installing
 @cindex obtaining and installing
@@ -248,6 +257,7 @@ command), by putting the following in your @file{.emacs} instead:
 
 
 
+
 @node Quick-Start
 @chapter Quick-Start
 @cindex quick-start
@@ -275,7 +285,7 @@ What if you don't want to use the most likely completion? As you type, a
 list of the ten most likely completions is displayed in the echo area,
 and after a short delay in a tooltip, ranked according to
 likelihood. Typing a number 0--9 will insert the corresponding
-completion. @xref{Completion Hotkeys} and @ref{Displaying a List of
+completion. @xref{Completion Hotkeys}, and @ref{Displaying a List of
 Candidates} for details.
 @findex completion-select
 
@@ -319,6 +329,7 @@ customization groups.
 
 
 
+
 @node Completing Words
 @chapter Completing Words
 @cindex completing words
@@ -349,6 +360,7 @@ type.
 * Completion Menu and Browser::  
 * Miscellaneous Options::       
 @end menu
+
 
 
 
@@ -486,6 +498,7 @@ string.
 
 
 
+
 @node Completion Hotkeys
 @section Completion Hotkeys
 @cindex completion hotkeys
@@ -515,6 +528,7 @@ cannot be more completions available than the number actually found!
 The maximum number to find is limited by
 @env{predictive-max-completions}, @ref{Miscellaneous Options}.
 @vindex predictive-max-completions
+
 
 
 
@@ -561,6 +575,7 @@ is displayed. If nil, the tooltip is displayed immediately.
 
 
 
+
 @node Completion Menu and Browser
 @section Completion Menu and Browser
 @cindex completion menu
@@ -580,6 +595,7 @@ lists @emph{all} possible completions, irrespective of the setting of
 @env{predictive-max-completions} (@pxref{Miscellaneous Options}). If
 it's taking too long to construct the browser, you can hit @kbd{C-g} to
 cancel it.
+
 
 
 
@@ -638,6 +654,7 @@ you whether you want to accept or reject.
 
 
 
+
 @node Advanced Customisation
 @chapter Advanced Customisation
 @cindex customisation, advanced
@@ -653,7 +670,10 @@ scope of this user guide.
 @menu
 * Character Syntax and Key Bindings::  
 * Dictionaries::                
+* Major Modes::                 
 @end menu
+
+
 
 
 @node Character Syntax and Key Bindings
@@ -675,7 +695,6 @@ different characters, and how to customise them.
 @menu
 * Keymaps and Key Bindings::    
 * Syntax::                      
-* Working with Major Modes::    
 @end menu
 
 
@@ -835,72 +854,6 @@ scope of this user-guide.}.
 
 
 
-
-@node Working with Major Modes
-@subsection Working with Major Modes
-@cindex working with major modes
-@cindex major modes
-
-The many features of predictive mode allow you to set things up
-appropriately for whatever language you are typing, whether it be plain
-text, markup languages such as HTML or La@TeX{}, programming languages
-such as C or Lisp, etc. Predictive mode will work happily alongside the
-appropriate major-mode. However, since each language requires different
-things of predictive completion, you may find yourself changing a large
-number of settings when switching major modes.
-
-To facilitate using predictive completion alongside different
-major-modes, predictive mode can run a setup function determined by the
-current major-mode whenever it is switched on in a buffer. Of course,
-you can also use major mode hooks, but hooks are less convenient if you
-don't want to always switch on predictive mode in that major mode, or if
-you want to switch it on and off whilst within the mode.
-@cindex setup function
-@cindex major mode hooks
-
-@vtable @env
-@item predictive-major-mode-alist
-Alist associating a major-mode symbol with a function. The alist is
-checked whenever predictive mode is switched on in a buffer using the
-@command{predictive-mode} or @command{turn-on-predictive-mode} commands
-(@pxref{Basic Completion Commands}), and if the buffer's major-mode
-matches one in the alist, the associated function is called. This makes
-it easier to customise predictive mode for different major modes.
-@findex predictive-mode
-@findex turn-on-predictive-mode
-@end vtable
-
-Since the setup function is determined by the current major-mode,
-predictive mode should be switched on @emph{after} switching to the
-appropriate major-mode. If you always want to use predictive mode with a
-particular major-mode, the easiest way to do this is to add the
-@command{predictive-mode} command to the major-mode hook in your
-@file{.emacs} file, using a line something like this:
-@cindex .emacs file
-@cindex startup file
-@cindex configuration file
-@lisp
-(add-hook '@var{major-mode}-hook 'turn-on-predictive-mode)
-@end lisp
-
-The predictive package itself contains setup functions for La@TeX{}
-(@command{predictive-setup-latex}), HTML
-(@command{predictive-setup-html}), and Fortran 90/95
-(@command{predictive-setup-f90})@footnote{An eclectic mix, which
-reflects the things I use emacs for most often, and perhaps also the
-fact that predictive completion mode is somewhat better suited to markup
-languages than programming languages.}. More contributions are always
-welcome! You must ensure that the dictionaries these setup functions
-require (which are also included in the package, @pxref{Obtaining and
-Installing}) can be found in your @env{load-path}.
-
-Since many settings are down to personal preference, the setup functions
-may not do precisely what you want, but if nothing else they provide
-examples to base your own on.
-
-
-
-
 @node Dictionaries
 @section Dictionaries
 @cindex dictionaries
@@ -928,7 +881,7 @@ go on strike!)
 * Creating Dictionaries::       
 * Loading and Saving Dictionaries::  
 * Basic Dictionary Usage::      
-* Dictionaries Local to a Region of Text::  
+* Region-Local Dictionaries::   
 * Dictionary Learning::         
 @end menu
 
@@ -947,7 +900,7 @@ can also store prefix relationships between words, @xref{Relationships
 Between Words}.
 
 @noindent
-The following commands are used to manually create and update
+The following commands are used to manually create and modify
 dictionaries:
 
 @ftable @command
@@ -981,12 +934,13 @@ dictionary, it will be added to it with that initial weight (or 0 if
 none is supplied). If the word is already in the dictionary, its weight
 will be incremented by the weight value (or by 1 if none is supplied).
 
+@item predictive-remove-from-dict
+Completely remove a word from a dictionary. The dictionary name and word
+are read from the mini-buffer (defaults to the word at the point).
+
 @item dictree-size
 Display the number of words in a dictionary.
 @end ftable
-
-Note that there is currently no @command{predictive-remove-from-dict}
-command to remove a word from a dictionary. @xref{Known Bugs}.
 
 The file containing the list of words used to populate a dictionary has
 to conform to a specific format. Each line contains one word, delimited
@@ -1000,10 +954,12 @@ characters. The quote character @samp{"} can be included by escaping it:
 
 To ensure it is as efficiently structured as possible, it is best to
 create a dictionary from a list of words using
-@command{predictive-create-dict}, rather than create a blank dictionary
-and add the words using @command{predictive-add-to-dict}. For small
-dictionaries it won't make much difference, but for larger ones it can
-be significant.
+@command{predictive-create-dict}, rather than creating a blank
+dictionary and adding the words using
+@command{predictive-add-to-dict}. Also, deleting words using
+@command{predictive-remove-from-dict} results in particularly
+inefficient dictionary structures. For small dictionaries it won't make
+much difference, but for larger ones it can be significant.
 
 It is often more useful for words that are prefixes for others to have
 higher weights, especially when using dynamic completion and the
@@ -1106,7 +1062,7 @@ add the following line to your @file{.emacs} file:
 
 @noindent
 The major-mode setup functions load the dictionaries they need
-automatically. @xref{Working with Major Modes}.
+automatically. @xref{Major Modes}.
 
 A buffer is usually associated with a file, and saving the buffer with
 the Emacs @command{save-buffer} command writes any changes back to that
@@ -1158,8 +1114,8 @@ you want to set the default main dictionary permanently, customize
 
 
 
-@node Dictionaries Local to a Region of Text
-@subsection Dictionaries Local to a Region of Text
+@node Region-Local Dictionaries
+@subsection Region-Local Dictionaries
 @cindex dictionaries, region-local
 @cindex dictionaries, region of text
 @cindex dictionaries, overlays
@@ -1168,11 +1124,11 @@ you want to set the default main dictionary permanently, customize
 @cindex multiple dictionaries
 
 Using overlays, it is possible to set up dictionaries that are local to
-specific regions of text. The predictive mode La@TeX{} and HTML support
-makes use of this feature. Overlay-defined dictionaries are beyond the
-scope of this user-guide. @xref{Region-Local Dictionaries, , ,
+specific regions of text. The predictive mode support for a number of
+major modes (notably the @LaTeX{} support) makes use of this feature
+(@pxref{Major Modes}). Region-local dictionaries are, however, beyond
+the scope of this user-guide. @xref{Region-Local Dictionaries, , ,
 predictive-programmer-guide, Predictive Programmer Guide}.
-
 
 
 
@@ -1231,9 +1187,8 @@ buffer when predictive mode is enabled (@pxref{Loading and Saving
 Dictionaries}). Each occurrence of a word increments its weight in the
 dictionary. By default, only occurrences that occur in a region where
 the dictionary is active are taken into account (@pxref{Region-Local
-Dictionaries, , , predictive-mode-writer, Predictive Mode Writer's
-Guide}). This can be overridden by supplying a prefix argument, in which
-case all occurrences are taken into account.
+Dictionaries}). This can be overridden by supplying a prefix argument,
+in which case all occurrences are taken into account.
 
 @item predictive-learn-from-file
 Like @command{predictive-learn-from-buffer}, but learns from a file
@@ -1381,6 +1336,209 @@ relationship between the words.
 
 
 
+@node Major Modes
+@section Major Modes
+@cindex working with major modes
+@cindex major modes
+
+The many features of predictive mode allow you to set things up
+appropriately for whatever language you are typing, whether it be plain
+text, markup languages such as HTML or @LaTeX{}, programming languages
+such as C or Lisp, etc. Predictive mode will work happily alongside the
+appropriate major-mode. However, since each language makes different
+demands of predictive completion, you may find yourself changing a large
+number of settings when switching major modes.
+
+To facilitate using predictive completion alongside different
+major-modes, predictive mode can run a setup function determined by the
+current major-mode whenever it is switched on in a buffer. Of course,
+you can also use major mode hooks, but hooks are less convenient if you
+don't want to always switch on predictive mode in that major mode, or if
+you want to switch it on and off whilst within the mode.
+@cindex setup function
+@cindex major mode hooks
+
+@vtable @env
+@item predictive-major-mode-alist
+Alist associating a major-mode symbol with a function. The alist is
+checked whenever predictive mode is switched on in a buffer using the
+@command{predictive-mode} or @command{turn-on-predictive-mode} commands
+(@pxref{Basic Completion Commands}), and if the buffer's major-mode
+matches one in the alist, the associated function is called. This makes
+it easier to customise predictive mode for different major modes.
+@findex predictive-mode
+@findex turn-on-predictive-mode
+@end vtable
+
+Since the setup function is determined by the current major-mode,
+predictive mode should be switched on @emph{after} switching to the
+appropriate major-mode. If you always want to use predictive mode with a
+particular major-mode, the easiest way to do this is to add the
+@command{predictive-mode} command to the major-mode hook in your
+@file{.emacs} file, using a line something like this:
+@cindex .emacs file
+@cindex startup file
+@cindex configuration file
+@lisp
+(add-hook '@var{major-mode}-hook 'turn-on-predictive-mode)
+@end lisp
+
+The predictive package itself includes support for @LaTeX{}
+(@command{predictive-setup-latex}).
+@c HTML (@command{predictive-setup-html}), and Fortran 90/95
+@c (@command{predictive-setup-f90}) @footnote{An eclectic mix, which
+@c reflects the things I use emacs for most often, and perhaps also the
+@c fact that predictive completion mode is somewhat better suited to
+@c markup languages than programming languages at the moment. More
+@c contributions are always welcome!}.
+You must ensure that the required dictionaries (which are also included
+in the package, @pxref{Obtaining and Installing}) can be found in your
+@env{load-path}. The @LaTeX{} support goes far beyond simply changing a
+few configuration variables. @xref{LaTeX Support}.
+@c Support for the other major-modes is more rudimentary.
+
+
+
+@menu
+* LaTeX Support::               
+* LaTeX Packages::              
+* Automatically Created Files::  
+@end menu
+
+@node LaTeX Support
+@subsection @LaTeX{} Support
+@cindex @LaTeX{} support
+@cindex major modes, @LaTeX{}
+
+Predictive mode comes with comprehensive support for the @LaTeX{}
+type-setting language. With the default settings, @LaTeX{} support is
+enabled automatically when predictive completion mode is turned on in a
+@LaTeX{} buffer, via an entry in @env{predictive-major-mode-alist}
+(@pxref{Major Modes}).
+
+Predictive @LaTeX{} mode honours the @env{TeX-master} variable. If it is
+turned on in a buffer whose @env{TeX-master} variable is set to the name
+of another @LaTeX{} file, the @env{TeX-master} file will be visited,
+predictive mode will be enabled in its buffer, and all buffers with the
+same @env{TeX-master} will share various predictive mode settings.
+
+In addition to the usual main dictionary, determined by
+@env{predictive-main-dict} (@pxref{Basic Dictionary Usage}), a number of
+@LaTeX{} dictionaries are also used, grouped into three
+@c four
+main categories: text-mode @LaTeX{} commands, maths-mode @LaTeX{}
+commands,
+@c preamble @LaTeX{} commands,
+and @LaTeX{} environments. The dictionaries in the different categories
+are used to look for completions in different contexts in the @LaTeX{}
+document. The main @LaTeX{} dictionaries in these categories are,
+respectively, @code{dict-latex}, @code{dict-latex-math},
+@c @code{dict-latex-preamble}
+and @code{dict-latex-env}. In addition, there are dictionaries for
+@LaTeX{} document classes (@code{dict-latex-docclass}), bibliography
+styles (@code{dict-latex-bibstyle}), and an automatically generated
+dictionary of cross-reference labels.
+
+Predictive mode will automatically complete words from the correct
+dictionary in different regions of your @LaTeX{} document@footnote{The
+automatic dictionary switching is implemented using the
+@dfn{auto-overlays} Elisp package.}. In the main body of the document it
+will complete from the usual main dictionary and from the dictionaries
+of text-mode @LaTeX{} commands. Inside an @samp{equation} or other
+display-mode environments, between @samp{$}'s, or between @samp{\[} and
+@samp{\]} it will use the dictionaries of maths-commands. Inside
+@samp{\begin@{@dots{}@}} it will use the dictionaries of @LaTeX{}
+environments. Inside @samp{\ref@{@dots{}@}} it will use the dictionary
+of cross-reference labels, which is created and updated automatically
+for each @LaTeX{} document.
+
+The behaviour of different character syntax classes, and the behaviour
+of certain individual characters, is set up appropriately for @LaTeX{}
+(@pxref{Character Syntax and Key Bindings}). Also, a special @LaTeX{}
+completion browser menu, more appropriate for browsing @LaTeX{}
+commands, is used instead of the default one.
+
+
+
+@node LaTeX Packages
+@subsection @LaTeX{} Packages
+@cindex @LaTeX{} packages
+@cindex dictionaries, automatic loading for @LaTeX{} packages
+
+Many @LaTeX{} commands and features only become available when the
+appropriate package is included in the document using the
+@samp{\usepackage} command. Predictive @LaTeX{} mode supports this by
+automatically trying to load package dictionaries and configuration
+functions when a @samp{\usepackage} command is typed, and unloading them
+again if it is modified or deleted.
+
+When a @samp{\usepackage@{@var{package}@}} command is typed, predictive
+@LaTeX{} mode looks for three
+@c four
+dictionaries based on the @var{package} name:
+@code{dict-latex-@var{package}}, @code{dict-latex-math-@var{package}},
+@c @code{dict-latex-preamble}@var{package},
+and @code{dict-latex-env-@var{package}}. These correspond to the three
+@c four
+categories of @LaTeX{} dictionary (@pxref{LaTeX Support}). If any of
+these dictionaries are found, they are added to the corresponding
+category and will be active in the appropriate regions of the
+document. If the text of the @samp{\usepackage@{@var{package}@}} command
+is modified or deleted, the dictionaries are removed again and will no
+longer be active in the buffer.
+
+In addition, when a @samp{\usepackage} command is typed, modified or
+deleted, predictive @LaTeX{} mode will try to load an Elisp file called
+@file{predictive-latex-}@var{package}@samp{.el[c]}, and run
+package-specific load or unload functions, as appropriate. The variable
+@env{predictive-latex-usepackage-functions} is used to determine which
+function (if any) to call when loading or unloading a @LaTeX{} package
+(see below). This allows arbitrary configuration changes to be made when
+packages are included in or removed from the document. (A common use of
+this is to add or remove auto-overlay regexps, @pxref{LaTeX Automatic
+Overlays, @LaTeX{} Automatic Overlays, , predictive-programmer-guide,
+Predictive Programmer Guide}.)
+
+@vtable @env
+@item predictive-latex-usepackage-functions
+Alist associating @LaTeX{} @var{package} names (strings) with a list
+containg two functions: a function to be called when loading the package
+with that name (i.e. when @samp{\usepackage@{@var{package}@}} is typed),
+and a function to be called when unloading the package (i.e. when the
+@samp{\usepackage@{@var{package}@}} is modified or deleted). Entires
+should be added to this variable by the corresponding Elisp file,
+@file{predictive-latex-}@var{package}@samp{.el[c]}.
+@end vtable
+
+The predictive completion package comes with support for some @LaTeX{}
+packages, though by no means all or even the most
+important@footnote{Dictionaries and Elisp code welcome!}.
+
+
+
+@node Automatically Created Files
+@subsection Automatically Created Files
+@cindex automatically created files
+@cindex @LaTeX{}, automatically created files
+
+The dictionary of cross-reference labels is saved to the same directory
+as the @LaTeX{} file, under the name
+@file{dict-latex-label-@var{filename}.elc}, where @var{filename} is the
+name of the @LaTeX{} file. Note that the label dictionary is shared
+across all buffer with the same @env{TeX-master}, and the file it is
+saved to will be based on the @env{TeX-master} file's name and
+directory.
+
+To speed up loading of predictive mode's @LaTeX{} support, a file
+containing information about the location of different regions within
+the document is saved to @file{auto-overlays-@var{filename}} within
+the same directory as the @LaTeX{} file. (Separate files are created
+even for buffers that share the same @env{TeX-master}.)
+
+
+
+
+
 @node Bugs and Future Improvements
 @chapter Bugs and Future Improvements
 @cindex bugs and future improvements
@@ -1391,8 +1549,8 @@ relationship between the words.
 
 The predictive completion package has been tested on Emacs versions 21.3
 and the multi-tty CVS branch, and is known to work reasonably well. It
-will not work tested under older versions, and currently doesn't work
-under any version of XEmacs.
+will not work under older versions, and currently doesn't work under any
+version of XEmacs.
 
 Report bugs and feature requests to
 @email{toby-predictive@@dr-qubit.org}. Even reports of which versions of
@@ -1400,11 +1558,11 @@ Emacs it runs under are useful at this stage (though check the web-site
 @uref{http://www.dr-qubit.org/emacs.php} first to make sure your version
 is not already listed).
 
-
 @menu
 * Known Bugs::                  
 * Future Improvements::         
 @end menu
+
 
 
 
@@ -1442,6 +1600,7 @@ reproduce it. They're fiendishly difficult to track down!
 
 
 
+
 @node Future Improvements
 @section Future Improvements
 @cindex feature requests
@@ -1457,19 +1616,28 @@ Allow the learning rate (i.e. increment added each time a word is
 learnt) to be set buffer-locally and/or separately for each dictionary?
 
 @item
-More dictionaries and setup functions. (This one will probably be here
-for ever. I suspect new major modes are being created faster than
-predictive mode setup functions!)
+Support for more major modes. (This one will probably be here for
+ever. I suspect new major modes are being created faster than predictive
+mode setup functions!)
 
 @item
 More predictive mode configuration variables could be allowed to have
-``overlay-local'' bindings, not just the active dictionary and
-completion-menu function.
+``overlay-local'' bindings, not just the active dictionary,
+completion-menu function, and @env{completion-word-thing}.
+
+@item
+The @LaTeX{} support should include an extra class of dictionaries:
+preamble @LaTeX{} commands. Also requires an auto-overlay from
+@samp{\documentclass} to @samp{\begin@{document@}}.
+
+@item
+It would be nice to be able to select the main dictionary automatically
+based on the @code{\documentclass} in @LaTeX{} modes.
 
 @item
 Predictive mode should be integrated with the @dfn{semantic} package, to
-make it more useful for writing programs. At the moment, it works best
-with plain text and markup languages.
+make it more useful for programming languages. At the moment, it works
+best with plain text and markup languages.
 @end enumerate
 
 
@@ -1487,28 +1655,14 @@ delimiter (c.f. block comments in c++).
 Currently, it's difficult to deal with @code{stack} class regexps for
 which the @code{end} regexps match some @code{start} regexps of interest
 but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
-La@TeX{} when you're only interested in @samp{\somecommand@{}
+@LaTeX{} when you're only interested in @samp{\somecommand@{}
 @code{start} regexps. Or matching parens in LISP, when you're only
 interested in function bodies, say. The only solution is to include all
 @code{start} regexps and give the irrelevant ones a null @code{dict}
 property. This can end up creating a lot of overlays! A variant of the
 @code{stack} class that avoids this problem is needed.
-
-@item
-The @command{auto-overlay-init} command takes a long time to create all
-the overlays in even medium-sized buffers. There's not much one can do
-about this the first time it's run, but the overlays could be saved in
-an auxiliary file when killing the buffer or Emacs, and reloaded from
-there to speed up subsequent invocations.
-
-@item
-It would be nice to automatically load La@TeX{} dictionaries based on
-@code{\includepackage} commands. It would also be nice to be able to
-select the main dictionary automatically based on the
-@code{\documentclass}. This could be done fairly easily by deriving a
-couple of new auto-overlay classes from the @code{word} class, with
-modified parse and suicide functions to do the dictionary loading.
 @end enumerate
+
 
 
 
