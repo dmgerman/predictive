@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.13
+0.14
 @c --version--
 
 Copyright @copyright{} 2005 2006 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.13
+@subtitle Version 0.14
 @c --version--
 @author Toby Cubitt
 
@@ -322,10 +322,33 @@ Finally, to get rid of a provisional completion and just leave the
 characters you've typed, use @kbd{M-SPACE}.
 @findex completion-reject
 
-The many and various predictive completion mode customization options
-can be found in the @env{predictive} and @env{completion-ui}
-customization groups.
+This ``Quick-Start'' describes the default behaviour. However,
+predictive completion mode can be heavily customized, allowing its
+behaviour to be radically changed. The many and various predictive
+completion mode customization options can be found in the
+@env{predictive} and @env{completion-ui} customization groups.
 
+For a start, all the features described above can be individually
+enabled and disabled. They can also be individually customized. For
+example, if you don't like the way completions are automatically
+accepted when an end-of-word character is typed, you can change things
+so that completions have to be accepted manually by hitting @kbd{ENTER},
+say. Or, if you don't want predictive completion mode to look for
+completions until you tell it to, you can turn off the automatic
+completion so that nothing will happen until you hit @kbd{M-TAB} to
+complete the word next to the point. If you like the idea of predictive
+completion, but don't like the way it works ``out-of-the-box'' the rest
+of this guide explains all the customization options in detail.
+
+The predictive completion package comes with an English dictionary,
+which is used by default. However, this is only really included to make
+sure everything works ``out of the box''. This default dictionary has
+already been trained on a large body of English text, which means it
+will take a very long time to adapt to your individual writing
+style. Don't expect predictive completion mode to display particularly
+good predictive powers if you stick to the default dictionary! For much
+better results, you should create your own dictionary and train it on
+your own writing. @xref{Dictionaries}.
 
 
 
@@ -957,9 +980,12 @@ create a dictionary from a list of words using
 @command{predictive-create-dict}, rather than creating a blank
 dictionary and adding the words using
 @command{predictive-add-to-dict}. Also, deleting words using
-@command{predictive-remove-from-dict} results in particularly
+@command{predictive-remove-from-dict} can result in particularly
 inefficient dictionary structures. For small dictionaries it won't make
-much difference, but for larger ones it can be significant.
+much difference, but for larger ones it can be significant. You can
+rebuild an inefficient dictionary by dumping the words to a buffer,
+creating a new dictionary, and populating it from the dumped
+words. @xref{Loading and Saving Dictionaries}.
 
 It is often more useful for words that are prefixes for others to have
 higher weights, especially when using dynamic completion and the
@@ -1580,18 +1606,6 @@ Predictive mode does not work under XEmacs. Making it work will take
 some compatibility work, but should be possible.
 
 @item
-No @command{predictive-remove-from-dict} command exists to remove a word
-from a dictionary. However, it it unlikely ever to exist unless there is
-huge demand (because removing entries from a ternary search tree is
-fraught with difficulties). The quick-and-dirty work-around at the
-moment is to reduce the word's weight using
-@command{predictive-add-to-dict} with a large negative weight, so that
-it is unlikely to show up as a likely completion. The better work-around
-is to dump the dictionary to a text file using
-@command{predictive-dump-dict-to-file}, remove the offending word, and
-recreate the dictionary.
-
-@item
 There are probably still bugs remaining in the @code{auto-overlay} code,
 used in some major modes to set up region-local dictionaries. If you
 find one, please report it along with precise instructions on how to
@@ -1626,11 +1640,6 @@ More predictive mode configuration variables could be allowed to have
 completion-menu function, and @env{completion-word-thing}.
 
 @item
-The @LaTeX{} support should include an extra class of dictionaries:
-preamble @LaTeX{} commands. Also requires an auto-overlay from
-@samp{\documentclass} to @samp{\begin@{document@}}.
-
-@item
 It would be nice to be able to select the main dictionary automatically
 based on the @code{\documentclass} in @LaTeX{} modes.
 
@@ -1646,13 +1655,7 @@ Possible future improvements to auto overlays (in no particular order):
 
 @enumerate
 @item
-A ``@code{flat}'' regexp class is missing from the @dfn{auto-overlay}
-package, i.e. regions that start at a @code{start} delimiter and ignore
-any further @code{start} delimiters until the first following @code{end}
-delimiter (c.f. block comments in c++).
-
-@item
-Currently, it's difficult to deal with @code{stack} class regexps for
+Currently, it's difficult to deal with @code{nest} class regexps for
 which the @code{end} regexps match some @code{start} regexps of interest
 but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
 @LaTeX{} when you're only interested in @samp{\somecommand@{}
@@ -1660,7 +1663,7 @@ but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
 interested in function bodies, say. The only solution is to include all
 @code{start} regexps and give the irrelevant ones a null @code{dict}
 property. This can end up creating a lot of overlays! A variant of the
-@code{stack} class that avoids this problem is needed.
+@code{nest} class that avoids this problem is needed.
 @end enumerate
 
 
