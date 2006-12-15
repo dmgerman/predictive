@@ -1,1 +1,0 @@
-../../auto-overlay-stack.el

@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.2
+;; Version: 0.7
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,11 +30,11 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.6.2
+;; Version 0.7
 ;; * fixed bugs in `auto-o-update-exclusive' that caused it to fail if called
 ;;   during a suicide when parentless overlays can exist, and that caused it
 ;;   to infinitely recurse if an exclusive overlay partially overlapped with
-;;   its match overlay
+;;   its match overlay (thanks to Aemon Cannon for pointing this out)
 ;; * removed `auto-overlay-functions' variable, and implemented new interface
 ;;   based on symbol properties
 ;;

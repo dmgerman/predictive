@@ -7,7 +7,7 @@
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1
-;; Keywords: predictive, latex, package, subref, subfloat
+;; Keywords: predictive, latex, package, subref, subfloat, subfig
 ;; URL: http://www.dr-qubit.org/emacs.php
 
 
@@ -49,7 +49,7 @@
 
 
 (defun predictive-latex-load-subfig ()
-  ;; Load sref regexps
+  ;; Load subfig regexps
   (auto-overlay-load-compound-regexp
    `(start "\\\\subref{" (dict . predictive-latex-label-dict) (priority . 2)
 	   (completion-menu . predictive-latex-construct-browser-menu)
@@ -74,8 +74,8 @@
 
 
 (defun predictive-latex-unload-subfig ()
-  ;; Unload sref regexps
+  ;; Unload subfig regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'subref)
 )
 
-;;; predictive-latex-smartref ends here
+;;; predictive-latex-subfig ends here
