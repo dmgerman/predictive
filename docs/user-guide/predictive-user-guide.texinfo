@@ -1650,23 +1650,6 @@ best with plain text and markup languages.
 @end enumerate
 
 
-@noindent
-Possible future improvements to auto overlays (in no particular order):
-
-@enumerate
-@item
-Currently, it's difficult to deal with @code{nest} class regexps for
-which the @code{end} regexps match some @code{start} regexps of interest
-but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
-@LaTeX{} when you're only interested in @samp{\somecommand@{}
-@code{start} regexps. Or matching parens in LISP, when you're only
-interested in function bodies, say. The only solution is to include all
-@code{start} regexps and give the irrelevant ones a null @code{dict}
-property. This can end up creating a lot of overlays! A variant of the
-@code{nest} class that avoids this problem is needed.
-@end enumerate
-
-
 
 
 

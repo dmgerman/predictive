@@ -129,7 +129,7 @@
 ;; Version 0.3.4
 ;; * added function to `after-change-functions' to hide tooltip
 ;; * made self-insert behaviour alists more flexible
-;; * minor fix to `compeltion-cycle' to leave point at end of word if dynamic
+;; * minor fix to `completion-cycle' to leave point at end of word if dynamic
 ;;   completion is disabled
 ;; * `completion-hotkey-list' no longer a customization option, since it must
 ;;    be set *before* completion-ui.el is loaded
@@ -148,7 +148,7 @@
 ;; Version 0.3
 ;; * incorporated a lot of code from predictive.el
 ;; * rewrote things so that all a package needs to do is set
-;;   the `completion-function' variables
+;;   the `completion-function' variable
 ;; * `completon-overlay-at-point' is kludgy no more
 ;;
 ;; Version 0.2.1
@@ -833,7 +833,7 @@ The other arguments are as for `define-minor-mode'."
   "Complete the PREFIX at point.
 
 If OVERLAY is supplied, use that instead of looking for a
-completion overlay at the point. If the point is not withing
+completion overlay at the point. If the point is not within
 OVERLAY, do nothing."
 
   ;; cancel any timer so that we don't have two running at once
@@ -881,7 +881,7 @@ OVERLAY, do nothing."
 
 
 
-(defun complete-dynamic (overlay)
+(defun complete-dynamic (&optional overlay)
   "Insert dynamic completion and update completion overlay
 accordingly. If OVERLAY is supplied, use that instead of finding
 or creating one."
@@ -911,7 +911,7 @@ or creating one."
 
 
 
-(defun complete-tooltip (overlay &optional nodelay)
+(defun complete-tooltip (&optional overlay nodelay)
   "Display list of completions in a tooltip.
 If OVERLAY is supplied, use that instead of finding or creating
 one. If NODELAY is non-nil, display tooltip immediately,
@@ -2295,6 +2295,7 @@ See also `completion-window-posn-at-point' and
 ;; prevent bogus compiler warnings
 (eval-when-compile
   (defun completion-compat-window-offsets (dummy)))
+
 
 
 (unless (fboundp 'posn-at-point)
