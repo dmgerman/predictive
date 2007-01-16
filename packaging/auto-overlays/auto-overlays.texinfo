@@ -1,0 +1,1 @@
+../../docs/auto-overlays/auto-overlays.texinfo
