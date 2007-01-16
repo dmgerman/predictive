@@ -6,13 +6,14 @@ DIR=~/programming/predictive/docs
 WEB=~/www.dr-qubit.org/htdocs/predictive
 USERDIR=user-guide
 PROGDIR=programmer-guide
+AUTOODIR=auto-overlay-manual
 
 test:
 	echo $(DIR)
 
 clean:
-	[[ -d $(DIR)/$(USERDIR) ]] && rm -r $(DIR)/$(USERDIR)
-	[[ -d $(DIR)/$(PROGDIR) ]] && rm -r $(DIR)/$(PROGDIR)
+#	[[ -d $(DIR)/$(USERDIR) ]] && rm -r $(DIR)/$(USERDIR)
+#	[[ -d $(DIR)/$(PROGDIR) ]] && rm -r $(DIR)/$(PROGDIR)
 # 	if [[ -d $(DIR)/html ]]; then rm -r $(DIR)/html; fi
 # 	if [[ -f $(DIR)/predictive.pdf ]]; then rm $(DIR)/predictive.pdf; fi
 # 	if [[ -f $(DIR)/predictive.dvi ]]; then rm $(DIR)/predictive.dvi; fi
@@ -39,6 +40,13 @@ install:
 	cp $(USERDIR)/predictive-user-guide.txt.gz $(WEB)/$(USERDIR)/
 #	cp -r $(PROGDIR) $(WEB)
 # 	cp -r html $(WEB)
+	cp -r $(AUTOODIR)/html $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual-html.tar.gz $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual.info.gz $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual.pdf $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual.ps.gz $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual-src.tar.gz $(WEB)/$(AUTOODIR)/
+	cp $(AUTOODIR)/auto-overlay-manual.txt.gz $(WEB)/$(AUTOODIR)/
 
 
 user-guide: $(USERDIR)/predictive-user-guide.info.gz \
@@ -55,6 +63,18 @@ prog-guide: $(PROGDIR)/predictive-prog-guide.info.gz \
             $(PROGDIR)/predictive-prog-guide.txt.gz \
             $(PROGDIR)/predictive-prog-guide.ps.gz \
             $(PROGDIR)/predictive-prog-guide.pdf
+
+
+auto-o-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
+               $(AUTOODIR)/auto-overlay-manual-html \
+	       $(AUTOODIR)/auto-overlay-manual-html.tar.gz \
+               $(AUTOODIR)/auto-overlay-manual.txt.gz \
+               $(AUTOODIR)/auto-overlay-manual.ps.gz \
+               $(AUTOODIR)/auto-overlay-manual.pdf \
+               auto-o-src
+
+auto-o-src:
+	tar -cvzf $(AUTOODIR)/auto-overlay-manual-src.tar.gz $(AUTOODIR)/auto-overlays.texinfo $(AUTOODIR)/auto-overlay-manual.texinfo
 
 
 
