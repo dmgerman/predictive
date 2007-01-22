@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.5
+;; Version: 0.6.6
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.6
+;; * added the appropriate checks for changed regexp definitions when starting
+;;   the auto-overlay set
 ;;
 ;; Version 0.6.5
 ;; * removed `auto-overlay-functions' and changed to use new interface
@@ -181,9 +185,12 @@
   
   ;; clear overlays and reset variables when predictive mode is disabled
   (add-hook 'predictive-mode-disable-hook 'predictive-latex-disable nil t)
-  ;; save overlays before killing buffer
+  ;; save overlays and unload regexp definitions before killing buffer
   (add-hook 'kill-buffer-hook
-	    (lambda () (auto-overlay-save-overlays 'predictive)) nil t)
+	    (lambda ()
+	      (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
+	      (auto-overlay-unload-regexp 'predictive))
+	    nil t)
   
   ;; use latex browser menu if first character of prefix is "\"
   (make-local-variable 'completion-menu)
@@ -226,6 +233,8 @@
       (setq predictive-latex-preamble-dict preamble-dict)
       (setq predictive-latex-env-dict env-dict)
       (setq predictive-latex-label-dict label-dict)
+      ;; start the auto-overlays
+      (auto-overlay-start 'predictive)
       ))
    
    
@@ -265,11 +274,14 @@
     ;; delete any existing predictive auto-overlay regexps and load latex
     ;; auto-overlay regexps
     (auto-overlay-unload-regexp 'predictive)
-    (predictive-latex-load-regexps)))
+    (predictive-latex-load-regexps)
+    
+    ;; start the auto-overlays, skipping the check that regexp definitions
+    ;; haven't changed if there's a file of saved overlay data to use
+    (auto-overlay-start 'predictive nil nil 'no-regexp-check)
+    ))
   
   
-  ;; start the auto-overlays
-  (auto-overlay-start 'predictive)
   ;; load the keybindings and related settings
   (predictive-latex-load-keybindings)
   ;; consider \ as start of a word
@@ -286,16 +298,12 @@
 Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
 
   ;; stop predictive auto overlays
-  (auto-overlay-stop 'predictive nil t)  ; non-nil final arg saves overlays
+  (auto-overlay-stop 'predictive nil 'save)  ; non-nil arg saves overlays
   (auto-overlay-unload-regexp 'predictive)
   ;; restore predictive-main-dict to saved setting
   (kill-local-variable 'predictive-main-dict)
   (setq predictive-main-dict predictive-latex-restore-main-dict)
   (kill-local-variable 'predictive-latex-restore-main-dict)
-;;   ;; remove modifications to predictive-main-dict
-;;   (dotimes (i (1- (length predictive-main-dict)))
-;;     (when (eq (nthcdr (1+ i) predictive-main-dict) predictive-latex-dict)
-;;       (setcdr (nthcdr i predictive-main-dict) nil)))))
   ;; remove other local variable settings
   (kill-local-variable 'completion-override-syntax-alist)
   (kill-local-variable 'completion-menu)
@@ -308,7 +316,10 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   (remove-hook 'predictive-mode-disable-hook 'predictive-latex-disable t)
   ;; remove hook function that saves overlays
   (remove-hook 'kill-buffer-hook
-	       (lambda () (auto-overlay-save-overlays 'predictive)) t)
+	       (lambda ()
+		 (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
+		 (auto-overlay-unload-regexp 'predictive))
+	       t)
 )
 
 

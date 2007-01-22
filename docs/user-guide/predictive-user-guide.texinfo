@@ -1330,35 +1330,51 @@ they are associated with.
 
 This is most useful when one word is a prefix for another. For example,
 you may want to ensure that, however frequently @samp{learning} is used,
-@samp{learn} always has at least as large a weight.
+@samp{learn} always has at least as large a weight so that it takes
+precedence when completing.
 
 The following functions allow you to define and undefine word
-relationships (note that despite the command names, the two words can be
-arbitrary; there is no requirement that one be a prefix for the other):
+relationships (note that despite the command names and descriptions,
+@command{predictive-define-prefix} and
+@command{predictive-undefine-prefix} can be used to define relationships
+between any two words, not just prefixes; however
+@command{predictive-define-all-prefixes} only defines relationships
+between true prefixes):
 
 @ftable @command
 @item predictive-define-prefix
-Define a relationship between two words, usually a prefix
-relationship. Predictive mode will ensure that the weight of the
-``prefix'' word is always at least as large as that of the other.
+Define a word to be a prefix of another. Predictive mode will ensure
+that the weight of the ``prefix'' word is always at least as large as
+that of the other.
 
 @item predictive-undefine-prefix
-Remove a relationship between two words.
+Remove a ``prefix'' definition.
 
 @item predictive-boost-prefix-weight
-Increase the weight of a word that is also a prefix for other words
-(e.g. @samp{boost} is a prefix for @samp{boosting}, so @samp{boosting}
-is a completion of @samp{boost}). Specifically, if the weight of the
-prefix is lower than any of its completions, its weight will be set to
-the maximum weight of its completions. Otherwise, it will be left
-unchanged. The dictionary name is read from the minibuffer. If a numeric
-prefix argument is supplied, the weights of @emph{all} prefixes longer
-than that value are increased. Otherwise, a prefix is read from the
-minibuffer (defaults to the word at the point). Note that, unlike
-@command{predictive-define-prefix}, this does not permanently define any
-relationship between the words.
+Define all possible prefix relationships. If called without a prefix
+argument (nothing to do with the prefix word!), this command prompts for
+a word, and that word is defined to be a prefix of all its completions
+(i.e. all words that it is a prefix for). Predictive mode will then
+automatically ensure that the weight of the ``prefix'' word is always at
+least as large as that of all its completions.
+
+If called with a numerical prefix argument, this command defines the
+same prefix relationships, but for @emph{all} words in the dictionary
+that are longer than the numerical value of the prefix argument. Use a 0
+prefix argument to define relationships for all words.
 @end ftable
 
+
+The following variable is used to help guess a likely prefix as a
+default for @command{predictive-define-prefix}:
+
+@vtable @env
+@item predictive-guess-prefix-suffixes
+List of suffixes to use when guessing a likely prefix for a word. The
+suffixes a tried in the order they appear in the list, and the first one
+that matches the end of the word is used: the guessed prefix is the
+original word with the suffix removed.
+@end vtable
 
 
 

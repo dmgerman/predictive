@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.13
+;; Version: 0.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4
+;; * accept and reject hooks now called with two or three arguments instead of
+;;   one: the prefix, the full word (this is what was passed previously) and
+;;   possibly the interactive prefix argument.
+;; * moved some anonymous commands into named functions to sanitize
+;;   key-bindings
 ;;
 ;; Version 0.3.13
 ;; * Tried to work around annoying `completion-select' bug
@@ -430,14 +437,19 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 Completions are accepted by calling `completion-accept',
 selecting one with a hotkey, or selecting one from a
-menu. Functions are passed one argument: the complete string that
-was accepted \(prefix and accepted completion combined\).")
+menu. Functions are passed two arguments: the prefix, and the
+complete string that was accepted \(the concatenation of the
+prefix and the accepted completion string\).")
 
 
 (defvar completion-reject-functions nil
   "Hook run after a completion is rejected.
-Functions are passed the complete string that was rejected
-\(prefix and rejected completion combined\).")
+
+Completions are rejected by calling
+`completion-reject'. Functions are passed two arguments: the
+prefix, and the complete string that was rejected \(the
+concatenation of the prefix and the rejected completion
+string\).")
 
 
 (defvar completion-tab-complete-functions nil
@@ -627,14 +639,9 @@ details.")
       )
     
     ;; <tab> does traditional tab-completion
-    (define-key map "\t"
-      (lambda ()
-	"Tab-complete current completion if there is one, otherwise
-run whatever command would normally be bound to the key sequence."
-	(interactive)
-	(completion-run-if-within-overlay 'completion-tab-complete
-					  'completion-function)))
-    ;; M-<tab> cycles or compeltes word at point
+    (define-key map "\t" 'completion-tab-complete-if-within-overlay)
+    
+    ;; M-<tab> cycles or completes word at point
     (define-key map [?\M-\t]
       (lambda ()
 	"Cycle through available completions if there are any,
@@ -655,13 +662,7 @@ otherwise complete the word at point."
 	  (complete-word-at-point -1))))
 
     ;; M-<space> rejects
-    (define-key map "\M- "
-      (lambda()
-	"Reject the current completion if there is one, otherwise
-run whatever would normally be bound to the key sequence."
-	(interactive)
-	(completion-run-if-within-overlay 'completion-reject
-					  'completion-function)))
+    (define-key map "\M- " 'completion-reject-if-within-overlay)
     
     ;; DEL deletes backwards and removes characters from the current
     ;; completion, if any
@@ -669,14 +670,7 @@ run whatever would normally be bound to the key sequence."
 
     ;; RET accepts any pending completion candidate, then runs
     ;; whatever is usually bound to RET
-    (define-key map "\r"
-      (lambda ()
-	"Accept current completion if there is one,
-then run whatever command would normally be bound to RET."
-	(interactive)
-	(completion-run-if-within-overlay 'completion-accept
-					  'completion-function
-					  'before)))
+    (define-key map "\r" 'completion-accept-if-within-overlay)
     
     (setq completion-map map))
 )
@@ -1005,6 +999,7 @@ of 'completion-menu, or `completion-menu' if there is none."
 	  ;; run accept hooks
 	  (run-hook-with-args
 	   'completion-accept-functions
+	   (overlay-get overlay 'prefix)
 	   (concat (overlay-get overlay 'prefix)
 		   (buffer-substring (overlay-start overlay)
 				     (overlay-end overlay))))
@@ -1155,12 +1150,12 @@ unless you know what you are doing, it only bind
        ((null resolve-behaviour))
        ;; accept
        ((eq resolve-behaviour 'accept)
-	(completion-accept overlay)
+	(completion-accept nil overlay)
 	(setq prefix (string last-input-event))
 	(setq wordstart t))
        ;; reject
        ((eq resolve-behaviour 'reject)
-	(completion-reject overlay)
+	(completion-reject nil overlay)
 	(setq prefix (string last-input-event))
 	(setq wordstart t))
        ;; add to prefix
@@ -1326,6 +1321,7 @@ Intended to be bound to keys in `completion-hotkey-map'."
 	(insert (nth n completions))
 	;; run accept hooks
 	(run-hook-with-args 'completion-accept-functions
+			    (overlay-get overlay 'prefix)
 			    (concat (overlay-get overlay 'prefix)
 				    (nth n completions)))
 	(delete-overlay overlay))
@@ -1413,16 +1409,25 @@ If this deletes into a word, complete what remains of that word."
 
 
 
-(defun completion-accept (&optional overlay)
+(defun completion-accept (&optional arg overlay)
   "Accept current provisional completion.
 
-When called from in Lisp programs, if OVERLAY is supplied use
-that instead of looking for one at the point. The point had
-better be within OVERLAY or else your teeth will turn green."
-  (interactive)
+The value of ARG is passed as the third argument to any functions
+called from the `completion-accept-functions' hook. Interactively,
+ARG is the prefix argument.
+
+If optional argument OVERLAY is supplied, it is used instead of
+looking for an overlay at the point. The point had better be
+within OVERLAY or else your hair will fall out.
+
+If a completion was accepted, returns a cons cell containing the
+prefix and the entire accepted completion \(the concatenation of
+the prefix and the completion string\). Otherwise returns nil."
+  (interactive "P")
 
   ;; if we haven't been passed one, get completion overlay at point
-  (let ((o (or overlay (completion-overlay-at-point))))
+  (let ((o (or overlay (completion-overlay-at-point)))
+	prefix completion)
     
     ;; resolve any other old provisional completions
     (completion-resolve-old o)
@@ -1430,32 +1435,57 @@ better be within OVERLAY or else your teeth will turn green."
     
     ;; if point is in a completion overlay...
     (when o
+      (setq prefix (overlay-get o 'prefix))
+      (setq completion
+	    (buffer-substring-no-properties (overlay-start o)
+					    (overlay-end o)))
       ;; accept current completion
       (goto-char (overlay-end o))
       ;; run accept hooks
-      (run-hook-with-args 'completion-accept-functions
-			  (concat (overlay-get o 'prefix)
-				  (buffer-substring (overlay-start o)
-						    (overlay-end o))))
+      (run-hook-with-args 'completion-accept-functions prefix completion arg)
       ;; delete overlay if we've found it ourselves
       (unless overlay
-	(setq completion-overlay-list
-	      (delq o completion-overlay-list))
-	(delete-overlay o))))
+	(setq completion-overlay-list (delq o completion-overlay-list))
+	(delete-overlay o))
+      (cons prefix completion)
+      ))
+)
+
+
+(defun completion-accept-if-within-overlay (&optional arg)
+  "Accept current completion if there is one,
+then run whatever command would normally be bound to RET.
+
+ARG is the prefix argument, which is passed as the third argument
+to any functions called from the `completion-accept-functions'
+hook."
+  (interactive "P")
+  (completion-run-if-within-overlay
+   (lambda () (interactive) (completion-accept arg))
+   'completion-function 'before)
 )
 
 
 
-(defun completion-reject (&optional overlay)
+(defun completion-reject (&optional arg overlay)
   "Reject current provisional completion.
 
-When called in Lisp programs, if OVERLAY is supplied use that
-instead of looking for one at the point. The point had better be
-within OVERLAY or else your hair will fall out."
-  (interactive)
+The value of ARG is passed as the third argument to any functions
+called from the `completion-reject-functions' hook. Interactively,
+ARG is the prefix argument.
+
+If optional argument OVERLAY is supplied, it is used instead of
+looking for an overlay at the point. The point had better be
+within OVERLAY or else your hair will fall out.
+
+If a completion was rejected, returns a cons cell containing the
+prefix and the entire rejected completion \(the concatenation of
+the prefix and the completion string\). Otherwise returns nil."
+  (interactive "P")
 
   ;; if we haven't been passed one, get completion overlay at point
-  (let ((o (or overlay (completion-overlay-at-point))))
+  (let ((o (or overlay (completion-overlay-at-point)))
+	prefix completion)
     
     ;; resolve any other old provisional completions
     (completion-resolve-old o)
@@ -1463,18 +1493,36 @@ within OVERLAY or else your hair will fall out."
     
     ;; if point is in a completion overlay...
     (when o
+      (setq prefix (overlay-get o 'prefix))
+      (setq completion
+	    (concat prefix (buffer-substring (overlay-start o)
+					     (overlay-end o))))
       ;; reject current completion
       (delete-region (overlay-start o) (overlay-end o))
       ;; run reject hooks
-      (run-hook-with-args 'completion-reject-functions
-			  (concat (overlay-get o 'prefix)
-				  (buffer-substring (overlay-start o)
-						    (overlay-end o))))
+      (run-hook-with-args 'completion-reject-functions prefix completion arg)
       ;; delete overlay if we've found it ourselves
       (unless overlay
 	(setq completion-overlay-list
 	      (delq o completion-overlay-list))
-	(delete-overlay o))))
+	(delete-overlay o))
+      ;; return cons cell containing prefix and rejected completion
+      (cons prefix completion)
+      ))
+)
+
+
+(defun completion-reject-if-within-overlay (&optional arg)
+  "Reject the current completion if there is one, otherwise run
+whatever would normally be bound to the key sequence.
+
+ARG is the prefix argument, which is passed as the third argument
+to any function called from the `completion-reject-functions'
+hook."
+  (interactive "P")
+  (completion-run-if-within-overlay
+   (lambda () (interactive) (completion-reject arg))
+   'completion-function)
 )
 
 
@@ -1577,6 +1625,15 @@ If OVERLAY is supplied, use that instead of finding one."
 )
 
 
+(defun completion-tab-complete-if-within-overlay ()
+  "Tab-complete current completion if there is one, otherwise run
+whatever command would normally be bound to the key sequence."
+  (interactive)
+  (completion-run-if-within-overlay 'completion-tab-complete
+				    'completion-function)
+)
+
+
 
 (defun completion-accept-and-newline (&optional n overlay)
   "Insert a newline. Accepts the current completion
@@ -1585,7 +1642,7 @@ newlines. Interactively, N is the prefix argument."
   (interactive "p")
   (completion-cancel-tooltip)
   (unless n (setq n 1))
-  (completion-accept overlay)
+  (completion-accept nil overlay)
   (newline n)
 )
 
@@ -1598,7 +1655,7 @@ newlines. Interactively, N is the prefix argument."
   (interactive "p")
   (completion-cancel-tooltip)
   (unless n (setq n 1))
-  (completion-reject overlay)
+  (completion-reject nil overlay)
   (newline n)
 )
 
@@ -1761,6 +1818,7 @@ OVERLAY will be left alone."
 	      (setq completion-overlay-list
 		    (delq o completion-overlay-list))
 	      	    (run-hook-with-args 'completion-accept-functions
+					(overlay-get o 'prefix)
 					(overlay-get o 'prefix))))
 	  completion-overlay-list))
    
@@ -1768,6 +1826,7 @@ OVERLAY will be left alone."
    ((eq completion-resolve-old-method 'accept)
     (mapc (lambda (o)
 	    (run-hook-with-args 'completion-accept-functions
+				(overlay-get o 'prefix)
 				(concat (overlay-get o 'prefix)
 					(buffer-substring
 					 (overlay-start o)
@@ -1780,7 +1839,8 @@ OVERLAY will be left alone."
    ((eq completion-resolve-old-method 'reject)
     (mapc (lambda (o)
 	    (run-hook-with-args 'completion-reject-functions
-				(concat (overlay-get overlay 'prefix)
+				(overlay-get o 'prefix)
+				(concat (overlay-get o 'prefix)
 					(buffer-substring
 					 (overlay-start o)
 					 (overlay-end o))))
@@ -1800,12 +1860,14 @@ OVERLAY will be left alone."
 		  ;; accept
 		  (run-hook-with-args
 		   'completion-accept-functions
+		   (overlay-get o 'prefix)
 		   (concat (overlay-get o 'prefix)
 			   (buffer-substring (overlay-start o)
 					     (overlay-end o))))
 		;; reject
 		(run-hook-with-args
 		 'completion-reject-functions
+		 (overlay-get o 'prefix)
 		 (concat (overlay-get o 'prefix)
 			 (buffer-substring (overlay-start o)
 					   (overlay-end o))))

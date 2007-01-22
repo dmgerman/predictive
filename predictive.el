@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.13.3
+;; Version: 0.14 (pending)
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.14 (pending)
+;; * enhanced the prefix definition functions
+;; * changed `predictive-auto-learn' to work with new completion-UI
+;;   accept/reject hooks
+;; * a word can be learned even if its completion was rejected, by supplying a
+;;   prefix argument when running `completion-reject' (M-SPC by default)
 ;;
 ;; Version 0.13.3
 ;; * fixed bug in `predictive-which-dict-mode' that assumed dict names were at
@@ -386,6 +393,16 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   :type 'boolean)
 
 
+(defcustom predictive-guess-prefix-suffixes
+  '("ability" "ibility" "ity" "ables" "able" "ibles" "ible" "ally" "ingly"
+    "ings" "ing" "ately" "ates" "ate" "ly" "ations" "ation" "tions" "tion"
+    "ions" "ion" "atives" "ative" "ives" "ive" "ments" "ment" "ances" "ance"
+    "ancy" "ish" "ists" "ist" "isms" "ism" "eous" "ous" "ians" "ian" "als"
+    "al" "ed" "es" "en" "ic" "ns" "s" "d" "n" "y")
+  "List of possible suffixes. Earlier entries take precedence."
+  :group 'predictive
+  :type '(repeat string))
+
 
 
 ;;; ==================================================================
@@ -427,6 +444,7 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 
 (defvar predictive-map nil "Keymap used in predictive mode.")
+
 
 
 
@@ -639,10 +657,16 @@ do: emails, academic research articles, letters...)"
       (add-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict
 		nil 'local))
     ;; make sure auto-learn/add caches are flushed if buffer is killed, and
-    ;; add auto-learn function to completion hook
+    ;; add auto-learn function to completion and rejection hooks (rejection
+    ;; hook only causes word to be auto-learned/added if prefix arg was
+    ;; supplied)
     (add-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches
 	      nil 'local)
     (add-hook 'completion-accept-functions 'predictive-auto-learn nil 'local)
+    (add-hook 'completion-reject-functions
+	      (lambda (prefix word arg)
+		(when arg (predictive-auto-learn prefix prefix)))
+	      nil 'local)
     
     ;; look up major mode in major-mode-alist and run any matching function
     (let ((modefunc (assq major-mode predictive-major-mode-alist)))
@@ -686,6 +710,10 @@ do: emails, academic research articles, letters...)"
 		 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
+    (remove-hook 'completion-reject-functions
+		 (lambda (prefix word arg)
+		   (when arg (predictive-auto-learn prefix word)))
+		 'local)
     ;; delete local variable bindings
     (kill-local-variable 'predictive-used-dict-list)
     (kill-local-variable 'completion-menu)
@@ -709,9 +737,9 @@ do: emails, academic research articles, letters...)"
 
 
 
-(defun predictive-auto-learn (word)
-  "Function called after completion is accepted to deal with auto-learning."
-  (interactive)
+(defun predictive-auto-learn (ignored1 word &optional ignored2)
+  "Function to deal with auto-learning WORD.
+Usually called after a completion is accepted. Note that PREFIX is ignored."
   
   (let ((dict (predictive-current-dict))
 	found dic)
@@ -1292,7 +1320,7 @@ See also `predictive-fast-learn-from-buffer'."
       (dolist (dict dict-list)
 	(message "Learning words for dictionary %s...(dict %d of %d)"
 		 dictname d numdicts)
-	;;initialise counters etc. for messages
+	;; initialise counters etc. for messages
 	(setq dictname (dictree-name dict))
 	(setq dictsize (dictree-size dict))
 	(setq d (1+ d))  ; counts dictionaries
@@ -1514,6 +1542,23 @@ entirely of word- or symbol-constituent characters."
 
 
 
+(defun predictive-guess-prefix (word)
+  "Guess a likely prefix for WORD.
+See `predictive-define-prefix' and 'predictive-guess-prefix-suffixes'."
+
+  (let ((suffix
+	 (catch 'found
+	   (dolist (sfx predictive-guess-prefix-suffixes)
+	     (when (and (> (length word) (length sfx))
+			(string= (substring word (- (length word) (length sfx))
+					    (length word))
+				 sfx))
+	       (throw 'found sfx))))))
+    (when suffix (substring word 0 (- (length word) (length suffix)))))
+)
+
+
+
 (defun predictive-define-prefix (dict word prefix)
   "Add PREFIX to the list of prefices for WORD in dictionary DICT.
 The weight of PREFIX will automatically be kept at least as large
@@ -1522,31 +1567,49 @@ as the weight of WORD."
 		     (setq word (read-string
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
-		     (read-string
-		      (format "Add prefix for \"%s\": "
-			      (if (or (null word) (string= word ""))
-				  (thing-at-point 'word)
-				word)))))
+		     (let ((wrd (if (or (null word) (string= word ""))
+				    (thing-at-point 'word)
+				  word)))
+		       (read-string
+			(format "Prefix for \"%s\" (default \"%s\"): "
+				wrd (or (predictive-guess-prefix wrd) ""))))
+		     ))
   
   ;; when called interactively, sort out arguments
   (when (interactive-p)
+    ;; default to word at point
     (when (or (null word) (string= word ""))
-	      (setq word (thing-at-point 'word)))
-     ;; word not in dict
-     (when (not (dictree-member-p dict word))
-       (error "\"%s\" not found in dictionary %s"
-	      word (dictree-name dict))))
+      (setq word (thing-at-point 'word)))
+    ;; default to guessed prefix, throwing error if there is no guess
+    (when (or (null prefix) (string= prefix ""))
+      (setq prefix (predictive-guess-prefix word))
+      (unless prefix (error "Prefix must be supplied for \"%s\"" word)))
+    ;; throw error if word not in dict
+    (when (not (dictree-member-p dict word))
+      (error "\"%s\" not found in dictionary %s" word (dictree-name dict))))
   
-  (let ((prefices (dictree-lookup-meta-data dict word)))
-    ;; unless prefix is already defined, define it
-    (unless (member prefix prefices)
-     (dictree-set-meta-data dict word (cons prefix prefices))))
 
-  ;; make sure prefix's weight is at least as large as word's
-  (let ((weight (dictree-lookup dict word))
-	(pweight (dictree-lookup dict prefix)))
-      (when (and weight (or (null pweight) (< pweight weight)))
-	(dictree-insert dict prefix weight (lambda (a b) a))))
+    ;; prompt for confirmation if prefix isn't really a prefix for word
+    (when (and (dictree-member-p dict word)
+	       (or (not (interactive-p))
+		   (and (> (length word) (length prefix))
+			(string= (substring word 0 (length prefix)) prefix))
+		   (y-or-n-p
+		    (format
+		     "\"%s\" is not a prefix of \"%s\". Continue anyway? "
+		     prefix word))))
+      
+      (let ((prefices (dictree-lookup-meta-data dict word)))
+	;; unless prefix is already defined, define it
+	(unless (member prefix prefices)
+	  (dictree-set-meta-data dict word (cons prefix prefices))))
+      
+      ;; make sure prefix's weight is at least as large as word's
+      (let ((weight (dictree-lookup dict word))
+	    (pweight (dictree-lookup dict prefix)))
+	(when (and weight (or (null pweight) (< pweight weight)))
+	  (dictree-insert dict prefix weight (lambda (a b) a))))
+      )
 )
 
 
@@ -1559,12 +1622,20 @@ least as large as the weight of WORD."
 		     (setq word (read-string
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
-		     (read-string (format "Remove prefix of \"%s\": "
-					  word))))
+		     (let ((wrd (if (or (null word) (string= word ""))
+				    (thing-at-point 'word)
+				  word)))
+		       (read-string
+			(format "Remove prefix of \"%s\" (default \"%s\"): "
+				wrd (or (predictive-guess-prefix wrd) ""))))
+		     ))
   
   ;; when called interactively, sort out arguments
   (when (interactive-p)
-    (when (null word) (setq word (thing-at-point 'word))))
+    (when (or (null word) (string= word ""))
+      (setq word (thing-at-point 'word)))
+    (when (or (null prefix) (string= prefix ""))
+      (setq prefix (predictive-guess-prefix word))))
   
   (let ((prefices (dictree-lookup-meta-data dict word)))
     (dictree-set-meta-data dict word (delete prefix prefices)))
@@ -1572,22 +1643,21 @@ least as large as the weight of WORD."
 
 
 
-(defun predictive-boost-prefix-weight (dict &optional prefix)
+(defun predictive-define-all-prefixes (dict &optional prefix)
   "Increase the weight of any word in dictionary DICT that is
 also a prefix for other words. The weight of the prefix will be
 increased so that it is equal to or greater than the weight of
 any word it is a prefix for.
 
-Optional argument LENGTH specifies a minimum length for a
-prefix. Prefices shorter than this minimum will be ignored. If it
-is zero or negative, all prefices will be boosted.
+Optional argument PREFIX can be an integer or a string. If it's
+an integer, it specifies a minimum length for a prefix. Prefices
+shorter than this minimum will be ignored. If it is zero or
+negative, all prefices will be boosted. It PREFIX is a string,
+only that prefix string will have its weight increased.
 
-If optional argument PREFIX is supplied, only that prefix will
-have its weight increased. PREFIX is ignored if LENGTH is supplied.
-
-Interactively, DICT is read from the minibuffer and LENGTH is the
-prefix argument. PREFIX is read from the minibuffer if LENGTH is not
-supplied."
+Interactively, DICT is read from the minibuffer. PREFIX is the
+integer prefix argument if one is supplied, otherwise a string is
+read from the minibuffer instead."
   (interactive (list (read-dict "Dictionary: ") current-prefix-arg))
   
   ;; when being called interactively, sort out arguments
@@ -1619,57 +1689,54 @@ supplied."
  stringp or numberp %s" (prin1-to-string prefix)))
   
   
-  (let (boost-fun)  
-    ;; create function for boosting weights
-    (setq boost-fun
-	  (lambda (word weight)
-	    (let (max-weight completion-weights string)
-	      ;; find completions, dropping first which is always the word
-	      ;; itself
+  (let (prefix-fun)  
+    ;; create function for defining prefixes
+    (setq prefix-fun
+	  (lambda (word)
+	    (let (completion-list string)
+	      ;; deal with capitalisation
 	      (if (and predictive-ignore-initial-caps
 		       (predictive-capitalized-p word))
 		  (setq string (list word (downcase word)))
 		(setq string word))
-	      
-	      (setq completion-weights
-		    (mapcar 'cdr (append (dictree-complete dict string) nil)))
-	      (setq completion-weights
-		    (last completion-weights
-			  (1- (length completion-weights))))
-	      
-	      ;; if word has completions (is a prefix), make sure its weight
-	      ;; is greater than weight of any of its completions
-	      (when completion-weights
-		(setq max-weight (apply 'max completion-weights))
-		(when (< weight max-weight)
-		  (dictree-insert dict word max-weight (lambda (a b) a)))))
-	    ))
+	      ;; find completions of word, dropping first which is always the
+	      ;; word itself
+	      (setq completion-list
+		    (mapcar (lambda (entry) (concat word (car entry)))
+			    (dictree-complete dict string)))
+	      (setq completion-list
+		    (last completion-list
+			  (1- (length completion-list))))
+	      ;; define the word to  be a prefix for all its completions
+	      (dolist (cmpl completion-list)
+		(predictive-define-prefix dict cmpl word))
+	      )))
     
     
-    ;; if there's a single prefix, boost its weight
+    ;; if a single prefix was supplied, define it
     (if (stringp prefix)
 	(when (dictree-member-p dict prefix)
-	  (message "Boosting weight of \"%s\" in %s..."
+	  (message "Defining \"%s\" as a prefix in %s..."
 		   prefix (dictree-name dict))
-	  (funcall boost-fun prefix (dictree-lookup dict prefix))
-	  (message "Boosting weight of \"%s\" in %s...done"
+	  (funcall prefix-fun prefix)
+	  (message "defining \"%s\" as a prefix in %s...done"
 		   prefix (dictree-name dict)))
       
-      ;; otherwise, boost weights of all prefices longer than min length
-      (message "Boosting prefix weights...")
+      ;; otherwise, define all prefixes longer than min length
+      (message "Defining prefixes in %s..." (dictree-name dict))
       (let ((i 0) (count (dictree-size dict)))
-	(message "Boosting prefix weights...(word 1 of %d)" count)
-	;; Note: relies on dict-map traversing in alphabetical order, so that
-	;; prefices that themselves have a prefix are processed later
+	(message "Defining prefixes in %s...(word 1 of %d)"
+		 (dictree-name dict) count)
 	(dictree-map
 	 (lambda (word weight)
 	   (setq i (1+ i))
 	   (when (= 0 (mod i 50))
-	     (message "Boosting prefix weights...(word %d of %d)" i count))
+	     (message "Defining prefixes in %s...(word %d of %d)"
+		      (dictree-name dict) i count))
 	   ;; ignore word if it's too short
-	   (unless (< (length word) prefix) (funcall boost-fun word weight)))
+	   (unless (< (length word) prefix) (funcall prefix-fun word)))
 	 dict 'string)
-	(message "Boosting prefix weights...done")))
+	(message "Defining prefixes in %s...done" (dictree-name dict))))
     )
 )
 
