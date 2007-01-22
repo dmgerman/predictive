@@ -10,7 +10,7 @@
 
 @copying
 This manual describes the Emacs Predictive Completion package, version
-0.14
+0.15
 @c --version--
 
 Copyright @copyright{} 2005 2006 Toby Cubitt
@@ -28,7 +28,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.14
+@subtitle Version 0.15
 @c --version--
 @author Toby Cubitt
 
@@ -979,19 +979,13 @@ To ensure it is as efficiently structured as possible, it is best to
 create a dictionary from a list of words using
 @command{predictive-create-dict}, rather than creating a blank
 dictionary and adding the words using
-@command{predictive-add-to-dict}. Also, deleting words using
-@command{predictive-remove-from-dict} can result in particularly
-inefficient dictionary structures. For small dictionaries it won't make
-much difference, but for larger ones it can be significant. You can
-rebuild an inefficient dictionary by dumping the words to a buffer,
-creating a new dictionary, and populating it from the dumped
-words. @xref{Loading and Saving Dictionaries}.
-
-It is often more useful for words that are prefixes for others to have
-higher weights, especially when using dynamic completion and the
-@command{predictive-scoot-ahead} command (@pxref{Dynamic
-Completion}). The @command{predictive-boost-prefix-weight} command
-manipulates word weights to ensure that this is the case.
+@command{predictive-add-to-dict}. Also, deleting many words using
+@command{predictive-remove-from-dict} will eventually result in
+particularly inefficient dictionary structures. For small dictionaries
+it won't make much difference, but for larger ones it can be
+significant. You can rebuild an inefficient dictionary by dumping the
+words to a buffer, creating a new dictionary, and populating it from the
+dumped words. @xref{Loading and Saving Dictionaries}.
 
 @noindent
 The following variables set defaults for other dictionary properties:
@@ -1329,44 +1323,51 @@ the words in this list are always at least as large as that of the word
 they are associated with.
 
 This is most useful when one word is a prefix for another. For example,
-you may want to ensure that, however frequently @samp{learning} is used,
-@samp{learn} always has at least as large a weight so that it takes
-precedence when completing.
+you may want to ensure that, however frequently the word @samp{learning}
+is used, the weight of the word @samp{learn} is always kept at least as
+big, so that it always takes precedence when completing.
 
-The following functions allow you to define and undefine word
+The following functions allow you to define and undefine such prefix
 relationships (note that despite the command names and descriptions,
 @command{predictive-define-prefix} and
 @command{predictive-undefine-prefix} can be used to define relationships
-between any two words, not just prefixes; however
-@command{predictive-define-all-prefixes} only defines relationships
-between true prefixes):
+between any two words, not just prefixes; however,
+@command{predictive-define-all-prefixes} and the
+@env{predictive-auto-define-prefixes} feature can only define actual
+prefix relationships):
 
 @ftable @command
 @item predictive-define-prefix
-Define a word to be a prefix of another. Predictive mode will ensure
+Define one word to be a prefix of another. Predictive mode will ensure
 that the weight of the ``prefix'' word is always at least as large as
-that of the other.
+that of the other. (Note that the word does not actually have to be a
+prefix of the other; this can be used to define a relationship between
+any two words, so that the weight of one is always larger than the
+other.)
 
 @item predictive-undefine-prefix
-Remove a ``prefix'' definition.
+Remove a ``prefix'' definition. (As for
+@command{predictive-define-prefix}, the word does not actually have to
+be a prefix of the other.)
 
-@item predictive-boost-prefix-weight
-Define all possible prefix relationships. If called without a prefix
-argument (nothing to do with the prefix word!), this command prompts for
-a word, and that word is defined to be a prefix of all its completions
-(i.e. all words that it is a prefix for). Predictive mode will then
-automatically ensure that the weight of the ``prefix'' word is always at
-least as large as that of all its completions.
+@item predictive-define-all-prefixes
+Define all possible prefix relationships for a word. If called without a
+prefix argument (nothing to do with the prefix word!), this command
+prompts for a word, and that word is defined to be a prefix of all its
+extensions (i.e. all words that it is a prefix for). Predictive mode
+will then automatically ensure that the weight of the prefix word is
+ketpt at least as large as that of all of its extensions.
 
 If called with a numerical prefix argument, this command defines the
 same prefix relationships, but for @emph{all} words in the dictionary
 that are longer than the numerical value of the prefix argument. Use a 0
-prefix argument to define relationships for all words.
+or negative prefix argument to define the relationships for all words.
 @end ftable
 
 
 The following variable is used to help guess a likely prefix as a
-default for @command{predictive-define-prefix}:
+default for @command{predictive-define-prefix}. It's default value is
+only appropriate for English.
 
 @vtable @env
 @item predictive-guess-prefix-suffixes
@@ -1374,6 +1375,23 @@ List of suffixes to use when guessing a likely prefix for a word. The
 suffixes a tried in the order they appear in the list, and the first one
 that matches the end of the word is used: the guessed prefix is the
 original word with the suffix removed.
+@end vtable
+
+
+Ensuring that prefixes take precedence when completing words is almost
+always a good idea. It makes predictive completion much more convenient
+(especially dynamic completion, @pxref{Dynamic Completion}). Therefore,
+predictive mode includes a feature that, when enabled (the default),
+automatically defines all the necesary prefix relationships whenever a
+word is added to a dictionary.
+
+@vtable @env
+@item predictive-auto-define-prefixes
+When non-nil, predictive mode will automatically update all prefix
+relationships for a word in a dictionary when the word is added. The
+new word will always take precedence over any word that is an extension
+of it, and in their turn any words that are prefixes of the new word
+will take precedence over it.
 @end vtable
 
 

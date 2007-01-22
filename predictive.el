@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.14 (pending)
+;; Version: 0.14
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -42,12 +42,15 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.14 (pending)
+;; Version 0.14
 ;; * enhanced the prefix definition functions
 ;; * changed `predictive-auto-learn' to work with new completion-UI
 ;;   accept/reject hooks
-;; * a word can be learned even if its completion was rejected, by supplying a
-;;   prefix argument when running `completion-reject' (M-SPC by default)
+;; * a word can now be learned even if its completion was rejected, by
+;;   supplying a prefix argument when running `completion-reject'
+;;   (M-SPC by default)  (Thanks to Mathias Dahl for related discussions)
+;; * added `predictive-auto-define-prefixes' feature, which automatically
+;;   defines all prefixes for any word added to a dictionary
 ;;
 ;; Version 0.13.3
 ;; * fixed bug in `predictive-which-dict-mode' that assumed dict names were at
@@ -325,6 +328,19 @@ ask before adding any word."
   "*If non-nil, predictive mode will ask before auto-adding a word
 to a dictionary. Enabled by default. This has no effect unless
 `predictive-auto-add-to-dict' is also enabled."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-auto-define-prefixes t
+  "*Controls automatic prefix definitions in predictive mode.
+
+If non-nil, whenever a word is added to a dictionary, it is
+automatically defined to be a prefix for all words for which it
+*is* a prefix. Predictive mode will then automatically ensure
+that its weight is always at least as great as the weight of any
+of those words, so that it takes precedence over them when
+completing."
   :group 'predictive
   :type 'boolean)
 
@@ -1232,7 +1248,14 @@ specified by the prefix argument."
   ;; insert word
   (let ((newweight (dictree-insert dict word weight))
 	pweight)
-    ;; if word has associated prefices, make sure weight of each prefix is at
+    ;; if automatically defining prefixes, do so!
+    (when predictive-auto-define-prefixes
+      (let (str)
+	(dotimes (i (length word))
+	  (setq str (substring word 0 (1+ i)))
+	  (when (dictree-member-p dict str)
+	    (predictive-define-all-prefixes dict str)))))
+    ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
     (dolist (prefix (dictree-lookup-meta-data dict word))
       (setq pweight (dictree-lookup dict prefix))
@@ -1560,7 +1583,7 @@ See `predictive-define-prefix' and 'predictive-guess-prefix-suffixes'."
 
 
 (defun predictive-define-prefix (dict word prefix)
-  "Add PREFIX to the list of prefices for WORD in dictionary DICT.
+  "Add PREFIX to the list of prefixes for WORD in dictionary DICT.
 The weight of PREFIX will automatically be kept at least as large
 as the weight of WORD."
   (interactive (list (read-dict "Dictionary: ")
@@ -1599,10 +1622,10 @@ as the weight of WORD."
 		     "\"%s\" is not a prefix of \"%s\". Continue anyway? "
 		     prefix word))))
       
-      (let ((prefices (dictree-lookup-meta-data dict word)))
+      (let ((prefixes (dictree-lookup-meta-data dict word)))
 	;; unless prefix is already defined, define it
-	(unless (member prefix prefices)
-	  (dictree-set-meta-data dict word (cons prefix prefices))))
+	(unless (member prefix prefixes)
+	  (dictree-set-meta-data dict word (cons prefix prefixes))))
       
       ;; make sure prefix's weight is at least as large as word's
       (let ((weight (dictree-lookup dict word))
@@ -1615,7 +1638,7 @@ as the weight of WORD."
 
 
 (defun predictive-undefine-prefix (dict word prefix)
-  "Remove PREFIX from list of prefices for WORD in dictionary DICT.
+  "Remove PREFIX from list of prefixes for WORD in dictionary DICT.
 The weight of PREFIX will no longer automatically be kept at
 least as large as the weight of WORD."
   (interactive (list (read-dict "Dictionary: ")
@@ -1637,23 +1660,23 @@ least as large as the weight of WORD."
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))))
   
-  (let ((prefices (dictree-lookup-meta-data dict word)))
-    (dictree-set-meta-data dict word (delete prefix prefices)))
+  (let ((prefixes (dictree-lookup-meta-data dict word)))
+    (dictree-set-meta-data dict word (delete prefix prefixes)))
 )
 
 
 
 (defun predictive-define-all-prefixes (dict &optional prefix)
-  "Increase the weight of any word in dictionary DICT that is
-also a prefix for other words. The weight of the prefix will be
-increased so that it is equal to or greater than the weight of
-any word it is a prefix for.
+  "Increase the weight of words in dictionary DICT that are also
+prefixes for other words. Predictive mode will then automatically
+ensure that the weight of the prefix word is always at least as
+great as the weight of any word it is a prefix for.
 
-Optional argument PREFIX can be an integer or a string. If it's
-an integer, it specifies a minimum length for a prefix. Prefices
-shorter than this minimum will be ignored. If it is zero or
-negative, all prefices will be boosted. It PREFIX is a string,
-only that prefix string will have its weight increased.
+Optional argument PREFIX can be an integer or a string. If it is
+an integer, it specifies a minimum length for a prefix word;
+prefix words shorter than this minimum will be ignored. If it is
+zero or negative, all prefix words will be included. If PREFIX is
+a string, only that prefix word will have its weight increased.
 
 Interactively, DICT is read from the minibuffer. PREFIX is the
 integer prefix argument if one is supplied, otherwise a string is
@@ -1719,7 +1742,7 @@ read from the minibuffer instead."
 	  (message "Defining \"%s\" as a prefix in %s..."
 		   prefix (dictree-name dict))
 	  (funcall prefix-fun prefix)
-	  (message "defining \"%s\" as a prefix in %s...done"
+	  (message "Defining \"%s\" as a prefix in %s...done"
 		   prefix (dictree-name dict)))
       
       ;; otherwise, define all prefixes longer than min length
