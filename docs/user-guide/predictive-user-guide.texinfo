@@ -223,6 +223,18 @@ sentences preceding it.)
 The current version of the predictive completion package can be obtained
 from @uref{http://www.dr-qubit.org/emacs.php}.
 
+If you are upgrading from a previous version of the predictive
+completion package, or switching to a different version of Emacs, make
+sure you first backup any dictionaries you use by dumping the words and
+data they contain to files (unless you want to start from
+scratch). @xref{Loading and Saving Dictionaries},
+@command{predictive-dump-dict-to-buffer} and
+@command{predictive-dump-dict-to-file}. Otherwise, your old dictionaries
+may be rendered useless and unrecoverable! It is @emph{not} enough to
+make a copy of the dictionary file itself. Only the plain-text
+``dumped'' format is guaranteed to be portable across different versions
+of predictive mode and Emacs.
+
 To install the package, extract the files using @kbd{tar -xvzf
 predictive.tar.gz}. This will put the files in a new subdirectory called
 @file{predictive/}. You're strongly encouraged to byte-compile all the

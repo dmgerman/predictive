@@ -9,6 +9,28 @@ http://www.dr-qubit.org/emacs.php
 
 
 
+Backing-Up Dictionaries      
+-----------------------     *************
+                            * IMPORTANT *
+                            *************
+If you are upgrading from a previous version of the predictive completion
+package, or are switching to a different version of Emacs, make sure you first
+backup any dictionaries you use by dumping the words and data they contain to
+files (unless you want to start from scratch). Use
+
+  M-x predictive-dump-dict-to-file
+
+or
+
+  M-x predictive-dump-dict-to-buffer
+
+to make the backups (see Loading and Saving Dictionaries, Emacs Predictive
+Completion Manual). It is NOT enough to make a copy of the dictionary
+file. Only the plain-text "dumped" format is guaranteed to be portable across
+different versions of predictive mode and Emacs.
+
+
+
 Installing
 ----------
 
@@ -26,10 +48,10 @@ emacs resides with
 
   make EMACS=/path/to/emacs
 
-Finally, move the Lisp files (files with extension .el or .elc) to a directory
-in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual). You can view
-the current load-path using `C-h v load-path' in Emacs, assuming default
-keybindings.
+Finally, move the Lisp files (files with extensions .el and .elc) to a
+directory in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual). You
+can view the current load-path using `C-h v load-path' in Emacs, assuming
+default keybindings.
 
 
 If you want the predictive completion minor-mode to be available whenever you
@@ -59,10 +81,8 @@ in the predictive/ directory created by extracting the files.
 Alternatively, you can do it manually using `byte-compile-file' or one of the
 other Emacs byte-compilation commands (see The Compilation Functions, GNU
 Emacs Lisp Reference Manual) for all of the Lisp files contained in the
-package.
-
-Personally, I like to use `dired' when byte-compiling multiple files. (See
-Operating on Files, GNU Emacs manual.)
+package. Personally, I like to use `dired' when byte-compiling multiple
+files. (See Operating on Files, GNU Emacs manual.)
 
 
 
@@ -89,4 +109,5 @@ will byte-compile the core lisp files as well as creating the dictionaries.
 You can, if you prefer, create the dictionaries manually using the
 `predictive-create-dict' command from the predictive package. You should give
 the dictionary the same file name as the word list file, minus the final
-"-word-list". (See Creating Dictionaries, Emacs Predictive Completion Manual.)
+".word-list" extension. (See Creating Dictionaries, Emacs Predictive
+Completion Manual.)
