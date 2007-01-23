@@ -319,7 +319,7 @@ word just needs a suffix adding, for instance.
 tab-completion.
 
 Finally, to get rid of a provisional completion and just leave the
-characters you've typed, use @kbd{M-SPACE}.
+characters you've typed, use @kbd{M-SPC}.
 @findex completion-reject
 
 This ``Quick-Start'' describes the default behaviour. However,
@@ -497,11 +497,17 @@ The following commands help control dynamic completion:
 
 @ftable @command
 @item completion-accept
-Accept the current completion, and move the point just beyond it.
+Accept the current completion, and move the point just beyond it. If
+@env{predictive-auto-learn} and/or @env{predictive-auto-add} are
+enabled, predictive mode will also learn the word (@pxref{Dictionary
+Learning}).
 
 @item completion-reject
-(@kbd{M-SPACE}) Abandon the current completion, removing the
-provisionally inserted (i.e. highlighted) characters.
+(@kbd{M-SPC}) Abandon the current completion, removing the provisionally
+inserted (i.e. highlighted) characters. If a prefix argument is
+supplied, predictive mode will also learn the resulting word, i.e. the
+prefix with the provisional completion removed (@pxref{Dictionary
+Learning}).
 @end ftable
 
 Note that since the @command{completion-reject} command ends the
