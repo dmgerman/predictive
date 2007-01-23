@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.4
+;; Version: 0.4.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -93,6 +93,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4.1
+;; * small but important bug-fix to `completion-accept'
 ;;
 ;; Version 0.4
 ;; * accept and reject hooks now called with two or three arguments instead of
@@ -1001,8 +1004,8 @@ of 'completion-menu, or `completion-menu' if there is none."
 	   'completion-accept-functions
 	   (overlay-get overlay 'prefix)
 	   (concat (overlay-get overlay 'prefix)
-		   (buffer-substring (overlay-start overlay)
-				     (overlay-end overlay))))
+		   (buffer-substring-no-properties (overlay-start overlay)
+						   (overlay-end overlay))))
 	  ;; insert selected completion
 	  (setq completion-overlay-list
 		(delq overlay completion-overlay-list))
@@ -1437,8 +1440,9 @@ the prefix and the completion string\). Otherwise returns nil."
     (when o
       (setq prefix (overlay-get o 'prefix))
       (setq completion
-	    (buffer-substring-no-properties (overlay-start o)
-					    (overlay-end o)))
+	    (concat prefix
+		    (buffer-substring-no-properties (overlay-start o)
+						    (overlay-end o))))
       ;; accept current completion
       (goto-char (overlay-end o))
       ;; run accept hooks
@@ -1495,8 +1499,8 @@ the prefix and the completion string\). Otherwise returns nil."
     (when o
       (setq prefix (overlay-get o 'prefix))
       (setq completion
-	    (concat prefix (buffer-substring (overlay-start o)
-					     (overlay-end o))))
+	    (concat prefix (buffer-substring-no-properties (overlay-start o)
+							   (overlay-end o))))
       ;; reject current completion
       (delete-region (overlay-start o) (overlay-end o))
       ;; run reject hooks
@@ -1828,7 +1832,7 @@ OVERLAY will be left alone."
 	    (run-hook-with-args 'completion-accept-functions
 				(overlay-get o 'prefix)
 				(concat (overlay-get o 'prefix)
-					(buffer-substring
+					(buffer-substring-no-properties
 					 (overlay-start o)
 					 (overlay-end o))))
 	    (delete-overlay o))
@@ -1841,7 +1845,7 @@ OVERLAY will be left alone."
 	    (run-hook-with-args 'completion-reject-functions
 				(overlay-get o 'prefix)
 				(concat (overlay-get o 'prefix)
-					(buffer-substring
+					(buffer-substring-no-properties
 					 (overlay-start o)
 					 (overlay-end o))))
 	    (delete-region (overlay-start o) (overlay-end o))
@@ -1862,15 +1866,15 @@ OVERLAY will be left alone."
 		   'completion-accept-functions
 		   (overlay-get o 'prefix)
 		   (concat (overlay-get o 'prefix)
-			   (buffer-substring (overlay-start o)
-					     (overlay-end o))))
+			   (buffer-substring-no-properties (overlay-start o)
+							   (overlay-end o))))
 		;; reject
 		(run-hook-with-args
 		 'completion-reject-functions
 		 (overlay-get o 'prefix)
 		 (concat (overlay-get o 'prefix)
-			 (buffer-substring (overlay-start o)
-					   (overlay-end o))))
+			 (buffer-substring-no-properties (overlay-start o)
+							 (overlay-end o))))
 		(delete-region (overlay-start o) (overlay-end o)))
 	      (delete-overlay o))
 	    completion-overlay-list)
