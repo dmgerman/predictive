@@ -2,10 +2,10 @@
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
 
-;; Copyright (C) 2004-2006 Toby Cubitt
+;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.14
+;; Version: 0.14.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.14.1
+;; * fixeds bugs in new auto-define-prefixes functionality, most significantly
+;;   in `predictive-add-to-dict'
 ;;
 ;; Version 0.14
 ;; * enhanced the prefix definition functions
@@ -1246,10 +1250,12 @@ specified by the prefix argument."
     (unless (null weight) (setq weight (prefix-numeric-value weight))))
   
   ;; insert word
-  (let ((newweight (dictree-insert dict word weight))
-	pweight)
-    ;; if automatically defining prefixes, do so!
-    (when predictive-auto-define-prefixes
+  (let* ((defpref (and predictive-auto-define-prefixes
+		       (not (dictree-member-p dict word))))
+	 (newweight (dictree-insert dict word weight))
+	 pweight)
+    ;; if automatically defining prefixes and word is new, do so!
+    (when defpref
       (let (str)
 	(dotimes (i (length word))
 	  (setq str (substring word 0 (1+ i)))
@@ -1261,6 +1267,9 @@ specified by the prefix argument."
       (setq pweight (dictree-lookup dict prefix))
       (when (and pweight (< pweight newweight))
 	(dictree-insert dict prefix newweight (lambda (a b) a)))))
+
+  (when (interactive-p)
+    (message "\"%s\" added to dictionary %s" word (dictree-name dict)))
 )
 
 
@@ -1739,27 +1748,33 @@ read from the minibuffer instead."
     ;; if a single prefix was supplied, define it
     (if (stringp prefix)
 	(when (dictree-member-p dict prefix)
-	  (message "Defining \"%s\" as a prefix in %s..."
-		   prefix (dictree-name dict))
+	  (when (interactive-p)
+	    (message "Defining \"%s\" as a prefix in %s..."
+		     prefix (dictree-name dict)))
 	  (funcall prefix-fun prefix)
-	  (message "Defining \"%s\" as a prefix in %s...done"
-		   prefix (dictree-name dict)))
+	  (when (interactive-p)
+	    (message "Defining \"%s\" as a prefix in %s...done"
+		     prefix (dictree-name dict))))
       
       ;; otherwise, define all prefixes longer than min length
-      (message "Defining prefixes in %s..." (dictree-name dict))
+      (when (interactive-p)
+	(message "Defining prefixes in %s..." (dictree-name dict)))
       (let ((i 0) (count (dictree-size dict)))
-	(message "Defining prefixes in %s...(word 1 of %d)"
-		 (dictree-name dict) count)
+	(when (interactive-p)
+	  (message "Defining prefixes in %s...(word 1 of %d)"
+		   (dictree-name dict) count))
 	(dictree-map
 	 (lambda (word weight)
 	   (setq i (1+ i))
 	   (when (= 0 (mod i 50))
-	     (message "Defining prefixes in %s...(word %d of %d)"
-		      (dictree-name dict) i count))
+	     (when (interactive-p)
+	       (message "Defining prefixes in %s...(word %d of %d)"
+			(dictree-name dict) i count)))
 	   ;; ignore word if it's too short
 	   (unless (< (length word) prefix) (funcall prefix-fun word)))
 	 dict 'string)
-	(message "Defining prefixes in %s...done" (dictree-name dict))))
+	(when (interactive-p)
+	  (message "Defining prefixes in %s...done" (dictree-name dict)))))
     )
 )
 

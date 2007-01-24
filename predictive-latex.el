@@ -3,7 +3,7 @@
 ;;;                         (assumes AMSmath)
 
 
-;; Copyright (C) 2004-2006 Toby Cubitt
+;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.6.6
