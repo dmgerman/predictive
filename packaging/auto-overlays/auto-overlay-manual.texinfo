@@ -1,1 +1,1 @@
-../../docs/auto-overlays/auto-overlay-manual.texinfo
+../../docs/auto-overlay-manual/auto-overlay-manual.texinfo
