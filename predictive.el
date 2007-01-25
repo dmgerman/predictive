@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.14.1
+;; Version: 0.14.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -42,6 +42,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.14.2
+;; * fixed auto-define-prefixes functionality...again
+;;
 ;; Version 0.14.1
 ;; * fixeds bugs in new auto-define-prefixes functionality, most significantly
 ;;   in `predictive-add-to-dict'
@@ -51,8 +54,8 @@
 ;; * changed `predictive-auto-learn' to work with new completion-UI
 ;;   accept/reject hooks
 ;; * a word can now be learned even if its completion was rejected, by
-;;   supplying a prefix argument when running `completion-reject'
-;;   (M-SPC by default)  (Thanks to Mathias Dahl for related discussions)
+;;   supplying a prefix argument when calling `completion-reject'
+;;   interactively (thanks to Mathias Dahl for related discussions)
 ;; * added `predictive-auto-define-prefixes' feature, which automatically
 ;;   defines all prefixes for any word added to a dictionary
 ;;
@@ -1254,13 +1257,16 @@ specified by the prefix argument."
 		       (not (dictree-member-p dict word))))
 	 (newweight (dictree-insert dict word weight))
 	 pweight)
-    ;; if automatically defining prefixes and word is new, do so!
+    
+    ;; if adding a new word, and we're automatically defining prefixes...
     (when defpref
-      (let (str)
-	(dotimes (i (length word))
-	  (setq str (substring word 0 (1+ i)))
-	  (when (dictree-member-p dict str)
-	    (predictive-define-all-prefixes dict str)))))
+      ;; define new word to be a prefix of all its completions
+      (predictive-define-all-prefixes dict word)
+      ;; define all prefixes of new word (note: `predictive-define-prefix'
+      ;; does nothing if prefix isn't in dict, so no need to check that here)
+      (dotimes (i (1- (length word)))
+	(predictive-define-prefix dict word (substring word 0 (1+ i)))))
+    
     ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
     (dolist (prefix (dictree-lookup-meta-data dict word))
@@ -1623,6 +1629,7 @@ as the weight of WORD."
 
     ;; prompt for confirmation if prefix isn't really a prefix for word
     (when (and (dictree-member-p dict word)
+	       (dictree-member-p dict prefix)
 	       (or (not (interactive-p))
 		   (and (> (length word) (length prefix))
 			(string= (substring word 0 (length prefix)) prefix))
