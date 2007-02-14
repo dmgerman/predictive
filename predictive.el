@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.14.2
+;; Version: 0.15
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.15
+;; * auto-completion is now a separate minor-mode provided by completion-UI,
+;;   and controlled by `predictive-auto-complete'
 ;;
 ;; Version 0.14.2
 ;; * fixed auto-define-prefixes functionality...again
@@ -299,6 +303,12 @@ Note that only the *first* capital letter of a string is
 ignored. Thus typing \"A\" would find \"and\", \"Alaska\" and
 \"ANSI\", but typing \"AN\" would only find \"ANSI\", whilst
 typing \"a\" would only find \"and\"."
+  :group 'predictive
+  :type 'boolean)
+
+
+(defcustom predictive-auto-complete t
+  "*Enable and disable auto-completion-mode along with predictive mode."
   :group 'predictive
   :type 'boolean)
 
@@ -698,6 +708,9 @@ do: emails, academic research articles, letters...)"
 	    (funcall (cdr modefunc))
 	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
 		 (prin1-to-string (cdr modefunc))))))
+
+    ;; turn on auto-completion mode if necessary
+    (when predictive-auto-complete (auto-completion-mode 1))
     
     ;; turn on which-dict mode if necessary
     (when predictive-which-dict (predictive-which-dict-mode t))
@@ -716,6 +729,8 @@ do: emails, academic research articles, letters...)"
    (predictive-mode
     ;; unset the completion function
     (setq completion-function nil)
+    ;; turn onff auto-completion mode if necessary
+    (when predictive-auto-complete (auto-completion-mode -1))
     ;; turn off which-dict mode
     (predictive-which-dict-mode -1)
     ;; cancel auto-learn timer and flush the caches
