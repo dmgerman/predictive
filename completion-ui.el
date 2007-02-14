@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.4.1
+;; Version: 0.5 (pending)
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,40 +31,34 @@
 ;;; Commentary:
 ;;
 ;; This package provides a user-interface for in-buffer text
-;; completion. It doesn't find completions itself. Instead, a
-;; completion package can simply set the `completion-function'
-;; variable to a function that takes two arguments, a string PREFIX
-;; and an integer MAXNUM, and returns a list of at most MAXNUM
-;; completion candidates for PREFIX. Completion-UI does the rest.
-
-;; Alternatively, a package can use the `completion-define-minor-mode'
-;; convenience macro to define an in-buffer completion minor-mode. It
-;; is very similar to the built-in `define-minor-mode' macro, but
-;; takes an additional function argument which should have the
-;; behaviour described above.
+;; completion. It doesn't find completions itself. Instead, a completion
+;; package can simply set the `completion-function' variable to a function
+;; that takes two arguments, a string PREFIX and an integer MAXNUM, and
+;; returns a list of at most MAXNUM completion candidates for
+;; PREFIX. Completion-UI does the rest.
 ;;
-;; That's it! Completion-UI and user customizations take care of the
-;; rest. (Avoid the temptation to set completion-UI customization
-;; variables from Elisp code to alter its behaviour. The user knows
-;; what they want better than you do.)
+;; That's it! Completion-UI, the auto-completion minor mode, and user
+;; customizations take care of the rest. (Avoid the temptation to set
+;; completion-UI customization variables from Elisp code to alter its
+;; behaviour. The user knows what they want better than you do!)
 ;;
-;; Typically, a lot of code in packages providing some kind of text
-;; completion deals with the user interface.  The ultimate goal is
-;; that all packages providing in-buffer (and possibly also
-;; mini-buffer) completion should use this package to provide a common
-;; user interface, freeing them to concentrate on finding the
-;; completion candidates in the first place. The Elisp programmer
-;; benfits by not having to reinvent the wheel, and the Emacs user
-;; benefits by having a standard yet highly customizable
-;; user-interface that they can customize once-and-for-all to to suit
-;; their preferences, for all the completion packages they use.
+;; Why use completion-UI? Typically, a lot of code in packages providing
+;; some kind of text completion deals with the user interface. The
+;; ultimate goal is that all packages providing in-buffer (and possibly
+;; one day also mini-buffer) completion should use this package to provide
+;; a common user interface, freeing them to concentrate on finding the
+;; completion candidates in the first place. The Elisp programmer benfits
+;; by not having to reinvent the wheel, and the Emacs user benefits by
+;; having a standard yet highly customizable user-interface that they can
+;; customize once and for all to to suit their preferences, for all
+;; completion mechanisms they use.
 ;;
-;; Various completion mechanisms are provided, all of which can be
+;; Various completion user-interfaces are provided, all of which can be
 ;; individually enabled, disabled and extensively tweaked via
 ;; customization variables:
 ;;
-;; * Dynamic completion: insert the best completion candidate in the
-;;   buffer as you type. Candidates are accepted, rejected or updated
+;; * Dynamic completion: provisionally insert the first available
+;;   completion candidate into the buffer, and accept, reject or update it
 ;;   based on character syntax.
 ;;
 ;; * Completion hotkeys: single-key selection of a completion
@@ -87,12 +81,26 @@
 ;; * Completion browser: browse through all possible completion
 ;;   candidates in a hierarchical menu located below the point.
 ;;
+;; Completion-UI also provides a new minor mode, called
+;; auto-completion-mode. When enabled, Emacs will automatically complete
+;; words as they are typed, using the `completion-function' to find
+;; completion candidates. The same customization variables determine how
+;; those candidates are displayed and can be selected. This works
+;; particularly well with dynamic completion (see above).
+;;
 ;; This package will work alongside the auto-overlays package if it's
 ;; available, but does not require it.
 
 
 
 ;;; Change Log:
+;;
+;; Version 0.5
+;; Modifications arising from discussions with rms:
+;; * removed `completion-define-minor-mode' macro; to use completion-UI,
+;;   `completion-function' should just be set appropriately
+;; * auto-completion is now a separate minor mode
+;; * renamed various variables and functions
 ;;
 ;; Version 0.4.1
 ;; * small but important bug-fix to `completion-accept'
@@ -192,108 +200,10 @@
   :group 'convenience)
 
 
-(defcustom completion-auto-complete t
-  "*Enable automatic completion whilst typing."
-  :group 'completion-ui
-  :type 'boolean)
-  
-
-(defcustom completion-use-dynamic t
-  "*Enable dynamic completion."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-use-echo t
-  "*Display completions in echo area."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-use-tooltip t
-  "*Display completions in a tooltip."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-use-hotkeys t
-  "*Enable completion hotkeys (single-key selection of completions)."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-use-menu t
-  "*Enable completion menu."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-auto-show-menu nil
-  "*Display completion menu automatically."
-  :group 'completion-ui
-  :type 'boolean)
-
-
-(defcustom completion-browser-max-items 25
-  "*Maximum number of completions to display
-in a completion browser submenu."
-  :group 'predictive
-  :type 'integer)
-
-
-(defcustom completion-browser-buckets 'balance
-  "*Policy for choosing number of buckets in completion browser:
-
-balance:  balance number of buckets and size of content
-maximize: maximize number of buckets, minimize size of contents
-mininize: minimize number of buckets, maximize size of contents"
-  :group 'predictive
-  :type '(choice (const :tag "balance" balance)
-		 (const :tag "maximize" max)
-		 (const :tag "minimize" min)))
-
-
 (defcustom completion-max-candidates 10
   "*Maximum number of completion candidates to offer."
   :group 'completion-ui
   :type 'integer)
-
-
-(defcustom completion-min-chars nil
-  "*Minimum number of characters before completions are offered."
-  :group 'completion-ui
-  :type '(choice (const :tag "Off" nil)
-		 (integer :tag "On")))
-
-
-(defcustom completion-delay nil
-  "*Number of seconds to wait before activating completion mechanisms."
-  :group 'completion-ui
-  :type '(choice (const :tag "Off" nil)
-		 (float :tag "On")))
-
-
-(defcustom completion-backward-delete-delay 0.1
-  "*Number of seconds to wait before activating completion mechanisms
-after deleting backwards."
-  :group 'completion-ui
-  :type 'float)
-
-
-(defcustom completion-tooltip-delay 3
-  "*Number of seconds to wait after activating completion
-mechanisms before displaying completions in a tooltip."
-  :group 'completion-ui
-  :type '(choice (const :tag "Off" nil)
-		 (float :tag "On")))
-
-
-(defcustom completion-tooltip-timeout 15
-  "*Number of seconds to display completions in a tooltip
-\(not relevant if help-echo text is displayed in echo area\)."
-  :group 'completion-ui
-  :type '(choice (const :tag "Off" nil)
-		 (integer :tag "On")))
 
 
 (defcustom completion-resolve-old-method 'leave
@@ -311,7 +221,41 @@ progress elsewhere in the buffer:
 		 (const :tag "ask" ask)))
 
 
-(defcustom completion-syntax-alist
+
+;;; ===== Auto-completion customizations =====
+
+(defcustom auto-completion-min-chars nil
+  "*Minimum number of characters before completions are offered."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (integer :tag "On")))
+
+
+(defcustom auto-completion-delay nil
+  "*Number of seconds to wait before activating completion mechanisms
+in auto-completion mode."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (float :tag "On")))
+
+
+(defcustom auto-completion-backward-delete-delay 0.1
+  "*Number of seconds to wait before activating completion mechanisms
+after deleting backwards in auto-completion mode."
+  :group 'completion-ui
+  :type 'float)
+
+
+
+;;; ===== Dynamic completion customizations =====
+
+(defcustom completion-use-dynamic t
+  "*Enable dynamic completion."
+  :group 'completion-ui
+  :type 'boolean)
+
+
+(defcustom completion-dynamic-syntax-alist
   '(
     ;; word constituents add to current completion
     (?w . (add t word))
@@ -348,15 +292,14 @@ place."
 				  (const t)
 				  (choice (const :tag "basic" basic)
 					  (const :tag "word" word)
-					  (const :tag "none" none))))
-)
+					  (const :tag "none" none)))))
 
 
-(defcustom completion-override-syntax-alist nil
+(defcustom completion-dynamic-override-syntax-alist nil
   "*Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
-in `completion-syntax-alist'. The format is the same as for
-`completion-synax-alist', except that the alist keys are
+in `completion-dynamic-syntax-alist'. The format is the same as for
+`completion-dynamic-synax-alist', except that the alist keys are
 characters rather than syntax descriptors."
   :group 'completion-ui
   :type '(alist :key-type character
@@ -365,8 +308,24 @@ characters rather than syntax descriptors."
 					  (const :tag "add" add))
 				  (choice (const :tag "basic" basic)
 					  (const :tag "word" word)
-					  (const :tag "none" nil))))
-)
+					  (const :tag "none" nil)))))
+
+(defface completion-dynamic-face
+  '((((class color) (background dark))
+     (:background "blue"))
+    (((class color) (background light))
+     (:background "orange1")))
+  "*Face used for provisional completions during dynamic completion."
+  :group 'completion-ui)
+
+
+
+;; ===== Hotkey customizations =====
+
+(defcustom completion-use-hotkeys t
+  "*Enable completion hotkeys (single-key selection of completions)."
+  :group 'completion-ui
+  :type 'boolean)
 
 
 ;; not a defcustom, since setting it after loading completion-ui.el (as
@@ -378,14 +337,27 @@ when `completion-use-hotkeys' is enabled. This variable must be
 set *before* completion-ui.el is laoded to take effect.")
 
 
-(defface completion-dynamic-face
-  '((((class color) (background dark))
-     (:background "blue"))
-    (((class color) (background light))
-     (:background "orange1")))
-  "*Face used for provisional completions during dynamic completion."
-  :group 'completion-ui)
 
+;;; ===== Tooltip customizations =====
+
+(defcustom completion-use-tooltip t
+  "*Display completions in a tooltip."
+  :group 'completion-ui
+  :type 'boolean)
+
+(defcustom completion-tooltip-delay 3
+  "*Number of seconds to wait after activating completion
+mechanisms before displaying completions in a tooltip."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (float :tag "On")))
+
+(defcustom completion-tooltip-timeout 15
+  "*Number of seconds to display completions in a tooltip
+\(not relevant if help-echo text is displayed in echo area\)."
+  :group 'completion-ui
+  :type '(choice (const :tag "Off" nil)
+		 (integer :tag "On")))
 
 ;; (defcustom completion-tooltip-x-offset 4
 ;;   "Horizontal pixel offset for tooltip.
@@ -393,7 +365,6 @@ set *before* completion-ui.el is laoded to take effect.")
 ;; position."
 ;;   :group 'completion-ui
 ;;   :type 'integer)
-
 
 ;; (defcustom completion-tooltip-y-offset 63
 ;;   "Vertical pixel offset for tooltip.
@@ -404,19 +375,52 @@ set *before* completion-ui.el is laoded to take effect.")
 
 
 
+;;; ===== Completion menu customizations =====
+
+(defcustom completion-auto-show-menu nil
+  "*Display completion menu automatically."
+  :group 'completion-ui
+  :type 'boolean)
+
+(defcustom completion-browser-max-items 25
+  "*Maximum number of completions to display
+in a completion browser submenu."
+  :group 'predictive
+  :type 'integer)
+
+
+(defcustom completion-browser-buckets 'balance
+  "*Policy for choosing number of buckets in completion browser:
+
+balance:  balance number of buckets and size of content
+maximize: maximize number of buckets, minimize size of contents
+mininize: minimize number of buckets, maximize size of contents"
+  :group 'predictive
+  :type '(choice (const :tag "balance" balance)
+		 (const :tag "maximize" max)
+		 (const :tag "minimize" min)))
+
+
+
+;;; ===== Echo-text customizations =====
+
+(defcustom completion-use-echo t
+  "*Display completions in echo area."
+  :group 'completion-ui
+  :type 'boolean)
+
+
+
+
 
 ;;; ============================================================
 ;;;                 Other configuration variables
 
 (defvar completion-function nil
-  "The entire completion UI interface is enabled by setting this
-to a function that accepts two arguments, PREFIX and MAXNUM, and
-returns a list of at most MAXNUM completion candidates for the
-PREFIX string. If MAXNUM is nil, it should return all completion
-candidates for PREFIX.
-
-For an easy way to define a completion minor-mode given such a
-function, see `completion-define-minor-mode'.")
+  "Function that accepts two arguments, PREFIX and MAXNUM,
+and returns a list of at most MAXNUM completion candidates for
+the PREFIX string. If MAXNUM is nil, it should return all
+completion candidates for PREFIX.")
 
 (make-variable-buffer-local 'completion-function)
 
@@ -462,7 +466,11 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 
 (defvar completion-map nil
-  "Keymap active when there's a completion at point.")
+  "Keymap active when a completion-function is defined.")
+
+
+(defvar auto-completion-map nil
+  "Keymap active when auto-completion-mode is enabled.")
 
 
 (defvar completion-hotkey-map nil
@@ -477,14 +485,6 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 (defvar completion-dynamic-map nil
   "Keymap active in a dynamic completion overlay.")
-
-
-(defvar completion-menu-map nil
-  "Keymap active when `completion-use-menu' is enabled.")
-
-
-;; used to trap recursive calls to certain completion functions
-(defvar completion-trap-recursion nil)
 
 
 
@@ -514,10 +514,14 @@ details.")
 (make-variable-buffer-local 'completion-word-thing)
 
 
+(defvar completion-trap-recursion nil
+  "Used to trap recursive calls to certain completion functions")
+
+
 
 
 ;;; =================================================================
-;;;                       Setup hook functions
+;;;                 Set modification hook functions
 
 (add-hook 'after-change-functions
 	  (lambda (&rest unused) (completion-cancel-tooltip)))
@@ -528,9 +532,48 @@ details.")
 ;;; =================================================================
 ;;;                     Setup default keymaps
 
-;; Set the default keymap if it hasn't been defined already (most
-;; likely in an init file or setup function)
+;; Set the default keymap if it hasn't been defined already (most likely in an
+;; init file)
 (unless completion-map
+  (let ((map (make-sparse-keymap)))
+    ;; M-<tab> cycles or completes word at point
+    (define-key map [?\M-\t]
+      (lambda ()
+	"Cycle through available completions if there are any,
+otherwise complete the word at point."
+	(interactive)
+	(if (completion-overlay-at-point)
+	    (completion-cycle)
+	  (complete-word-at-point))))
+    
+    ;; M-<shift>-<tab> cycles backwards
+    (define-key map '[(meta shift iso-lefttab)]
+      (lambda ()
+	"Cycle backwards through completions if there are any,
+otherwise complete the word at point."
+	(interactive)
+	(if (completion-overlay-at-point)
+	    (completion-cycle -1)
+	  (complete-word-at-point))))
+
+    (setq completion-map map)))
+
+
+;; make sure completion-map is associated with `completion-function' in the
+;; minor-mode-keymap-alist, so that the M-tab bindings are enabled whenever a
+;; completion function is defined
+(let ((existing (assq 'completion-function minor-mode-map-alist)))
+  (if existing
+      (setcdr existing completion-map)
+    (push (cons 'completion-function completion-map)
+	  minor-mode-map-alist)))
+
+    
+
+
+;; Set the default auto-completion-mode keymap if it hasn't been defined
+;; already (most likely in an init file or setup function)
+(unless auto-completion-map
   (let (map)
     ;; if we can remap keys, do that
     (if (fboundp 'command-remapping)
@@ -641,9 +684,6 @@ details.")
       (define-key map "/" 'completion-self-insert)
       )
     
-    ;; <tab> does traditional tab-completion
-    (define-key map "\t" 'completion-tab-complete-if-within-overlay)
-    
     ;; M-<tab> cycles or completes word at point
     (define-key map [?\M-\t]
       (lambda ()
@@ -661,53 +701,176 @@ otherwise complete the word at point."
 otherwise complete the word at point."
 	(interactive)
 	(if (completion-overlay-at-point)
-	    (completion-cycle)
-	  (complete-word-at-point -1))))
+	    (completion-cycle -1)
+	  (complete-word-at-point))))
 
-    ;; M-<space> rejects
-    (define-key map "\M- " 'completion-reject-if-within-overlay)
-    
     ;; DEL deletes backwards and removes characters from the current
     ;; completion, if any
     (define-key map "\d" 'completion-backward-delete)
 
-    ;; RET accepts any pending completion candidate, then runs
-    ;; whatever is usually bound to RET
-    (define-key map "\r" 'completion-accept-if-within-overlay)
-    
-    (setq completion-map map))
-)
-
-
-;; make sure completion-map is in minor-mode-keymap-alist
-(let ((existing (assq 'completion-function minor-mode-map-alist)))
-  (if existing
-      (setcdr existing completion-map)
-    (push (cons 'completion-function completion-map)
-	  minor-mode-map-alist)))
+    (setq auto-completion-map map)))
 
 
 
-
-;; set default bindings for the keymap assigned to completion overlays
+;; set default bindings for the keymap used when dynamic completion is
+;; enabled
 (unless completion-dynamic-map
-  (let ((map (make-sparse-keymap)))
-    ;; <tab> does traditional tab-completion
-    (define-key map "\t" 'completion-tab-complete)
-    ;; M-<tab> cycles
-    (define-key map [?\M-\t] 'completion-cycle)
-    ;; M-<shift>-<tab> cycles backwards (note: [\M-\S-iso-lefttab]
-    ;; also works)
-    (define-key map '[(meta shift iso-lefttab)]
-      (lambda () "Cycle backwards through completions."
-	(interactive) (completion-cycle -1)))
-    ;; M-<space> abandons
-    (define-key map "\M- " 'completion-reject)
-;;    ;; <down> displays the completion menu
-;;    (define-key map [down] 'completion-show-menu)
-    ;; clicking on completion opens completion menu
-    (define-key map [mouse-2] 'completion-show-menu)
-    (setq completion-dynamic-map map)))
+  (let (map)
+
+    ;; if we can remap keys, do that
+    (if (fboundp 'command-remapping)
+	(progn
+	  (setq map (make-sparse-keymap))
+	  ;; remap printable characters to run completion-self-insert
+	  (define-key map [remap self-insert-command]
+	    'completion-self-insert))
+       
+      ;; otherwise, create a great big keymap where all printable
+      ;; characters run completion-self-insert, which decides what to
+      ;; do based on the character's syntax
+      (setq map (make-keymap))
+      (define-key map "A" 'completion-self-insert)
+      (define-key map "a" 'completion-self-insert)
+      (define-key map "B" 'completion-self-insert)
+      (define-key map "b" 'completion-self-insert)
+      (define-key map "C" 'completion-self-insert)
+      (define-key map "c" 'completion-self-insert)
+      (define-key map "D" 'completion-self-insert)
+      (define-key map "d" 'completion-self-insert)
+      (define-key map "E" 'completion-self-insert)
+      (define-key map "e" 'completion-self-insert)
+      (define-key map "F" 'completion-self-insert)
+      (define-key map "f" 'completion-self-insert)
+      (define-key map "G" 'completion-self-insert)
+      (define-key map "g" 'completion-self-insert)
+      (define-key map "H" 'completion-self-insert)
+      (define-key map "h" 'completion-self-insert)
+      (define-key map "I" 'completion-self-insert)
+      (define-key map "i" 'completion-self-insert)
+      (define-key map "J" 'completion-self-insert)
+      (define-key map "j" 'completion-self-insert)
+      (define-key map "K" 'completion-self-insert)
+      (define-key map "k" 'completion-self-insert)
+      (define-key map "L" 'completion-self-insert)
+      (define-key map "l" 'completion-self-insert)
+      (define-key map "M" 'completion-self-insert)
+      (define-key map "m" 'completion-self-insert)
+      (define-key map "N" 'completion-self-insert)
+      (define-key map "n" 'completion-self-insert)
+      (define-key map "O" 'completion-self-insert)
+      (define-key map "o" 'completion-self-insert)
+      (define-key map "P" 'completion-self-insert)
+      (define-key map "p" 'completion-self-insert)
+      (define-key map "Q" 'completion-self-insert)
+      (define-key map "q" 'completion-self-insert)
+      (define-key map "R" 'completion-self-insert)
+      (define-key map "r" 'completion-self-insert)
+      (define-key map "S" 'completion-self-insert)
+      (define-key map "s" 'completion-self-insert)
+      (define-key map "T" 'completion-self-insert)
+      (define-key map "t" 'completion-self-insert)
+      (define-key map "U" 'completion-self-insert)
+      (define-key map "u" 'completion-self-insert)
+      (define-key map "V" 'completion-self-insert)
+      (define-key map "v" 'completion-self-insert)
+      (define-key map "W" 'completion-self-insert)
+      (define-key map "w" 'completion-self-insert)
+      (define-key map "X" 'completion-self-insert)
+      (define-key map "x" 'completion-self-insert)
+      (define-key map "Y" 'completion-self-insert)
+      (define-key map "y" 'completion-self-insert)
+      (define-key map "Z" 'completion-self-insert)
+      (define-key map "z" 'completion-self-insert)
+      (define-key map "'" 'completion-self-insert)
+      (define-key map "-" 'completion-self-insert)
+      (define-key map "<" 'completion-self-insert)
+      (define-key map ">" 'completion-self-insert)
+      (define-key map " " 'completion-self-insert)
+      (define-key map "." 'completion-self-insert)
+      (define-key map "," 'completion-self-insert)
+      (define-key map ":" 'completion-self-insert)
+      (define-key map ";" 'completion-self-insert)
+      (define-key map "?" 'completion-self-insert)
+      (define-key map "!" 'completion-self-insert)
+      (define-key map "\"" 'completion-self-insert)
+      (define-key map "0" 'completion-self-insert)
+      (define-key map "1" 'completion-self-insert)
+      (define-key map "2" 'completion-self-insert)
+      (define-key map "3" 'completion-self-insert)
+      (define-key map "4" 'completion-self-insert)
+      (define-key map "5" 'completion-self-insert)
+      (define-key map "6" 'completion-self-insert)
+      (define-key map "7" 'completion-self-insert)
+      (define-key map "8" 'completion-self-insert)
+      (define-key map "9" 'completion-self-insert)
+      (define-key map "~" 'completion-self-insert)
+      (define-key map "`" 'completion-self-insert)
+      (define-key map "@" 'completion-self-insert)
+      (define-key map "#" 'completion-self-insert)
+      (define-key map "$" 'completion-self-insert)
+      (define-key map "%" 'completion-self-insert)
+      (define-key map "^" 'completion-self-insert)
+      (define-key map "&" 'completion-self-insert)
+      (define-key map "*" 'completion-self-insert)
+      (define-key map "_" 'completion-self-insert)
+      (define-key map "+" 'completion-self-insert)
+      (define-key map "=" 'completion-self-insert)
+      (define-key map "(" 'completion-self-insert)
+      (define-key map ")" 'completion-self-insert)
+      (define-key map "{" 'completion-self-insert)
+      (define-key map "}" 'completion-self-insert)
+      (define-key map "[" 'completion-self-insert)
+      (define-key map "]" 'completion-self-insert)
+      (define-key map "|" 'completion-self-insert)
+      (define-key map "\\" 'completion-self-insert)
+      (define-key map "/" 'completion-self-insert)
+      )
+
+    
+    (cond    
+     ;; if current Emacs version supports it properly, the map is assigned to
+     ;; the completion overlay's keymap property
+     ((>= emacs-major-version 22)
+      ;; <tab> does traditional tab-completion
+      (define-key map "\t" 'completion-tab-complete)
+      ;; M-<tab> cycles
+      (define-key map [?\M-\t] 'completion-cycle)
+      ;; M-<shift>-<tab> cycles backwards (note: [\M-\S-iso-lefttab] would
+      ;; also work)
+      (define-key map '[(meta shift iso-lefttab)]
+	(lambda () "Cycle backwards through completions."
+	  (interactive) (completion-cycle -1)))
+      ;; M-<space> abandons
+      (define-key map "\M- " 'completion-reject)
+      ;; M-<down> displays the completion menu
+      (define-key map [M-down] 'completion-show-menu)
+      ;; clicking on completion opens completion menu
+      (define-key map [mouse-2] 'completion-show-menu)
+      (setq completion-dynamic-map map))
+     
+
+     ;; if overlay keybindings support is lacking, have to use
+     ;; `completion-run-if-within-overlay' hack to simulate it
+     (t
+      ;; <tab> does traditional tab-completion
+      (define-key map "\t" 'completion-tab-complete-if-within-overlay)
+      ;; M-<space> rejects
+      (define-key map "\M- " 'completion-reject-if-within-overlay)
+      ;; RET accepts any pending completion candidate, then runs whatever is
+      ;; usually bound to RET
+      (define-key map "\r" 'completion-accept-if-within-overlay)
+      ;; M-<down> displays the completion menu
+      (define-key map [M-down] 'completion-show-menu-if-within-overlay)
+      
+      ;; make sure completion-dynamic-map is in minor-mode-keymap-alist if
+      ;; we're having to simulate overlay keybindings
+      (setq completion-dynamic-map map)
+      (let ((existing (assq 'completion-function minor-mode-map-alist)))
+	(if existing
+	    (setcdr existing completion-dynamic-map)
+	  (push (cons 'completion-function completion-dynamic-map)
+		minor-mode-map-alist))))
+     )))
 
 
 
@@ -715,13 +878,7 @@ otherwise complete the word at point."
 ;; completion-hotkey-list
 (let ((map (make-sparse-keymap)) key)
   (dolist (key completion-hotkey-list)
-    (define-key map key
-      (lambda ()
-	"Select a completion to insert if there is one, otherwise
-run whatever command would normally be bound to the key sequence."
-	(interactive)
-	(completion-run-if-within-overlay 'completion-select
-					  'completion-use-hotkeys))))
+    (define-key map key 'completion-select-if-within-overlay))
   (setq completion-hotkey-map map))
 
 ;; make sure completion-hotkey-map is in minor-mode-keymap-alist
@@ -731,30 +888,6 @@ run whatever command would normally be bound to the key sequence."
     (push (cons 'completion-use-hotkeys completion-hotkey-map)
 	  minor-mode-map-alist)))
 
-
-
-;; set default bindings for the keymap used when completion menu is
-;; enabled
-(unless completion-menu-map
-  (let ((map (make-sparse-keymap)))
-    ;; M-<down> displays the completion menu
-    (define-key map [M-down]
-      (lambda ()
-	"Display completion menu for current completion
-if there is one, otherwise run whatever command would normally be
-bound to the key sequence."
-	(interactive)
-	(completion-run-if-within-overlay 'completion-show-menu
-					  'completion-use-menu)))
-    (setq completion-menu-map map)))
-
-
-;; make sure completion-menu-map is in minor-mode-keymap-alist
-(let ((existing (assq 'completion-use-menu minor-mode-map-alist)))
-  (if existing
-      (setcdr existing completion-menu-map)
-    (push (cons 'completion-use-menu completion-menu-map)
-	  minor-mode-map-alist)))
 
 
 
@@ -799,55 +932,68 @@ Comparison is done with 'equal."
 
 
 
-;;; ========================================================
-;;;                Completion minor mode macro
+;;; =======================================================
+;;;         Auto-completion minor-mode definition
 
-(defmacro completion-define-minor-mode
-  (mode doc function &optional init-value lighter keymap &rest body)
-  "Define a new completion minor mode MODE.
-FUNCTION should take two arguments, PREFIX and MAXNUM, and return
-at most MAXNUM completion candidates for the PREFIX string. If
-MAXNUM is nil, it should return all completion candidates for
-PREFIX.
+(define-minor-mode auto-completion-mode
+  "Toggle auto-completion mode.
+With no argument, this command toggles the mode.
+A positive prefix argument turns the mode on.
+A negative prefix argument turns it off.
 
-The other arguments are as for `define-minor-mode'."
+In auto-completion-mode, Emacs will try to complete words as you
+type, using whatever completion method has been set up (either by the
+major mode, or by another minor mode)."
+  :lighter " complete"
+  :keymap auto-completion-map)
 
-  `(define-minor-mode ,mode ,doc ,init-value ,lighter ,keymap
-    (if ,mode
-	(setq completion-function ,function)
-      (setq completion-function nil))
-    ,@body)
+
+
+(defun turn-on-predictive-mode ()
+  "Turn on auto-completion mode. Useful for adding to hooks."
+  (unless auto-completion-mode (auto-completion-mode))
 )
 
 
 
 
 ;;; =======================================================
-;;;                 Completion UI functions
+;;;              User-interface functions
 
-
-(defun complete (prefix &optional overlay pos)
-  "Complete the PREFIX at point.
+(defun complete-in-buffer (prefix &optional overlay auto pos)
+  "Complete PREFIX at point.
 
 If OVERLAY is supplied, use that instead of looking for a
-completion overlay at the point. If the point is not within
-OVERLAY, do nothing."
+completion overlay at the point.
+
+If AUTO is non-nil, assume we're auto-completing and respect
+settings of `auto-completion-min-chars' and
+`auto-completion-delay'.
+
+If POS is non-nil, only complete if point is at POS (only used
+internally)."
 
   ;; cancel any timer so that we don't have two running at once
   (cancel-timer completion-tooltip-timer)
   ;; resolve any provisional completions
   (completion-resolve-old overlay)
+
   
-  ;; only complete if prefix has requisite number of characters
-  (unless (or (and pos (/= (point) pos))
-	      (and completion-min-chars
-		   (< (length prefix) completion-min-chars)))
+  ;; if auto-completing, only complete prefix if it has requisite number of
+  ;; characters and point is at POS (latter is only used when called from
+  ;; timer)
+  (unless (and auto
+	       (or (and pos (/= (point) pos))
+		   (and auto-completion-min-chars
+			(< (length prefix) auto-completion-min-chars))))
     
-    ;; delay completing if `completion-delay' is set
-    (if completion-delay
+    ;; if we're auto-completing and `auto-completion-delay' is set, delay
+    ;; completing by setting a timer to call ourselves later
+    (if (and auto auto-completion-delay)
 	(setq completion-tooltip-timer
-	      (run-with-idle-timer completion-delay nil
-				   'complete prefix overlay (point)))
+	      (run-with-idle-timer auto-completion-delay nil
+				   'complete-in-buffer
+				   prefix overlay nil (point)))
       
       
       ;; otherwise, call completion function to find completions
@@ -855,8 +1001,8 @@ OVERLAY, do nothing."
 	     (funcall completion-function
 		      prefix completion-max-candidates)))
 	;; setup completion overlay
-	(setq overlay (completion-setup-overlay prefix completions
-						nil overlay))
+	(setq overlay
+	      (completion-setup-overlay prefix completions nil overlay))
 	
 	;; activate dynamic completion
 	(when completion-use-dynamic (complete-dynamic overlay))
@@ -868,8 +1014,7 @@ OVERLAY, do nothing."
 	(when completion-use-tooltip (complete-tooltip overlay))
 	
 	;; activate completion menu
-	(when completion-auto-show-menu
-	  (completion-show-menu overlay))
+	(when completion-auto-show-menu (completion-show-menu overlay))
 	
 	;; no need to do anything for hotkeys, it's all done when
 	;; completion-select is called
@@ -935,7 +1080,8 @@ irrespective of the setting of `completion-tooltip-delay'."
 (defun complete-echo (overlay)
   "Display completion candidates in the echo-area."
   (let ((message-log-max nil))
-    (message (completion-construct-echo-text overlay))))
+    (message (completion-construct-echo-text overlay)))
+)
   
 
 
@@ -1020,6 +1166,15 @@ of 'completion-menu, or `completion-menu' if there is none."
 )
 
 
+(defun completion-show-menu-if-within-overlay ()
+  "Display completion menu for current completion
+if there is one, otherwise run whatever command would normally be
+bound to the key sequence."
+  (interactive)
+  (completion-run-if-within-overlay 'completion-show-menu
+				    'completion-use-menu)
+)
+
 
 
 (defun completion-show-tooltip (&optional overlay position)
@@ -1094,29 +1249,30 @@ point is at position."
 
 
 ;;; ===============================================================
-;;;           Completion commands for binding to keys
+;;;                Commands for binding to keys
 
 
 (defun completion-self-insert ()
   "Execute a completion function based on syntax.
 
 Decide what completion function to execute by looking up the
-character's syntax in `completion-syntax-alist'. The
+character's syntax in `completion-dynamic-syntax-alist'. The
 syntax-derived function can be overridden for individual
-characters by `completion-override-syntax-alist'.
+characters by `completion-dynamic-override-syntax-alist'.
 
-The default functions in `completion-syntax-alist' all insert the
-last input event, in addition to taking any completion related
-action \(hence the name, `completion-self-insert'\). Therefore,
-unless you know what you are doing, it only bind
-`completion-self-insert' to printable characters."
+The default functions in `completion-dymamic-syntax-alist' all
+insert the last input event, in addition to taking any completion
+related action \(hence the name,
+`completion-self-insert'\). Therefore, unless you know what you
+are doing, it only bind `completion-self-insert' to printable
+characters."
   (interactive)
   (completion-cancel-tooltip)
 
   ;; if we're not automatically completing or doing dynamic
-  ;; completion, just accept provisional completions and insert last
+  ;; completion, just resolve provisional completions and insert last
   ;; input event
-  (if (and (not completion-auto-complete)
+  (if (and (not auto-completion-mode)
 	   (not completion-use-dynamic))
       (progn
 	(completion-resolve-old)
@@ -1126,12 +1282,12 @@ unless you know what you are doing, it only bind
     ;; otherwise, lookup behaviour in syntax alists
     (let* ((syntax-alist (if (fboundp 'auto-overlay-local-binding)
 			     (auto-overlay-local-binding
-			      'completion-syntax-alist)
-			   'completion-syntax-alist))
+			      'completion-dynamic-syntax-alist)
+			   'completion-dynamic-syntax-alist))
 	   (override-alist (if (fboundp 'auto-overlay-local-binding)
 			       (auto-overlay-local-binding
-				'completion-override-syntax-alist)
-			     'completion-override-syntax-alist))
+				'completion-dynamic-override-syntax-alist)
+			     'completion-dynamic-override-syntax-alist))
 	   (behaviour
 	    (or (cdr (assq last-input-event override-alist))
 		(cdr (assq (char-syntax last-input-event) syntax-alist))
@@ -1173,8 +1329,8 @@ unless you know what you are doing, it only bind
 			    (and (not (completion-within-word-p))
 				 (not (completion-end-of-word-p))))))
        ;; error
-       (t (error "Invalid entry in `completion-syntax-alist' or\
- `completion-override-syntax-alist', %s"
+       (t (error "Invalid entry in `completion-dynamic-syntax-alist'\
+  or `completion-dynamic-override-syntax-alist', %s"
 		 (prin1-to-string resolve-behaviour))))
       
       
@@ -1198,7 +1354,7 @@ unless you know what you are doing, it only bind
        
        ;; if not using automatic completion or not completing after
        ;; inserting, resolve any overlay
-       ((or (not completion-auto-complete)
+       ((or (not auto-completion-mode)
 	    (eq complete-behaviour 'none))
 	(when overlay
 	  (delete-overlay overlay)
@@ -1209,27 +1365,30 @@ unless you know what you are doing, it only bind
        ;; if doing basic completion, or we're in a completion overlay
        ;; or at the beginning of a word, do normal completion
        ((or (eq complete-behaviour 'basic) overlay wordstart)
-	(complete prefix overlay))
+	(complete-in-buffer prefix overlay t))
        
        ;; if completing word at point, do so
        ((eq complete-behaviour 'word)
-	(complete-word-at-point overlay))
+	(complete-word-at-point overlay 'auto))
 
        ;; error
-       (t (error "Invalid entry in `completion-syntax-alist' or\
- `completion-override-syntax-alist', %s"
+       (t (error "Invalid entry in `completion-dynamic-syntax-alist'\
+ or `completion-dynamic-override-syntax-alist', %s"
 		 (prin1-to-string complete-behaviour))))
       ))
 )
 
 
 
-(defun complete-word-at-point (&optional overlay)
+(defun complete-word-at-point (&optional overlay auto)
   "Complete the word at or next to the point.
 
-When called from Lisp programs, use OVERLAY instead of looking
-for one at the point. The point had better be within OVERLAY or
-carrots will start growing out your ears."
+When called from Lisp programs, OVERLAY is used if supplied
+instead of looking for one at the point. The point had better be
+within OVERLAY or carrots will start growing out your ears.
+
+If AUTO is non-nil, assume we're auto-completing rather than
+being invoked manually"
   (interactive)
 
   (unless overlay (setq overlay (completion-overlay-at-point)))
@@ -1240,7 +1399,8 @@ carrots will start growing out your ears."
 	prefix pos)
     (cond
      ;; if within an existing overlay, complete its prefix
-     (overlay (complete (overlay-get overlay 'prefix) overlay))
+     (overlay (complete-in-buffer (overlay-get overlay 'prefix)
+				  overlay auto))
      
      ;; if point is at end of a word, complete it
      ((completion-end-of-word-p)
@@ -1248,7 +1408,7 @@ carrots will start growing out your ears."
       (save-excursion
 	(forward-thing word-thing -1)
 	(setq prefix (buffer-substring-no-properties (point) pos)))
-      (complete prefix overlay))
+      (complete-in-buffer prefix overlay auto))
      
      ;; if point is within a word, delete part of word after point (up
      ;; to overlay, if there is one) and complete remainding prefix
@@ -1269,7 +1429,7 @@ carrots will start growing out your ears."
 			     (point)))
 	(forward-thing word-thing -1)
 	(setq prefix (buffer-substring-no-properties (point) pos)))
-      (complete prefix overlay))
+      (complete-in-buffer prefix overlay auto))
      ))
 )
 
@@ -1280,7 +1440,9 @@ carrots will start growing out your ears."
 when hotkey completion is active.
 
 If integer N is supplied, insert completion corresponding to that
-instead. If OVERLAY is supplied, use that instead of finding one.
+instead. If OVERLAY is supplied, use that instead of finding one
+at point. The point had better be within OVERLAY or a meteorite
+will smash through your ceiling.
 
 Intended to be bound to keys in `completion-hotkey-map'."
   (interactive)
@@ -1332,10 +1494,21 @@ Intended to be bound to keys in `completion-hotkey-map'."
 )
 
 
+(defun completion-select-if-within-overlay ()
+  "Select a completion to insert if there is one, otherwise run
+whatever command would normally be bound to the key sequence used
+to invoke this function."
+  (interactive)
+  (completion-run-if-within-overlay 'completion-select
+				    'completion-use-hotkeys)
+)
+
+
 
 (defun completion-backward-delete (&optional n)
   "Delete backwards N characters \(default 1\).
-If this deletes into a word, complete what remains of that word."
+If this deletes into a word and auto-completion is enabled,
+complete what remains of that word."
   (interactive "p")
   (when (null n) (setq n 1))
   (completion-cancel-tooltip)
@@ -1349,7 +1522,7 @@ If this deletes into a word, complete what remains of that word."
     (combine-after-change-calls
       ;; if not auto-completing, just resolve old pending completiong
       ;; and delete backwards
-      (if (not completion-auto-complete)
+      (if (not auto-completion-mode)
 	  (progn
 	    (completion-resolve-old)
 	    (backward-delete-char-untabify n))
@@ -1368,8 +1541,8 @@ If this deletes into a word, complete what remains of that word."
 	(backward-delete-char-untabify n)
 
 	(cond
-	 ;; if we're not in or at the end of a word, reject any
-	 ;; completion and cancel any timer that's been set up
+	 ;; if we're not in or at the end of a word, reject any completion
+	 ;; and cancel any timer that's been set up
 	 ((and (not (completion-within-word-p))
 	       (not (completion-end-of-word-p)))
 	  (completion-reject)
@@ -1378,11 +1551,12 @@ If this deletes into a word, complete what remains of that word."
 	  (setq completion-backward-delete-timer nil))
 	 
 	 
-	 ;; otherwise, we're in or at the end of a word, so we're
-	 ;; going to complete the word at point
-	 (t
-	  ;; if point was at start of word before deleting, setup
-	  ;; overlay to prevent word after point being deleted
+	 ;; otherwise, we're in or at the end of a word, so if
+	 ;; auto-completion is enabled we're going to complete the word at
+	 ;; point...
+	 (auto-completion-mode
+	  ;; if point was at start of word before deleting, setup overlay
+	  ;; to prevent word after point being deleted
 	  (when (or overlay
 		    (and wordstart
 			 (null (completion-overlay-at-point))
@@ -1401,13 +1575,17 @@ If this deletes into a word, complete what remains of that word."
 	    (cancel-timer completion-backward-delete-timer))
 	  (setq completion-backward-delete-timer
 		(run-with-idle-timer
-		 completion-backward-delete-delay nil
+		 auto-completion-backward-delete-delay nil
+		 ;; FIXME: tooltip doesn't seem to be displayed - why?
 		 (lambda ()
-		   ;; FIXME: tooltip doesn't seem to be displayed -
-		   ;; why?
 		   (complete-word-at-point)
 		   (setq completion-backward-delete-timer nil)))))
-	 ))))
+	 
+	 
+	 ;; if auto-completion isn't enabled, delete the overlay and do
+	 ;; nothing
+	 (t (delete-overlay overlay)))
+	)))
 )
 
 
@@ -1458,7 +1636,8 @@ the prefix and the completion string\). Otherwise returns nil."
 
 (defun completion-accept-if-within-overlay (&optional arg)
   "Accept current completion if there is one,
-then run whatever command would normally be bound to RET.
+then run whatever command would normally be bound to the key
+sequence used to invoke this function.
 
 ARG is the prefix argument, which is passed as the third argument
 to any functions called from the `completion-accept-functions'
@@ -1518,7 +1697,8 @@ the prefix and the completion string\). Otherwise returns nil."
 
 (defun completion-reject-if-within-overlay (&optional arg)
   "Reject the current completion if there is one, otherwise run
-whatever would normally be bound to the key sequence.
+whatever would normally be bound to the key sequence used to
+invoke this function.
 
 ARG is the prefix argument, which is passed as the third argument
 to any function called from the `completion-reject-functions'
@@ -1554,8 +1734,8 @@ boil away."
      nil nil overlay))
   
   ;; if auto-completing, do so
-  (when completion-auto-complete
-    (complete (overlay-get overlay 'prefix) overlay))
+  (when auto-completion-mode
+    (complete-in-buffer (overlay-get overlay 'prefix) overlay t))
 )
 
 
@@ -1624,14 +1804,15 @@ If OVERLAY is supplied, use that instead of finding one."
 		     (concat (overlay-get overlay 'prefix) str))
 	(overlay-put overlay 'completions nil))
       ;; when auto-completing, do so
-      (when completion-auto-complete
-	(complete (overlay-get overlay 'prefix) overlay))))
+      (when auto-completion-mode
+	(complete-in-buffer (overlay-get overlay 'prefix) overlay t))))
 )
 
 
 (defun completion-tab-complete-if-within-overlay ()
   "Tab-complete current completion if there is one, otherwise run
-whatever command would normally be bound to the key sequence."
+whatever command would normally be bound to the key sequence used
+to invoke this function."
   (interactive)
   (completion-run-if-within-overlay 'completion-tab-complete
 				    'completion-function)
@@ -2356,7 +2537,7 @@ See also `completion-window-posn-at-point' and
 
 
 ;;; ===============================================================
-;;;                       Compatibility Stuff
+;;;                     Compatibility Stuff
 
 ;; prevent bogus compiler warnings
 (eval-when-compile
