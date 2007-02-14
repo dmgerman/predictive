@@ -75,7 +75,7 @@ liking.
 Completing Words
 
 * Basic Completion Commands::   
-* Auto-Completion mode::        
+* Auto-Completion Mode::        
 * Dynamic Completion::          
 * Completion Hotkeys::          
 * Displaying a List of Candidates::  
@@ -390,7 +390,7 @@ type.
 
 @menu
 * Basic Completion Commands::   
-* Auto-Completion mode::        
+* Auto-Completion Mode::        
 * Dynamic Completion::          
 * Completion Hotkeys::          
 * Displaying a List of Candidates::  
@@ -463,7 +463,7 @@ string.
 @findex completion-scoot-ahead
 @end ftable
 
-Unless you are using @env{auto-completion-mode},
+Unless you are using @command{auto-completion-mode},
 @command{complete-word-at-point}, bound to both @kbd{M-TAB} and
 @kbd{M-SHIFT-TAB} by default, must be used to start completing a
 word. After running @command{complete-word-at-point},
@@ -473,6 +473,7 @@ cycles through the available completions for the current word,
 provisionally inserting them after the point and highlighting them to
 indicate they have not been accepted yet. In the default key bindings,
 @kbd{M-TAB} cycles forwards and @kbd{M-SHIFT-TAB} cycles backwards.
+@findex auto-completion-mode
 
 To accept a completion, simply type any end-of-word character
 (@pxref{Character Syntax and Key Bindings}), or use the
@@ -494,15 +495,15 @@ word.
 @item completion-backward-delete
 (@kbd{DEL}) Reject current completion, if there is one, and delete
 backwards. A prefix argument sets the number of characters to delete. If
-this deletes into a word and @env{auto-completion-mode} is enabled,
+this deletes into a word and @command{auto-completion-mode} is enabled,
 complete what remains of that word.
-@findex{auto-completion-mode}
+@findex auto-completion-mode
 @end ftable
 
 @command{completion-backward-delete} works very like
 @command{backward-delete-untabify}), but first rejects any provisional
 completion that had been inserted at the point. If
-@env{auto-completion-mode} is enabled, it also re-completes the string
+@command{auto-completion-mode} is enabled, it also re-completes the string
 remaining before the point after the characters have been deleted
 (@pxref{Auto-Completion Mode}).
 @findex backward-delete
@@ -511,30 +512,30 @@ remaining before the point after the characters have been deleted
 
 
 
-@node Auto-Completion mode
-@section Auto-Completion mode
+@node Auto-Completion Mode
+@section Auto-Completion Mode
 @cindex auto-completion mode
 @cindex completion, automatic
 
-When the @env{auto-completion} minor mode is enabled by running the
+When the @command{auto-completion} minor mode is enabled by running the
 @command{auto-completion-mode} command, predictive mode will
 automatically look for completions of words as you type. This is
 especially useful when used in conjunction with dynamic completion
 (@pxref{Dynamic Completion}). If you would like
-@env{auto-completion-mode} to be enabled automatically whenever
+@command{auto-completion-mode} to be enabled automatically whenever
 predictive mode is enabled, set the @env{predictive-auto-complete}
 variable.
 
 @ftable @command
 @item auto-completion-mode
-Enable auto-completion mode. In this minor mode, completions are found
+Enable auto-completion Mode. In this minor mode, completions are found
 automatically as words are typed.
 @end ftable
 
 @vtable @env
 @item predictive-auto-complete
 When non-nil (the default), enabling and disabling predictive mode will
-also automatically enable or disable @env{auto-completion-mode}, without
+also automatically enable or disable @command{auto-completion-mode}, without
 needing to run the @command{auto-completion-mode} command manually.
 @end vtable
 
@@ -551,11 +552,12 @@ Dynamic completion is controlled by the @env{completion-use-dynamic}
 customisation variable. When it is non-nil, the most likely completion
 is provisionally inserted in the buffer after the point and highlighted
 to indicate that it has not yet been accepted. If
-@env{auto-completion-mode} is enabled, typing more word-constituent
+@command{auto-completion-mode} is enabled, typing more word-constituent
 characters will add them to the word, and update the most likely
-completion (@pxref{Auto-Completion mode}). Typing any end-of-word
+completion (@pxref{Auto-Completion Mode}). Typing any end-of-word
 character (such as a space or a punctuation character) will accept the
 completion.
+@findex auto-completion-mode
 
 The current syntax table (@pxref{Syntax, , , emacs, GNU Emacs Manual})
 determines which characters are word-constituents and which are not
@@ -565,7 +567,7 @@ overridden). @xref{Character Syntax and Key Bindings}, for details.
 Note that since the @command{completion-reject} command ends the
 completion process, if you want to find completions for the word again
 you have to do it manually with @command{complete-word-at-point} even
-when @env{auto-completion-mode} is enabled. @xref{Inserting
+when @command{auto-completion-mode} is enabled. @xref{Inserting
 Completions}, and @ref{Auto-Completion Mode}.
 @findex complete-word-at-point
 @findex auto-completion-mode
