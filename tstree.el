@@ -2,7 +2,7 @@
 ;;; tstree.el --- ternary search tree package
 
 
-;; Copyright (C) 2004-2006 Toby Cubitt
+;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.7.3
@@ -60,8 +60,8 @@
 ;;; Change Log:
 ;;
 ;; Version 0.7.3
-;; * fixed bug in `tstree-construct-sortfun' that caused keys to be sorted in
-;;   reverse order
+;; * fixed bug in `tstree-construct-sortfun' that caused keys to be
+;;   sorted in reverse order
 ;;
 ;; Version 0.7.2
 ;; * fixed `tstree-complete' and `tstree-complete-ordered' so they work
@@ -162,7 +162,8 @@
 
 
 
-(defmacro tstree--node-create (low equal high split) ; INTERNAL USE ONLY.
+(defmacro tstree--node-create (low equal high split)
+  ;; INTERNAL USE ONLY.
   ;; Create a TST node from LOW, EQUAL, HIGH and SPLIT.
   ;; Note: If SPLIT is nil, EQUAL stores data rather than a pointer
   `(vector ,low ,equal ,high ,split))
@@ -220,7 +221,8 @@
   `(aref ,node (1+ (tstree--signum ,d))))
 
 
-(defmacro tstree--node-set-branch (node d newbranch)  ; INTERNAL USE ONLY.
+(defmacro tstree--node-set-branch (node d newbranch)
+  ;; INTERNAL USE ONLY.
   ;; If D is negative, zero or positive, set the high, equal or low
   ;; value respectively of NODE to NEWBRANCH.
   `(aset ,node (1+ (tstree--signum ,d)) ,newbranch))
@@ -245,7 +247,8 @@
 	(while (and node (< c len))
 	  (setq d (funcall cmpfun chr (tstree--node-split node)))
 	  (if (= 0 d)
-	      (when (< (setq c (1+ c)) len) (setq chr (elt sequence c))))
+	      (when (< (setq c (1+ c)) len)
+		(setq chr (elt sequence c))))
 	  (setq node (tstree--node-branch node d)))
 	node))
   )
@@ -298,8 +301,9 @@ than\". Used by `tstree-complete-ordered' to rank completions."
 
          ;; comparison-function defaults to -
   (let* ((cmpfun (if compare-function compare-function '-))
-	 ;; the lambda expression redefines the compare funtion to ensure
-	 ;; that all values other than nil are "greater" than nil
+	 ;; the lambda expression redefines the compare funtion to
+	 ;; ensure that all values other than nil are "greater" than
+	 ;; nil
 	 (cmpfun `(lambda (a b)
 		    (cond ((and (null a) (null b)) 0) ((null a) -1)
 			  ((null b) 1) (t (,cmpfun a b)))))
@@ -409,7 +413,8 @@ tree."
 	  ;; if we've reached end of key, create data node and exit
 	  (tstree--node-set-branch
 	   node d (tstree--node-create
-		   nil (setq newdata (funcall insfun data nil)) nil nil))
+		   nil (setq newdata (funcall insfun data nil))
+		   nil nil))
 	  (setq node nil)))  ; fores loop to exit
       
       ;; return the newly inserted data
@@ -445,8 +450,8 @@ the insersion function of the first tree in the list."
       
       ;; keep following the low branch until we find the data node, or
       ;; can't go any further (Note: no need to deal with deleted data
-      ;; nodes specially, since they have null equal nodes anyway and will
-      ;; return the right thing, namely nil)
+      ;; nodes specially, since they have null equal nodes anyway and
+      ;; will return the right thing, namely nil)
       (while (tstree--node-p node)
 	(setq node (if (tstree--node-split node) (tstree--node-low node)
 		     (tstree--node-equal node))))
@@ -522,11 +527,12 @@ Returns non-nil if KEY was deleted, nil if KEY was not in TREE."
     
     (cond
      ;; if KEY is not in TREE, return nil
-     ((or (tstree--node-split node) (eq (tstree--node-low node) 'deleted))
+     ((or (tstree--node-split node)
+	  (eq (tstree--node-low node) 'deleted))
       nil)
-     ;; if KEY is in TREE, recurse up the stack deleting the nodes, until
-     ;; we reach a node that has a branch other than the one containing
-     ;; KEY
+     ;; if KEY is in TREE, recurse up the stack deleting the nodes,
+     ;; until we reach a node that has a branch other than the one
+     ;; containing KEY
      (t
       (let (parent)
 	(setq parent (car stack))
@@ -608,7 +614,8 @@ function calls is returned. Don't use this. Use the
 	      (progn
 		(setq result (funcall function str
 				      (tstree--node-equal node)))
-		(when mapcar (setq accumulate (cons result accumulate))))
+		(when mapcar
+		  (setq accumulate (cons result accumulate))))
 	    (when (tstree--node-equal node)
 	      (push (tstree--node-equal node) stack)
 	      (push (cond
@@ -616,7 +623,8 @@ function calls is returned. Don't use this. Use the
 		      (concat str (string (tstree--node-split node))))
 		     ((eq type 'list)
 		      (append str (list (tstree--node-split node))))
-		     (t (vconcat str (vector (tstree--node-split node)))))
+		     (t (vconcat str
+				 (vector (tstree--node-split node)))))
 		    stack)))
 	  
 	  ;; add the low child to the stack, if it exists
@@ -716,8 +724,8 @@ included in the results."
 	  (pop stack)))
       
       ;; ----- search the tree -----
-      ;; Keep going until we've searched all nodes (node stack is empty),
-      ;; or have found enough completions.
+      ;; Keep going until we've searched all nodes (node stack is
+      ;; empty), or have found enough completions.
       (while (and stack (or (null maxnum) (< num maxnum)))
 	(setq seq (pop stack))
 	(setq node (pop stack))
@@ -736,13 +744,15 @@ included in the results."
 		      (concat seq (string (tstree--node-split node))))
 		     ((listp seq)
 		      (append seq (list (tstree--node-split node))))
-		     (t (vconcat seq (vector (tstree--node-split node)))))
+		     (t (vconcat seq
+				 (vector (tstree--node-split node)))))
 		    stack))
-	  ;; if we're at a data node that hasn't been flagged as deleted,
-	  ;; and passes the filter, we've found a completion
+	  ;; if we're at a data node that hasn't been flagged as
+	  ;; deleted, and passes the filter, we've found a completion
 	  (when (and (not (eq (tstree--node-low node) 'deleted))
 		     (or (null filter)
-			 (funcall filter seq (tstree--node-equal node))))
+			 (funcall filter seq
+				  (tstree--node-equal node))))
 	    ;; skip completion if we've already found it in a previous
 	    ;; tree
 	    (unless (catch 'found
@@ -851,7 +861,8 @@ results."
 
     
     ;; ----- initialise the heap -----
-    (let ((rankfun (or rank-function (tstree--tree-rankfun (car tree)))))
+    (let ((rankfun (or rank-function
+		       (tstree--tree-rankfun (car tree)))))
       ;; create the heap with a rank-function constructed from the first
       ;; tree in the list
       (setq heap (heap-create `(lambda (a b) (not (,rankfun a b)))
@@ -872,7 +883,8 @@ results."
 	
 	
 	;; ------ search the current tree -----
-	;; keep going until we've searched all nodes (node stack is empty)
+	;; keep going until we've searched all nodes (node stack is
+	;; empty)
 	(while stack
 	  (setq seq (pop stack))
 	  (setq node (pop stack))
@@ -882,7 +894,8 @@ results."
 	    (push (tstree--node-high node) stack)
 	    (push seq stack))
 	  
-	  ;; if we're not at a data node, add the equal child to the stack
+	  ;; if we're not at a data node, add the equal child to the
+	  ;; stack
 	  (if (tstree--node-split node)
 	      (when (tstree--node-equal node)
 		(push (tstree--node-equal node) stack)
@@ -892,7 +905,8 @@ results."
 		       ((listp seq)
 			(append seq (list (tstree--node-split node))))
 		       (t
-			(vconcat seq (vector (tstree--node-split node)))))
+			(vconcat seq
+				 (vector (tstree--node-split node)))))
 		      stack))
 	    ;; if we're at a data node that hasn't been flagged as
 	    ;; deleted, and passes the filter, we've found a completion
@@ -918,8 +932,8 @@ results."
 		;; add the completion to the heap
 		(heap-add heap (cons seq data))
 		(setq num (1+ num))
-		;; If we already have enough completions, delete the worst
-		;; one from the heap.
+		;; If we already have enough completions, delete the
+		;; worst one from the heap.
 		(when (and maxnum (> num maxnum))
 		  (heap-delete-root heap))))
 	    )
