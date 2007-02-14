@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.2
+;; Version: 0.8 (pending)
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8
+;; * modified to allow sets of regexps that are shared between buffers to be
+;;   enabled and disabled independently in each of those buffers
+;; * abstracted access to the `auto-overlay-regexps' variable into accessor
+;;   macros, as much as possible
 ;;
 ;; Version 0.7.2
 ;; * added md5 sum check for regexps to `auto-overlay-load-overlays', to
@@ -121,46 +127,92 @@
 ;;;========================================================
 ;;;                 Code-tidying macros
 
-(defmacro auto-o-enabled-p (set-id)
-  ;; Return non-nil if regexp set identified by SET-ID is enabled.
-  `(let ((set (assq ,set-id auto-overlay-regexps)))
-     (and set (cadr set))))
+(defmacro auto-o-create-set (set-id)
+  ;; Add blank entry for a new regexp set SET-ID to `auto-overlay-regexps'.
+  `(push (list ,set-id nil) auto-overlay-regexps))
+
+
+(defmacro auto-o-delete-set (set-id)
+  ;; Delete SET-ID entry from `auto-overlay-regexps'.
+  `(setq auto-overlay-regexps
+	 (assq-delete-all ,set-id auto-overlay-regexps)))
+
+
+(defmacro auto-o-get-full-buffer-list (set-id)
+  ;; Return the list of buffers and associated properties for egexp set
+  ;; SET-ID.
+  `(nth 1 (assq ,set-id auto-overlay-regexps)))
 
 
 (defmacro auto-o-get-buffer-list (set-id)
-  ;; Return the list of buffers that use the regexp set SET-ID.
-  `(let ((set (assq ,set-id auto-overlay-regexps)))
-     (and set (caddr set))))
+  ;; Return list of buffers using regexp set SET-ID.
+  `(mapcar 'car (auto-o-get-full-buffer-list ,set-id)))
 
 
-(defmacro auto-o-set-buffer-list (set-id list)
-  ;; Set the list of buffers that use the regexp set SET-ID to LIST.
-  `(let ((set (assq ,set-id auto-overlay-regexps)))
-     (and set (setcar (cddr set) ,list))))
+(defmacro auto-o-get-regexps (set-id)
+  ;; Return the list of regexp definitions for regexp set SET-ID.
+  `(cddr (assq ,set-id auto-overlay-regexps)))
+
+
+
+
+;; (defmacro auto-o-set-buffer-list (set-id list)
+;;   ;; Set the list of buffers that use the regexp set SET-ID to LIST.
+;;   `(let ((set (assq ,set-id auto-overlay-regexps)))
+;;      (and set (setcar (cddr set) ,list))))
 
 
 (defmacro auto-o-add-to-buffer-list (set-id buffer)
   ;; Add BUFFER to the list of buffers using regexp set SET-ID.
   `(let ((set (assq ,set-id auto-overlay-regexps)))
      (and set
-	  (null (assq ,buffer (caddr set)))
-	  (setcar (cddr set) (cons ,buffer (caddr set))))))
+	  (null (assq ,buffer (cadr set)))
+	  (setcar (cdr set) (cons (cons ,buffer nil) (cadr set))))))
 
 
 (defmacro auto-o-delete-from-buffer-list (set-id buffer)
   ;; Remove BUFFER from the list of buffers using regexp set SET-ID.
   `(let ((set (assq ,set-id auto-overlay-regexps)))
-     (and set (setcar (cddr set) (delq ,buffer (caddr set))))))
+     (and set
+	  (setcar (cdr set) (assq-delete-all ,buffer (cadr set))))))
 
 
-(defmacro auto-o-enable-set (set-id)
-  ;; Set enabled flag for regexp set identified by SET-ID.
-  `(setcar (cdr (assq ,set-id auto-overlay-regexps)) t))
 
 
-(defmacro auto-o-disable-set (set-id)
-  ;; Unset enabled flag for regexp set identified by SET-ID.
-  `(setcar (cdr (assq ,set-id auto-overlay-regexps)) nil))
+(defmacro auto-o-enabled-p (set-id &optional buffer)
+  ;; Return non-nil if regexp set identified by SET-ID is enabled in BUFFER.
+  `(let ((buff (or ,buffer (current-buffer))))
+     (cdr (assq buff (auto-o-get-full-buffer-list ,set-id)))))
+
+
+(defmacro auto-o-enable-set (set-id buffer)
+  ;; Set enabled flag for BUFFER in regexp set SET-ID.
+  `(setcdr (assq ,buffer (auto-o-get-full-buffer-list ,set-id)) t))
+
+
+(defmacro auto-o-disable-set (set-id buffer)
+  ;; Unset enabled flag for BUFFER in regexp set SET-ID.
+  `(setcdr (assq ,buffer (auto-o-get-full-buffer-list ,set-id)) nil))
+
+
+
+
+(defmacro auto-o-append-regexp (set-id entry)
+  ;; Append regexp ENTRY to SET-ID's regexps.
+  `(nconc (auto-o-get-regexps ,set-id) (list ,entry)))
+
+
+(defmacro auto-o-prepend-regexp (set-id entry)
+  ;; Prepend regexp ENTRY to SET-ID's regexps.
+  `(setcdr (cdr (assq ,set-id auto-overlay-regexps))
+	   (nconc (list ,entry) (auto-o-get-regexps ,set-id))))
+
+
+(defmacro auto-o-insert-regexp (set-id pos entry)
+  ;; Insert regexp ENTRY in SET-ID's regexps at POS.
+  `(setcdr (nthcdr (1- pos) (auto-o-get-regexps ,set-id))
+	   (nconc (list ,entry) (nthcdr pos (auto-o-get-regexps ,set-id)))))
+
 
 
 (defmacro auto-o-entry (set-id entry-id &optional subentry-id)
@@ -168,15 +220,14 @@
   `(if ,subentry-id
        (cdr (assq ,subentry-id
 		  (cdr (assq ,entry-id
-			     (cddr (assq ,set-id auto-overlay-regexps))))))
+			     (auto-o-get-regexps ,set-id)))))
      (cdr (assq ,entry-id (cddr (assq ,set-id auto-overlay-regexps))))))
 
 
 (defmacro auto-o-class (o-match)
   ;; Return class of match overlay O-MATCH.
   `(cadr (assq (overlay-get ,o-match 'entry-id)
-	      (cddr (assq (overlay-get ,o-match 'set-id)
-			  auto-overlay-regexps)))))
+	      (auto-o-get-regexps (overlay-get ,o-match 'set-id)))))
 
 
 (defmacro auto-o-entry-regexp (set-id entry-id &optional subentry-id)
@@ -303,8 +354,7 @@
   `(auto-o-position
     (overlay-get ,o-match 'subentry-id)
     (cddr (assq (overlay-get ,o-match 'entry-id)
-		(cddr (assq (overlay-get ,o-match 'set-id)
-			    auto-overlay-regexps))))))
+		(auto-o-get-regexps (overlay-get ,o-match 'set-id))))))
 
 
 (defmacro auto-o-overlay-filename (set-id)
@@ -337,7 +387,7 @@ Comparison is done with 'eq."
 
 
 ;;;=========================================================
-;;;             auto-overlay regexp functions
+;;;       auto-overlay regexp definition functions
 
 (defun auto-overlay-load-regexp (entry set-id &optional pos entry-id)
   "Load ENTRY into the list of regexps named SET-ID.
@@ -350,34 +400,31 @@ at that position.
 If ENTRY-ID is supplied, it should be a symbol that can be used
 to uniquely identify the ENTRY."
 
-  (let ((regexp-set (assq set-id auto-overlay-regexps)))
+  (let ((regexps (auto-o-get-regexps set-id)))
     ;; if SET-ID doesn't exist in regexp list, create empty set
-    (when (null regexp-set)
-      (push (list set-id nil (list (current-buffer))) auto-overlay-regexps)
-      (setq regexp-set (car auto-overlay-regexps)))
+    (when (null regexps)
+      (auto-o-create-set set-id)
+      (auto-o-add-to-buffer-list set-id (current-buffer))
+      (setq regexps (auto-o-get-regexps set-id)))
     ;; if ENTRY-ID is not specified, create a unique numeric ENTRY-ID
     (unless entry-id
       (setq entry-id
 	    (1+ (apply 'max -1
 		       (mapcar (lambda (elt)
 				 (if (integerp (car elt)) (car elt) -1))
-			       (cdr regexp-set))))))
+			       regexps)))))
     (cond
+     ;; adding first entry or at start
+     ((or (eq pos t) (= (length regexps) 0)
+	  (and (integerp pos) (<= pos (length regexps))))
+      (auto-o-prepend-regexp set-id (cons entry-id (copy-sequence entry))))
      ;; adding at end
-     ((or (null pos) (and (integerp pos) (>= pos (length (cddr regexp-set)))))
-      (if (= (length (cddr regexp-set)) 0)
-	  (setcdr (cdr regexp-set) (list (cons entry-id (copy-sequence entry))))
-	(nconc (cddr regexp-set) (list (cons entry-id (copy-sequence entry))))))
-     ;; adding at start
-     ((or (eq pos t) (and (integerp pos) (<= pos 0)))
-      (setcdr (cdr regexp-set)
-	      (nconc (list (cons entry-id (copy-sequence entry)))
-		     (cddr regexp-set))))
+     ((or (null pos) (and (integerp pos) (>= pos (length regexps))))
+      (auto-o-append-regexp set-id (cons entry-id (copy-sequence entry))))
      ;; adding at POS
      ((integerp pos)
-      (setcdr (nthcdr (1- pos) (cddr regexp-set))
-	      (nconc (list (cons entry-id (copy-sequence entry)))
-		     (nthcdr pos (cddr regexp-set)))))))
+      (auto-o-insert-regexp set-id pos (cons entry-id (copy-sequence entry))))
+     ))
   ;; return new entry ID
   entry-id
 )
@@ -396,7 +443,7 @@ at that position.
 If SUBENTRY-ID is supplied, it should be a symbol that can be
 used to uniquely identify ENTRY."
 
-  (let ((regexps (assq entry-id (cddr (assq set-id auto-overlay-regexps)))))
+  (let ((regexps (assq entry-id (auto-o-get-regexps set-id))))
     (when (null regexps)
       (error "Compound regexp %s not found in auto-overlay regexp list %s"
 	     (symbol-name entry-id) (symbol-name set-id)))
@@ -454,9 +501,7 @@ that entire set."
 				  (eq subentry-id ,subentry-id)))))
       ;; delete regexp entry
       (assq-delete-all subentry-id
-		       (cdr (assq entry-id
-				  (cddr (assq set-id
-					      auto-overlay-regexps))))))
+		       (cdr (assq entry-id (auto-o-get-regexps set-id)))))
      
      ;; delete one entry
      (entry-id
@@ -470,19 +515,16 @@ that entire set."
 				  (eq entry-id ,entry-id)
 				  (eq subentry-id ,subentry-id)))))
       ;; delete regexp entry
-      (assq-delete-all entry-id (cddr (assq set-id auto-overlay-regexps))))
+      (assq-delete-all entry-id (auto-o-get-regexps set-id)))
    
    ;; delete entire set
    (t
-    ;; disable regexp set to delete overlays, reset enabled flag in case
-    ;; regexps are shared with other buffers, then delete regexp set from
+    ;; disable regexp set to delete overlays, then delete regexp set from
     ;; current buffer
     (when (auto-o-enabled-p set-id)
-      (auto-overlay-stop set-id)
-      (auto-o-enable-set set-id))
+      (auto-overlay-stop set-id))
     (auto-o-delete-from-buffer-list set-id (current-buffer))
-    (setq auto-overlay-regexps
-	  (assq-delete-all set-id auto-overlay-regexps)))
+    (auto-o-delete-set set-id))
    ))
   
 ;;   ;; run any required updates
@@ -538,34 +580,27 @@ the same as when the overlays were saved."
 
     ;; set enabled flag for regexp set, and make sure buffer is in buffer list
     ;; for the regexp set
-    (auto-o-enable-set set-id)
-
+    (auto-o-enable-set set-id (current-buffer))
     
-    ;; search for regexp matches in all buffers in which set is enabled
-    (save-excursion
-      (dolist (buff (auto-o-get-buffer-list set-id))
-	(set-buffer buff)
-	
-	;; try to load overlays from file
-	(unless (and (null ignore-save-file)
-		     (file-exists-p (auto-o-overlay-filename set-id))
-		     (auto-overlay-load-overlays set-id nil nil
-						 no-regexp-check))
-	  
-	  ;; if loading was unsuccessful, search for new auto overlays
-	  (let ((lines (count-lines (point-min) (point-max))))
-	    (goto-char (point-min))
-	    (message "Scanning for auto-overlays...(line 1 of %d)"
-		     lines)
-	    (dotimes (i lines)
-	      (when (= 9 (mod i 10))
-		(message
-		 "Scanning for auto-overlays...(line %d of %d)"
-		 (+ i 1) lines))
-	      (auto-overlay-update nil nil set-id)
-	      (forward-line 1))
-	    (message "Scanning for auto-overlays...done"))
-	  ))
+    ;; try to load overlays from file
+    (unless (and (null ignore-save-file)
+		 (file-exists-p (auto-o-overlay-filename set-id))
+		 (auto-overlay-load-overlays set-id nil nil
+					     no-regexp-check))
+      
+      ;; if loading was unsuccessful, search for new auto overlays
+      (let ((lines (count-lines (point-min) (point-max))))
+	(goto-char (point-min))
+	(message "Scanning for auto-overlays...(line 1 of %d)"
+		 lines)
+	(dotimes (i lines)
+	  (when (= 9 (mod i 10))
+	    (message
+	     "Scanning for auto-overlays...(line %d of %d)"
+	     (+ i 1) lines))
+	  (auto-overlay-update nil nil set-id)
+	  (forward-line 1))
+	(message "Scanning for auto-overlays...done"))
       ))
 )
 
@@ -585,42 +620,37 @@ up a bit\)."
   (save-excursion
     (when buffer (set-buffer buffer))
     ;; disable overlay set
-    (auto-o-disable-set set-id)
+    (auto-o-disable-set set-id (current-buffer))
 
-    ;; delete overlays from all buffers in which set is enabled
-    (save-excursion
-      (dolist (buff (auto-o-get-buffer-list set-id))
-	(set-buffer buff)
-	
-	;; if SAVE is non-nil, save overlays to a file
-	(when save (auto-overlay-save-overlays set-id))
-	;; delete overlays unless told not to bother
-	(unless leave-overlays
-	  (mapc 'delete-overlay
-		(auto-overlays-in
-		 (point-min) (point-max)
-		 (list
-		  (list (lambda (overlay match) (or overlay match))
-			'(auto-overlay auto-overlay-match))
-		  (list 'eq 'set-id set-id))
-		 nil 'inactive)))
-	
-	;; if there are no more active auto-overlay definitions...
-	(unless (catch 'enabled
-		  (dolist (set auto-overlay-regexps)
-		    (when (auto-o-enabled-p (car set))
-		      (throw 'enabled t)))
-		  nil)
-	  ;; run clear hooks
-	  (run-hooks 'auto-overlay-unload-hook)
-	  ;; reset variables
-	  (remove-hook 'after-change-functions 'auto-o-schedule-update t)
-	  (remove-hook 'after-change-functions
-		       'auto-o-run-after-change-functions t)
-	  (setq auto-o-pending-suicides nil
-		auto-o-pending-updates nil
-		auto-o-pending-post-suicide nil)))
-      ))
+    ;; if SAVE is non-nil, save overlays to a file
+    (when save (auto-overlay-save-overlays set-id))
+    
+    ;; delete overlays unless told not to bother
+    (unless leave-overlays
+      (mapc 'delete-overlay
+	    (auto-overlays-in
+	     (point-min) (point-max)
+	     (list
+	      (list (lambda (overlay match) (or overlay match))
+		    '(auto-overlay auto-overlay-match))
+	      (list 'eq 'set-id set-id))
+	     nil 'inactive)))
+    
+    ;; if there are no more active auto-overlay definitions...
+    (unless (catch 'enabled
+	      (dolist (set auto-overlay-regexps)
+		(when (auto-o-enabled-p (car set))
+		  (throw 'enabled t)))
+	      nil)
+      ;; run clear hooks
+      (run-hooks 'auto-overlay-unload-hook)
+      ;; reset variables
+      (remove-hook 'after-change-functions 'auto-o-schedule-update t)
+      (remove-hook 'after-change-functions
+		   'auto-o-run-after-change-functions t)
+      (setq auto-o-pending-suicides nil
+	    auto-o-pending-updates nil
+	    auto-o-pending-post-suicide nil)))
 )
 
 
@@ -644,7 +674,7 @@ They can be loaded again later using `auto-overlay-load-overlays'."
       ;; write md5 digests to first two lines
       (prin1 (md5 (current-buffer)) buff)
       (terpri buff)
-      (prin1 (md5 (prin1-to-string (assq set-id auto-overlay-regexps))) buff)
+      (prin1 (md5 (prin1-to-string (auto-o-get-regexps set-id))) buff)
       (terpri buff)
 				    
       ;; get sorted list of all match overlays in set SET-ID
@@ -679,12 +709,6 @@ They can be loaded again later using `auto-overlay-load-overlays'."
     )
 )
 
-
-
-;; (put 'auto-overlay-md5-mismatch
-;;      'error-conditions '(error auto-overlay-md5-mismatch))
-;; (put 'auto-overlay-md5-mismatch
-;;      'error-message "Buffer has changed since overlays were saved to file")
 
 
 (defun auto-overlay-load-overlays (set-id &optional buffer file
@@ -732,8 +756,7 @@ was saved."
 		      (or no-regexp-check
 			  (string= md5-regexp
 				   (md5 (prin1-to-string
-					 (assq set-id
-					       auto-overlay-regexps)))))))
+					 (auto-o-get-regexps set-id)))))))
 	    (progn (kill-buffer buff) nil)
 
 	  ;; count number of overlays, for progress message
@@ -839,8 +862,8 @@ was saved."
   ;; containing the point. If SET-ID is specified, only look for matches in
   ;; that set of overlay regexps definitions.
   
-  (let (regexp-list entry-id class regexp group priority set-id subentry-id
-		    o-match o-overlap o-new)
+  (let (regexp-entry entry-id class regexp group priority set-id subentry-id
+		     o-match o-overlap o-new)
     (unless start (setq start (line-number-at-pos)))
     (save-excursion
       (save-match-data
@@ -852,20 +875,19 @@ was saved."
 	    (setq set-id (or set-id (car (nth s auto-overlay-regexps))))
 	    (when (auto-o-enabled-p set-id)
 	      ;; check each regexp entry in regexp set
-	      (dotimes (tp (length (cddr (nth s auto-overlay-regexps))))
-		(setq regexp-list (nth tp (cddr (nth s auto-overlay-regexps))))
-		(setq entry-id (car regexp-list))
-		(setq class (nth 1 regexp-list))
-		(setq regexp-list (cdr regexp-list)) ; remove entry-id
+	      (dolist (regexp-entry (auto-o-get-regexps set-id))
+		(setq entry-id (car regexp-entry))
+		(setq class (nth 1 regexp-entry))
+		(setq regexp-entry (cdr regexp-entry)) ; remove entry-id
 		(if (auto-o-entry-compound-class-p set-id entry-id)
-		    (pop regexp-list)		       ; remove class
-		  (setq regexp-list (list regexp-list))) ; bundle in list
+		    (pop regexp-entry)		       ; remove class
+		  (setq regexp-entry (list regexp-entry))) ; bundle in list
 	      
 		;; check all regexps for current entry if it has a compound
 		;; class
-		(dotimes (rank (length regexp-list))
-		  (if (> (length regexp-list) 1)
-		      (setq subentry-id (car (nth rank regexp-list)))
+		(dotimes (rank (length regexp-entry))
+		  (if (> (length regexp-entry) 1)
+		      (setq subentry-id (car (nth rank regexp-entry)))
 		    (setq subentry-id nil))
 		  
 		  ;; extract regexp properties from current entry
