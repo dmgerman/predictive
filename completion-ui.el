@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5 (pending)
+;; Version: 0.5
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 

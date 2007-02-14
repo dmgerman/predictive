@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8 (pending)
+;; Version: 0.8
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 

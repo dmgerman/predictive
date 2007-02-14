@@ -1,5 +1,5 @@
 
-all: user-guide programmer-guide
+all: user-guide programmer-guide auto-o-manual
 
 
 DIR=~/programming/predictive/docs

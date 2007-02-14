@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.6
+;; Version: 0.6.7
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,14 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.7
+;; * updated to work with new versions of the completion-UI and auto-overlays
+;;   packages
+;; * predictive mode can once again be enabled and disabled independently in
+;;   different LaTeX buffers that share the same TeX-master, but disabling it
+;;   in the TeX-master buffer will now disable it in all those related LaTeX
+;;   buffers
 ;;
 ;; Version 0.6.6
 ;; * added the appropriate checks for changed regexp definitions when starting
@@ -295,8 +303,20 @@
 
 (defun predictive-latex-disable ()
   "Disables predictive mode LaTeX settings.
-Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
+Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 
+  ;; if we're the TeX-master, first disable predictive mode in all related
+  ;; LaTeX buffers, which we find by looking for buffers that share the
+  ;; auto-overlays 'predictive regexp set
+  (when (eq TeX-master t)
+    (dolist (buff (auto-o-get-buffer-list 'predictive))
+      ;; TeX-master itself will be in list of buffers sharing regexp set, so
+      ;; need to filter it out
+      (unless (eq buff (current-buffer))
+	(save-excursion
+	  (set-buffer buff)
+	  (predictive-mode -1)))))
+  
   ;; stop predictive auto overlays
   (auto-overlay-stop 'predictive nil 'save)  ; non-nil arg saves overlays
   (auto-overlay-unload-regexp 'predictive)
@@ -305,7 +325,7 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   (setq predictive-main-dict predictive-latex-restore-main-dict)
   (kill-local-variable 'predictive-latex-restore-main-dict)
   ;; remove other local variable settings
-  (kill-local-variable 'completion-override-syntax-alist)
+  (kill-local-variable 'completion-dynamic-override-syntax-alist)
   (kill-local-variable 'completion-menu)
   (kill-local-variable 'words-include-escapes)
   (kill-local-variable 'predictive-latex-dict)
@@ -384,12 +404,12 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
    `(start "\\\\ref{" (dict . predictive-latex-label-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-syntax-alist . ((?w . (add t word))
-				       (?_ . (add t word))
-				       (?  . (accept t none))
-				       (?. . (add t word))
-				       (t  . (reject t none))))
-	   (completion-override-syntax-alist
+	   (completion-dynamic-syntax-alist . ((?w . (add t word))
+					       (?_ . (add t word))
+					       (?  . (accept t none))
+					       (?. . (add t word))
+					       (t  . (reject t none))))
+	   (completion-dynamic-override-syntax-alist
 	    . ((?: . ((lambda ()
 			(predictive-latex-completion-add-to-regexp ":"))
 		      t word))
@@ -403,12 +423,12 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
    `(start "\\\\eqref{" (dict . predictive-latex-label-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-syntax-alist . ((?w . (add t word))
+	   (completion-dynamic-syntax-alist . ((?w . (add t word))
 				       (?_ . (add t word))
 				       (?  . (accept t none))
 				       (?. . (add t word))
 				       (t  . (reject t none))))
-	   (completion-override-syntax-alist
+	   (completion-dynamic-override-syntax-alist
 	    . ((?: . ((lambda ()
 			(predictive-latex-completion-add-to-regexp
 			 ":"))
@@ -537,8 +557,8 @@ Added to `predictive-mode-disable-hook' by `predictive-latex-setup'."
   (local-unset-key [?-])
   
   ;; make "\", "$", "{" and "}" do the right thing
-  (make-local-variable 'completion-override-syntax-alist)
-  (setq completion-override-syntax-alist
+  (make-local-variable 'completion-dynamic-override-syntax-alist)
+  (setq completion-dynamic-override-syntax-alist
 	'((?\\ . ((lambda ()
 		    (if (and (char-before) (= (char-before) ?\\)
 			     (or (not (char-before (1- (point))))
@@ -992,7 +1012,8 @@ then cause `completion-self-insert' to add the last typed
 character and re-complete.
 
 Intended to be used as the \"resolve\" entry in
-`completion-syntax-alist' or `completion-override-syntax-alist'."
+`completion-dynamic-syntax-alist' or
+`completion-dynamic-override-syntax-alist'."
   
   (let (overlay completion)
     ;; if completion characters contain REGEXP, insert characters up to first

@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.2
+;; Version: 0.7.3
 ;; Keywords: ternary search tree, tstree
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -58,6 +58,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.3
+;; * fixed bug in `tstree-construct-sortfun' that caused keys to be sorted in
+;;   reverse order
 ;;
 ;; Version 0.7.2
 ;; * fixed `tstree-complete' and `tstree-complete-ordered' so they work
@@ -257,9 +261,9 @@ that compares individual elements of that type."
        (catch 'compared
 	 (dotimes (i (min (length a) (length b)))
 	   (setq cmp (funcall ,cmpfun (elt a i) (elt b i)))
-	   (cond ((< cmp 0) (throw 'compared nil))
-		 ((> cmp 0) (throw 'compared t))))
-	 (> (length a) (length b)))))
+	   (cond ((< cmp 0) (throw 'compared t))
+		 ((> cmp 0) (throw 'compared nil))))
+	 (< (length a) (length b)))))
 )
 
 
@@ -771,7 +775,7 @@ included in the results."
     ;; if searching across multiple trees, need to sort completions
     (when (> (length tree) 1)
       ;; construct sort function from tree's comparison function
-      (let* ((cmpl-sortfun `(lambda (a b) (,sortfun (car a) (car b)))))
+      (let ((cmpl-sortfun `(lambda (a b) (,sortfun (car a) (car b)))))
 	;; sort completions
 	(setq completions (sort completions cmpl-sortfun))))
     

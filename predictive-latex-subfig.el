@@ -54,12 +54,12 @@
    `(start "\\\\subref{" (dict . predictive-latex-label-dict) (priority . 2)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-syntax-alist . ((?w . (add t word))
-				       (?_ . (add t word))
-				       (?  . (accept t none))
-				       (?. . (add t word))
-				       (t  . (reject t none))))
-	   (completion-override-syntax-alist
+	   (completion-dynamic-syntax-alist . ((?w . (add t word))
+					       (?_ . (add t word))
+					       (?  . (accept t none))
+					       (?. . (add t word))
+					       (t  . (reject t none))))
+	   (completion-dynamic-override-syntax-alist
 	    . ((?: . ((lambda ()
 			(predictive-latex-completion-add-to-regexp ":"))
 		      t word))

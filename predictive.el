@@ -840,8 +840,12 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 
 (defun predictive-complete (prefix &optional maxnum)
   "Try to complete string PREFIX, usually the string before the point,
-returning at most MAXNUM completion candidates.
-  
+returning at most MAXNUM completion candidates, ordered by
+their weighting.
+
+If MAXNUM is null, all possible completion candidates are
+returned in alphabetical order, rather than by weight.
+
 If `predictive-ignore-initial-caps' is enabled and first
 character of string is capitalized, also search for completions
 for uncapitalized version."
