@@ -297,9 +297,11 @@ Share the set of regexp definitions identified by the symbol
 @var{set-id} in buffer @code{from-buffer} with the buffer
 @var{to-buffer}, or the current buffer if @var{to-buffer} is null. The
 regexp set becomes common to both buffers, and any changes made to it in
-one buffer, such as loading and unloading regexp definitions or starting
-and stopping the regexp set, are also reflected in the other buffer. To
-unshare the regexp set, simply unload the entire set from the desired
+one buffer, such as loading and unloading regexp definitions, are also
+reflected in the other buffer. However, the regexp set can still be
+enabled and disabled independently in both buffers. The same regexp set
+can be shared between any number of buffers. To remove a shared regexp
+set from one of the buffers, simply unload the entire set from that
 buffer using @command{auto-overlay-unload-regexp}. The regexp set will
 remain defined in all the other buffers it was shared with.
 @end table
