@@ -1726,6 +1726,7 @@ read from the minibuffer instead."
     ;; if no prefix or min length was supplied, prompt for a prefix
     (if (null prefix)
 	(let ((str (thing-at-point 'word)))
+	  (when (string= str "") (setq str nil))
 	  (setq prefix (read-from-minibuffer
 			(concat "Prefix to boost"
 				(when str (concat " (default \"" str "\")"))
