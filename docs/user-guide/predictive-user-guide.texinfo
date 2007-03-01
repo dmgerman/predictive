@@ -7,9 +7,13 @@
 @settitle Emacs Predictive Completion User Guide
 @c %**end of header
 
+@dircategory Emacs
+@direntry
+* Predictive: (predictive). Predictive text completion package for Emacs.
+@end direntry
 
 @copying
-This manual describes the Emacs Predictive Completion package, version
+This manual documents the Emacs Predictive Completion package, version
 0.16
 @c --version--
 
@@ -1404,11 +1408,11 @@ be a prefix of the other.)
 
 @item predictive-define-all-prefixes
 Define all possible prefix relationships for a word. If called without a
-prefix argument (nothing to do with the prefix word!), this command
-prompts for a word, and that word is defined to be a prefix of all its
-extensions (i.e. all words that it is a prefix for). Predictive mode
-will then automatically ensure that the weight of the prefix word is
-ketpt at least as large as that of all of its extensions.
+prefix argument (nothing to do with the prefix @emph{word}!), this
+command prompts for a word, and that word is defined to be a prefix of
+all its extensions (i.e. all words that it is a prefix for). Predictive
+mode will then automatically ensure that the weight of the prefix word
+is kept at least as large as that of all of its extensions.
 
 If called with a numerical prefix argument, this command defines the
 same prefix relationships, but for @emph{all} words in the dictionary
