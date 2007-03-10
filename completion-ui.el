@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5
+;; Version: 0.5.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -94,6 +94,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.1
+;; * fixed small bug in `completion-self-insert' (thanks to Nikolaj Schumacher
+;;   for pointing it out)
 ;;
 ;; Version 0.5
 ;; Modifications arising from discussions with rms:
@@ -1283,11 +1287,11 @@ characters."
     (let* ((syntax-alist (if (fboundp 'auto-overlay-local-binding)
 			     (auto-overlay-local-binding
 			      'completion-dynamic-syntax-alist)
-			   'completion-dynamic-syntax-alist))
+			   completion-dynamic-syntax-alist))
 	   (override-alist (if (fboundp 'auto-overlay-local-binding)
 			       (auto-overlay-local-binding
 				'completion-dynamic-override-syntax-alist)
-			     'completion-dynamic-override-syntax-alist))
+			     completion-dynamic-override-syntax-alist))
 	   (behaviour
 	    (or (cdr (assq last-input-event override-alist))
 		(cdr (assq (char-syntax last-input-event) syntax-alist))
