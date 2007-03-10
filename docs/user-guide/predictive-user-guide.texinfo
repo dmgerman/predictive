@@ -65,6 +65,7 @@ liking.
 * Obtaining and Installing::    
 * Quick-Start::                 
 * Completing Words::            
+* Dictionaries::                
 * Advanced Customisation::      
 * Bugs and Future Improvements::  
 * Credits::                     
@@ -91,17 +92,6 @@ Basic Completion Commands
 * Inserting Completions::       
 * Deleting Characters::         
 
-Advanced Customisation
-
-* Character Syntax and Key Bindings::  
-* Dictionaries::                
-* Major Modes::                 
-
-Character Syntax and Key Bindings
-
-* Keymaps and Key Bindings::    
-* Syntax::                      
-
 Dictionaries
 
 * Creating Dictionaries::       
@@ -115,6 +105,16 @@ Dictionary Learning
 * Learning from Buffers and Files::  
 * Automatic Learning::          
 * Relationships Between Words::  
+
+Advanced Customisation
+
+* Character Syntax and Key Bindings::  
+* Major Modes::                 
+
+Character Syntax and Key Bindings
+
+* Keymaps and Key Bindings::    
+* Syntax::                      
 
 Major Modes
 
@@ -734,6 +734,527 @@ you whether you want to accept or reject.
 
 
 
+@node Dictionaries
+@chapter Dictionaries
+@cindex dictionaries
+
+Predictive completion is only as good as the dictionary it uses. The
+dictionary doesn't only list the words themselves, it also ranks them
+according to how likely they are, so that predictive mode can offer the
+most likely completions first.
+
+As you type, predictive mode can learn which words you use more
+frequently, so that the predictions improve. It can automatically ensure
+certain words are always ranked higher than others (useful when one word
+is a prefix for another).
+
+It is not restricted to using one dictionary at a time; it can use many
+dictionaries in parallel, and can automatically switch dictionaries in
+regions of text defined by regular expressions.
+
+And it attempts to do all of that faster than you type, so that your
+typing is not slowed down even when using very large dictionaries. (As
+soon as Emacs becomes sentient -- surely not far off -- it will probably
+go on strike!)
+
+@menu
+* Creating Dictionaries::       
+* Loading and Saving Dictionaries::  
+* Basic Dictionary Usage::      
+* Region-Local Dictionaries::   
+* Dictionary Learning::         
+@end menu
+
+
+
+@node Creating Dictionaries
+@section Creating Dictionaries
+@cindex creating dictionaries
+@cindex dictionary, creating
+
+Predictive mode dictionaries store words along with their associated
+weights, used to rank the words in order of likelihood. The weight is
+just an integer value, which can be thought of as the relative frequency
+of a word (relative to the other words in the dictionary). A dictionary
+can also store prefix relationships between words, @xref{Relationships
+Between Words}.
+
+@noindent
+The following commands are used to manually create and modify
+dictionaries:
+
+@ftable @command
+@item predictive-create-dict
+Create a new dictionary. The dictionary name is read from the
+mini-buffer. You can optionally supply a filename to associate with the
+dictionary. The dictionary will be saved to this file by default (just
+as a buffer is saved to its associated file). You may also supply a file
+containing a list of words with which to populate the new
+dictionary. The @env{predictive-completion-speed} and
+@env{predictive-dict-autosave} variables set the new dictionary's
+completion speed and autosave flag (see below).
+@vindex predictive-completion-speed
+@vindex predictive-dict-autosave
+
+@item predictive-create-meta-dict
+Create a new meta-dictionary. A meta-dictionary is a wrapper around two
+or more dictionaries that behaves as if it was a single, combined
+dictionary. The weight of a word is the sum of it's weights in the
+constituent dictionaries, and the prefix relationships from all
+constituent dictionaries are merged (@pxref{Relationships Between
+Words}). Apart from supplying a list of constituent dictionaries, the
+other options are identical to those for
+@command{predictive-create-dict}.
+
+@item predictive-add-to-dict
+Insert a word into a dictionary. The dictionary name and word are read
+from the mini-buffer (defaults to the word at the point). An optional
+prefix argument specifies the weight. If the word is not already in the
+dictionary, it will be added to it with that initial weight (or 0 if
+none is supplied). If the word is already in the dictionary, its weight
+will be incremented by the weight value (or by 1 if none is supplied).
+
+@item predictive-remove-from-dict
+Completely remove a word from a dictionary. The dictionary name and word
+are read from the mini-buffer (defaults to the word at the point).
+
+@item dictree-size
+Display the number of words in a dictionary.
+@end ftable
+
+The file containing the list of words used to populate a dictionary has
+to conform to a specific format. Each line contains one word, delimited
+by @samp{""}, optionally followed by an integer separated by whitespace
+from the word itself, which specifies the word's weight. Any characters
+before the first @samp{"} are ignored. Note that the `words' in a
+dictionary do not have to be words in the usual sense. They can be
+arbitrary sequences of characters, including whitespace and punctuation
+characters. The quote character @samp{"} can be included by escaping it:
+@samp{\"}. However, see @ref{Known Bugs}.
+
+To ensure it is as efficiently structured as possible, it is best to
+create a dictionary from a list of words using
+@command{predictive-create-dict}, rather than creating a blank
+dictionary and adding the words using
+@command{predictive-add-to-dict}. Also, deleting many words using
+@command{predictive-remove-from-dict} will eventually result in
+particularly inefficient dictionary structures. For small dictionaries
+it won't make much difference, but for larger ones it can be
+significant. You can rebuild an inefficient dictionary by dumping the
+words to a buffer, creating a new dictionary, and populating it from the
+dumped words. @xref{Loading and Saving Dictionaries}.
+
+@noindent
+The following variables set defaults for other dictionary properties:
+
+@vtable @env
+@item predictive-completion-speed
+Sets the default completion speed of dictionaries created with
+@command{predictive-create-dict}. This is the desired upper limit on the
+time it takes to find completions; there is no guarantee it will be
+achieved! If it takes longer than this to find a particular completion,
+the results are cached so that they can be retrieved faster next
+time. Thus lower values result in faster completion, at the expense of
+dictionaries taking up more memory. Note that individual dictionaries
+can override this value, if a completion-speed is specified when they
+are created.
+
+@item predictive-dict-autosave
+Sets the default autosave property for dictionaries created with
+@command{predictive-create-dict}. If non-nil, modified dictionaries will
+automatically be saved when it is unloaded (either with the
+@command{predictive-dict-unload} command, or when exiting emacs). If
+nil, any unsaved modifications will be lost. @xref{Loading and Saving
+Dictionaries}.
+@cindex predictive-dict-unload
+@end vtable
+
+
+
+@node Loading and Saving Dictionaries
+@section Loading and Saving Dictionaries
+@cindex loading and saving dictionaries
+@cindex dictionaries, loading
+@cindex dictionaries, saving
+
+@ftable @command
+@item dictree-load
+Load a dictionary from file. The name given to the loaded dictionary is
+the same as the file name, with the extension removed. This will not add
+it to the list of dictionaries used by the current buffer (see
+@command{predictive-load-dict}, below).
+
+@item predictive-load-dict
+Load a dictionary, and add it to the list of dictionaries used by the
+current buffer. The dictionary file must be in your @env{load-path}. The
+dictionary will be included when learning from the buffer, see
+@ref{Learning from Buffers and Files}.
+
+@item dictree-unload
+Unload a dictionary. If the dictionary's autosave flag is set, this will
+also save it (@pxref{Creating Dictionaries}), unless overridden by
+supplying a prefix argument.
+
+@item dictree-save
+Save a dictionary to its associated file. Prompt for a file name if
+there is none associated with the dictionary.
+
+@item dictree-write
+Write a dictionary to a file specified via the mini-buffer. This also
+associates the dictionary with that file. If a prefix argument is
+supplied, you will @emph{not} be asked to confirm if over-writing an
+existing file.
+
+@item dictree-save-modified
+Save all modified dictionaries. If a prefix argument is supplied,
+confirm each dictionary before saving.
+
+@item predictive-dump-dict-to-buffer
+Dumps all words and weights in the dictionary to a buffer, in the
+same format as that used to populate dictionaries (@pxref{Creating
+Dictionaries}).
+
+@item predictive-dump-dict-to-file
+Dumps words and weights to a text file rather than a buffer. If a prefix
+argument is supplied, you will @emph{not} be asked to confirm if
+over-writing an existing file.
+@end ftable
+
+To use a dictionary, it must be loaded into memory. If the dictionary is
+in your load path, this can be done manually using the
+@command{load-library} or @command{predictive-load-dict} commands. The
+@command{predictive-load-dict} command additionally it to the list of
+dictionaries used by the current buffer. Alternatively, you can manually
+load a dictionary from file using the @command{dictree-load} command
+(you should avoid loading a dictionary using the @command{load-file}
+command, as it will not ensure the dictionary is associated with the
+file it was loaded from).
+
+If you want a dictionary to be loaded every time you run Emacs, you can
+add the following line to your @file{.emacs} file:
+
+@lisp
+(require '@var{dictionary-name})
+@end lisp
+
+@noindent
+The major-mode setup functions load the dictionaries they need
+automatically. @xref{Major Modes}.
+
+A buffer is usually associated with a file, and saving the buffer with
+the Emacs @command{save-buffer} command writes any changes back to that
+file. Similarly, dictionaries are usually associated with a dictionary
+file. The @command{dictree-save} command saves any changes back to that
+file. The @command{dictree-write} command is analogous to the Emacs
+@command{write-file} command.
+
+Dictionaries can be modified by adding words to them with the
+@command{predictive-add-to-dict} command (@pxref{Creating
+Dictionaries}). If the auto-learn features are used, dictionaries are
+modified whenever a completion is accepted (@pxref{Automatic
+Learning}). The @command{dictree-save-modified} saves all modified
+dictionaries. Modified dictionaries used in a buffer are automatically
+saved when that buffer is killed if they have their @code{autosave} flag
+set. All modified autosave dictionaries are saved when you exit Emacs.
+
+
+
+@node Basic Dictionary Usage
+@section Basic Dictionary Usage
+@cindex basic dictionary usage
+@cindex dictionaries, basic usage
+@cindex dictionaries, using
+@vindex predictive-main-dict
+
+The name of the main dictionary used by a buffer is stored in the
+buffer-local @env{predictive-main-dict} variable. Note that the variable
+usually contains the @emph{name} of the dictionary (a symbol), not the
+dictionary itself. This is the dictionary predictive mode will normally
+search for words in.
+
+@env{predictive-main-dict} can also hold a list of dictionary
+names. They are then treated as though they form one combined
+dictionary. However, when @env{predictive-auto-add-to-dict} is used,
+words are always added to the first dictionary in the
+list. @xref{Automatic Learning}.
+@vindex predictive-auto-learn
+@vindex predictive-auto-add-to-dict
+
+@ftable @command
+@item predictive-set-main-dict
+This function can be used as a convenience to set the main dictionary
+for the current buffer. You will only be able to select dictionaries
+that are already loaded (@pxref{Loading and Saving Dictionaries}). If
+you want to set the default main dictionary permanently, customize
+@env{predictive-main-dict} instead.
+@end ftable
+
+
+
+@node Region-Local Dictionaries
+@section Region-Local Dictionaries
+@cindex dictionaries, region-local
+@cindex dictionaries, region of text
+@cindex dictionaries, overlays
+@cindex dictionaries, using multiple
+@cindex using multiple dictionaries
+@cindex multiple dictionaries
+
+Using overlays, it is possible to set up dictionaries that are local to
+specific regions of text. The predictive mode support for a number of
+major modes (notably the @LaTeX{} support) makes use of this feature
+(@pxref{Major Modes}). Region-local dictionaries are, however, beyond
+the scope of this user-guide. @xref{Region-Local Dictionaries, , ,
+predictive-programmer-guide, Predictive Programmer Guide}.
+
+
+
+@node Dictionary Learning
+@section Dictionary Learning
+@cindex dictionaries, learning
+@cindex learning
+
+The better the weights in a dictionary match the frequency with which
+you use words, the more useful predictive mode will be. Some of the
+standard dictionaries already include word weights, which match average
+word frequencies taken from a large sample of texts. Some don't include
+any word weights. In any case, your personal word usage might be very
+different from the average.
+
+Ideally, the weights in a dictionary should match your personal style of
+writing. In fact, since your writing style might change significantly
+depending on whether you're writing, say, a scientific article or an
+email, it may even be worth having different dictionaries for different
+circumstances.
+
+The easiest way to teach a dictionary about your writing style is to
+supply it with samples of your writing, and have it learn the word
+weights from them. Predictive mode provides two ways to do this:
+learning from existing files, and automatic learning as you type.
+
+@menu
+* Learning from Buffers and Files::  
+* Automatic Learning::          
+* Relationships Between Words::  
+@end menu
+
+
+@node Learning from Buffers and Files
+@subsection Learning from Buffers and Files
+@cindex learning from buffers
+@cindex learning from files
+@cindex dictionaries, learning from buffers
+@cindex dictionaries, learning from files
+
+Predictive mode can learn word weights from existing text. The following
+commands can be used to do this. Note that they will not add new words
+to a dictionary; they only update weight of word that are already in the
+dictionary. The learning commands can use the information provided by
+switch-dictionary regions to decide which dictionary a word belongs
+to.
+
+Note that all the learning commands (even the ``fast'' ones!) can take a
+long time to run.
+
+@ftable @command
+@item predictive-learn-from-buffer
+Learns weights for words in a dictionary from text in a buffer. By
+default, learns word weights for all dictionaries used by the current
+buffer when predictive mode is enabled (@pxref{Loading and Saving
+Dictionaries}). Each occurrence of a word increments its weight in the
+dictionary. By default, only occurrences that occur in a region where
+the dictionary is active are taken into account (@pxref{Region-Local
+Dictionaries}). This can be overridden by supplying a prefix argument,
+in which case all occurrences are taken into account.
+
+@item predictive-learn-from-file
+Like @command{predictive-learn-from-buffer}, but learns from a file
+instead of a buffer.
+
+@item predictive-fast-learn-from-buffer
+Similar to @command{predictive-learn-from-buffer}. It runs faster for
+large dictionaries, at the expense of missing some words. Specifically,
+only words consisting entirely of word- or symbol-constituent characters
+(according to the buffer's syntax table) will be taken into account.
+
+@item predictive-fast-learn-from-file
+Like @command{predictive-fast-learn-from-buffer}, but learns from a file
+instead of a buffer.
+@end ftable
+
+
+@node Automatic Learning
+@subsection Automatic Learning
+@cindex automatic learning
+@cindex learning, automatic
+@cindex dictionary, automatic learn
+
+Predictive mode can automatically learn which words you use most often
+as you type, in order to make better predictions. This feature is
+especially useful when you first start using a dictionary, to adapt it
+to your writing style. Once a dictionary has `learned' and is making
+good predictions, it can be turned off to fix the order in which
+completions are offered (@pxref{What is predictive completion?}).
+
+@noindent
+The following variables control automatic learning:
+
+@vtable @env
+@item predictive-auto-learn
+Controls automatic word frequency learning. When non-nil, the weight for
+a word in is incremented each time it is accepted as a completion,
+making the word more likely to be offered higher up the list of
+completions in the future. Words that are not already in the dictionary
+are ignored unless @env{predictive-auto-add-to-dict} is set. Auto learn
+is disabled by default.
+
+@item predictive-auto-add-to-dict
+Controls automatic adding of new words to dictionaries. If nil (the
+default), words are never automatically added to a dictionary. If
+@code{t}, new words are automatically added to the active dictionary.
+If set to a dictionary name, new words are automatically added to that
+dictionary instead of the active one.
+
+@item predictive-add-to-dict-ask
+If non-nil, predictive mode will ask for confirmation before
+automatically adding any word to a dictionary. Enabled by default. This
+has no effect unless @env{predictive-auto-add-to-dict} is also set.
+
+@item predictive-use-buffer-local-dict
+If non-nil, a special, buffer-local dictionary will be created for each
+predictive mode buffer. The buffer-local dictionary is used in
+conjunction with the @env{predictive-main-dict}, and the two act as a
+single, combined main dictionary for the buffer.
+
+The buffer-local dictionary is initially empty, but whenever a word is
+learned (auto-learned, auto-added, or learned from a buffer or file), it
+is added to the buffer-local dictionary, and its weight there is
+incremented by a value @env{predictive-buffer-local-learn-multiplier}
+times higher than for normal dictionaries. Thus the buffer-local
+dictionary will help predictive mode adapt much faster to the vocabulary
+used in a specific buffer than global dictionaries alone can.
+
+If @env{predictive-dict-autosave} is enabled and the buffer is
+associated with a file, the buffer-local dictionary will automatically
+be saved to the directory containing the file (in fact, two files will
+be created in the directory).
+
+@item predictive-buffer-local-learn-multiplier
+Sets the learning speed for buffer-local dictionaries. Whenever a word
+is added to a buffer-local dictionary, the weight increment is
+multiplied by this value before being added to any existing word weight.
+
+@item predictive-use-auto-learn-cache
+If non-nil (the default), auto-learned and auto-added words are cached,
+and only actually added to the dictionary when Emacs has been idle for
+@env{predictive-flush-auto-learn-delay} seconds or the buffer is killed
+(it has no effect unless at least one of @env{predictive-auto-learn} or
+@env{predictive-auto-add-to-dict} is also set). This avoids small but
+sometimes noticeable delays when typing. New words or word weights will
+not be taken into account until the cache is fully flushed.
+@end vtable
+
+Note that if @env{predictive-main-dict} contains a list of dictionary
+names (@pxref{Basic Dictionary Usage}), an automatically learned or
+added word may not end up where you want it. The weight of a word is
+incremented in the first dictionary it is found in, and words are added
+to the first dictionary in the list (assuming
+@env{predictive-auto-add-to-dict} is set to @code{t}). It is best to
+ensure that dictionaries in the list do not duplicate any words.
+@vindex predictive-main-dict
+@cindex dictionary, buffer
+
+
+@node Relationships Between Words
+@subsection Relationships Between Words
+@cindex relationship between words
+@cindex prefix words
+@cindex words, relationships
+@cindex words, prefices
+
+As well as word frequencies, predictive mode dictionaries can store
+certain relationships between words, to make learning more
+effective. With each word in a dictionary, a list of other words can be
+associated. Predictive mode automatically ensures that the weights of
+the words in this list are always at least as large as that of the word
+they are associated with.
+
+This is most useful when one word is a prefix for another. For example,
+you may want to ensure that, however frequently the word @samp{learning}
+is used, the weight of the word @samp{learn} is always kept at least as
+big, so that it always takes precedence when completing.
+
+The following functions allow you to define and undefine such prefix
+relationships (note that despite the command names and descriptions,
+@command{predictive-define-prefix} and
+@command{predictive-undefine-prefix} can be used to define relationships
+between any two words, not just prefixes; however,
+@command{predictive-define-all-prefixes} and the
+@env{predictive-auto-define-prefixes} feature can only define actual
+prefix relationships):
+
+@ftable @command
+@item predictive-define-prefix
+Define one word to be a prefix of another. Predictive mode will ensure
+that the weight of the ``prefix'' word is always at least as large as
+that of the other. (Note that the word does not actually have to be a
+prefix of the other; this can be used to define a relationship between
+any two words, so that the weight of one is always larger than the
+other.)
+
+@item predictive-undefine-prefix
+Remove a ``prefix'' definition. (As for
+@command{predictive-define-prefix}, the word does not actually have to
+be a prefix of the other.)
+
+@item predictive-define-all-prefixes
+Define all possible prefix relationships for a word. If called without a
+prefix argument (nothing to do with the prefix @emph{word}!), this
+command prompts for a word, and that word is defined to be a prefix of
+all its extensions (i.e. all words that it is a prefix for). Predictive
+mode will then automatically ensure that the weight of the prefix word
+is kept at least as large as that of all of its extensions.
+
+If called with a numerical prefix argument, this command defines the
+same prefix relationships, but for @emph{all} words in the dictionary
+that are longer than the numerical value of the prefix argument. Use a 0
+or negative prefix argument to define the relationships for all words.
+@end ftable
+
+
+The following variable is used to help guess a likely prefix as a
+default for @command{predictive-define-prefix}. It's default value is
+only appropriate for English.
+
+@vtable @env
+@item predictive-guess-prefix-suffixes
+List of suffixes to use when guessing a likely prefix for a word. The
+suffixes a tried in the order they appear in the list, and the first one
+that matches the end of the word is used: the guessed prefix is the
+original word with the suffix removed.
+@end vtable
+
+
+Ensuring that prefixes take precedence when completing words is almost
+always a good idea. It makes predictive completion much more convenient
+(especially dynamic completion, @pxref{Dynamic Completion}). Therefore,
+predictive mode includes a feature that, when enabled (the default),
+automatically defines all the necesary prefix relationships whenever a
+word is added to a dictionary.
+
+@vtable @env
+@item predictive-auto-define-prefixes
+When non-nil, predictive mode will automatically update all prefix
+relationships for a word in a dictionary when the word is added. The
+new word will always take precedence over any word that is an extension
+of it, and in their turn any words that are prefixes of the new word
+will take precedence over it.
+@end vtable
+
+
+
+
+
 @node Advanced Customisation
 @chapter Advanced Customisation
 @cindex customisation, advanced
@@ -748,7 +1269,6 @@ scope of this user guide.
 
 @menu
 * Character Syntax and Key Bindings::  
-* Dictionaries::                
 * Major Modes::                 
 @end menu
 
@@ -930,525 +1450,6 @@ what is considered a word. Logically enough, it defaults to
 @code{word}. Lisp packages can redefine it, but this is again beyond the
 scope of this user-guide.}.
 
-
-
-
-@node Dictionaries
-@section Dictionaries
-@cindex dictionaries
-
-Predictive completion is only as good as the dictionary it uses. The
-dictionary doesn't only list the words themselves, it also ranks them
-according to how likely they are, so that predictive mode can offer the
-most likely completions first.
-
-As you type, predictive mode can learn which words you use more
-frequently, so that the predictions improve. It can automatically ensure
-certain words are always ranked higher than others (useful when one word
-is a prefix for another).
-
-It is not restricted to using one dictionary at a time; it can use many
-dictionaries in parallel, and can automatically switch dictionaries in
-regions of text defined by regular expressions.
-
-And it attempts to do all of that faster than you type, so that your
-typing is not slowed down even when using very large dictionaries. (As
-soon as Emacs becomes sentient -- surely not far off -- it will probably
-go on strike!)
-
-@menu
-* Creating Dictionaries::       
-* Loading and Saving Dictionaries::  
-* Basic Dictionary Usage::      
-* Region-Local Dictionaries::   
-* Dictionary Learning::         
-@end menu
-
-
-
-@node Creating Dictionaries
-@subsection Creating Dictionaries
-@cindex creating dictionaries
-@cindex dictionary, creating
-
-Predictive mode dictionaries store words along with their associated
-weights, used to rank the words in order of likelihood. The weight is
-just an integer value, which can be thought of as the relative frequency
-of a word (relative to the other words in the dictionary). A dictionary
-can also store prefix relationships between words, @xref{Relationships
-Between Words}.
-
-@noindent
-The following commands are used to manually create and modify
-dictionaries:
-
-@ftable @command
-@item predictive-create-dict
-Create a new dictionary. The dictionary name is read from the
-mini-buffer. You can optionally supply a filename to associate with the
-dictionary. The dictionary will be saved to this file by default (just
-as a buffer is saved to its associated file). You may also supply a file
-containing a list of words with which to populate the new
-dictionary. The @env{predictive-completion-speed} and
-@env{predictive-dict-autosave} variables set the new dictionary's
-completion speed and autosave flag (see below).
-@vindex predictive-completion-speed
-@vindex predictive-dict-autosave
-
-@item predictive-create-meta-dict
-Create a new meta-dictionary. A meta-dictionary is a wrapper around two
-or more dictionaries that behaves as if it was a single, combined
-dictionary. The weight of a word is the sum of it's weights in the
-constituent dictionaries, and the prefix relationships from all
-constituent dictionaries are merged (@pxref{Relationships Between
-Words}). Apart from supplying a list of constituent dictionaries, the
-other options are identical to those for
-@command{predictive-create-dict}.
-
-@item predictive-add-to-dict
-Insert a word into a dictionary. The dictionary name and word are read
-from the mini-buffer (defaults to the word at the point). An optional
-prefix argument specifies the weight. If the word is not already in the
-dictionary, it will be added to it with that initial weight (or 0 if
-none is supplied). If the word is already in the dictionary, its weight
-will be incremented by the weight value (or by 1 if none is supplied).
-
-@item predictive-remove-from-dict
-Completely remove a word from a dictionary. The dictionary name and word
-are read from the mini-buffer (defaults to the word at the point).
-
-@item dictree-size
-Display the number of words in a dictionary.
-@end ftable
-
-The file containing the list of words used to populate a dictionary has
-to conform to a specific format. Each line contains one word, delimited
-by @samp{""}, optionally followed by an integer separated by whitespace
-from the word itself, which specifies the word's weight. Any characters
-before the first @samp{"} are ignored. Note that the `words' in a
-dictionary do not have to be words in the usual sense. They can be
-arbitrary sequences of characters, including whitespace and punctuation
-characters. The quote character @samp{"} can be included by escaping it:
-@samp{\"}. However, see @ref{Known Bugs}.
-
-To ensure it is as efficiently structured as possible, it is best to
-create a dictionary from a list of words using
-@command{predictive-create-dict}, rather than creating a blank
-dictionary and adding the words using
-@command{predictive-add-to-dict}. Also, deleting many words using
-@command{predictive-remove-from-dict} will eventually result in
-particularly inefficient dictionary structures. For small dictionaries
-it won't make much difference, but for larger ones it can be
-significant. You can rebuild an inefficient dictionary by dumping the
-words to a buffer, creating a new dictionary, and populating it from the
-dumped words. @xref{Loading and Saving Dictionaries}.
-
-@noindent
-The following variables set defaults for other dictionary properties:
-
-@vtable @env
-@item predictive-completion-speed
-Sets the default completion speed of dictionaries created with
-@command{predictive-create-dict}. This is the desired upper limit on the
-time it takes to find completions; there is no guarantee it will be
-achieved! If it takes longer than this to find a particular completion,
-the results are cached so that they can be retrieved faster next
-time. Thus lower values result in faster completion, at the expense of
-dictionaries taking up more memory. Note that individual dictionaries
-can override this value, if a completion-speed is specified when they
-are created.
-
-@item predictive-dict-autosave
-Sets the default autosave property for dictionaries created with
-@command{predictive-create-dict}. If non-nil, modified dictionaries will
-automatically be saved when it is unloaded (either with the
-@command{predictive-dict-unload} command, or when exiting emacs). If
-nil, any unsaved modifications will be lost. @xref{Loading and Saving
-Dictionaries}.
-@cindex predictive-dict-unload
-@end vtable
-
-
-
-@node Loading and Saving Dictionaries
-@subsection Loading and Saving Dictionaries
-@cindex loading and saving dictionaries
-@cindex dictionaries, loading
-@cindex dictionaries, saving
-
-@ftable @command
-@item dictree-load
-Load a dictionary from file. The name given to the loaded dictionary is
-the same as the file name, with the extension removed. This will not add
-it to the list of dictionaries used by the current buffer (see
-@command{predictive-load-dict}, below).
-
-@item predictive-load-dict
-Load a dictionary, and add it to the list of dictionaries used by the
-current buffer. The dictionary file must be in your @env{load-path}. The
-dictionary will be included when learning from the buffer, see
-@ref{Learning from Buffers and Files}.
-
-@item dictree-unload
-Unload a dictionary. If the dictionary's autosave flag is set, this will
-also save it (@pxref{Creating Dictionaries}), unless overridden by
-supplying a prefix argument.
-
-@item dictree-save
-Save a dictionary to its associated file. Prompt for a file name if
-there is none associated with the dictionary.
-
-@item dictree-write
-Write a dictionary to a file specified via the mini-buffer. This also
-associates the dictionary with that file. If a prefix argument is
-supplied, you will @emph{not} be asked to confirm if over-writing an
-existing file.
-
-@item dictree-save-modified
-Save all modified dictionaries. If a prefix argument is supplied,
-confirm each dictionary before saving.
-
-@item predictive-dump-dict-to-buffer
-Dumps all words and weights in the dictionary to a buffer, in the
-same format as that used to populate dictionaries (@pxref{Creating
-Dictionaries}).
-
-@item predictive-dump-dict-to-file
-Dumps words and weights to a text file rather than a buffer. If a prefix
-argument is supplied, you will @emph{not} be asked to confirm if
-over-writing an existing file.
-@end ftable
-
-To use a dictionary, it must be loaded into memory. If the dictionary is
-in your load path, this can be done manually using the
-@command{load-library} or @command{predictive-load-dict} commands. The
-@command{predictive-load-dict} command additionally it to the list of
-dictionaries used by the current buffer. Alternatively, you can manually
-load a dictionary from file using the @command{dictree-load} command
-(you should avoid loading a dictionary using the @command{load-file}
-command, as it will not ensure the dictionary is associated with the
-file it was loaded from).
-
-If you want a dictionary to be loaded every time you run Emacs, you can
-add the following line to your @file{.emacs} file:
-
-@lisp
-(require '@var{dictionary-name})
-@end lisp
-
-@noindent
-The major-mode setup functions load the dictionaries they need
-automatically. @xref{Major Modes}.
-
-A buffer is usually associated with a file, and saving the buffer with
-the Emacs @command{save-buffer} command writes any changes back to that
-file. Similarly, dictionaries are usually associated with a dictionary
-file. The @command{dictree-save} command saves any changes back to that
-file. The @command{dictree-write} command is analogous to the Emacs
-@command{write-file} command.
-
-Dictionaries can be modified by adding words to them with the
-@command{predictive-add-to-dict} command (@pxref{Creating
-Dictionaries}). If the auto-learn features are used, dictionaries are
-modified whenever a completion is accepted (@pxref{Automatic
-Learning}). The @command{dictree-save-modified} saves all modified
-dictionaries. Modified dictionaries used in a buffer are automatically
-saved when that buffer is killed if they have their @code{autosave} flag
-set. All modified autosave dictionaries are saved when you exit Emacs.
-
-
-
-@node Basic Dictionary Usage
-@subsection Basic Dictionary Usage
-@cindex basic dictionary usage
-@cindex dictionaries, basic usage
-@cindex dictionaries, using
-@vindex predictive-main-dict
-
-The name of the main dictionary used by a buffer is stored in the
-buffer-local @env{predictive-main-dict} variable. Note that the variable
-usually contains the @emph{name} of the dictionary (a symbol), not the
-dictionary itself. This is the dictionary predictive mode will normally
-search for words in.
-
-@env{predictive-main-dict} can also hold a list of dictionary
-names. They are then treated as though they form one combined
-dictionary. However, when @env{predictive-auto-add-to-dict} is used,
-words are always added to the first dictionary in the
-list. @xref{Automatic Learning}.
-@vindex predictive-auto-learn
-@vindex predictive-auto-add-to-dict
-
-@ftable @command
-@item predictive-set-main-dict
-This function can be used as a convenience to set the main dictionary
-for the current buffer. You will only be able to select dictionaries
-that are already loaded (@pxref{Loading and Saving Dictionaries}). If
-you want to set the default main dictionary permanently, customize
-@env{predictive-main-dict} instead.
-@end ftable
-
-
-
-@node Region-Local Dictionaries
-@subsection Region-Local Dictionaries
-@cindex dictionaries, region-local
-@cindex dictionaries, region of text
-@cindex dictionaries, overlays
-@cindex dictionaries, using multiple
-@cindex using multiple dictionaries
-@cindex multiple dictionaries
-
-Using overlays, it is possible to set up dictionaries that are local to
-specific regions of text. The predictive mode support for a number of
-major modes (notably the @LaTeX{} support) makes use of this feature
-(@pxref{Major Modes}). Region-local dictionaries are, however, beyond
-the scope of this user-guide. @xref{Region-Local Dictionaries, , ,
-predictive-programmer-guide, Predictive Programmer Guide}.
-
-
-
-@node Dictionary Learning
-@subsection Dictionary Learning
-@cindex dictionaries, learning
-@cindex learning
-
-The better the weights in a dictionary match the frequency with which
-you use words, the more useful predictive mode will be. Some of the
-standard dictionaries already include word weights, which match average
-word frequencies taken from a large sample of texts. Some don't include
-any word weights. In any case, your personal word usage might be very
-different from the average.
-
-Ideally, the weights in a dictionary should match your personal style of
-writing. In fact, since your writing style might change significantly
-depending on whether you're writing, say, a scientific article or an
-email, it may even be worth having different dictionaries for different
-circumstances.
-
-The easiest way to teach a dictionary about your writing style is to
-supply it with samples of your writing, and have it learn the word
-weights from them. Predictive mode provides two ways to do this:
-learning from existing files, and automatic learning as you type.
-
-@menu
-* Learning from Buffers and Files::  
-* Automatic Learning::          
-* Relationships Between Words::  
-@end menu
-
-
-@node Learning from Buffers and Files
-@subsubsection Learning from Buffers and Files
-@cindex learning from buffers
-@cindex learning from files
-@cindex dictionaries, learning from buffers
-@cindex dictionaries, learning from files
-
-Predictive mode can learn word weights from existing text. The following
-commands can be used to do this. Note that they will not add new words
-to a dictionary; they only update weight of word that are already in the
-dictionary. The learning commands can use the information provided by
-switch-dictionary regions to decide which dictionary a word belongs
-to.
-
-Note that all the learning commands (even the ``fast'' ones!) can take a
-long time to run.
-
-@ftable @command
-@item predictive-learn-from-buffer
-Learns weights for words in a dictionary from text in a buffer. By
-default, learns word weights for all dictionaries used by the current
-buffer when predictive mode is enabled (@pxref{Loading and Saving
-Dictionaries}). Each occurrence of a word increments its weight in the
-dictionary. By default, only occurrences that occur in a region where
-the dictionary is active are taken into account (@pxref{Region-Local
-Dictionaries}). This can be overridden by supplying a prefix argument,
-in which case all occurrences are taken into account.
-
-@item predictive-learn-from-file
-Like @command{predictive-learn-from-buffer}, but learns from a file
-instead of a buffer.
-
-@item predictive-fast-learn-from-buffer
-Similar to @command{predictive-learn-from-buffer}. It runs faster for
-large dictionaries, at the expense of missing some words. Specifically,
-only words consisting entirely of word- or symbol-constituent characters
-(according to the buffer's syntax table) will be taken into account.
-
-@item predictive-fast-learn-from-file
-Like @command{predictive-fast-learn-from-buffer}, but learns from a file
-instead of a buffer.
-@end ftable
-
-
-@node Automatic Learning
-@subsubsection Automatic Learning
-@cindex automatic learning
-@cindex learning, automatic
-@cindex dictionary, automatic learn
-
-Predictive mode can automatically learn which words you use most often
-as you type, in order to make better predictions. This feature is
-especially useful when you first start using a dictionary, to adapt it
-to your writing style. Once a dictionary has `learned' and is making
-good predictions, it can be turned off to fix the order in which
-completions are offered (@pxref{What is predictive completion?}).
-
-@noindent
-The following variables control automatic learning:
-
-@vtable @env
-@item predictive-auto-learn
-Controls automatic word frequency learning. When non-nil, the weight for
-a word in is incremented each time it is accepted as a completion,
-making the word more likely to be offered higher up the list of
-completions in the future. Words that are not already in the dictionary
-are ignored unless @env{predictive-auto-add-to-dict} is set. Auto learn
-is disabled by default.
-
-@item predictive-auto-add-to-dict
-Controls automatic adding of new words to dictionaries. If nil (the
-default), words are never automatically added to a dictionary. If
-@code{t}, new words are automatically added to the active dictionary.
-If set to a dictionary name, new words are automatically added to that
-dictionary instead of the active one.
-
-@item predictive-add-to-dict-ask
-If non-nil, predictive mode will ask for confirmation before
-automatically adding any word to a dictionary. Enabled by default. This
-has no effect unless @env{predictive-auto-add-to-dict} is also set.
-
-@item predictive-use-buffer-local-dict
-If non-nil, a special, buffer-local dictionary will be created for each
-predictive mode buffer. The buffer-local dictionary is used in
-conjunction with the @env{predictive-main-dict}, and the two act as a
-single, combined main dictionary for the buffer.
-
-The buffer-local dictionary is initially empty, but whenever a word is
-learned (auto-learned, auto-added, or learned from a buffer or file), it
-is added to the buffer-local dictionary, and its weight there is
-incremented by a value @env{predictive-buffer-local-learn-multiplier}
-times higher than for normal dictionaries. Thus the buffer-local
-dictionary will help predictive mode adapt much faster to the vocabulary
-used in a specific buffer than global dictionaries alone can.
-
-If @env{predictive-dict-autosave} is enabled and the buffer is
-associated with a file, the buffer-local dictionary will automatically
-be saved to the directory containing the file (in fact, two files will
-be created in the directory).
-
-@item predictive-buffer-local-learn-multiplier
-Sets the learning speed for buffer-local dictionaries. Whenever a word
-is added to a buffer-local dictionary, the weight increment is
-multiplied by this value before being added to any existing word weight.
-
-@item predictive-use-auto-learn-cache
-If non-nil (the default), auto-learned and auto-added words are cached,
-and only actually added to the dictionary when Emacs has been idle for
-@env{predictive-flush-auto-learn-delay} seconds or the buffer is killed
-(it has no effect unless at least one of @env{predictive-auto-learn} or
-@env{predictive-auto-add-to-dict} is also set). This avoids small but
-sometimes noticeable delays when typing. New words or word weights will
-not be taken into account until the cache is fully flushed.
-@end vtable
-
-Note that if @env{predictive-main-dict} contains a list of dictionary
-names (@pxref{Basic Dictionary Usage}), an automatically learned or
-added word may not end up where you want it. The weight of a word is
-incremented in the first dictionary it is found in, and words are added
-to the first dictionary in the list (assuming
-@env{predictive-auto-add-to-dict} is set to @code{t}). It is best to
-ensure that dictionaries in the list do not duplicate any words.
-@vindex predictive-main-dict
-@cindex dictionary, buffer
-
-
-@node Relationships Between Words
-@subsubsection Relationships Between Words
-@cindex relationship between words
-@cindex prefix words
-@cindex words, relationships
-@cindex words, prefices
-
-As well as word frequencies, predictive mode dictionaries can store
-certain relationships between words, to make learning more
-effective. With each word in a dictionary, a list of other words can be
-associated. Predictive mode automatically ensures that the weights of
-the words in this list are always at least as large as that of the word
-they are associated with.
-
-This is most useful when one word is a prefix for another. For example,
-you may want to ensure that, however frequently the word @samp{learning}
-is used, the weight of the word @samp{learn} is always kept at least as
-big, so that it always takes precedence when completing.
-
-The following functions allow you to define and undefine such prefix
-relationships (note that despite the command names and descriptions,
-@command{predictive-define-prefix} and
-@command{predictive-undefine-prefix} can be used to define relationships
-between any two words, not just prefixes; however,
-@command{predictive-define-all-prefixes} and the
-@env{predictive-auto-define-prefixes} feature can only define actual
-prefix relationships):
-
-@ftable @command
-@item predictive-define-prefix
-Define one word to be a prefix of another. Predictive mode will ensure
-that the weight of the ``prefix'' word is always at least as large as
-that of the other. (Note that the word does not actually have to be a
-prefix of the other; this can be used to define a relationship between
-any two words, so that the weight of one is always larger than the
-other.)
-
-@item predictive-undefine-prefix
-Remove a ``prefix'' definition. (As for
-@command{predictive-define-prefix}, the word does not actually have to
-be a prefix of the other.)
-
-@item predictive-define-all-prefixes
-Define all possible prefix relationships for a word. If called without a
-prefix argument (nothing to do with the prefix @emph{word}!), this
-command prompts for a word, and that word is defined to be a prefix of
-all its extensions (i.e. all words that it is a prefix for). Predictive
-mode will then automatically ensure that the weight of the prefix word
-is kept at least as large as that of all of its extensions.
-
-If called with a numerical prefix argument, this command defines the
-same prefix relationships, but for @emph{all} words in the dictionary
-that are longer than the numerical value of the prefix argument. Use a 0
-or negative prefix argument to define the relationships for all words.
-@end ftable
-
-
-The following variable is used to help guess a likely prefix as a
-default for @command{predictive-define-prefix}. It's default value is
-only appropriate for English.
-
-@vtable @env
-@item predictive-guess-prefix-suffixes
-List of suffixes to use when guessing a likely prefix for a word. The
-suffixes a tried in the order they appear in the list, and the first one
-that matches the end of the word is used: the guessed prefix is the
-original word with the suffix removed.
-@end vtable
-
-
-Ensuring that prefixes take precedence when completing words is almost
-always a good idea. It makes predictive completion much more convenient
-(especially dynamic completion, @pxref{Dynamic Completion}). Therefore,
-predictive mode includes a feature that, when enabled (the default),
-automatically defines all the necesary prefix relationships whenever a
-word is added to a dictionary.
-
-@vtable @env
-@item predictive-auto-define-prefixes
-When non-nil, predictive mode will automatically update all prefix
-relationships for a word in a dictionary when the word is added. The
-new word will always take precedence over any word that is an extension
-of it, and in their turn any words that are prefixes of the new word
-will take precedence over it.
-@end vtable
 
 
 
