@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.15
+;; Version: 0.16
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.16
+;; * `predictive-add-to-dict' can once again be set to 'buffer, to auto-add
+;;   words to the buffer-local dictionary
 ;;
 ;; Version 0.15
 ;; * auto-completion is now a separate minor-mode provided by completion-UI,
@@ -330,7 +334,13 @@ If nil, words are never automatically added to a dictionary. If
 t, new words \(i.e. words that are not in the dictionary\) are
 automatically added to the active dictionary. If set to a
 dictionary name (a symbol), new words are automatically added to
-that dictionary instead of the active one.
+that dictionary instead of the active one. If set to the symbol
+'buffer, words will be added to the buffer-local dictionary
+\(`predictive-use-buffer-local-dict' must be non-nil in this
+case\). Note that this is subtly different from adding to the
+active dictionary when `predictive-use-buffer-local-dict' is
+enabled, which will add words to *both* the buffer-local and main
+dictionaries.
 
 If `predctive-add-to-dict-ask' is enabled, predictive mode will
 ask before adding any word."
@@ -363,8 +373,8 @@ completing."
 
 
 (defcustom predictive-use-buffer-local-dict nil
-  "*If non-nil, a buffer-local dictionary will be used in
-conjunction with `predictive-main-dict'. Results from both
+  "*If non-nil, a buffer-local dictionary will be used
+in conjunction with `predictive-main-dict'. Results from both
 dictionaries are combined, as though they were one large
 dictionary.
 
@@ -812,14 +822,32 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 	    ;; if adding to the currently active dictionary, then do just that,
 	    ;; adding to the first in the list if there are a list of
 	    ;; dictionaries
-	    (if (eq predictive-auto-add-to-dict t)
+	    (cond
+	     ((eq predictive-auto-add-to-dict t)
+	      ;; if caching auto-added words, do so
+	      (if predictive-use-auto-learn-cache
+		  (push (cons word (car dict)) predictive-auto-add-cache)
+		;; otherwise, add it to the dictionary
+		(predictive-add-to-dict (car dict) word)))
+	     
+	     ;; if adding to the buffer-local dictionary...
+	     ((eq predictive-auto-add-to-dict 'buffer)
+	      ;; if buffer-local dictionaries are not enabled, display an
+	      ;; error message
+	      (if (null predictive-use-buffer-local-dict)
+		  (message "The setting of `predictive-auto-add-to-dict'\
+ specifies adding to the buffer-local dictionary, but buffer-local\
+ dictionaries are disabled by `predictive-use-buffer-local-dict'")
 		;; if caching auto-added words, do so
 		(if predictive-use-auto-learn-cache
-		    (push (cons word (car dict)) predictive-auto-add-cache)
+		    (push (cons word (predictive-buffer-local-dict-name))
+			  predictive-auto-add-cache)
 		  ;; otherwise, add it to the dictionary
-		  (predictive-add-to-dict (car dict) word))
-	      
-	      ;; anything else specifies an explicit dictionary to add to
+		  (predictive-add-to-dict (predictive-buffer-local-dict-name)
+					  word))))
+	     
+	     ;; anything else specifies an explicit dictionary to add to
+	     (t
 	      (setq dict (eval predictive-auto-add-to-dict))
 	      ;; check `predictive-auto-add-to-dict' is a dictionary
 	      (if (dictree-p dict)
@@ -831,7 +859,8 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 		;; display error message if not a dictionary
 		(beep)
 		(message
-		 "Wrong type in `predictive-auto-add-to-dict': dictp"))))
+		 "Wrong type in `predictive-auto-add-to-dict': dictp")))
+	     ))
 	
 	
 	;; if the completion was in the dictionary and auto-learn is set...

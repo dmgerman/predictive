@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5.1
+;; Version: 0.6
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -94,6 +94,17 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6
+;; * added `completion-prefix' and `completion-tooltip' variables to allow
+;;   overriding of default methods for determining prefix at point and
+;;   constructing tooltip text
+;;
+;; Version 0.5.2
+;; * fixed tooltip face issues, which included defining a new
+;;   `completion-tooltip-face'
+;; * implemented better method of positioning tooltip, avoiding moving the
+;;   mouse (thanks to Nikolaj Schumacher for this!)
 ;;
 ;; Version 0.5.1
 ;; * fixed small bug in `completion-self-insert' (thanks to Nikolaj Schumacher
@@ -316,10 +327,11 @@ characters rather than syntax descriptors."
 
 (defface completion-dynamic-face
   '((((class color) (background dark))
-     (:background "blue"))
+     (:background "blue" :foreground "white"))
     (((class color) (background light))
-     (:background "orange1")))
-  "*Face used for provisional completions during dynamic completion."
+     (:background "orange1" :foreground "black")))
+  "*Face used for provisional completions during dynamic completion.
+Also used to highlight selected completion in tooltip."
   :group 'completion-ui)
 
 
@@ -363,19 +375,18 @@ mechanisms before displaying completions in a tooltip."
   :type '(choice (const :tag "Off" nil)
 		 (integer :tag "On")))
 
-;; (defcustom completion-tooltip-x-offset 4
-;;   "Horizontal pixel offset for tooltip.
-;; Unfortunately, needs to be set manually to get tooltip in correct
-;; position."
-;;   :group 'completion-ui
-;;   :type 'integer)
+(defcustom completion-tooltip-offset '(0 . 0)
+   "Pixel offset for tooltip.
+This sometimes needs to be tweaked manually to get tooltip in
+correct position on different operating systems."
+  :group 'completion-ui
+  :type '(cons integer integer))
 
-;; (defcustom completion-tooltip-y-offset 63
-;;   "Vertical pixel offset for tooltip.
-;; Unfortunately, needs to be set manually to get tooltip in correct
-;; position."
-;;   :group 'completion-ui
-;;   :type 'integer)
+(defface completion-tooltip-face
+  `((t (:background ,(or (face-attribute 'menu :background) "white")
+        :foreground ,(or (face-attribute 'menu :foreground) "black"))))
+  "*Face used in tooltip. Only foreground and background attributes are used."
+  :group 'completion-ui)
 
 
 
@@ -429,15 +440,45 @@ completion candidates for PREFIX.")
 (make-variable-buffer-local 'completion-function)
 
 
+(defvar completion-prefix nil
+  "Function that finds a prefix to complete at the point.
+It should return the prefix to complete as a string.
+
+Used by `complete-word-at-point' and
+`completion-backward-delete'.")
+
+
+(defvar completion-word-thing 'word
+  "Symbol used to determine what is considered a word.
+
+Used by `complete-word-at-point' and `completion-backward-delete'
+in calls to `thing-at-point'.  See `thing-at-point' for more
+details. It is ignored if `completion-prefix' is set, since that
+is used instead.")
+(make-variable-buffer-local 'completion-word-thing)
+
+
 (defvar completion-menu nil
-  "Completion menu. If set, it should be a menu keymap or a function.
-The function is called with two arguments, prefix and
-completions, and should return a menu keymap.")
+  "Menu keymap for completion menu, or a function to call
+to get a menu keymap. The function is called with two arguments,
+prefix and completions, and should return a menu keymap.")
 
 
 (defvar completion-browser-menu nil
-  "Menu keymap for the completion browser, or a function to run
+  "Menu keymap for the completion browser, or a function to call
 to get a menu keymap.
+
+Note: this can be overridden by an \"overlay local\" binding (see
+`auto-overlay-local-binding').")
+
+
+(defvar completion-tooltip nil
+  "Function to call to construct the tooltip text.
+
+The function is called with three arguments, the prefix,
+completions, and index of the currently active completion. It
+should return a string containing the text to be displayed in the
+tooltip.
 
 Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
@@ -507,15 +548,6 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 (defvar completion-backward-delete-timer nil
   "Timer used to postpone completion until finished deleting.")
-
-
-(defvar completion-word-thing 'word
-  "Symbol used to determine what is considered a word.
-
-Used by `complete-word-at-point' and `completion-backward-delete'
-in calls to `thing-at-point'.  See `thing-at-point' for more
-details.")
-(make-variable-buffer-local 'completion-word-thing)
 
 
 (defvar completion-trap-recursion nil
@@ -846,6 +878,9 @@ otherwise complete the word at point."
 	  (interactive) (completion-cycle -1)))
       ;; M-<space> abandons
       (define-key map "\M- " 'completion-reject)
+      ;; RET accepts any pending completion candidate, then runs whatever is
+      ;; usually bound to RET
+      (define-key map "\r" 'completion-accept-and-newline)
       ;; M-<down> displays the completion menu
       (define-key map [M-down] 'completion-show-menu)
       ;; clicking on completion opens completion menu
@@ -1192,28 +1227,39 @@ If POSITION is supplied, a tooltip will only be displayed if
 point is at position."
   (interactive)
 
-  (when (and (string= window-system "x")
+  (when (and window-system (fboundp 'x-show-tip)
 	     (or (null position) (= (point) position)))
     (unless overlay (setq overlay (completion-overlay-at-point)))
     
     ;; if point is in a completion overlay...
     (when overlay
-      ;; note: there's no reliable way to calculate the *screen*
-      ;; position (which is what x-show-tip requires) of point, so we
-      ;; use the kludge of moving mouse to point, displaying mouse
-      ;; tooltip, and moving mouse back
-      (let ((restore (mouse-pixel-position))
+      (let ((mouse-pos (mouse-pixel-position))
 	    (pos (completion-frame-posn-at-point))
-	    params
-	    (fg (face-attribute 'menu :foreground))
-	    (bg (face-attribute 'menu :background))
-	    (text (completion-construct-tooltip-text
-		   (overlay-get overlay 'prefix)
-		   (overlay-get overlay 'completions)
-		   (overlay-get overlay 'completion-num))))
+	    (fg (face-attribute 'completion-tooltip-face :foreground))
+	    (bg (face-attribute 'completion-tooltip-face :background))
+	    params text text-func)
+
+	;; construct the tooltip text using the "overlay-local" binding of
+	;; 'tooltip-function, or `completion-tooltip-function' if there is
+	;; none, or failing that `completion-construct-tooltip-text'
+	(setq text-func
+	      (or (and (fboundp 'auto-overlay-local-binding)
+		       (auto-overlay-local-binding 'completion-tooltip))
+		  completion-tooltip
+		  'completion-construct-tooltip-text))
+	(setq text (funcall text-func
+			    (overlay-get overlay 'prefix)
+			    (overlay-get overlay 'completions)
+			    (overlay-get overlay 'completion-num)))
 	
-	;; use menu face and frame parameters
-	;; FIXME: should we define our own?
+	;; mouse position can be nil if mouse is outside Emacs frame in
+	;; certain window systems (e.g. windows); in this case, we move mouse
+	;; into frame (there's no way to restore its position afterwards,
+	;; since we can't find out its position)
+	(set-mouse-position (selected-frame) 1 0)
+	(setq mouse-pos (mouse-pixel-position))
+	
+	;; set face and frame parameters
 	(when (stringp fg)
 	  (setq params
 		(tooltip-set-param params 'foreground-color fg))
@@ -1235,17 +1281,15 @@ point is at position."
 ;; 	       (+ (cdr pos) completion-tooltip-y-offset)))
 	
 	;; show tooltip
-	;; note: we subtract a bit from x and y position so that mouse
-	;; isn't on top of overlay when tooltip is displayed,
-	;; otherwise overlay's help-echo tooltip appears, removing our
-	;; tooltip, and it too disappears when mouse position is set
-	;; back (so nothing gets displayed)
- 	(set-mouse-pixel-position (selected-frame)
- 				  (- (car pos) 1) (cdr pos))
+	;; note: there's no reliable way to display a tooltip at the *screen*
+	;; position (which is what x-show-tip requires) of point, so we use
+	;; the kludge of calculating an offset from the mouse position and
+	;; displaying the tooltip relative to the mouse
 	(x-show-tip text nil params completion-tooltip-timeout
-		    0 (frame-char-height))
- 	(set-mouse-pixel-position (car restore) (cadr restore)
-				  (cddr restore))
+		    (+ (- (car pos) (cadr mouse-pos))
+		       (car completion-tooltip-offset))
+		    (+ (- (cdr pos) (cddr mouse-pos)) (frame-char-height)
+		       (cdr completion-tooltip-offset)))
 	)))
 )
 
@@ -1400,11 +1444,20 @@ being invoked manually"
   (let ((word-thing (if (fboundp 'auto-overlay-local-binding)
 			(auto-overlay-local-binding 'completion-word-thing)
 		      completion-word-thing))
-	prefix pos)
+	prefix pos prefix-fun)
     (cond
      ;; if within an existing overlay, complete its prefix
      (overlay (complete-in-buffer (overlay-get overlay 'prefix)
 				  overlay auto))
+
+     ;; if `completion-prefix' is set, use that to determine the prefix and
+     ;; complete it
+     ((setq prefix-fun
+	    (or (and (fboundp 'auto-overlay-local-binding)
+		     (auto-overlay-local-binding 'completion-prefix))
+		completion-prefix))
+      (setq prefix (funcall completion-prefix))
+      (complete-in-buffer prefix overlay auto))
      
      ;; if point is at end of a word, complete it
      ((completion-end-of-word-p)
@@ -1415,7 +1468,7 @@ being invoked manually"
       (complete-in-buffer prefix overlay auto))
      
      ;; if point is within a word, delete part of word after point (up
-     ;; to overlay, if there is one) and complete remainding prefix
+     ;; to overlay, if there is one) and complete remaining prefix
      ((completion-within-word-p)
       (setq pos (point))
       ;; find first completion overlay within word
@@ -1566,11 +1619,17 @@ complete what remains of that word."
 			 (null (completion-overlay-at-point))
 			 (or (completion-within-word-p)
 			     (completion-end-of-word-p))))
-	    (let ((pos (point)) prefix)
-	      (save-excursion
-		(forward-thing word-thing -1)
-		(setq prefix
-		      (buffer-substring-no-properties (point) pos)))
+	    (let ((pos (point)) prefix prefix-func)
+	      (if (setq prefix-func
+			(or (and (fboundp 'auto-overlay-local-binding)
+				 (auto-overlay-local-binding
+				  'completion-prefix))
+			    completion-prefix))
+		  (setq prefix (funcall completion-prefix))
+		(save-excursion
+		  (forward-thing word-thing -1)
+		  (setq prefix
+			(buffer-substring-no-properties (point) pos))))
 	      (completion-setup-overlay prefix nil nil overlay)))
 	  
 	  ;; if there's no existing timer, set one up to complete
@@ -2144,16 +2203,16 @@ inserted dynamic completion."
 			       (nth i completion-hotkey-list))))))
       ;; if current completion is the inserted dynamic completion, use
       ;; `completion-dynamic-face' to highlight it
-      (if (and num (= i num))
-	  ;; setting 'face attribute to 'completion-dynamic-face
-	  ;; doesn't seem to work with defface using display classes
-	  (put-text-property 0 (length str) 'face
-			     (cons 'background-color
-				   (face-attribute
-				    'completion-dynamic-face
-				    :background))
-			     str)
-	(put-text-property 0 (length str) 'face 'menu str))
+      (when (and num (= i num))
+	;; setting 'face attribute to 'completion-dynamic-face
+	;; doesn't seem to work with defface using display classes
+	(put-text-property
+	 0 (length str) 'face
+	 `((foreground-color . ,(face-attribute 'completion-dynamic-face
+						:foreground))
+	   (background-color . ,(face-attribute 'completion-dynamic-face
+						:background)))
+	 str))
       (setq text (concat text str "\n")))
       
     ;; return constructed text
@@ -2166,7 +2225,8 @@ inserted dynamic completion."
   "Hide any displayed tooltip and cancel any tooltip timer."
   (interactive)
   (and completion-function
-       (string= window-system "x")
+       window-system
+       (fboundp 'x-show-tip)
        (tooltip-hide)
        (timerp completion-tooltip-timer)
        (cancel-timer completion-tooltip-timer))

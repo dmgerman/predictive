@@ -577,7 +577,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 		   (cond
 		    ((auto-overlays-at-point nil
 					     '(eq dict predictive-latex-env-dict))
-		     (complete ""))
+		     (complete-in-buffer ""))
 		    ((and (char-before) (= (char-before) ?\\))
 		     'word)
 		    (t 'none)))))
