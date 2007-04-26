@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * bugfix in `auto-overlay-local-binding'
 ;;
 ;; Version 0.1
 ;; * initial version split from auto-overlays
@@ -230,7 +233,7 @@ See `auto-overlay-highest-priority-at-point' for a definition of
 		  point `(identity ,symbol))))
     (if overlay
 	(overlay-get overlay symbol)
-      (eval symbol)))
+      (when (boundp symbol) (eval symbol))))
 )
 
 ;; auto-overlay-common.el ends here
