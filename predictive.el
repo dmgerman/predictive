@@ -221,7 +221,8 @@
 ;;; ================================================================
 ;;;          Customization variables controling predictive mode 
 
-(defgroup predictive '((completion-ui custom-group))
+(defgroup predictive '((completion-ui custom-group)
+		       (predictive-latex custom-group))
   "Predictive completion."
   :group 'convenience)
 
@@ -1053,6 +1054,8 @@ disabled (see `predictive-dict-autosave-on-kill-buffer' and
   
   (interactive (list (read-dict "Dictionary: "
 				nil predictive-used-dict-list)))
+  ;; sort out argument
+  (when (symbolp dict) (setq dict (eval dict)))
   
   ;; remove dictionary from buffer's used dictionary list
   (setq predictive-used-dict-list (delq dict predictive-used-dict-list))

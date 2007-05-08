@@ -2,7 +2,7 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
 
-;; Copyright (C) 2005 2006 2007 Toby Cubitt
+;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.8
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.1
+;; * modified `auto-o-run-after-change-functions' to cope more robustly with
+;;   the pending functions that it calls themselves scheduling other functions
 ;;
 ;; Version 0.8
 ;; * modified to allow sets of regexps that are shared between buffers to be
@@ -804,26 +808,33 @@ was saved."
   ;; functions that should run after a change to the buffer, in the correct
   ;; order.
 
-  ;; run pending pre-suicide functions
-  (when auto-o-pending-pre-suicide
-    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
-    (setq auto-o-pending-pre-suicide nil))  
-  ;; run pending suicides
-  (when auto-o-pending-suicides
-    (mapc 'auto-o-suicide auto-o-pending-suicides)
-    (setq auto-o-pending-suicides nil))
-  ;; run pending post-suicide functions
-  (when auto-o-pending-post-suicide
-    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
-    (setq auto-o-pending-post-suicide nil))
-  ;; run updates
-  (when auto-o-pending-updates
-    (mapc (lambda (l) (apply 'auto-overlay-update l)) auto-o-pending-updates)
-    (setq auto-o-pending-updates nil))
-  ;; run pending post-update functions
-  (when auto-o-pending-post-update
-    (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
-    (setq auto-o-pending-post-update nil))
+  ;; repeat until all the pending functions have been cleared (it may be
+  ;; necessary to run multiple times since the pending functions may
+  ;; themselves cause more functions to be added to the pending lists)
+  (while (or auto-o-pending-pre-suicide auto-o-pending-suicides
+	     auto-o-pending-post-suicide auto-o-pending-updates
+	     auto-o-pending-post-update)
+    ;; run pending pre-suicide functions
+    (when auto-o-pending-pre-suicide
+      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
+      (setq auto-o-pending-pre-suicide nil))
+    ;; run pending suicides
+    (when auto-o-pending-suicides
+      (mapc 'auto-o-suicide auto-o-pending-suicides)
+      (setq auto-o-pending-suicides nil))
+    ;; run pending post-suicide functions
+    (when auto-o-pending-post-suicide
+      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
+      (setq auto-o-pending-post-suicide nil))
+    ;; run updates
+    (when auto-o-pending-updates
+      (mapc (lambda (l) (apply 'auto-overlay-update l)) auto-o-pending-updates)
+      (setq auto-o-pending-updates nil))
+    ;; run pending post-update functions
+    (when auto-o-pending-post-update
+      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
+      (setq auto-o-pending-post-update nil))
+    )
 )
 
 
@@ -838,10 +849,12 @@ was saved."
 
   ;; FIXME: we should do more to avoid doing multiple, redundant
   ;;        updates. Currently, only updates for identical regions are
-  ;;        filtered, not updates for overlapping regions.
+  ;;        filtered (by add-to-list), not updates for overlapping regions.
   (add-to-list 'auto-o-pending-updates
-	       (list (line-number-at-pos start)
-		     (when end (line-number-at-pos end))
+	       (list (setq start (line-number-at-pos start))
+		     (when (and end (setq end (line-number-at-pos end))
+				(not (= start end)))
+		       end)
 		     set-id))
 )
 
@@ -999,8 +1012,9 @@ was saved."
 		  (looking-at (auto-o-regexp o-self)))
 		 (= (match-end 0) (overlay-end o-self)))
       ;; if we have a parent overlay, call appropriate suicide function,
-      ;; schedule an update (necessary for complicated reasons!) then delete
-      ;; ourselves
+      ;; schedule an update (necessary since if match regexp contains
+      ;; "context", we may be comitting suicide only for the match overlay to
+      ;; be recreated in a slightly different place), then delete ourselves
       (when (overlay-get o-self 'parent)
 	(funcall (auto-o-suicide-function o-self) o-self))
       ;; Note: not supplying the 'set-id can avoid multiple, effectively

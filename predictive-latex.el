@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.7
+;; Version: 0.7
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,14 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7
+;; * added automatic synchronization of environment names
+;; * added interactive commands for navigating by LaTeX environments
+;; * added automatic switching of main dictionary based on document class
+;;
+;; Version 0.6.8
+;; * fixed small bug in `predictive-latex-unload-package'
 ;;
 ;; Version 0.6.7
 ;; * updated to work with new versions of the completion-UI and auto-overlays
@@ -126,6 +134,30 @@
 (require 'auto-overlay-nest)
 
 (provide 'predictive-latex)
+
+
+
+;;;============================================================
+;;;                  Customization Options
+
+(defgroup predictive-latex nil
+  "Predictive completion mode LaTeX support."
+  :group 'predictive)
+
+
+(defcustom predictive-latex-electric-environments t
+  "*When enabled, environment names are automatically synchronized
+between \\begin{...} and \\end{...} commands."
+  :group 'predictive-latex
+  :type 'boolean)
+
+
+(defcustom predictive-latex-docclass-alist nil
+  "*Alist associating LaTeX document classes with dictionaries.
+When a document class is in the list, "
+  :group 'predictive-latex
+  :type '(repeat (cons string symbol)))
+
 
 
 
@@ -354,39 +386,39 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	  (face . (background-color . ,predictive-latex-debug-color)))
    'predictive)
     
-  ;; $'s delimit the start and end of inline maths regions...
+  ;; $'s delimit the start and end of maths regions...
   (auto-overlay-load-regexp
    `(self "\\$" (dict . predictive-latex-math-dict) (priority . 40)
 	  (completion-menu . predictive-latex-construct-browser-menu)
 	  (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive)
+   'predictive nil 'inline-math)
   
   ;; ...as do \[ and \], but not \\[ and \\]
-  (auto-overlay-load-regexp '(nest) 'predictive nil 'inline-math)
+  (auto-overlay-load-regexp '(nest) 'predictive nil 'display-math)
   (auto-overlay-load-compound-regexp
    `(start ("[^\\]\\(\\\\\\[\\)" . 1)
 	   (dict . predictive-latex-math-dict) (priority . 40)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'inline-math)
+   'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(start ("^\\(\\\\\\[\\)" . 1)
 	   (dict . predictive-latex-math-dict) (priority . 40)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'inline-math)
+   'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(end ("[^\\]\\(\\\\\\]\\)" . 1)
 	 (dict . predictive-latex-math-dict) (priority . 40)
 	 (completion-menu . predictive-latex-construct-browser-menu)
 	 (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'inline-math)
+   'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(end ("^\\(\\\\\\]\\)" . 1)
 	 (dict . predictive-latex-math-dict) (priority . 40)
 	 (completion-menu . predictive-latex-construct-browser-menu)
 	 (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'inline-math)
+   'predictive 'display-math)
   
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
@@ -500,8 +532,14 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
    'predictive 'preamble)
 	   
   
-  ;; \begin{...} and \end{...} start and end LaTeX environments
-  (auto-overlay-load-regexp '(nest) 'predictive nil 'environment)
+  ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
+  ;; "electric" by using a special env overlay class (defined below) if the
+  ;; corresponding customization option is enabled
+  (if predictive-latex-electric-environments
+      (auto-overlay-load-regexp '(predictive-latex-env)
+				'predictive nil 'environment)
+    (auto-overlay-load-regexp '(nest)
+			      'predictive nil 'environment))
   (auto-overlay-load-compound-regexp
    `(start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 	    0 1)
@@ -526,6 +564,16 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
    'predictive 'environment)
 
   
+  ;; \documentclass defines the document type. Through the use of a special
+  ;; "docclass" regexp class defined below, this automagically changes the
+  ;; main dictionary if one is defined for the docclass in
+  ;; `predictive-latex-docclass-alist'
+  (auto-overlay-load-regexp
+   '(predictive-latex-docclass
+     ("\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))
+   'predictive)
+  
+  
   ;; \usepackage loads a latex package. Through the use of a special
   ;; "usepackage" regexp class defined below, this automagically loads new
   ;; dictionaries and auto-overlay regexps.
@@ -540,7 +588,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   ;; the label dictionary.
   (auto-overlay-load-regexp
    '(predictive-latex-label ("\\\\label{\\(.*?\\)}" . 1))
-   'predictive)
+   'predictive nil 'label)
 )
 
 
@@ -575,8 +623,8 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 		 t
 		 (lambda ()
 		   (cond
-		    ((auto-overlays-at-point nil
-					     '(eq dict predictive-latex-env-dict))
+		    ((auto-overlays-at-point
+		      nil '(eq dict predictive-latex-env-dict))
 		     (complete-in-buffer ""))
 		    ((and (char-before) (= (char-before) ?\\))
 		     'word)
@@ -710,6 +758,493 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 
 
 
+;;;=======================================================================
+;;;                 Miscelaneous interactive commands
+
+(defun predictive-latex-goto-matching-delim ()
+  "If the point is currently on some kind of LaTeX delimeter
+\(\\begin{...}, \\end{...}, \\[, \\] or $\), move to its matching
+delimeter."
+  (interactive)
+  
+  ;; get innermost LaTeX environment match overlay
+  (let ((o-match
+	 (car (sort (auto-overlays-at-point
+		     nil `((eq auto-overlay-match t)
+			   (eq set-id predictive)
+			   (,(lambda (entry-id)
+			       (or (eq entry-id 'environment)
+				   (eq entry-id 'inline-math)
+				   (eq entry-id 'display-math)))
+			    entry-id)))
+		    (lambda (a b)
+		      (and (<= (- (overlay-end a) (overlay-start a))
+			       (- (overlay-end b) (overlay-start b)))))
+		    )))
+	o-parent o-other)
+
+    ;; if we haven't found a match overlay, display a message
+    (if (not o-match)
+	(message "Not at a LaTeX delimeter")
+      ;; otherwise, if other edge of its parent is not matched, display
+      ;; message
+      (if (not (and (setq o-parent (overlay-get o-match 'parent))
+		    (setq o-other
+			  (overlay-get o-parent
+				       (if (eq o-match
+					       (overlay-get o-parent 'start))
+					   'end 'start)))))
+	  (message "Unmatched LaTeX delimeter")
+	;; otherwise, move point to the other edge
+	(goto-char (overlay-get o-other
+				(if (eq o-other (overlay-get o-parent 'start))
+				    'delim-end 'delim-start)))))
+    )
+)
+
+
+
+(defun predictive-latex-goto-delim-start ()
+  "If the point is currently within a LaTeX environment or
+math-mode, move to the start of it."
+  (interactive)
+  
+  ;; get innermost LaTeX environment overlay
+  (let ((overlay
+	 (car (sort (auto-overlays-at-point
+		     nil `((identity auto-overlay)
+			   (eq set-id predictive)
+			   (,(lambda (entry-id)
+			       (or (eq entry-id 'environment)
+				   (eq entry-id 'inline-math)
+				   (eq entry-id 'display-math)))
+			    entry-id)))
+		    (lambda (a b)
+		      (and (<= (- (overlay-end a) (overlay-start a))
+			       (- (overlay-end b) (overlay-start b)))))
+		    )))
+	o-match)
+    
+    ;; if we've found an overlay, and it's start-matched, move to its start
+    ;; match
+    (if (and overlay (setq o-match (overlay-get overlay 'start)))
+	(goto-char (overlay-get o-match 'delim-end))
+      (message "Not within a LaTeX environment")))
+)
+
+
+
+(defun predictive-latex-goto-delim-end ()
+  "If the point is currently within a LaTeX environment or
+math-mode, move to the end of it."
+  (interactive)
+  
+  ;; get innermost LaTeX environment overlay
+  (let ((overlay
+	 (car (sort (auto-overlays-at-point
+		     nil `((identity auto-overlay)
+			   (eq set-id predictive)
+			   (,(lambda (entry-id)
+			       (or (eq entry-id 'environment)
+				   (eq entry-id 'inline-math)
+				   (eq entry-id 'display-math)))
+			    entry-id)))
+		    (lambda (a b)
+		      (and (<= (- (overlay-end a) (overlay-start a))
+			       (- (overlay-end b) (overlay-start b)))))
+		    )))
+	o-match)
+    
+    ;; if we've found an overlay, and it's start-matched, move to its start
+    ;; match, otherwise display message
+    (if (and overlay (setq o-match (overlay-get overlay 'end)))
+	(goto-char (overlay-get o-match 'delim-start))
+      (message "Not within a LaTeX environment")))
+)
+
+
+
+;;; FIXME: generalise label searching to allow cycling through all label
+;;;        definitions and references
+
+(defun predictive-latex-goto-label-def ()
+  "If the point is on a reference command, move to the label it
+refers to."
+  (interactive)
+
+  (let ((current-dict (predictive-current-dict))
+	label overlay-list filtered-list)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+    
+    ;; when we're not within a referencing command (which we check by checking
+    ;; if current dictionary is the label dictionary), display a message,
+    ;; otherwise...
+    (if (null (member (eval (predictive-latex-label-dict-name)) current-dict))
+	(message "Not on LaTeX cross-reference")
+      
+      ;; get label name and list of label overlays
+      (setq label (thing-at-point 'predictive-latex-label-word))
+      (setq overlay-list (auto-overlays-in (point-min) (point-max)
+					   '((identity auto-overlay)
+					     (eq set-id predictive)
+					     (eq entry-id label))))
+      ;; filter overlay list for matching label name (filtered list should
+      ;; only contain one element, unless label is multiply defined)
+      (mapc (lambda (o)
+	      (when (string= (buffer-substring-no-properties
+			      (overlay-start o) (overlay-end o))
+			     label)
+		(push o filtered-list)))
+	    overlay-list)
+      ;; goto matching label definition, displaying warning if the label is
+      ;; multiply defined
+      (when filtered-list
+	(goto-char (overlay-start (car filtered-list)))
+	(when (> (length filtered-list) 1)
+	  (message "LaTeX label \"%s\" is multiply defined" label)))
+      ))
+)
+
+
+
+
+;;;=======================================================================
+;;;    Automatic main dictionary switching based on document class
+
+(put 'predictive-latex-docclass 'auto-overlay-parse-function
+     'predictive-latex-parse-docclass-match)
+(put 'predictive-latex-docclass 'auto-overlay-suicide-function
+     'predictive-latex-docclass-suicide)
+
+
+(defun predictive-latex-parse-docclass-match (o-match)
+  ;; Create a new word overlay for a docclass command, and load and set the
+  ;; appropriate dictionaries
+
+  ;; create new word overlay and extract docclass name
+  (let ((o-new (auto-o-parse-word-match o-match))
+	(docclass (buffer-substring-no-properties
+		   (overlay-get o-match 'delim-start)
+		   (overlay-get o-match 'delim-end)))
+	dict)
+    ;; save the docclass in an overlay property
+    (overlay-put o-match 'docclass-name docclass)
+    ;; update the main dict
+    (predictive-latex-docclass-change-main-dict docclass)
+    ;; return the new overlay
+    o-new)
+)
+
+
+
+(defun predictive-latex-docclass-suicide (o-match)
+  ;; Delete the word overlay for a docclass command, and unload the
+  ;; appropriate dictionaries
+  
+  (let ((docclass (overlay-get o-match 'docclass-name)))
+    ;; delete the overlay
+    (auto-o-delete-overlay (overlay-get o-match 'parent))
+    ;; unload the dictionary and restore the default main dictionary
+    (predictive-latex-docclass-restore-main-dict docclass))
+)
+
+
+
+(defun predictive-latex-schedule-docclass-update
+  (o-self modified &rest unused)
+  ;; All docclass overlay modification hooks are set to this function, which
+  ;; schedules `predictive-latex-docclass-update' to run after any suicide
+  ;; functions have been called
+  (unless modified
+    (add-to-list 'auto-o-pending-post-suicide
+		 (list 'predictive-latex-docclass-update o-self)))
+)
+
+
+
+(defun predictive-latex-docclass-update (o-self)
+  ;; Update the main dictionary dictionary after a modification, in case
+  ;; docclass has changed
+  
+  (let* ((o-match (overlay-get o-self 'start))
+	 (docclass (buffer-substring-no-properties
+		    (overlay-get o-match 'delim-start)
+		    (overlay-get o-match 'delim-end))))
+    ;; if we haven't been deleted by a suicide function, and docclass has
+    ;; changed, restore main dict and then change to new one
+    (when (and (overlay-buffer o-self)
+	       (not (string= docclass (overlay-get o-match 'docclass))))
+      (predictive-latex-docclass-restore-main-dict
+       (overlay-get o-match 'docclass))
+      (predictive-latex-docclass-change-main-dict docclass)))
+)
+
+
+
+(defun predictive-latex-docclass-change-main-dict (docclass)
+  ;; If there is a dictionary associated with the docclass matched by OVERLAY,
+  ;; load it and change the main dict
+
+  ;; look for a dictionary associated with the docclass
+  (let ((dict-list (assoc docclass predictive-latex-docclass-alist)))
+    (when dict-list
+      (setq dict-list (cdr dict-list))
+      (when (atom dict-list) (setq dict-list (list dict-list)))
+      ;; if loading of any of the dictionaries in the list fails, unload those
+      ;; which succeeded and don't change dictionary
+      (if (not (catch 'failed
+		 (mapc (lambda (dic)
+			 (unless (predictive-load-dict dic)
+			   (throw 'failed nil)))
+		       dict-list)))
+	  (mapc 'predictive-unload-dict dict-list)
+	;; otherwise, unload the old main dictionary and change to the new one
+	(let ((old-dict predictive-latex-restore-main-dict))
+	  (when (atom old-dict) (setq old-dict (list old-dict)))
+	  (mapc 'predictive-unload-dict old-dict))
+	(setq predictive-main-dict (append dict-list predictive-latex-dict))
+	)))
+)
+
+
+
+(defun predictive-latex-docclass-restore-main-dict (docclass)
+  ;; Unload any dictionary that has been loaded for DOCCLASS, and restore the
+  ;; default main dict
+  (let ((dict-list (assoc docclass predictive-latex-docclass-alist)))
+    (when dict-list
+      (setq dict-list (cdr dict-list))
+      (when (atom dict-list) (setq dict-list (list dict-list)))
+      (mapc 'predictive-unload-dict dict-list)
+      (setq dict-list predictive-latex-restore-main-dict)
+      (when (atom dict-list) (setq dict-list (list dict-list)))
+      (setq predictive-main-dict (append dict-list predictive-latex-dict))))
+)
+
+
+
+
+;;;=======================================================================
+;;;  Automatic synchronization of LaTeX \begin{...} \end{...} environments
+
+;;; FIXME: The features provided by this new auto-overlay class should be
+;;;        integrated into the standard nest class
+
+(put 'predictive-latex-env 'auto-overlay-parse-function
+     'predictive-latex-parse-env-match)
+(put 'predictive-latex-env 'auto-overlay-suicide-function
+     'predictive-latex-env-suicide)
+
+
+
+(defun predictive-latex-parse-env-match (o-match)
+  ;; Perform any necessary updates of auto overlays due to a match for a nest
+  ;; regexp.
+
+  ;; add synchronization function to match overlay's modification hooks
+  (overlay-put o-match 'modification-hooks
+	       (append (overlay-get o-match 'modification-hooks)
+		       '(predictive-latex-schedule-env-synchronize)))
+  
+  
+  ;; update auto overlays as necessary
+  (let* ((overlay-stack (auto-o-nested-stack o-match))
+	 (o (car overlay-stack)))
+    (cond
+     ;; if the stack is empty, just create and return a new unmatched overlay
+     ((null overlay-stack)
+      (auto-o-make-nest o-match 'unmatched))
+     
+     ;; if appropriate edge of innermost overlay is unmatched, just match it
+     ((or (and (eq (auto-o-edge o-match) 'start)
+	       (not (auto-o-start-matched-p o)))
+	  (and (eq (auto-o-edge o-match) 'end)
+	       (not (auto-o-end-matched-p o))))
+      (predictive-latex-match-env-overlay o o-match)
+      ;; return nil since haven't created any new overlays
+      nil)
+     
+     ;; otherwise...
+     (t
+      ;; create new innermost overlay and add it to the overlay stack
+      (push (auto-o-make-nest o-match) overlay-stack)
+      ;; sort out the overlay stack
+      (predictive-latex-env-stack-cascade overlay-stack)
+      ;; return newly created overlay
+      (car overlay-stack)))
+    )
+)
+
+
+
+(defun predictive-latex-env-suicide (o-self)
+  ;; Called when match no longer matches. Unmatch the match overlay O-SELF, if
+  ;; necessary deleting its parent overlay or cascading the stack.
+  
+  (let* ((overlay-stack (auto-o-nested-stack o-self))
+	(o-parent (car overlay-stack)))
+    
+    (cond
+     ;; if other end of parent is unmatched, just delete parent
+     ((not (auto-o-edge-matched-p
+	    o-parent
+	    (if (eq (auto-o-edge o-self) 'start) 'end 'start)))
+      (auto-o-delete-overlay o-parent))
+
+     ;; if parent is the only overlay in the stack...
+     ((= (length overlay-stack) 1)
+      ;; if we're a start match, make parent start-unmatched
+      (if (eq (auto-o-edge o-self) 'start)
+	  (predictive-latex-match-env-overlay o-parent 'unmatched nil)
+	    ;; if we're an end match, make parent end-unmatched
+	(predictive-latex-match-env-overlay o-parent nil 'unmatched)))
+     
+      ;; otherwise, unmatch ourselves from parent and cascade the stack
+     (t
+      (overlay-put o-parent (auto-o-edge o-self) nil)
+      (overlay-put o-self 'parent nil)
+      (predictive-latex-env-stack-cascade overlay-stack))
+     ))
+)
+
+
+
+;; Variable used to temporarily disable \begin{...} \end{...} synchronization
+;; when the text within a match overlay is being modified
+(defvar predictive-latex-disable-env-synchronize nil)
+
+
+(defun predictive-latex-schedule-env-synchronize
+  (o-self &optional modified &rest unused)
+  ;; Schedule synchronization of \begin{...} and \end{...} environment names
+  (unless modified
+    (add-to-list 'auto-o-pending-post-suicide
+		 (list 'predictive-latex-env-synchronize o-self))))
+
+
+(defun predictive-latex-env-synchronize (o-self)
+  ;; Synchronize the corresponding start/end match after any modification
+
+  ;; if synchronization has not been disabled, and we haven't been deleted by
+  ;; the suicide function...
+  (when (and (not predictive-latex-disable-env-synchronize)
+	     (overlay-buffer o-self))
+    (let ((o-other (overlay-get (overlay-get o-self 'parent)
+				(if (eq (auto-o-edge o-self) 'start)
+				    'end 'start)))
+	  env)
+      
+      ;; if other end of parent overlay is matched...
+      (when o-other
+	(save-excursion
+	  ;; get environment name from self
+	  (goto-char (overlay-start o-self))
+	  (when (search-forward-regexp "{\\(.*?\\)}" (overlay-end o-self) t)
+	    (setq env (match-string-no-properties 1))
+	    ;; replace environment name in other edge
+	    (goto-char (overlay-start o-other))
+	    (when (search-forward-regexp "{\\(.*?\\)}"
+					 (overlay-end o-other) t)
+	      (let ((predictive-latex-disable-env-synchronize t))
+		;; Have to force `auto-o-run-after-update-functions' to
+		;; (recursively) call itself a second time, since doing the
+		;; replace-match will schedule some suicides and updates.
+		;; Note: not supplying the 'set-id can avoid multiple,
+		;; effectively identical auto-overlay-update calls
+		(add-to-list 'auto-o-pending-updates
+			     (list (line-number-at-pos (point)) nil nil))
+		;; Note: the replace-match will *not* in fact cause a
+		;; synchronization to be scheduled for the other match
+		;; overlay, since it is impossible for a function called by
+		;; `auto-o-run-after-change-functions' to schedule something
+		;; else in the same pending list as itself. Therefore, the
+		;; `predictive-latex-disable-env-synchronization' mechanism to
+		;; protext against recursion is probably redundant.
+		(replace-match env t t nil 1)))
+	    )))
+      ))
+)
+
+
+
+(defun predictive-latex-env-stack-cascade (overlay-stack)
+  ;; Cascade the ends of the overlays in OVERLAY-STACK up or down the stack,
+  ;; so as to re-establish a valid stack. It assumes that only the innermost
+  ;; is incorrect.
+  
+  (let ((o (car overlay-stack)) o1)
+    (cond
+     
+     ;; if innermost overlay is start-matched (and presumably
+     ;; end-unmatched)...
+     ((auto-o-start-matched-p o)
+      ;; cascade overlay end matches up through stack until one is left
+      (dotimes (i (- (length overlay-stack) 1))
+	(setq o (nth i overlay-stack))
+	(setq o1 (nth (+ i 1) overlay-stack))
+	(predictive-latex-match-env-overlay o nil
+			      (if (overlay-get o1 'end)
+				    (overlay-get o1 'end)
+				'unmatched)
+			      nil nil 'protect-match))
+      ;; if final overlay is start-matched, make it end-unmatched, otherwise
+      ;; delete it
+      (if (auto-o-start-matched-p o1)
+	  ;; FIXME: could postpone re-parsing here in case it can be avoided
+	  (predictive-latex-match-env-overlay
+	   o1 nil 'unmatch nil nil 'protect-match)
+	(auto-o-delete-overlay o1 nil 'protect-match)))
+     
+     
+     ;; if innermost overlay is end-matched (and presumably
+     ;; start-unmatched)...
+     ((auto-o-end-matched-p o)
+      ;; cascade overlay start matches up through stack until one is left
+      (dotimes (i (- (length overlay-stack) 1))
+	(setq o (nth i overlay-stack))
+	(setq o1 (nth (+ i 1) overlay-stack))
+	(predictive-latex-match-env-overlay o (if (overlay-get o1 'start)
+						   (overlay-get o1 'start)
+						 'unmatched)
+					     nil nil nil 'protect-match))
+      ;; if final overlay is end-matched, make it start-unmatched, otherwise
+      ;; delete it
+      (if (auto-o-end-matched-p o1)
+	  ;; FIXME: could postpone re-parsing here in case it can be avoided
+	  (predictive-latex-match-env-overlay
+	   o1 'unmatch nil nil nil 'protect-match)
+	(auto-o-delete-overlay o1 nil 'protect-match))))
+    )
+)
+
+
+
+(defun predictive-latex-match-env-overlay
+  (overlay start &optional end no-props no-parse protect-match)
+  
+  ;; match the overlay
+  (auto-o-match-overlay overlay start end no-props no-parse protect-match)
+
+  ;; if overlay is now both start and end matched, synchronize end with start
+  (setq start (overlay-get overlay 'start))
+  (setq end (overlay-get overlay 'end))
+  (when (and start end)
+    (save-excursion
+      (let (env)
+	;; get environment name from start
+	(goto-char (overlay-get start 'delim-start))
+	(when (search-forward-regexp "{\\(.*?\\)}" (overlay-end start) t)
+	  (setq env (match-string-no-properties 1))
+	  ;; replace environment name in end
+	  (goto-char (overlay-start end))
+	  (when (search-forward-regexp "{\\(.*?\\)}" (overlay-end end) t)
+	    (let ((predictive-latex-disable-env-synchronize t))
+	      (replace-match env t t nil 1)))
+	  ))))
+)
+
+
+
 
 ;;;=======================================================================
 ;;;  Automatic loading and unloading of LaTeX package dictionaries etc.
@@ -833,7 +1368,7 @@ for LaTeX package PACKAGE."
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
       (when (setq dict (intern-soft (concat (cdr dic) package)))
-	(predictive-unload-dict dict)
+	(predictive-unload-dict (eval dict))
 	(when (and (listp (eval (car dic)))
 		   (not (dictree-p (eval (car dic)))))
 	  ;; we don't use "(set ... (delq ..." here because other variables
@@ -1133,7 +1668,7 @@ Intended to be used as the \"resolve\" entry in
 
 
 ;;;=============================================================
-;;;                  Miscelaneous functions
+;;;               Miscelaneous utility functions
 
 (defun predictive-latex-forward-word (&optional n)
   (let (m)
