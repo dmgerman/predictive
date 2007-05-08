@@ -99,6 +99,14 @@
 ;; * added `completion-prefix' and `completion-tooltip' variables to allow
 ;;   overriding of default methods for determining prefix at point and
 ;;   constructing tooltip text
+;; * fixed bugs related to backwards-deletion (thanks to Maciej Katafiasz for
+;;   pointing some of these out)
+;; * added `completion-insert-as-word-constituent' funtion and appropriate
+;;   key bindings to insert characters as though word constituents
+;; * modified `completion-backward-delete', created corresponding
+;;   `completion-delete' function, and defined a whole host of deletion and
+;;   kill commands that are substituted for the standard ones
+;;   
 ;;
 ;; Version 0.5.2
 ;; * fixed tooltip face issues, which included defining a new
@@ -572,6 +580,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 ;; init file)
 (unless completion-map
   (let ((map (make-sparse-keymap)))
+    
     ;; M-<tab> cycles or completes word at point
     (define-key map [?\M-\t]
       (lambda ()
@@ -581,7 +590,6 @@ otherwise complete the word at point."
 	(if (completion-overlay-at-point)
 	    (completion-cycle)
 	  (complete-word-at-point))))
-    
     ;; M-<shift>-<tab> cycles backwards
     (define-key map '[(meta shift iso-lefttab)]
       (lambda ()
@@ -591,7 +599,85 @@ otherwise complete the word at point."
 	(if (completion-overlay-at-point)
 	    (completion-cycle -1)
 	  (complete-word-at-point))))
-
+    ;; if command remapping is supported, remap delete commands, otherwise
+    ;; can't do better than rebind their default bindings
+    (if (fboundp 'command-remapping)
+	(progn
+	  (define-key map [remap delete-char]
+	    'completion-delete-char)
+	  (define-key map [remap backward-delete-char]
+	    'completion-backward-delete-char)
+	  (define-key map [remap delete-backward-char]
+	    'completion-backward-delete-char)
+	  (define-key map [remap backward-delete-char-untabify]
+	    'completion-backward-delete-char-untabify)
+	  (define-key map [remap kill-word]
+	    'completion-kill-word)
+	  (define-key map [remap backward-kill-word]
+	    'completion-backward-kill-word)
+	  (define-key map [remap kill-sentenve]
+	    'completion-kill-sentenve)
+	  (define-key map [remap backward-kill-sentenve]
+	    'completion-backward-kill-sentenve)
+	  (define-key map [remap kill-sexp]
+	    'completion-kill-sexp)
+	  (define-key map [remap backward-kill-sexp]
+	    'completion-backward-kill-sexp)
+	  (define-key map [remap kill-paragraphs]
+	    'completion-kill-paragraph)
+	  (define-key map [remap backward-kill-paragraph]
+	    'completion-backward-kill-paragraph))
+	(define-key map [backspace] 'completion-backward-delete-char-untabify)
+	(define-key map [(meta backspace)] 'completion-backward-kill-word)
+	(define-key map [(control backspace)] 'completion-backward-kill-word))
+    
+    ;; If the current Emacs version doesn't support overlay keybindings half
+    ;; decently, have to simulate them using
+    ;; `completion-run-if-within-overlay' hack in the main `completion-map'.
+    (when (<= emacs-major-version 22)
+      ;; <tab> does traditional tab-completion
+      (define-key map "\t" 'completion-tab-complete-if-within-overlay)
+      ;; RET accepts any pending completion candidate, then runs whatever is
+      ;; usually bound to RET
+      (define-key map "\r" 'completion-accept-if-within-overlay)
+      ;; M-<down> displays the completion menu
+      (define-key map [M-down] 'completion-show-menu-if-within-overlay)      
+      
+      ;; C-<space> abandons
+      (define-key map "\C- " 'completion-reject-if-within-overlay)
+      ;; M-<space> abandons and inserts a space
+      (define-key map "\M- "
+	(lambda () "Reject current provisional completion and insert a space."
+	  (interactive)
+	  (completion-run-if-within-overlay
+	   (lambda () (interactive) (completion-reject) (insert " "))
+	   'completion-function)))
+      ;; M-. inserts "." as a word-constituent
+      (define-key map "\M-."
+	(lambda () "Insert \".\" as though it were a word-constituent."
+	  (interactive)
+	  (completion-run-if-within-overlay
+	   (lambda () (interactive)
+	     (completion-insert-as-word-constituent ?.))
+	   'completion-function)))
+      ;; M-- inserts "-" as a word-constituent
+      (define-key map "\M--"
+	(lambda () "Insert \"-\" as though it were a word-constituent."
+	  (interactive)
+	  (completion-run-if-within-overlay
+	   (lambda () (interactive)
+	     (completion-insert-as-word-constituent ?-))
+	   'completion-function)))
+      ;; M-/ inserts "/" as a word-constituent
+      (define-key map "\M-/"
+	(lambda () "Insert \"/\" as though it were a word-constituent."
+	  (interactive)
+	  (completion-run-if-within-overlay
+	   (lambda () (interactive)
+	     (completion-insert-as-word-constituent ?/))
+	   'completion-function)))
+      )
+    
     (setq completion-map map)))
 
 
@@ -717,33 +803,7 @@ otherwise complete the word at point."
       (define-key map "]" 'completion-self-insert)
       (define-key map "|" 'completion-self-insert)
       (define-key map "\\" 'completion-self-insert)
-      (define-key map "/" 'completion-self-insert)
-      )
-    
-    ;; M-<tab> cycles or completes word at point
-    (define-key map [?\M-\t]
-      (lambda ()
-	"Cycle through available completions if there are any,
-otherwise complete the word at point."
-	(interactive)
-	(if (completion-overlay-at-point)
-	    (completion-cycle)
-	  (complete-word-at-point))))
-    
-    ;; M-<shift>-<tab> cycles backwards
-    (define-key map '[(meta shift iso-lefttab)]
-      (lambda ()
-	"Cycle backwards through completions if there are any,
-otherwise complete the word at point."
-	(interactive)
-	(if (completion-overlay-at-point)
-	    (completion-cycle -1)
-	  (complete-word-at-point))))
-
-    ;; DEL deletes backwards and removes characters from the current
-    ;; completion, if any
-    (define-key map "\d" 'completion-backward-delete)
-
+      (define-key map "/" 'completion-self-insert))
     (setq auto-completion-map map)))
 
 
@@ -752,7 +812,12 @@ otherwise complete the word at point."
 ;; enabled
 (unless completion-dynamic-map
   (let (map)
-
+    ;; Note: rebinding printable characters here is redundant if
+    ;; `auto-completion-mode' is enabled, since they are also bound in
+    ;; `auto-completion-map', but we still need to ensure that the provisional
+    ;; completion is correctly dealt with even if `auto-completion-mode' is
+    ;; disabled.
+    
     ;; if we can remap keys, do that
     (if (fboundp 'command-remapping)
 	(progn
@@ -861,55 +926,49 @@ otherwise complete the word at point."
       (define-key map "\\" 'completion-self-insert)
       (define-key map "/" 'completion-self-insert)
       )
-
     
-    (cond    
-     ;; if current Emacs version supports it properly, the map is assigned to
-     ;; the completion overlay's keymap property
-     ((>= emacs-major-version 22)
-      ;; <tab> does traditional tab-completion
-      (define-key map "\t" 'completion-tab-complete)
-      ;; M-<tab> cycles
-      (define-key map [?\M-\t] 'completion-cycle)
-      ;; M-<shift>-<tab> cycles backwards (note: [\M-\S-iso-lefttab] would
-      ;; also work)
-      (define-key map '[(meta shift iso-lefttab)]
-	(lambda () "Cycle backwards through completions."
-	  (interactive) (completion-cycle -1)))
-      ;; M-<space> abandons
-      (define-key map "\M- " 'completion-reject)
-      ;; RET accepts any pending completion candidate, then runs whatever is
-      ;; usually bound to RET
-      (define-key map "\r" 'completion-accept-and-newline)
-      ;; M-<down> displays the completion menu
-      (define-key map [M-down] 'completion-show-menu)
-      ;; clicking on completion opens completion menu
-      (define-key map [mouse-2] 'completion-show-menu)
-      (setq completion-dynamic-map map))
-     
-
-     ;; if overlay keybindings support is lacking, have to use
-     ;; `completion-run-if-within-overlay' hack to simulate it
-     (t
-      ;; <tab> does traditional tab-completion
-      (define-key map "\t" 'completion-tab-complete-if-within-overlay)
-      ;; M-<space> rejects
-      (define-key map "\M- " 'completion-reject-if-within-overlay)
-      ;; RET accepts any pending completion candidate, then runs whatever is
-      ;; usually bound to RET
-      (define-key map "\r" 'completion-accept-if-within-overlay)
-      ;; M-<down> displays the completion menu
-      (define-key map [M-down] 'completion-show-menu-if-within-overlay)
-      
-      ;; make sure completion-dynamic-map is in minor-mode-keymap-alist if
-      ;; we're having to simulate overlay keybindings
-      (setq completion-dynamic-map map)
-      (let ((existing (assq 'completion-function minor-mode-map-alist)))
-	(if existing
-	    (setcdr existing completion-dynamic-map)
-	  (push (cons 'completion-function completion-dynamic-map)
-		minor-mode-map-alist))))
-     )))
+    ;; <tab> does traditional tab-completion
+    (define-key map "\t" 'completion-tab-complete)
+    ;; M-<tab> cycles
+    (define-key map [?\M-\t] 'completion-cycle)
+    ;; M-<shift>-<tab> cycles backwards (note: [\M-\S-iso-lefttab] would also
+    ;; work)
+    (define-key map '[(meta shift iso-lefttab)]
+      (lambda () "Cycle backwards through completions."
+	(interactive) (completion-cycle -1)))
+    ;; C-<space> abandons
+    (define-key map "\C- " 'completion-reject)
+    ;; M-<space> abandons and inserts a space
+    (define-key map "\M- "
+      (lambda () "Reject current provisional completion and insert a space."
+	(interactive)
+	(completion-reject)
+	(insert " ")))
+    ;; M-. inserts "." as a word-constituent
+    (define-key map "\M-."
+      (lambda () "Insert \".\" as though it were a word-constituent."
+	(interactive)
+	(completion-insert-as-word-constituent ?.)))
+    ;; M-- inserts "-" as a word-constituent
+    (define-key map "\M--"
+      (lambda () "Insert \"-\" as though it were a word-constituent."
+	(interactive)
+	(completion-insert-as-word-constituent ?-)))
+    ;; M-/ inserts "/" as a word-constituent
+    (define-key map "\M-/"
+      (lambda () "Insert \"/\" as though it were a word-constituent."
+	(interactive)
+	(completion-insert-as-word-constituent ?/)))
+    ;; RET accepts any pending completion candidate, then runs whatever is
+    ;; usually bound to RET
+    (define-key map "\r" 'completion-accept-and-newline)
+    ;; M-<down> displays the completion menu
+    (define-key map [M-down] 'completion-show-menu)
+    ;; clicking on completion opens completion menu
+    (define-key map [mouse-2] 'completion-show-menu)
+    
+    (setq completion-dynamic-map map))
+)
 
 
 
@@ -988,7 +1047,7 @@ major mode, or by another minor mode)."
 
 
 
-(defun turn-on-predictive-mode ()
+(defun turn-on-auto-completion-mode ()
   "Turn on auto-completion mode. Useful for adding to hooks."
   (unless auto-completion-mode (auto-completion-mode))
 )
@@ -1067,27 +1126,32 @@ internally)."
 accordingly. If OVERLAY is supplied, use that instead of finding
 or creating one."
 
-  ;; delete old completion
-  (delete-region (overlay-start overlay) (overlay-end overlay))
-  ;; for some reason, the delete-region sometimes deletes the overlay,
-  ;; and even moving it back fails, so we have to re-create it
-  (unless (overlay-buffer overlay)
-    (setq completion-overlay-list
-	  (delq overlay completion-overlay-list))
-    (setq overlay
-	  (completion-setup-overlay
+  ;; for some reason, the delete-region or insert later on sometimes delete or
+  ;; move the completion overlay, so we store its start position before doing
+  ;; anything else, so we can move the completion overlay into the correct new
+  ;; position later
+  (let ((pos (overlay-start overlay)))
+    
+    ;; delete old completion
+    (delete-region (overlay-start overlay) (overlay-end overlay))
+    ;; for some reason, the delete-region sometimes deletes the overlay,
+    ;; and even moving it back fails, so we have to re-create it
+    (unless (overlay-buffer overlay)
+      (setq completion-overlay-list
+	    (delq overlay completion-overlay-list))
+      (setq overlay
+	    (completion-setup-overlay
 	   (overlay-get overlay 'prefix)
 	   (overlay-get overlay 'completions))))
   
-  ;; insert new one, if any
-  (let ((completions (overlay-get overlay 'completions)))
-    (when completions
-      (insert (car completions))
-      (move-overlay overlay (overlay-start overlay)
-		    (+ (overlay-start overlay)
-		       (length (car completions))))
-      (overlay-put overlay 'completion-num 0))
-    (goto-char (overlay-start overlay)))
+    ;; insert new one, if any
+    (let ((completions (overlay-get overlay 'completions)))
+      (when completions
+	(insert (car completions))
+	(move-overlay overlay pos (+ pos (length (car completions))))
+	(overlay-put overlay 'completion-num 0))
+      (goto-char (overlay-start overlay)))
+    )
 )
 
 
@@ -1428,6 +1492,57 @@ characters."
 
 
 
+(defun completion-insert-as-word-constituent (char)
+  "Insert character CHAR as though it was a word constituent,
+irrespective of its actual syntax class."
+  (let ((overlay (completion-overlay-at-point))
+	prefix wordstart)
+
+    ;; if we're not automatically completing or doing dynamic completion, just
+    ;; resolve provisional completions and insert last input event
+    (if (and (not auto-completion-mode)
+	     (not completion-use-dynamic))
+	(progn
+	  (completion-resolve-old)
+	  (insert (string char)))
+      
+      
+      ;; otherwise, add character to prefix
+      (if (null overlay)
+	  (setq prefix (string char))
+	(delete-region (overlay-start overlay)
+		       (overlay-end overlay))
+	(setq prefix (concat (overlay-get overlay 'prefix) (string char))))
+      (setq wordstart (or (completion-beginning-of-word-p)
+			  (and (not (completion-within-word-p))
+			       (not (completion-end-of-word-p)))))
+      
+      ;; insert typed character and move overlay
+      (insert (string char))
+      (when overlay (move-overlay overlay (point) (point)))
+      
+      (cond
+       ;; if not using automatic completion or not completing after
+       ;; inserting, resolve any overlay
+       ((not auto-completion-mode)
+	(when overlay
+	  (delete-overlay overlay)
+	  (setq completion-overlay-list
+		(delq overlay completion-overlay-list))
+	  (completion-resolve-old)))
+       
+       ;; if we're auto-completing, and are either in a completion overlay or
+       ;; at the beginning of a word, do normal completion
+       ((or overlay wordstart)
+	(complete-in-buffer prefix overlay t))
+       
+       ;; otherwise, complete word at point
+       (t (complete-word-at-point overlay 'auto)))
+      ))
+)
+
+
+
 (defun complete-word-at-point (&optional overlay auto)
   "Complete the word at or next to the point.
 
@@ -1562,12 +1677,13 @@ to invoke this function."
 
 
 
-(defun completion-backward-delete (&optional n)
-  "Delete backwards N characters \(default 1\).
-If this deletes into a word and auto-completion is enabled,
+(defun completion-backward-delete (command &rest args)
+  "Run backward-delete COMMAND, passing it ARGS.
+Any provisional completion at the point is first rejected. If
+COMMAND deletes into a word and auto-completion is enabled,
 complete what remains of that word."
-  (interactive "p")
-  (when (null n) (setq n 1))
+
+  ;; start by cancelling any tooltip that's stil hanging around
   (completion-cancel-tooltip)
   
   (let ((overlay (completion-overlay-at-point))
@@ -1581,8 +1697,13 @@ complete what remains of that word."
       ;; and delete backwards
       (if (not auto-completion-mode)
 	  (progn
+	    (delete-region (overlay-start overlay)
+			   (overlay-end overlay))
+	    (delete-overlay overlay)
+	    (setq completion-overlay-list
+		  (delq overlay completion-overlay-list))
 	    (completion-resolve-old)
-	    (backward-delete-char-untabify n))
+	    (apply command args))
 
 
 	;; if auto-completing...
@@ -1595,7 +1716,7 @@ complete what remains of that word."
 			 (overlay-end overlay)))
 	
 	;; delete backwards
-	(backward-delete-char-untabify n)
+	(apply command args)
 
 	(cond
 	 ;; if we're not in or at the end of a word, reject any completion
@@ -1650,6 +1771,239 @@ complete what remains of that word."
 	 (t (delete-overlay overlay)))
 	)))
 )
+
+
+
+(defun completion-delete (command &rest args)
+  "Call forward-delete COMMAND, passing it ARGS.
+If there is a provisional completion at point after deleting, reject it."
+  
+  ;; start by cancelling any tooltip that's stil hanging around
+  (completion-cancel-tooltip)
+  ;; call the deletion command
+  (apply command args)
+  ;; if there's a completion overlay at point after deleting, reject it
+  (let ((overlay (completion-overlay-at-point)))
+    (when overlay
+      (delete-region (overlay-start overlay)
+		     (overlay-end overlay))
+      (delete-overlay overlay)
+      (setq completion-overlay-list
+	    (delq overlay completion-overlay-list))))
+  (completion-resolve-old)
+)
+
+
+
+(defun completion-delete-char (n &optional killflag)
+  "Delete the following N characters (previous if N is negative).
+If there is a provisional completion at point after deleting,
+reject it.  \(If N is negative, behaviour is instead as for
+`completion-backward-delete-char'.\)
+
+Optional second arg KILLFLAG non-nil means kill instead (save in
+kill ring). Interactively, N is the prefix arg (default 1), and
+KILLFLAG is set if n was explicitly specified."
+  (interactive "p")
+  (when (and (interactive-p) n) (setq killflag t))
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (< n 0)
+      (completion-backward-delete 'backward-delete-char n killflag)
+    (completion-delete 'delete-char n killflag))
+)
+
+
+
+(defun completion-backward-delete-char (n &optional killflag)
+  "Delete the previous N characters (following if N is negative).
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word. \(If N is negative,
+behaviour is instead as for `completion-delete-char'.\)
+
+Optional second arg KILLFLAG non-nil means kill instead (save in
+kill ring). Interactively, N is the prefix arg (default 1), and
+KILLFLAG is set if N was explicitly specified."
+  (interactive "p")
+  (when (and (interactive-p) n) (setq killflag t))
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'delete-char n killflag)
+    (completion-backward-delete 'backward-delete-char n killflag))
+)
+
+
+
+(defun completion-backward-delete-char-untabify (n &optional killflag)
+  "Delete N characters backward, changing tabs into spaces.
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word. \(If N is negative,
+behaviour is instead as for `completion-delete-char'.\)
+
+Optional second arg KILLFLAG non-nil means kill instead (save in
+kill ring). Interactively, N is the prefix arg (default 1), and
+KILLFLAG is set if N was explicitly specified.
+
+The exact behavior depends on `backward-delete-char-untabify-method'."
+  (interactive "p")
+  (when (and (interactive-p) n) (setq killflag t))
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'delete-char n killflag)
+    (completion-backward-delete 'backward-delete-char-untabify n killflag))
+)
+
+
+
+(defun completion-kill-word (&optional n)
+  "Kill characters forward until encountering the end of a word.
+With argument, do this that many times. If there is a provisional
+completion at point after deleting, reject it. \(If N is
+negative, behaviour is instead as for
+`completion-backward-kill-word'.\)"
+  (interactive "p")
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (< n 0)
+      (completion-backward-delete 'backward-kill-word n)
+    (completion-delete 'kill-word n))
+)
+
+
+
+
+(defun completion-backward-kill-word (&optional n)
+  "Kill characters backward until encountering the end of a word.
+With argument, do this that many times. Any provisional
+completion at point is first rejected. If deleting backwards into
+a word, and `auto-completion-mode' is enabled, complete what
+remains of that word.  \(If N is negative, behaviour is instead
+as for `completion-kill-word'.\)"
+  (interactive "p")
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'kill-word n)
+    (completion-backward-delete 'backward-kill-word n))
+)
+
+
+
+(defun completion-kill-sentence (&optional n)
+  "Kill from point to end of sentence.
+With argument, do this that many times. If there is a provisional
+completion at point after deleting, reject it. \(If N is
+negative, behaviour is instead as for
+`completion-backward-kill-sentence'.\)"
+  (interactive "p")
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (< n 0)
+      (completion-backward-delete 'backward-kill-sentence n)
+    (completion-delete 'kill-sentence n))
+)
+
+
+
+
+(defun completion-backward-kill-sentence (&optional n)
+  "Kill back from point to start of sentence.
+With argument, do this that many times. Any provisional
+completion at point is first rejected. If deleting backwards into
+a word, and `auto-completion-mode' is enabled, complete what
+remains of that word.  \(If N is negative, behaviour is instead
+as for `completion-kill-sentence'.\)"
+  (interactive "p")
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'kill-sentence n)
+    (completion-backward-delete 'backward-kill-sentence n))
+)
+
+
+
+(defun completion-kill-sexp (&optional n)
+  "Kill the sexp (balanced expression) following point.
+With argument, do this that many times. If there is a provisional
+completion at point after deleting, reject it. \(If N is
+negative, behaviour is instead as for
+`completion-backward-kill-sexp'.\)"
+  (interactive "p")
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (< n 0)
+      (completion-backward-delete 'backward-kill-sexp n)
+    (completion-delete 'kill-sexp n))
+)
+
+
+
+
+(defun completion-backward-kill-sexp (&optional n)
+  "Kill the sexp (balanced expression) before point.
+With argument, do this that many times. Any provisional
+completion at point is first rejected. If deleting backwards into
+a word, and `auto-completion-mode' is enabled, complete what
+remains of that word.  \(If N is negative, behaviour is instead
+as for `completion-kill-sexp'.\)"
+  (interactive "p")
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'kill-sexp n)
+    (completion-backward-delete 'backward-kill-sexp n))
+)
+
+
+
+(defun completion-kill-paragraph (&optional n)
+  "Kill forward to end of paragraph.
+With argument, do this that many times. If there is a provisional
+completion at point after deleting, reject it. \(If N is
+negative, behaviour is instead as for
+`completion-backward-kill-paragraph'.\)"
+  (interactive "p")
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (< n 0)
+      (completion-backward-delete 'backward-kill-paragraph n)
+    (completion-delete 'kill-paragraph n))
+)
+
+
+
+
+(defun completion-backward-kill-paragraph (&optional n)
+  "Kill backward to start of paragraph.
+With argument, do this that many times. Any provisional
+completion at point is first rejected. If deleting backwards into
+a word, and `auto-completion-mode' is enabled, complete what
+remains of that word.  \(If N is negative, behaviour is instead
+as for `completion-kill-paragraph'.\)"
+  (interactive "p")
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'kill-paragraph n)
+    (completion-backward-delete 'backward-kill-paragraph n))
+)
+
+
+
+;; (defun completion-backward-delete-if-within-overlay (&optional n)
+;;   "Delete backwards N characters.
+;; If there is a provisional completion at the point, delete it first."
+;;   (interactive "p")
+;;   (completion-run-if-within-overlay
+;;    (lambda () (interactive) (completion-backward-delete n))
+;;    'completion-function 'instead)
+;; )
+
 
 
 
@@ -2156,7 +2510,7 @@ Intended to be bound to a key sequence in a keymap."
     ;; run command if running before, or if running instead and we're
     ;; within an overlay
     (when (or (eq when 'before)
-	      (and (or (null when) (eq when 'insted)) overlay))
+	      (and (or (null when) (eq when 'instead)) overlay))
       (command-execute command))
   
     ;; run whatever would normally be bound to the key sequence,
