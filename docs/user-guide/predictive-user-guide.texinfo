@@ -1422,8 +1422,8 @@ rejects any provisional completion and inserts the character.
 
 Occasionally, the syntax-derived behaviour needs to be overridden for
 individual characters. The @env{completion-override-syntax-alist}
-associates characters with functions, and takes precedence over
-@env{completion-syntax-alist}.
+associates characters with completion behaviour and takes precedence
+over @env{completion-syntax-alist}.
 
 Each association in @env{completion-syntax-alist} and
 @env{completion-override-syntax-alist} is a three-element list of the
@@ -1447,8 +1447,9 @@ end of the word, and completes the prefix constructed from the part of
 the word before the point (including the newly typed
 character)@footnote{The value of @env{completion-word-thing} determines
 what is considered a word. Logically enough, it defaults to
-@code{word}. Lisp packages can redefine it, but this is again beyond the
-scope of this user-guide.}.
+@code{word}. Lisp packages can redefine it, or even override the whole
+prefix-finding mechanism with their own function, but this is again
+beyond the scope of this user-guide.}.
 
 
 
