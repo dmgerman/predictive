@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.3
+;; Version: 0.7.4
 ;; Keywords: ternary search tree, tstree
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -58,6 +58,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.4
+;; * fixedm bug in `tstree-map' so it works when tree contains deleted data
+;;   nodes (thanks to Mathias Dahl for noticing this)
 ;;
 ;; Version 0.7.3
 ;; * fixed bug in `tstree-construct-sortfun' that caused keys to be
@@ -476,7 +480,7 @@ the insersion function of the first tree in the list."
       (setq node
 	    (if (tstree--node-split node) (tstree--node-low node)
 	      ;; data nodes flagged as deleted don't count (they have a
-	      ;; non-nil, atomic low child)
+	      ;; low child set to the symbol 'deleted)
 	      (if (eq (tstree--node-low node) 'deleted) nil t))))
     node)
 )
@@ -485,7 +489,7 @@ the insersion function of the first tree in the list."
 
 ;; Deleting keys from a ternary search tree is a messy
 ;; operation. Basically, either the tree has to be left with redundant
-;; nodes including nodes with null equal children, or the sub-tree below
+;; nodes, including nodes with null equal children, or the sub-tree below
 ;; the key needs to be restructured.
 ;;
 ;; Possible solutions are either to leave the redundant nodes in the
@@ -497,7 +501,10 @@ the insersion function of the first tree in the list."
 ;;
 ;; The following function adopts the former solution: it leaves the tree
 ;; with redundant nodes (though deleting all keys from the tree will
-;; result in an empty tree again).
+;; result in an empty tree again). Since data nodes can never have a
+;; low-child (they have a null split value, and the comparison function
+;; ensures everything is larger than nil), deleted data nodes are flagged
+;; by setting their low-child cell to the symbol 'deleted.
 
 (defun tstree-delete (tree key)
   "Delete KEY and its associated data from TREE.
@@ -608,9 +615,10 @@ function calls is returned. Don't use this. Use the
 	    (push (tstree--node-high node) stack)
 	    (push str stack))
 	  
-	  ;; if we're at a data node call FUNCTION, otherwise add the
-	  ;; equal child to the stack
-	  (if (null (tstree--node-split node))
+	  ;; if we're at a data node that hasn't been flagged as deleted, call
+	  ;; FUNCTION, otherwise add the equal child to the stack
+	  (if (and (null (tstree--node-split node))
+		   (not (eq (tstree--node-low node) 'deleted)))
 	      (progn
 		(setq result (funcall function str
 				      (tstree--node-equal node)))
@@ -628,7 +636,8 @@ function calls is returned. Don't use this. Use the
 		    stack)))
 	  
 	  ;; add the low child to the stack, if it exists
-	  (when (tstree--node-low node)
+	  (when (and (tstree--node-low node)
+		     (not (eq (tstree--node-low node) 'deleted)))
 	    (push (tstree--node-low node) stack)
 	    (push str stack))
 	  )))
