@@ -106,6 +106,8 @@
 ;; * modified `completion-backward-delete', created corresponding
 ;;   `completion-delete' function, and defined a whole host of deletion and
 ;;   kill commands that are substituted for the standard ones
+;; * added convenience function `completion-define-word-constituent-binding'
+;;   for defining bindings to insert characters as word-constituents
 ;;   
 ;;
 ;; Version 0.5.2
@@ -584,8 +586,8 @@ been inserted so far \(prefix and tab-completion combined\).")
     ;; M-<tab> cycles or completes word at point
     (define-key map [?\M-\t]
       (lambda ()
-	"Cycle through available completions if there are any,
-otherwise complete the word at point."
+	"Cycle through available completions if there are any,\
+ otherwise complete the word at point."
 	(interactive)
 	(if (completion-overlay-at-point)
 	    (completion-cycle)
@@ -593,8 +595,8 @@ otherwise complete the word at point."
     ;; M-<shift>-<tab> cycles backwards
     (define-key map '[(meta shift iso-lefttab)]
       (lambda ()
-	"Cycle backwards through completions if there are any,
-otherwise complete the word at point."
+	"Cycle backwards through completions if there are any,\
+ otherwise complete the word at point."
 	(interactive)
 	(if (completion-overlay-at-point)
 	    (completion-cycle -1)
@@ -986,6 +988,30 @@ otherwise complete the word at point."
     (push (cons 'completion-use-hotkeys completion-hotkey-map)
 	  minor-mode-map-alist)))
 
+
+
+(defun completion-define-word-constituent-binding (key char)
+  "Setup key bindings for KEY so that it inserts character CHAR
+as though it were a word-constituent character."
+  (let ((doc (concat "Insert \"" (string char) "\" as though it were a\
+ word-constituent.")))
+    ;; create `completion-dynamic-map' binding
+    (define-key completion-dynamic-map key
+      `(lambda () ,doc
+	 (interactive)
+	 (completion-insert-as-word-constituent ,char)))
+    ;; if emacs version doesn't support overlay keymaps properly, create
+    ;; binding in `completion-map' to simulate them via
+    ;; `completion-run-if-within-overlay' hack
+    (when (<= emacs-major-version 22)
+      (define-key completion-map key
+	`(lambda () ,doc
+	   (interactive)
+	   (completion-run-if-within-overlay
+	    (lambda () (interactive)
+	      (completion-insert-as-word-constituent ,char))
+	    'completion-function)))))
+)
 
 
 
@@ -1677,6 +1703,262 @@ to invoke this function."
 
 
 
+(defun completion-accept (&optional arg overlay)
+  "Accept current provisional completion.
+
+The value of ARG is passed as the third argument to any functions
+called from the `completion-accept-functions' hook. Interactively,
+ARG is the prefix argument.
+
+If optional argument OVERLAY is supplied, it is used instead of
+looking for an overlay at the point. The point had better be
+within OVERLAY or else your hair will fall out.
+
+If a completion was accepted, returns a cons cell containing the
+prefix and the entire accepted completion \(the concatenation of
+the prefix and the completion string\). Otherwise returns nil."
+  (interactive "P")
+
+  ;; if we haven't been passed one, get completion overlay at point
+  (let ((o (or overlay (completion-overlay-at-point)))
+	prefix completion)
+    
+    ;; resolve any other old provisional completions
+    (completion-resolve-old o)
+    (completion-cancel-tooltip)
+    
+    ;; if point is in a completion overlay...
+    (when o
+      (setq prefix (overlay-get o 'prefix))
+      (setq completion
+	    (concat prefix
+		    (buffer-substring-no-properties (overlay-start o)
+						    (overlay-end o))))
+      ;; accept current completion
+      (goto-char (overlay-end o))
+      ;; run accept hooks
+      (run-hook-with-args 'completion-accept-functions prefix completion arg)
+      ;; delete overlay if we've found it ourselves
+      (unless overlay
+	(setq completion-overlay-list (delq o completion-overlay-list))
+	(delete-overlay o))
+      (cons prefix completion)
+      ))
+)
+
+
+(defun completion-accept-if-within-overlay (&optional arg)
+  "Accept current completion if there is one,
+then run whatever command would normally be bound to the key
+sequence used to invoke this function.
+
+ARG is the prefix argument, which is passed as the third argument
+to any functions called from the `completion-accept-functions'
+hook."
+  (interactive "P")
+  (completion-run-if-within-overlay
+   (lambda () (interactive) (completion-accept arg))
+   'completion-function 'before)
+)
+
+
+
+(defun completion-reject (&optional arg overlay)
+  "Reject current provisional completion.
+
+The value of ARG is passed as the third argument to any functions
+called from the `completion-reject-functions' hook. Interactively,
+ARG is the prefix argument.
+
+If optional argument OVERLAY is supplied, it is used instead of
+looking for an overlay at the point. The point had better be
+within OVERLAY or else your hair will fall out.
+
+If a completion was rejected, returns a cons cell containing the
+prefix and the entire rejected completion \(the concatenation of
+the prefix and the completion string\). Otherwise returns nil."
+  (interactive "P")
+
+  ;; if we haven't been passed one, get completion overlay at point
+  (let ((o (or overlay (completion-overlay-at-point)))
+	prefix completion)
+    
+    ;; resolve any other old provisional completions
+    (completion-resolve-old o)
+    (completion-cancel-tooltip)
+    
+    ;; if point is in a completion overlay...
+    (when o
+      (setq prefix (overlay-get o 'prefix))
+      (setq completion
+	    (concat prefix (buffer-substring-no-properties (overlay-start o)
+							   (overlay-end o))))
+      ;; reject current completion
+      (delete-region (overlay-start o) (overlay-end o))
+      ;; run reject hooks
+      (run-hook-with-args 'completion-reject-functions prefix completion arg)
+      ;; delete overlay if we've found it ourselves
+      (unless overlay
+	(setq completion-overlay-list
+	      (delq o completion-overlay-list))
+	(delete-overlay o))
+      ;; return cons cell containing prefix and rejected completion
+      (cons prefix completion)
+      ))
+)
+
+
+(defun completion-reject-if-within-overlay (&optional arg)
+  "Reject the current completion if there is one, otherwise run
+whatever would normally be bound to the key sequence used to
+invoke this function.
+
+ARG is the prefix argument, which is passed as the third argument
+to any function called from the `completion-reject-functions'
+hook."
+  (interactive "P")
+  (completion-run-if-within-overlay
+   (lambda () (interactive) (completion-reject arg))
+   'completion-function)
+)
+
+
+
+(defun completion-scoot-ahead (&optional overlay)
+  "Accept the characters from the current completion, and recomplete
+the resulting string.
+
+When called from Lisp programs, use OVERLAY instead of finding
+one. The point had better be within OVERLAY or the oceans will
+boil away."
+  (interactive)
+  (completion-cancel-tooltip)
+
+  (unless overlay (setq overlay (completion-overlay-at-point)))
+  
+  ;; if within a completion overlay, accept characters it contains
+  (when (and overlay (/= (point) (overlay-end overlay)))
+    (goto-char (overlay-end overlay))
+    (move-overlay overlay (point) (point))
+    (completion-setup-overlay
+     (concat (overlay-get overlay 'prefix)
+	     (nth (overlay-get overlay 'completion-num)
+		  (overlay-get overlay 'completions)))
+     nil nil overlay))
+  
+  ;; if auto-completing, do so
+  (when auto-completion-mode
+    (complete-in-buffer (overlay-get overlay 'prefix) overlay t))
+)
+
+
+
+(defun completion-cycle (&optional n overlay)
+  "Cycle through available completions.
+
+Optional argument N specifies the number of completions to cycle
+forwards \(backwards if negative\). Default is 1. Interactively,
+N is the prefix argument.
+
+If OVERLAY is supplied, use that instead of finding one. The
+point had better be within OVERLAY or you'll be stuck by
+lightening."
+  (interactive "P")
+  (when (null n) (setq n 1))
+  
+  ;; if we haven't been passed one, get completion overlay at point
+  (unless overlay (setq overlay (completion-overlay-at-point)))
+  
+  ;; if within a completion overlay, cycle to next completion
+  (when overlay
+    (let* (i string)
+      (when (null (setq i (overlay-get overlay 'completion-num)))
+	(setq i -1))
+      (setq i (mod (+ i n)
+		   (length (overlay-get overlay 'completions))))
+      (setq string (nth i (overlay-get overlay 'completions)))
+      ;; delete old completion and insert new one
+      (delete-region (overlay-start overlay) (overlay-end overlay))
+      (insert string)
+      (move-overlay overlay (overlay-start overlay)
+		    (+ (overlay-start overlay) (length string)))
+      (overlay-put overlay 'completion-num i)
+      (when completion-use-dynamic
+	(goto-char (overlay-start overlay)))
+      ;; display echo text and tooltip if using them
+      (when completion-use-echo	(complete-echo overlay))
+      (when completion-use-tooltip
+	(completion-cancel-tooltip)
+	(complete-tooltip overlay 'no-delay))))
+)
+
+
+
+(defun completion-tab-complete (&optional overlay)
+  "Tab-complete completion at point
+\(i.e. insert longest common prefix of all the completions\).
+
+If OVERLAY is supplied, use that instead of finding one."
+  (interactive)
+  (completion-cancel-tooltip)
+  
+  (unless overlay (setq overlay (completion-overlay-at-point)))
+  
+  ;; if within a completion overlay
+  (when overlay
+    (let ((str (try-completion ""
+			       (overlay-get overlay 'completions))))
+      (unless (or (null str) (string= str ""))
+	;; do tab-completion
+	(delete-region (overlay-start overlay) (overlay-end overlay))
+	(insert str)
+	(move-overlay overlay (point) (point))
+	(overlay-put overlay 'prefix
+		     (concat (overlay-get overlay 'prefix) str))
+	(overlay-put overlay 'completions nil))
+      ;; when auto-completing, do so
+      (when auto-completion-mode
+	(complete-in-buffer (overlay-get overlay 'prefix) overlay t))))
+)
+
+
+(defun completion-tab-complete-if-within-overlay ()
+  "Tab-complete current completion if there is one, otherwise run
+whatever command would normally be bound to the key sequence used
+to invoke this function."
+  (interactive)
+  (completion-run-if-within-overlay 'completion-tab-complete
+				    'completion-function)
+)
+
+
+
+(defun completion-accept-and-newline (&optional n overlay)
+  "Insert a newline. Accepts the current completion
+if there is one. If N is specified, insert that many
+newlines. Interactively, N is the prefix argument."
+  (interactive "p")
+  (completion-cancel-tooltip)
+  (unless n (setq n 1))
+  (completion-accept nil overlay)
+  (newline n)
+)
+
+
+
+(defun completion-reject-and-newline (&optional n overlay)
+  "Insert a newline. Rejects the current completion
+if there is one. If N is specified, insert that many
+newlines. Interactively, N is the prefix argument."
+  (interactive "p")
+  (completion-cancel-tooltip)
+  (unless n (setq n 1))
+  (completion-reject nil overlay)
+  (newline n)
+)
+
+
+
 (defun completion-backward-delete (command &rest args)
   "Run backward-delete COMMAND, passing it ARGS.
 Any provisional completion at the point is first rejected. If
@@ -2004,262 +2286,6 @@ as for `completion-kill-paragraph'.\)"
 ;;    'completion-function 'instead)
 ;; )
 
-
-
-
-(defun completion-accept (&optional arg overlay)
-  "Accept current provisional completion.
-
-The value of ARG is passed as the third argument to any functions
-called from the `completion-accept-functions' hook. Interactively,
-ARG is the prefix argument.
-
-If optional argument OVERLAY is supplied, it is used instead of
-looking for an overlay at the point. The point had better be
-within OVERLAY or else your hair will fall out.
-
-If a completion was accepted, returns a cons cell containing the
-prefix and the entire accepted completion \(the concatenation of
-the prefix and the completion string\). Otherwise returns nil."
-  (interactive "P")
-
-  ;; if we haven't been passed one, get completion overlay at point
-  (let ((o (or overlay (completion-overlay-at-point)))
-	prefix completion)
-    
-    ;; resolve any other old provisional completions
-    (completion-resolve-old o)
-    (completion-cancel-tooltip)
-    
-    ;; if point is in a completion overlay...
-    (when o
-      (setq prefix (overlay-get o 'prefix))
-      (setq completion
-	    (concat prefix
-		    (buffer-substring-no-properties (overlay-start o)
-						    (overlay-end o))))
-      ;; accept current completion
-      (goto-char (overlay-end o))
-      ;; run accept hooks
-      (run-hook-with-args 'completion-accept-functions prefix completion arg)
-      ;; delete overlay if we've found it ourselves
-      (unless overlay
-	(setq completion-overlay-list (delq o completion-overlay-list))
-	(delete-overlay o))
-      (cons prefix completion)
-      ))
-)
-
-
-(defun completion-accept-if-within-overlay (&optional arg)
-  "Accept current completion if there is one,
-then run whatever command would normally be bound to the key
-sequence used to invoke this function.
-
-ARG is the prefix argument, which is passed as the third argument
-to any functions called from the `completion-accept-functions'
-hook."
-  (interactive "P")
-  (completion-run-if-within-overlay
-   (lambda () (interactive) (completion-accept arg))
-   'completion-function 'before)
-)
-
-
-
-(defun completion-reject (&optional arg overlay)
-  "Reject current provisional completion.
-
-The value of ARG is passed as the third argument to any functions
-called from the `completion-reject-functions' hook. Interactively,
-ARG is the prefix argument.
-
-If optional argument OVERLAY is supplied, it is used instead of
-looking for an overlay at the point. The point had better be
-within OVERLAY or else your hair will fall out.
-
-If a completion was rejected, returns a cons cell containing the
-prefix and the entire rejected completion \(the concatenation of
-the prefix and the completion string\). Otherwise returns nil."
-  (interactive "P")
-
-  ;; if we haven't been passed one, get completion overlay at point
-  (let ((o (or overlay (completion-overlay-at-point)))
-	prefix completion)
-    
-    ;; resolve any other old provisional completions
-    (completion-resolve-old o)
-    (completion-cancel-tooltip)
-    
-    ;; if point is in a completion overlay...
-    (when o
-      (setq prefix (overlay-get o 'prefix))
-      (setq completion
-	    (concat prefix (buffer-substring-no-properties (overlay-start o)
-							   (overlay-end o))))
-      ;; reject current completion
-      (delete-region (overlay-start o) (overlay-end o))
-      ;; run reject hooks
-      (run-hook-with-args 'completion-reject-functions prefix completion arg)
-      ;; delete overlay if we've found it ourselves
-      (unless overlay
-	(setq completion-overlay-list
-	      (delq o completion-overlay-list))
-	(delete-overlay o))
-      ;; return cons cell containing prefix and rejected completion
-      (cons prefix completion)
-      ))
-)
-
-
-(defun completion-reject-if-within-overlay (&optional arg)
-  "Reject the current completion if there is one, otherwise run
-whatever would normally be bound to the key sequence used to
-invoke this function.
-
-ARG is the prefix argument, which is passed as the third argument
-to any function called from the `completion-reject-functions'
-hook."
-  (interactive "P")
-  (completion-run-if-within-overlay
-   (lambda () (interactive) (completion-reject arg))
-   'completion-function)
-)
-
-
-
-(defun completion-scoot-ahead (&optional overlay)
-  "Accept the characters from the current completion, and recomplete
-the resulting string.
-
-When called from Lisp programs, use OVERLAY instead of finding
-one. The point had better be within OVERLAY or the oceans will
-boil away."
-  (interactive)
-  (completion-cancel-tooltip)
-
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  ;; if within a completion overlay, accept characters it contains
-  (when (and overlay (/= (point) (overlay-end overlay)))
-    (goto-char (overlay-end overlay))
-    (move-overlay overlay (point) (point))
-    (completion-setup-overlay
-     (concat (overlay-get overlay 'prefix)
-	     (nth (overlay-get overlay 'completion-num)
-		  (overlay-get overlay 'completions)))
-     nil nil overlay))
-  
-  ;; if auto-completing, do so
-  (when auto-completion-mode
-    (complete-in-buffer (overlay-get overlay 'prefix) overlay t))
-)
-
-
-
-(defun completion-cycle (&optional n overlay)
-  "Cycle through available completions.
-
-Optional argument N specifies the number of completions to cycle
-forwards \(backwards if negative\). Default is 1. Interactively,
-N is the prefix argument.
-
-If OVERLAY is supplied, use that instead of finding one. The
-point had better be within OVERLAY or you'll be stuck by
-lightening."
-  (interactive "P")
-  (when (null n) (setq n 1))
-  
-  ;; if we haven't been passed one, get completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  ;; if within a completion overlay, cycle to next completion
-  (when overlay
-    (let* (i string)
-      (when (null (setq i (overlay-get overlay 'completion-num)))
-	(setq i -1))
-      (setq i (mod (+ i n)
-		   (length (overlay-get overlay 'completions))))
-      (setq string (nth i (overlay-get overlay 'completions)))
-      ;; delete old completion and insert new one
-      (delete-region (overlay-start overlay) (overlay-end overlay))
-      (insert string)
-      (move-overlay overlay (overlay-start overlay)
-		    (+ (overlay-start overlay) (length string)))
-      (overlay-put overlay 'completion-num i)
-      (when completion-use-dynamic
-	(goto-char (overlay-start overlay)))
-      ;; display echo text and tooltip if using them
-      (when completion-use-echo	(complete-echo overlay))
-      (when completion-use-tooltip
-	(completion-cancel-tooltip)
-	(complete-tooltip overlay 'no-delay))))
-)
-
-
-
-(defun completion-tab-complete (&optional overlay)
-  "Tab-complete completion at point
-\(i.e. insert longest common prefix of all the completions\).
-
-If OVERLAY is supplied, use that instead of finding one."
-  (interactive)
-  (completion-cancel-tooltip)
-  
-  (unless overlay (setq overlay (completion-overlay-at-point)))
-  
-  ;; if within a completion overlay
-  (when overlay
-    (let ((str (try-completion ""
-			       (overlay-get overlay 'completions))))
-      (unless (or (null str) (string= str ""))
-	;; do tab-completion
-	(delete-region (overlay-start overlay) (overlay-end overlay))
-	(insert str)
-	(move-overlay overlay (point) (point))
-	(overlay-put overlay 'prefix
-		     (concat (overlay-get overlay 'prefix) str))
-	(overlay-put overlay 'completions nil))
-      ;; when auto-completing, do so
-      (when auto-completion-mode
-	(complete-in-buffer (overlay-get overlay 'prefix) overlay t))))
-)
-
-
-(defun completion-tab-complete-if-within-overlay ()
-  "Tab-complete current completion if there is one, otherwise run
-whatever command would normally be bound to the key sequence used
-to invoke this function."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-tab-complete
-				    'completion-function)
-)
-
-
-
-(defun completion-accept-and-newline (&optional n overlay)
-  "Insert a newline. Accepts the current completion
-if there is one. If N is specified, insert that many
-newlines. Interactively, N is the prefix argument."
-  (interactive "p")
-  (completion-cancel-tooltip)
-  (unless n (setq n 1))
-  (completion-accept nil overlay)
-  (newline n)
-)
-
-
-
-(defun completion-reject-and-newline (&optional n overlay)
-  "Insert a newline. Rejects the current completion
-if there is one. If N is specified, insert that many
-newlines. Interactively, N is the prefix argument."
-  (interactive "p")
-  (completion-cancel-tooltip)
-  (unless n (setq n 1))
-  (completion-reject nil overlay)
-  (newline n)
-)
 
 
 
