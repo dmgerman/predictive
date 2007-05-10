@@ -336,7 +336,7 @@ word just needs a suffix adding, for instance.
 tab-completion.
 
 Finally, to get rid of a provisional completion and just leave the
-characters you've typed, use @kbd{M-SPC}.
+characters you've typed, use @kbd{C-SPC}.
 @findex completion-reject
 
 This ``Quick-Start'' describes the default behaviour. However,
@@ -448,7 +448,7 @@ enabled, predictive mode will also learn the word (@pxref{Dictionary
 Learning}).
 
 @item completion-reject
-(@kbd{M-SPC}) Abandon the current completion, removing the provisionally
+(@kbd{C-SPC}) Abandon the current completion, removing the provisionally
 inserted (i.e. highlighted) characters. If a prefix argument is
 supplied, predictive mode will also learn the resulting word, i.e. the
 prefix with the provisional completion removed (@pxref{Dictionary
@@ -496,20 +496,46 @@ word.
 @cindex characters, deleting
 
 @ftable @command
-@item completion-backward-delete
-(@kbd{DEL}) Reject current completion, if there is one, and delete
+@item completion-delete-char
+(@kbd{<delete>}) Delete forwards and, after deleting, reject any
+completion at the point. A prefix argument sets the number of characters
+to delete.
+
+@item completion-backward-delete-char
+Reject current completion, if there is one, and delete
 backwards. A prefix argument sets the number of characters to delete. If
 this deletes into a word and @command{auto-completion-mode} is enabled,
 complete what remains of that word.
 @findex auto-completion-mode
+
+@item completion-backward-delete-char-untabify
+(@kbd{DEL}) Similar to @command{completion-backward-delete-char}, but
+changes tabs to spaces.
+
+@item completion-kill-word (@kbd{C-<delete>})
+@item completion-kill-sentence
+@item completion-kill-sexp
+@item completion-kill-paragraph
+Similar to @command{completion-delete-char}, only kill forward until the
+end of the word/sentence/sexp/paragraph, instead of deleting individual
+characters.
+
+@item completion-backward-kill-word (@kbd{C-DEL})
+@item completion-backward-kill-sentence
+@item completion-backward-kill-sexp
+@item completion-backward-kill-paragraph
+Similar to @command{completion-backward-delete-char}, only kill backward
+until the end of the word/sentence/sexp/paragraph, instead of deleting
+individual characters.
 @end ftable
 
-@command{completion-backward-delete} works very like
-@command{backward-delete-untabify}), but first rejects any provisional
-completion that had been inserted at the point. If
-@command{auto-completion-mode} is enabled, it also re-completes the string
-remaining before the point after the characters have been deleted
-(@pxref{Auto-Completion Mode}).
+These commands replace the standard Emacs deletion and kill commands, so
+that they deal sensibly with any provisional completion that might be
+present in the region being deleted. If auto completion mode is enabled,
+the backwards deletion commands also re-complete any remaining prefix
+when they delete backwards into part of a word (@pxref{Auto-Completion
+Mode}). In all other respects, these commands are identical to the
+equivalent standard deletion commands with similar names.
 @findex backward-delete
 @findex auto-completion-mode
 
@@ -565,8 +591,17 @@ completion.
 
 The current syntax table (@pxref{Syntax, , , emacs, GNU Emacs Manual})
 determines which characters are word-constituents and which are not
-(although the behaviour of individual characters can be
-overridden). @xref{Character Syntax and Key Bindings}, for details.
+(although the behaviour of individual characters can be overridden). If
+you want to exceptionally insert a punctuation character as though it is
+a word-constituent, such as the @samp{.} in @samp{e.g.}, without
+changing the default behaviour, you can often prefix the character key
+with @keyboard{M-}. The bindings @keyboard{M-.}, @keyboard{M--} and
+@keyboard{M-/} set up by default, but you can easily add more using the
+@command{completion-define-word-constituent-binding} convenience
+function in your @file{.emacs} file. @xref{Character Syntax and Key
+Bindings}, for more details about all the syntax and key binding
+features.
+@findex completion-define-word-constituent-binding
 
 Note that since the @command{completion-reject} command ends the
 completion process, if you want to find completions for the word again
@@ -1379,9 +1414,12 @@ and key list do not correspond!
 
 If the keymaps are not defined when predictive mode is first loaded
 (@pxref{Obtaining and Installing}), it creates the default keymaps and
-loads them into Emacs. Therefore, to customise predictive mode key
-bindings, you must re-define the keymap variables @emph{before} loading
-predictive mode (e.g. before the @code{(require 'predictive)} line).
+loads them into Emacs. Therefore, to completely re-define predictive
+mode key bindings, it is simpler to re-define the keymap variables
+@emph{before} loading predictive mode (e.g. before the @code{(require
+'predictive)} line). But if you simply want to modify a few key
+bindings, as will usually be the case, you can do it in the usual Emacs
+way.
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
@@ -1393,16 +1431,34 @@ predictive mode (e.g. before the @code{(require 'predictive)} line).
 @cindex syntax
 @cindex characters, syntax
 
-@vtable @env
-@item completion-syntax-alist
+@table
+@item @env{completion-syntax-alist}
 Alist associating character syntax descriptors with completion
 functions. Used by the @command{completion-self-insert} function to
 decide what to do based on a typed character's syntax.
+@vindex completion-syntax-alist
 
-@item completion-override-syntax-alist
+@item @env{completion-override-syntax-alist}
 Alist associating characters with completion functions. Overrides the
 default function for a typed character's syntax. Used by
 @command{completion-self-insert}.
+@vindex completion-override-syntax-alist
+
+@item @command{completion-define-word-constituent-binding}
+Convenience command for use in your @file{.emacs} file. It is used to
+define key bindings that insert a character as though it had a different
+syntax. Usually used to allow punctuation characters to be inserted
+one-off as word-constituents. To define @var{key} as a binding to insert
+character @var{char} as though its were a word-constituent, use:
+@lisp
+(completion-define-word-constituent-binding key char)
+@end lisp
+To define @var{key} as a binding to insert character @var{char} as
+though its syntax class were @var{syntax}, use:
+@lisp
+(completion-define-word-constituent-binding key char syntax)
+@end lisp
+@findex completion-define-word-constituent-binding
 @end vtable
 
 When a character is typed, predictive mode decides what to do based on
@@ -1450,6 +1506,18 @@ what is considered a word. Logically enough, it defaults to
 @code{word}. Lisp packages can redefine it, or even override the whole
 prefix-finding mechanism with their own function, but this is again
 beyond the scope of this user-guide.}.
+
+Finally, it is occasionally useful to be able to manually override a
+character's syntax, and have it treated one-off as though it had a
+different syntax class. A key binding to do this can be created using
+the @command{completion-define-word-constituent-binding} function in
+your @file{.emacs} file (after the line loading the predictive package,
+@pxref{Obtaining and Installing}). This is most commonly used to allow
+punctuation characters to be inserted one-off as word-constituents. The
+bindings @keyboard{M-.}, @keyboard{M--} and @keyboard{M-/} are defined
+by default in predictive mode to do precisely this for the punctuation
+characters @samp{.}, @samp{-} and @samp{/}.
+@findex completion-define-word-constituent-binding
 
 
 
