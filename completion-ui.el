@@ -101,8 +101,9 @@
 ;;   constructing tooltip text
 ;; * fixed bugs related to backwards-deletion (thanks to Maciej Katafiasz for
 ;;   pointing some of these out)
-;; * added `completion-insert-as-word-constituent' funtion and appropriate
-;;   key bindings to insert characters as though word constituents
+;; * added optional arguements to `completion-self-insert' to allow
+;;   automatically determined character and syntax to be overridden, and
+;;   created key bindings to insert characters as word constituents
 ;; * modified `completion-backward-delete', created corresponding
 ;;   `completion-delete' function, and defined a whole host of deletion and
 ;;   kill commands that are substituted for the standard ones
@@ -629,9 +630,10 @@ been inserted so far \(prefix and tab-completion combined\).")
 	    'completion-kill-paragraph)
 	  (define-key map [remap backward-kill-paragraph]
 	    'completion-backward-kill-paragraph))
-	(define-key map [backspace] 'completion-backward-delete-char-untabify)
-	(define-key map [(meta backspace)] 'completion-backward-kill-word)
-	(define-key map [(control backspace)] 'completion-backward-kill-word))
+      (define-key map [delete] 'completion-delete-char)
+      (define-key map [backspace] 'completion-backward-delete-char-untabify)
+      (define-key map [(control delete)] 'completion-kill-word)
+      (define-key map [(control backspace)] 'completion-backward-kill-word))
     
     ;; If the current Emacs version doesn't support overlay keybindings half
     ;; decently, have to simulate them using
@@ -660,7 +662,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 	  (interactive)
 	  (completion-run-if-within-overlay
 	   (lambda () (interactive)
-	     (completion-insert-as-word-constituent ?.))
+	     (completion-self-insert ?. ?w))
 	   'completion-function)))
       ;; M-- inserts "-" as a word-constituent
       (define-key map "\M--"
@@ -668,7 +670,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 	  (interactive)
 	  (completion-run-if-within-overlay
 	   (lambda () (interactive)
-	     (completion-insert-as-word-constituent ?-))
+	     (completion-self-insert ?- ?w))
 	   'completion-function)))
       ;; M-/ inserts "/" as a word-constituent
       (define-key map "\M-/"
@@ -676,7 +678,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 	  (interactive)
 	  (completion-run-if-within-overlay
 	   (lambda () (interactive)
-	     (completion-insert-as-word-constituent ?/))
+	     (completion-self-insert ?/ ?w))
 	   'completion-function)))
       )
     
@@ -950,17 +952,17 @@ been inserted so far \(prefix and tab-completion combined\).")
     (define-key map "\M-."
       (lambda () "Insert \".\" as though it were a word-constituent."
 	(interactive)
-	(completion-insert-as-word-constituent ?.)))
+	(completion-self-insert ?. ?w)))
     ;; M-- inserts "-" as a word-constituent
     (define-key map "\M--"
       (lambda () "Insert \"-\" as though it were a word-constituent."
 	(interactive)
-	(completion-insert-as-word-constituent ?-)))
+	(completion-self-insert ?- ?w)))
     ;; M-/ inserts "/" as a word-constituent
     (define-key map "\M-/"
       (lambda () "Insert \"/\" as though it were a word-constituent."
 	(interactive)
-	(completion-insert-as-word-constituent ?/)))
+	(completion-self-insert ?/ ?w)))
     ;; RET accepts any pending completion candidate, then runs whatever is
     ;; usually bound to RET
     (define-key map "\r" 'completion-accept-and-newline)
@@ -990,16 +992,20 @@ been inserted so far \(prefix and tab-completion combined\).")
 
 
 
-(defun completion-define-word-constituent-binding (key char)
+(defun completion-define-word-constituent-binding (key char &optional syntax)
   "Setup key bindings for KEY so that it inserts character CHAR
-as though it were a word-constituent character."
+as though it's syntax were SYNTAX (defaults to word-constituent, ?w)."
+
+  (when (null syntax) (setq syntax ?w))
   (let ((doc (concat "Insert \"" (string char) "\" as though it were a\
  word-constituent.")))
+    
     ;; create `completion-dynamic-map' binding
     (define-key completion-dynamic-map key
       `(lambda () ,doc
 	 (interactive)
-	 (completion-insert-as-word-constituent ,char)))
+	 (completion-self-insert ,char ,syntax)))
+    
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate them via
     ;; `completion-run-if-within-overlay' hack
@@ -1009,7 +1015,7 @@ as though it were a word-constituent character."
 	   (interactive)
 	   (completion-run-if-within-overlay
 	    (lambda () (interactive)
-	      (completion-insert-as-word-constituent ,char))
+	      (completion-self-insert ,char ,syntax))
 	    'completion-function)))))
 )
 
@@ -1390,23 +1396,35 @@ point is at position."
 ;;;                Commands for binding to keys
 
 
-(defun completion-self-insert ()
+(defun completion-self-insert (&optional char syntax)
   "Execute a completion function based on syntax.
 
 Decide what completion function to execute by looking up the
-character's syntax in `completion-dynamic-syntax-alist'. The
-syntax-derived function can be overridden for individual
-characters by `completion-dynamic-override-syntax-alist'.
+syntax of the character corresponding to the last input event in
+`completion-dynamic-syntax-alist'. The syntax-derived function
+can be overridden for individual characters by
+`completion-dynamic-override-syntax-alist'.
+
+If CHAR is supplied, it is used instead of the last input event
+to determine the character typed. If SYNTAX is supplied, it
+overrides the character's syntax, and is used instead to lookup
+the behaviour in the alists.
 
 The default functions in `completion-dymamic-syntax-alist' all
 insert the last input event, in addition to taking any completion
 related action \(hence the name,
 `completion-self-insert'\). Therefore, unless you know what you
-are doing, it only bind `completion-self-insert' to printable
+are doing, only bind `completion-self-insert' to printable
 characters."
   (interactive)
   (completion-cancel-tooltip)
 
+  ;; if CHAR or SYNTAX were supplied, use them, otherwise get character and
+  ;; syntax from last input event (relies on sensible key bindings being used
+  ;; for this command)
+  (when (null char) (setq char last-input-event))
+  (when (null syntax) (setq syntax (char-syntax last-input-event)))
+  
   ;; if we're not automatically completing or doing dynamic
   ;; completion, just resolve provisional completions and insert last
   ;; input event
@@ -1414,7 +1432,7 @@ characters."
 	   (not completion-use-dynamic))
       (progn
 	(completion-resolve-old)
-	(insert (string last-input-event)))
+	(insert (string char)))
     
     
     ;; otherwise, lookup behaviour in syntax alists
@@ -1427,8 +1445,8 @@ characters."
 				'completion-dynamic-override-syntax-alist)
 			     completion-dynamic-override-syntax-alist))
 	   (behaviour
-	    (or (cdr (assq last-input-event override-alist))
-		(cdr (assq (char-syntax last-input-event) syntax-alist))
+	    (or (cdr (assq char override-alist))
+		(cdr (assq syntax syntax-alist))
 		(cdr (assq t syntax-alist))))
 	   (resolve-behaviour (nth 0 behaviour))
 	   (insert-behaviour (nth 1 behaviour))
@@ -1448,21 +1466,20 @@ characters."
        ;; accept
        ((eq resolve-behaviour 'accept)
 	(completion-accept nil overlay)
-	(setq prefix (string last-input-event))
+	(setq prefix (string char))
 	(setq wordstart t))
        ;; reject
        ((eq resolve-behaviour 'reject)
 	(completion-reject nil overlay)
-	(setq prefix (string last-input-event))
+	(setq prefix (string char))
 	(setq wordstart t))
        ;; add to prefix
        ((eq resolve-behaviour 'add)
 	(if (null overlay)
-	    (setq prefix (string last-input-event))
+	    (setq prefix (string char))
 	  (delete-region (overlay-start overlay)
 			 (overlay-end overlay))
-	  (setq prefix (concat (overlay-get overlay 'prefix)
-			       (string last-input-event))))
+	  (setq prefix (concat (overlay-get overlay 'prefix) (string char))))
 	(setq wordstart (or (completion-beginning-of-word-p)
 			    (and (not (completion-within-word-p))
 				 (not (completion-end-of-word-p))))))
@@ -1478,7 +1495,7 @@ characters."
       ;; insert typed character and move overlay, unless told not to
       ;; by return value of complete-after function
       (when insert-behaviour
-	(self-insert-command 1)
+	(insert (string char))
 	(when overlay (move-overlay overlay (point) (point))))
       
       
@@ -1513,57 +1530,6 @@ characters."
        (t (error "Invalid entry in `completion-dynamic-syntax-alist'\
  or `completion-dynamic-override-syntax-alist', %s"
 		 (prin1-to-string complete-behaviour))))
-      ))
-)
-
-
-
-(defun completion-insert-as-word-constituent (char)
-  "Insert character CHAR as though it was a word constituent,
-irrespective of its actual syntax class."
-  (let ((overlay (completion-overlay-at-point))
-	prefix wordstart)
-
-    ;; if we're not automatically completing or doing dynamic completion, just
-    ;; resolve provisional completions and insert last input event
-    (if (and (not auto-completion-mode)
-	     (not completion-use-dynamic))
-	(progn
-	  (completion-resolve-old)
-	  (insert (string char)))
-      
-      
-      ;; otherwise, add character to prefix
-      (if (null overlay)
-	  (setq prefix (string char))
-	(delete-region (overlay-start overlay)
-		       (overlay-end overlay))
-	(setq prefix (concat (overlay-get overlay 'prefix) (string char))))
-      (setq wordstart (or (completion-beginning-of-word-p)
-			  (and (not (completion-within-word-p))
-			       (not (completion-end-of-word-p)))))
-      
-      ;; insert typed character and move overlay
-      (insert (string char))
-      (when overlay (move-overlay overlay (point) (point)))
-      
-      (cond
-       ;; if not using automatic completion or not completing after
-       ;; inserting, resolve any overlay
-       ((not auto-completion-mode)
-	(when overlay
-	  (delete-overlay overlay)
-	  (setq completion-overlay-list
-		(delq overlay completion-overlay-list))
-	  (completion-resolve-old)))
-       
-       ;; if we're auto-completing, and are either in a completion overlay or
-       ;; at the beginning of a word, do normal completion
-       ((or overlay wordstart)
-	(complete-in-buffer prefix overlay t))
-       
-       ;; otherwise, complete word at point
-       (t (complete-word-at-point overlay 'auto)))
       ))
 )
 
