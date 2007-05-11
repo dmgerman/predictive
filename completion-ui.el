@@ -42,6 +42,9 @@
 ;; completion-UI customization variables from Elisp code to alter its
 ;; behaviour. The user knows what they want better than you do!)
 ;;
+;; Examples are available on the Emacs wiki, at:
+;; www.emacswiki.org/cgi-bin/wiki/CompletionUI
+;; 
 ;; Why use completion-UI? Typically, a lot of code in packages providing
 ;; some kind of text completion deals with the user interface. The
 ;; ultimate goal is that all packages providing in-buffer (and possibly
