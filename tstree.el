@@ -60,8 +60,8 @@
 ;;; Change Log:
 ;;
 ;; Version 0.7.4
-;; * fixed bug in `tstree-map' so it works when tree contains deleted data
-;;   nodes (thanks to Mathias Dahl for noticing this)
+;; * fixed bug in `tstree-map' so it works when tree contains deleted
+;;   data nodes (thanks to Mathias Dahl for noticing this)
 ;;
 ;; Version 0.7.3
 ;; * fixed bug in `tstree-construct-sortfun' that caused keys to be
