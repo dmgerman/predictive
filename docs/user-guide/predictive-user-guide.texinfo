@@ -586,7 +586,8 @@ to indicate that it has not yet been accepted. If
 characters will add them to the word, and update the most likely
 completion (@pxref{Auto-Completion Mode}). Typing any end-of-word
 character (such as a space or a punctuation character) will accept the
-completion.
+completion. Typing @kbd{M-SPC} will reject the completion and insert a
+space.
 @findex auto-completion-mode
 
 The current syntax table (@pxref{Syntax, , , emacs, GNU Emacs Manual})
