@@ -595,8 +595,8 @@ determines which characters are word-constituents and which are not
 you want to exceptionally insert a punctuation character as though it is
 a word-constituent, such as the @samp{.} in @samp{e.g.}, without
 changing the default behaviour, you can often prefix the character key
-with @keyboard{M-}. The bindings @keyboard{M-.}, @keyboard{M--} and
-@keyboard{M-/} set up by default, but you can easily add more using the
+with @kbd{M-}. The bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} set up by
+default, but you can easily add more using the
 @command{completion-define-word-constituent-binding} convenience
 function in your @file{.emacs} file. @xref{Character Syntax and Key
 Bindings}, for more details about all the syntax and key binding
@@ -1431,20 +1431,20 @@ way.
 @cindex syntax
 @cindex characters, syntax
 
-@table
-@item @env{completion-syntax-alist}
+@vtable @env
+@item completion-syntax-alist
 Alist associating character syntax descriptors with completion
 functions. Used by the @command{completion-self-insert} function to
 decide what to do based on a typed character's syntax.
-@vindex completion-syntax-alist
 
-@item @env{completion-override-syntax-alist}
+@item completion-override-syntax-alist
 Alist associating characters with completion functions. Overrides the
 default function for a typed character's syntax. Used by
 @command{completion-self-insert}.
-@vindex completion-override-syntax-alist
+@end vtable
 
-@item @command{completion-define-word-constituent-binding}
+@ftable @command
+@item completion-define-word-constituent-binding
 Convenience command for use in your @file{.emacs} file. It is used to
 define key bindings that insert a character as though it had a different
 syntax. Usually used to allow punctuation characters to be inserted
@@ -1458,8 +1458,7 @@ though its syntax class were @var{syntax}, use:
 @lisp
 (completion-define-word-constituent-binding key char syntax)
 @end lisp
-@findex completion-define-word-constituent-binding
-@end vtable
+@end ftable
 
 When a character is typed, predictive mode decides what to do based on
 that character's syntax, as defined by the current syntax table
@@ -1514,9 +1513,9 @@ the @command{completion-define-word-constituent-binding} function in
 your @file{.emacs} file (after the line loading the predictive package,
 @pxref{Obtaining and Installing}). This is most commonly used to allow
 punctuation characters to be inserted one-off as word-constituents. The
-bindings @keyboard{M-.}, @keyboard{M--} and @keyboard{M-/} are defined
-by default in predictive mode to do precisely this for the punctuation
-characters @samp{.}, @samp{-} and @samp{/}.
+bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} are defined by default in
+predictive mode to do precisely this for the punctuation characters
+@samp{.}, @samp{-} and @samp{/}.
 @findex completion-define-word-constituent-binding
 
 
