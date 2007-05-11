@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.16
+0.17
 @c --version--
 
 Copyright @copyright{} 2005 2006 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.16
+@subtitle Version 0.17
 @c --version--
 @author Toby Cubitt
 
