@@ -119,6 +119,9 @@ Character Syntax and Key Bindings
 Major Modes
 
 * LaTeX Support::               
+
+@LaTeX{} Support
+
 * LaTeX Packages::              
 * Automatically Created Files::  
 
@@ -1583,13 +1586,11 @@ in the package, @pxref{Obtaining and Installing}) can be found in your
 few configuration variables. @xref{LaTeX Support}.
 @c Support for the other major-modes is more rudimentary.
 
-
-
 @menu
 * LaTeX Support::               
-* LaTeX Packages::              
-* Automatically Created Files::  
 @end menu
+
+
 
 @node LaTeX Support
 @subsection @LaTeX{} Support
@@ -1602,24 +1603,29 @@ enabled automatically when predictive completion mode is turned on in a
 @LaTeX{} buffer, via an entry in @env{predictive-major-mode-alist}
 (@pxref{Major Modes}).
 
-Predictive @LaTeX{} mode honours the @env{TeX-master} variable. If it is
-turned on in a buffer whose @env{TeX-master} variable is set to the name
-of another @LaTeX{} file, the @env{TeX-master} file will be visited,
-predictive mode will be enabled in its buffer, and all buffers with the
-same @env{TeX-master} will share various predictive mode settings.
+@vtable @env
+@item predictive-latex-docclass-alist
+Alist associating LaTeX document classes (the @env{docclass} appearing
+inside @code{\documentclass@{<@env{docclass}>@}} with dictionaries.
 
-In addition to the usual main dictionary, determined by
-@env{predictive-main-dict} (@pxref{Basic Dictionary Usage}), a number of
-@LaTeX{} dictionaries are also used, grouped into three
-@c four
-main categories: text-mode @LaTeX{} commands, maths-mode @LaTeX{}
-commands,
-@c preamble @LaTeX{} commands,
-and @LaTeX{} environments. The dictionaries in the different categories
-are used to look for completions in different contexts in the @LaTeX{}
-document. The main @LaTeX{} dictionaries in these categories are,
-respectively, @code{dict-latex}, @code{dict-latex-math},
-@c @code{dict-latex-preamble}
+@item predictive-latex-electric-environments
+When non-nil, environment names appearing inside
+@code{\begin@{<@env{environment}>@}} and
+@code{\end@{<@env{environment}>@}} are automatically synchronized.
+@end vtable
+
+By default, predictive mode will use the usual main dictionary in
+@LaTeX{} mode, determined by @env{predictive-main-dict} (@pxref{Basic
+Dictionary Usage}). However, by customizing
+@env{predictive-latex-docclass-alist}, the main dictionary can be
+selected automatically based on the document class. In addition to the
+main dictionary, a number of @LaTeX{} dictionaries are also used,
+grouped into four main categories: text-mode @LaTeX{} commands,
+maths-mode @LaTeX{} commands, preamble @LaTeX{} commands, and @LaTeX{}
+environments. The dictionaries in the different categories are used to
+look for completions in different contexts in the @LaTeX{} document. The
+main @LaTeX{} dictionaries in these categories are, respectively,
+@code{dict-latex}, @code{dict-latex-math}, @code{dict-latex-preamble}
 and @code{dict-latex-env}. In addition, there are dictionaries for
 @LaTeX{} document classes (@code{dict-latex-docclass}), bibliography
 styles (@code{dict-latex-bibstyle}), and an automatically generated
@@ -1638,16 +1644,38 @@ environments. Inside @samp{\ref@{@dots{}@}} it will use the dictionary
 of cross-reference labels, which is created and updated automatically
 for each @LaTeX{} document.
 
+When @env{predictive-latex-electric-environments} is enabled, the
+environment name appearing inside a @LaTeX{}
+@code{\end@{<@env{environment}>@}} command is automatically synchronized
+with its matching @code{\begin@{<@env{environment}>@}} command. The
+synchronization doesn't just occur when the @code{\end} command is first
+typed; it is kept synchronized at all times, even when the @code{\begin}
+command that it matches changes. Also, when the environment name within
+either a @code{\begin} @emph{or} an @code{\end} command is modified, the
+environment name within its matching partner is also modified
+accordingly.
+
 The behaviour of different character syntax classes, and the behaviour
 of certain individual characters, is set up appropriately for @LaTeX{}
 (@pxref{Character Syntax and Key Bindings}). Also, a special @LaTeX{}
 completion browser menu, more appropriate for browsing @LaTeX{}
 commands, is used instead of the default one.
 
+Predictive @LaTeX{} mode honours the @env{TeX-master} variable. If it is
+turned on in a buffer whose @env{TeX-master} variable is set to the name
+of another @LaTeX{} file, the @env{TeX-master} file will be visited,
+predictive mode will be enabled in its buffer, and all buffers with the
+same @env{TeX-master} will share various predictive mode settings.
+
+@menu
+* LaTeX Packages::              
+* Automatically Created Files::  
+@end menu
+
 
 
 @node LaTeX Packages
-@subsection @LaTeX{} Packages
+@subsubsection @LaTeX{} Packages
 @cindex @LaTeX{} packages
 @cindex dictionaries, automatic loading for @LaTeX{} packages
 
@@ -1703,7 +1731,7 @@ important@footnote{Dictionaries and Elisp code welcome!}.
 
 
 @node Automatically Created Files
-@subsection Automatically Created Files
+@subsubsection Automatically Created Files
 @cindex automatically created files
 @cindex @LaTeX{}, automatically created files
 
