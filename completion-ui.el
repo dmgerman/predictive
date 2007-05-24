@@ -1086,8 +1086,10 @@ A negative prefix argument turns it off.
 In auto-completion-mode, Emacs will try to complete words as you
 type, using whatever completion method has been set up (either by the
 major mode, or by another minor mode)."
-  :lighter " complete"
-  :keymap auto-completion-map)
+  nil                  ; init-value
+  " complete"          ; lighter
+  auto-completion-map  ; keymap
+)
 
 
 
@@ -1439,6 +1441,8 @@ characters."
   ;; being used for this command)
   (when (null char) (setq char last-input-event))
   (when (null syntax) (setq syntax (char-syntax last-input-event)))
+;;  (message "Syntax of %c: %c" char syntax)
+
   
   ;; if we're not automatically completing or doing dynamic
   ;; completion, just resolve provisional completions and insert last
@@ -1447,7 +1451,8 @@ characters."
 	   (not completion-use-dynamic))
       (progn
 	(completion-resolve-old)
-	(insert (string char)))
+	(setq last-input-event char)
+	(self-insert-command 1))
     
     
     ;; otherwise, lookup behaviour in syntax alists
@@ -1513,7 +1518,8 @@ characters."
       ;; insert typed character and move overlay, unless told not to
       ;; by return value of complete-after function
       (when insert-behaviour
-	(insert (string char))
+	(setq last-input-event char)
+	(self-insert-command 1)
 	(when overlay (move-overlay overlay (point) (point))))
       
       
