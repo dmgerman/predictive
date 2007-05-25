@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6
+;; Version: 0.6.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -97,6 +97,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.1
+;; * modified define-minor-mode usage for auto-completion-mode to work in
+;;   older Emacs versions
+;; * fixed `completion-self-insert' so that auto-fill works again
+;; * if command remapping isn't supported, attempt to simulate it more
+;;   effectively for deletion commands
 ;;
 ;; Version 0.6
 ;; * added `completion-prefix' and `completion-tooltip' variables to
@@ -608,8 +615,7 @@ been inserted so far \(prefix and tab-completion combined\).")
 	(if (completion-overlay-at-point)
 	    (completion-cycle -1)
 	  (complete-word-at-point))))
-    ;; if command remapping is supported, remap delete commands,
-    ;; otherwise can't do better than rebind their default bindings
+    ;; if command remapping is supported, remap delete commands
     (if (fboundp 'command-remapping)
 	(progn
 	  (define-key map [remap delete-char]
@@ -636,12 +642,37 @@ been inserted so far \(prefix and tab-completion combined\).")
 	    'completion-kill-paragraph)
 	  (define-key map [remap backward-kill-paragraph]
 	    'completion-backward-kill-paragraph))
-      (define-key map [delete] 'completion-delete-char)
-      (define-key map [backspace]
-	'completion-backward-delete-char-untabify)
-      (define-key map [(control delete)] 'completion-kill-word)
-      (define-key map [(control backspace)]
-	'completion-backward-kill-word))
+      ;; otherwise, can't do better than define bindings for the keys that are
+      ;; currently bound to them
+      (dolist (key '([delete] [deletechar] [backspace] "\d"
+		     [(control delete)] [(control deletechar)]
+		     [(meta delete)] [(meta deletechar)]
+		     [(control backspace)] [(meta backspace)] "\M-\d"))
+	(catch 'rebound
+	  (dolist (binding '((delete-char . completion-delete-char)
+			     (kill-word . completion-kill-word)
+			     (kill-sentence . completion-kill-sentence)
+			     (kill-sexp . completion-kill-sexp)
+			     (kill-paragraph . completion-kill-paragraph)
+			     (backward-delete-char
+			      . completion-backward-delete-char)
+			     (delete-backward-char
+			      . completion-backward-delete-char)
+			     (backward-delete-char-untabify
+			      . completion-backward-delete-char-untabify)
+			     (backward-kill-word
+			      . completion-backward-kill-word)
+			     (backward-kill-sentence
+			      . completion-backward-kill-sentence)
+			     (backward-kill-sexp
+			      . completion-backward-kill-sexp)
+			     (backward-kill-paragraph
+			      . completion-backward-kill-paragraph)))
+	    (when (eq (key-binding key) (car binding))
+	      (define-key map key (cdr binding))
+	      (throw 'rebound t)))))
+      )
+    
     
     ;; If the current Emacs version doesn't support overlay keybindings
     ;; half decently, have to simulate them using
