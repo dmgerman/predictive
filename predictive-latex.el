@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7
+;; Version: 0.7.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.7.1
+;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
+;;   an even number of \'s in front of them
+;; 
 ;; Version 0.7
 ;; * added automatic synchronization of environment names
 ;; * added interactive commands for navigating by LaTeX environments
@@ -393,10 +397,12 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	  (face . (background-color . ,predictive-latex-debug-color)))
    'predictive nil 'inline-math)
   
-  ;; ...as do \[ and \], but not \\[ and \\]
+  ;; ...as do \[ and \], but not \\[ and \\] etc.
+  ;; Note: regexps contain a lot of \'s because it has to check whether number
+  ;; of \'s in front of { is even or odd
   (auto-overlay-load-regexp '(nest) 'predictive nil 'display-math)
   (auto-overlay-load-compound-regexp
-   `(start ("[^\\]\\(\\\\\\[\\)" . 1)
+   `(start ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
 	   (dict . predictive-latex-math-dict) (priority . 40)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-latex-debug-color)))
@@ -408,7 +414,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
-   `(end ("[^\\]\\(\\\\\\]\\)" . 1)
+   `(end ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
 	 (dict . predictive-latex-math-dict) (priority . 40)
 	 (completion-menu . predictive-latex-construct-browser-menu)
 	 (face . (background-color . ,predictive-latex-debug-color)))
@@ -422,7 +428,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
-  ;; included to ensure all { and } match, but \{ is excluded.
+  ;; included to ensure all { and } match, but \{ is excluded
   (auto-overlay-load-regexp '(nest) 'predictive nil 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\usepackage{" (dict . t) (priority . 30)
@@ -500,12 +506,16 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
+  ;; Note: regexps contain a lot of \'s because it has to check whether number
+  ;; of \'s in front of { is even or odd. Also, since auto-overlay regexps
+  ;; aren't allowed to match across lines, we have to deal with the case of {
+  ;; or } at the start of a line separately.
   (auto-overlay-load-compound-regexp
    `(start ("^\\({\\)" . 1) (priority . 30)
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
-   `(start ("[^\\]\\({\\)" . 1) (priority . 30)
+   `(start ("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2) (priority . 30)
 	   (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
@@ -513,7 +523,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	 (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
-   `(end ("[^\\]\\(}\\)" . 1) (priority . 30)
+   `(end ("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2) (priority . 30)
 	 (face . (background-color . ,predictive-latex-debug-color)))
    'predictive 'brace)
   
@@ -1028,7 +1038,7 @@ refers to."
 ;;;  Automatic synchronization of LaTeX \begin{...} \end{...} environments
 
 ;;; FIXME: The features provided by this new auto-overlay class should be
-;;;        integrated into the standard nest class
+;;;        integrated into the standard nest class once they work reliably
 
 (put 'predictive-latex-env 'auto-overlay-parse-function
      'predictive-latex-parse-env-match)

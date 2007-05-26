@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -97,6 +97,16 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.2
+;; * modified the default `completion-dynamic-syntax-alist' to make
+;;   parentheses behave like punctuation
+;; * minor bug-fix to `completion-show-menu-if-within-overlay'
+;; * fixed `completion-self-insert' again so that it works if called with an
+;;   explicit char (auto-fill will not work in that case)
+;; * fixed `complete-dynamic' so that the completion overlay ends up in the
+;;   right place even when modification hooks cause text to be inserted in the
+;;   buffer during its execution
 ;;
 ;; Version 0.6.1
 ;; * modified define-minor-mode usage for auto-completion-mode to work in
@@ -301,6 +311,8 @@ after deleting backwards in auto-completion mode."
     ;; whitespace and punctuation chars accept current completion
     (?  . (accept t none))
     (?. . (accept t none))
+    (?\( . (accept t none))
+    (?\) . (accept t none))
     ;; anything else rejects the current completion
     (t  . (reject t none)))
   "*Alist associating character syntax with completion behaviour.
@@ -1207,7 +1219,8 @@ or creating one."
   ;; delete or move the completion overlay, so we store its start
   ;; position before doing anything else, so we can move the completion
   ;; overlay into the correct new position later
-  (let ((pos (overlay-start overlay)))
+  (let ((pos (make-marker)))
+    (move-marker pos (overlay-start overlay))
     
     ;; delete old completion
     (delete-region (overlay-start overlay) (overlay-end overlay))
@@ -1353,7 +1366,7 @@ if there is one, otherwise run whatever command would normally be
 bound to the key sequence."
   (interactive)
   (completion-run-if-within-overlay 'completion-show-menu
-				    'completion-use-menu)
+				    'completion-function)
 )
 
 
@@ -1472,7 +1485,7 @@ characters."
   ;; being used for this command)
   (when (null char) (setq char last-input-event))
   (when (null syntax) (setq syntax (char-syntax last-input-event)))
-;;  (message "Syntax of %c: %c" char syntax)
+;;  (message "Syntax of %c (%d): %c (%d)" char char syntax syntax)
 
   
   ;; if we're not automatically completing or doing dynamic
@@ -1549,8 +1562,10 @@ characters."
       ;; insert typed character and move overlay, unless told not to
       ;; by return value of complete-after function
       (when insert-behaviour
-	(setq last-input-event char)
-	(self-insert-command 1)
+	;; use `self-insert-command' if possible, auto-fill depends on it
+	(if (eq char last-input-event)
+	    (self-insert-command 1)
+	  (insert char))
 	(when overlay (move-overlay overlay (point) (point))))
       
       
