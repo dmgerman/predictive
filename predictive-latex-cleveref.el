@@ -1,13 +1,13 @@
 
-;;; predictive-latex-smartref.el --- predictive mode LaTeX smartref
+;;; predictive-latex-cleveref.el --- predictive mode LaTeX cleveref
 ;;;                                  package support
 
 
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3
-;; Keywords: predictive, latex, package, smartref, sref
+;; Version: 0.4
+;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
 
@@ -31,6 +31,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.4
+;; * renamed to "cleveref" to match package name change
+;;
 ;; Version 0.3
 ;; * updated for new version of smartref package
 ;;
@@ -48,28 +51,28 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-smartref)
+(provide 'predictive-latex-cleveref)
 
 ;; add load and unload functions to alist
-;;(assoc-delete-all "smartref" predictive-latex-usepackage-functions)
-(push '("smartref" predictive-latex-load-smartref
-	predictive-latex-unload-smartref)
+;;(assoc-delete-all "cleveref" predictive-latex-usepackage-functions)
+(push '("cleveref" predictive-latex-load-cleveref
+	predictive-latex-unload-cleveref)
       predictive-latex-usepackage-functions)
 
 
-;; set up 'predictive-latex-smartref-label-word to be a `thing-at-point'
+;; set up 'predictive-latex-cleveref-label-word to be a `thing-at-point'
 ;; symbol
-(put 'predictive-latex-smartref-label-word 'forward-op
-     'predictive-latex-smartref-label-forward-word)
+(put 'predictive-latex-cleveref-label-word 'forward-op
+     'predictive-latex-cleveref-label-forward-word)
 
 
 
-(defun predictive-latex-load-smartref ()
-  ;; Load sref regexps
+(defun predictive-latex-load-cleveref ()
+  ;; Load cref regexps
   (auto-overlay-load-compound-regexp
-   `(start "\\\\sref{" (dict . predictive-latex-label-dict) (priority . 2)
+   `(start "\\\\cref{" (dict . predictive-latex-label-dict) (priority . 2)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (completion-word-thing . predictive-latex-smartref-label-word)
+	   (completion-word-thing . predictive-latex-cleveref-label-word)
 	   (completion-dynamic-syntax-alist . ((?w . (add t word))
 					       (?_ . (add t word))
 					       (?  . (accept t none))
@@ -85,11 +88,11 @@
 	       (?, . (accept t none))
 	       (?} . (accept t none))))
 	   (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'brace t 'sref)
+   'predictive 'brace t 'cref)
   (auto-overlay-load-compound-regexp
-   `(start "\\\\Sref{" (dict . predictive-latex-label-dict) (priority . 2)
+   `(start "\\\\Cref{" (dict . predictive-latex-label-dict) (priority . 2)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (completion-word-thing . predictive-latex-smartref-label-word)
+	   (completion-word-thing . predictive-latex-cleveref-label-word)
 	   (completion-dynamic-syntax-alist . ((?w . (add t word))
 					       (?_ . (add t word))
 					       (?  . (accept t none))
@@ -105,20 +108,20 @@
 	       (?, . (accept t none))
 	       (?} . (accept t none))))
 	   (face . (background-color . ,predictive-latex-debug-color)))
-   'predictive 'brace t 'Sref)
+   'predictive 'brace t 'Cref)
 )
 
 
 
-(defun predictive-latex-unload-smartref ()
-  ;; Unload sref regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'sref)
-  (auto-overlay-unload-regexp 'predictive 'brace 'Sref)
+(defun predictive-latex-unload-cleveref ()
+  ;; Unload cref regexps
+  (auto-overlay-unload-regexp 'predictive 'brace 'cref)
+  (auto-overlay-unload-regexp 'predictive 'brace 'Cref)
 )
 
 
 
-(defun predictive-latex-smartref-label-forward-word (&optional n)
+(defun predictive-latex-cleveref-label-forward-word (&optional n)
   (let (m)
     ;; going backwards...
     (if (and n (< n 0))
@@ -145,4 +148,4 @@
       ))
 )
 
-;;; predictive-latex-smartref ends here
+;;; predictive-latex-cleveref ends here
