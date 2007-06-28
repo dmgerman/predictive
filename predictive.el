@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.16
+;; Version: 0.16.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.16.1 (pending)
+;; * added `predcitive-reset-weight' command to facilitate resetting word
+;;   weights
 ;;
 ;; Version 0.16
 ;; * `predictive-add-to-dict' can once again be set to 'buffer, to auto-add
@@ -1627,6 +1631,49 @@ entirely of word- or symbol-constituent characters."
       ;; learn from the buffer
       (predictive-fast-learn-from-buffer buff dict all)
       (unless visiting (kill-buffer buff))))
+)
+
+
+
+(defun predictive-reset-weight (dict word &optional weight)
+  "Reset the weight of WORD in dictionary DICT to 0.
+If WORD is null, reset weights of all words in the dictionary.
+If WEIGHT is supplied, reset to that value instead of 0. Interactively, WEIGHT
+is the numerical prefix argument."
+  (interactive (list (read-dict "Dictionary: " nil)
+		     (read-string
+		      "Word to reset (leave blank to reset all words): ")
+		     current-prefix-arg))
+  
+  ;; sort out arguments
+  (when (and (stringp word) (string= word "")) (setq word nil))
+  (cond
+   ((null weight) (setq weight 0))
+   ((interactive-p) (setq weight (prefix-numeric-value weight))))
+  
+  ;; confirm interactive reset of all weights
+  (when (or word
+	    (not (interactive-p))
+	    (yes-or-no-p
+	     (format "Really reset weights of all words in dictionary %s? "
+		     (dictree-name dict))))
+    ;; if a word was specified, reset its weight to 0
+    (if word
+	(dictree-insert dict word weight (lambda (a b) a))
+      ;; if no word was specified, reset all weights to 0
+      (let ((i 0) (count (dictree-size dict)))
+	(message "Resetting word weights in %s...(word 1 of %d)"
+		 (dictree-name dict) count)
+	(dictree-map
+	 (lambda (word ignored)
+	   (setq i (1+ i))
+	   (when (= (mod i 10) 0)
+	     (message "Resetting word weights in %s...(word %d of %d)"
+		      (dictree-name dict) i count))
+	   (dictree-insert dict word weight (lambda (a b) a)))
+	 dict)
+	(message "Resetting word weights in %s...done" (dictree-name dict))
+	)))
 )
 
 

@@ -241,19 +241,18 @@ scratch). @xref{Loading and Saving Dictionaries},
 may be rendered useless and unrecoverable! It is @emph{not} enough to
 make a copy of the dictionary file itself. Only the plain-text
 ``dumped'' format is guaranteed to be portable across different versions
-of predictive mode and Emacs.
+of predictive mode and different versions of Emacs.
 
 To install the package, extract the files using @kbd{tar -xvzf
 predictive.tar.gz}. This will put the files in a new subdirectory called
 @file{predictive/}. You're strongly encouraged to byte-compile all the
 Lisp files by running @kbd{make} in the @file{predictive/} subdirectory.
 
-Finally, move the Lisp files (files with extension @file{.el} or
+Finally, move the Lisp files (files with extension @file{.el} and
 @file{.elc}) to a directory in your Emacs load-path (@pxref{Lisp
 Libraries, , , emacs, GNU Emacs Manual}). You can view the current
-@env{load-path} using @kbd{C-h v load-path} in Emacs, assuming default
-keybindings. See the @file{INSTALL} file for more installation
-instructions.
+@env{load-path} using @kbd{C-h v load-path} within Emacs. See the
+@file{INSTALL} file for more detailed installation instructions.
 
 If you want the predictive completion minor-mode to be available
 whenever you start Emacs, put the following line in your @file{.emacs}
@@ -265,7 +264,7 @@ file:
 
 Alternatively, you can save memory and only load the lisp libraries when
 they're needed (i.e. when you first run the @command{predictive-mode}
-command), by putting the following in your @file{.emacs} instead:
+command), by putting the following in your @file{.emacs} file instead:
 
 @lisp
 (autoload 'predictive-mode "@var{/path/to/predictive.elc}" t)
@@ -367,8 +366,9 @@ already been trained on a large body of English text, which means it
 will take a very long time to adapt to your individual writing
 style. Don't expect predictive completion mode to display particularly
 good predictive powers if you stick to the default dictionary! For much
-better results, you should create your own dictionary and train it on
-your own writing. @xref{Dictionaries}.
+better results, you should create your own dictionary (possible based on
+the supplied one), and train it on your own
+writing. @xref{Dictionaries}.
 
 
 
@@ -782,19 +782,20 @@ dictionary doesn't only list the words themselves, it also ranks them
 according to how likely they are, so that predictive mode can offer the
 most likely completions first.
 
-As you type, predictive mode can learn which words you use more
-frequently, so that the predictions improve. It can automatically ensure
-certain words are always ranked higher than others (useful when one word
-is a prefix for another).
+As you type, predictive mode learns which words you use more frequently,
+so that the predictions improve. It can automatically ensure certain
+words are always ranked higher than others (useful when one word is a
+prefix for another).
 
-It is not restricted to using one dictionary at a time; it can use many
-dictionaries in parallel, and can automatically switch dictionaries in
-regions of text defined by regular expressions.
+Predictive mode is not restricted to using one dictionary at a time; it
+can use many dictionaries in parallel, and can automatically switch
+dictionaries in different regions of text, the regions being defined by
+regular expressions.
 
-And it attempts to do all of that faster than you type, so that your
-typing is not slowed down even when using very large dictionaries. (As
-soon as Emacs becomes sentient -- surely not far off -- it will probably
-go on strike!)
+And predictive mode attempts to do all of that faster than you type, so
+that your typing is not slowed down even when using very large
+dictionaries. (As soon as Emacs becomes sentient -- surely not far off
+-- it will probably go on strike through being forced to work too fast!)
 
 @menu
 * Creating Dictionaries::       
@@ -857,6 +858,12 @@ will be incremented by the weight value (or by 1 if none is supplied).
 Completely remove a word from a dictionary. The dictionary name and word
 are read from the mini-buffer (defaults to the word at the point).
 
+@item predictive-reset-weight
+Reset the weight of a word in a dictionary to 0. The dictionary name and
+word are read from the mini-buffer. If no word is supplied, reset the
+weights of all words in the dictionary. If a prefix argument is
+supplied, reset weight(s) to that value, rather than 0.
+
 @item dictree-size
 Display the number of words in a dictionary.
 @end ftable
@@ -869,19 +876,19 @@ before the first @samp{"} are ignored. Note that the `words' in a
 dictionary do not have to be words in the usual sense. They can be
 arbitrary sequences of characters, including whitespace and punctuation
 characters. The quote character @samp{"} can be included by escaping it:
-@samp{\"}. However, see @ref{Known Bugs}.
+@samp{\"}. (@xref{Known Bugs}, however.)
 
 To ensure it is as efficiently structured as possible, it is best to
 create a dictionary from a list of words using
 @command{predictive-create-dict}, rather than creating a blank
-dictionary and adding the words using
+dictionary and adding the words manually using
 @command{predictive-add-to-dict}. Also, deleting many words using
 @command{predictive-remove-from-dict} will eventually result in
-particularly inefficient dictionary structures. For small dictionaries
-it won't make much difference, but for larger ones it can be
-significant. You can rebuild an inefficient dictionary by dumping the
-words to a buffer, creating a new dictionary, and populating it from the
-dumped words. @xref{Loading and Saving Dictionaries}.
+inefficient dictionary structures. For small dictionaries it won't make
+much difference, but for larger ones it can be significant. You can
+rebuild an inefficient dictionary by dumping the words to a buffer,
+creating a new dictionary, and populating it from the dumped
+words. @xref{Loading and Saving Dictionaries}.
 
 @noindent
 The following variables set defaults for other dictionary properties:
@@ -894,17 +901,15 @@ time it takes to find completions; there is no guarantee it will be
 achieved! If it takes longer than this to find a particular completion,
 the results are cached so that they can be retrieved faster next
 time. Thus lower values result in faster completion, at the expense of
-dictionaries taking up more memory. Note that individual dictionaries
-can override this value, if a completion-speed is specified when they
-are created.
+dictionaries taking up more memory.
 
 @item predictive-dict-autosave
 Sets the default autosave property for dictionaries created with
 @command{predictive-create-dict}. If non-nil, modified dictionaries will
-automatically be saved when it is unloaded (either with the
+automatically be saved when they are unloaded (either with the
 @command{predictive-dict-unload} command, or when exiting emacs). If
-nil, any unsaved modifications will be lost. @xref{Loading and Saving
-Dictionaries}.
+nil, any unsaved modifications will be lost unless the dictionary is
+saved manually. @xref{Loading and Saving Dictionaries}.
 @cindex predictive-dict-unload
 @end vtable
 
@@ -925,9 +930,11 @@ it to the list of dictionaries used by the current buffer (see
 
 @item predictive-load-dict
 Load a dictionary, and add it to the list of dictionaries used by the
-current buffer. The dictionary file must be in your @env{load-path}. The
-dictionary will be included when learning from the buffer, see
-@ref{Learning from Buffers and Files}.
+current buffer. The dictionary will be included when learning from the
+buffer, see @ref{Learning from Buffers and Files}, and if its autosave
+flag is set (@pxref{Creating Dictionaries}), it will automatically be
+saved when the buffer is killed. The dictionary file must be in your
+@env{load-path}.
 
 @item dictree-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
@@ -945,29 +952,33 @@ supplied, you will @emph{not} be asked to confirm if over-writing an
 existing file.
 
 @item dictree-save-modified
-Save all modified dictionaries. If a prefix argument is supplied,
-confirm each dictionary before saving.
+Save all modified dictionaries that have a non-nil autosave flag. If a
+prefix argument is supplied, confirm each dictionary before saving.
 
 @item predictive-dump-dict-to-buffer
-Dumps all words and weights in the dictionary to a buffer, in the
-same format as that used to populate dictionaries (@pxref{Creating
-Dictionaries}).
+Dump all words, weights and prefix relationships in the dictionary to a
+buffer, in the same format as that used to populate dictionaries
+(@pxref{Creating Dictionaries}).
 
 @item predictive-dump-dict-to-file
-Dumps words and weights to a text file rather than a buffer. If a prefix
-argument is supplied, you will @emph{not} be asked to confirm if
-over-writing an existing file.
+Dump words, weights and prefix relationships to a text file rather than
+a buffer. If a prefix argument is supplied, you will @emph{not} be asked
+to confirm if over-writing an existing file.
 @end ftable
 
 To use a dictionary, it must be loaded into memory. If the dictionary is
 in your load path, this can be done manually using the
 @command{load-library} or @command{predictive-load-dict} commands. The
-@command{predictive-load-dict} command additionally it to the list of
-dictionaries used by the current buffer. Alternatively, you can manually
-load a dictionary from file using the @command{dictree-load} command
-(you should avoid loading a dictionary using the @command{load-file}
-command, as it will not ensure the dictionary is associated with the
-file it was loaded from).
+@command{predictive-load-dict} command additionally adds it to the list
+of dictionaries used by the current buffer. This has two implications:
+the dictionary will automaticall be saved when the buffer is killed
+(assuming its autosave flag is non-nil, @pxref{Creating Dictionaries}),
+and it will be included when learning from the buffer (@pxref{Learning
+from Buffers and Files}). Alternatively, you can manually load a
+dictionary from file using the @command{dictree-load} command (you
+should avoid loading a dictionary using the @command{load-file} command,
+as it will not necessarily ensure that the dictionary is correctly
+associated with the file it was loaded from).
 
 If you want a dictionary to be loaded every time you run Emacs, you can
 add the following line to your @file{.emacs} file:
@@ -992,9 +1003,10 @@ Dictionaries can be modified by adding words to them with the
 Dictionaries}). If the auto-learn features are used, dictionaries are
 modified whenever a completion is accepted (@pxref{Automatic
 Learning}). The @command{dictree-save-modified} saves all modified
-dictionaries. Modified dictionaries used in a buffer are automatically
-saved when that buffer is killed if they have their @code{autosave} flag
-set. All modified autosave dictionaries are saved when you exit Emacs.
+dictionaries whose autosave flag is set. Modified dictionaries used in a
+buffer are automatically saved when that buffer is killed if they have
+their autosave flag set. All modified autosave dictionaries are saved
+when you exit Emacs.
 
 
 
@@ -1009,7 +1021,7 @@ The name of the main dictionary used by a buffer is stored in the
 buffer-local @env{predictive-main-dict} variable. Note that the variable
 usually contains the @emph{name} of the dictionary (a symbol), not the
 dictionary itself. This is the dictionary predictive mode will normally
-search for words in.
+search in when looking for completions.
 
 @env{predictive-main-dict} can also hold a list of dictionary
 names. They are then treated as though they form one combined
@@ -1087,10 +1099,18 @@ learning from existing files, and automatic learning as you type.
 
 Predictive mode can learn word weights from existing text. The following
 commands can be used to do this. Note that they will not add new words
-to a dictionary; they only update weight of word that are already in the
-dictionary. The learning commands can use the information provided by
-switch-dictionary regions to decide which dictionary a word belongs
-to.
+to a dictionary; they only update weights of words that are already in
+the dictionary. The learning commands take account of region-local
+dictionaries, and will ensure words are learned in the correct
+dictionaries (@pxref{Region-Local Dictionaries}).
+
+Usually, you want to accumulate knowledge from each new piece of
+text. But sometimes, you may want to start from scratch, and reset the
+word weights to zero before starting to train a dictionary (for example,
+to erase the predefined weights from the supplied English dictionary, so
+that you can train it on your own writing style). You can use the
+@command{predictive-reset-weight} command for this purpose
+(@pxref{Creating Dictionaries}).
 
 Note that all the learning commands (even the ``fast'' ones!) can take a
 long time to run.
