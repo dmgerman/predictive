@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -97,6 +97,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.3
+;; * fixed M-<space> bindings so that prefix argument is passed to
+;;   `completion-reject', and fixed C-<space> bindings
 ;;
 ;; Version 0.6.2
 ;; * modified the default `completion-dynamic-syntax-alist' to make
@@ -525,25 +529,26 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 Completions are accepted by calling `completion-accept',
 selecting one with a hotkey, or selecting one from a
-menu. Functions are passed two arguments: the prefix, and the
+menu. Functions are passed three arguments: the prefix, the
 complete string that was accepted \(the concatenation of the
-prefix and the accepted completion string\).")
+prefix and the accepted completion string\), and any prefix
+argument supplied to and interactive accept command.")
 
 
 (defvar completion-reject-functions nil
   "Hook run after a completion is rejected.
 
 Completions are rejected by calling
-`completion-reject'. Functions are passed two arguments: the
-prefix, and the complete string that was rejected \(the
-concatenation of the prefix and the rejected completion
-string\).")
+`completion-reject'. Functions are passed three arguments: the
+prefix, the complete string that was rejected \(the concatenation
+of the prefix and the rejected completion string\), and any
+prefix argument supplied to an interactive rejection command.")
 
 
-(defvar completion-tab-complete-functions nil
-  "Hook run after tab-completion.
-Functions are passed two arguments: the complete string that has
-been inserted so far \(prefix and tab-completion combined\).")
+;; (defvar completion-tab-complete-functions nil
+;;   "Hook run after tab-completion.
+;; Functions are passed two arguments: the complete string that has
+;; been inserted so far \(prefix and tab-completion combined\).")
 
 
 (defvar completion-map nil
@@ -700,14 +705,15 @@ been inserted so far \(prefix and tab-completion combined\).")
       (define-key map [M-down] 'completion-show-menu-if-within-overlay)
       
       ;; C-<space> abandons
-      (define-key map "\C- " 'completion-reject-if-within-overlay)
+      (define-key map [?\C- ] 'completion-reject-if-within-overlay)
       ;; M-<space> abandons and inserts a space
       (define-key map "\M- "
-	(lambda () "Reject current provisional completion and insert a\
- space."
+	(lambda ()
+	  "Reject current provisional completion and insert a space."
 	  (interactive)
 	  (completion-run-if-within-overlay
-	   (lambda () (interactive) (completion-reject) (insert " "))
+	   (lambda (&optional arg) (interactive "P")
+	     (completion-reject arg) (insert " "))
 	   'completion-function)))
       ;; M-. inserts "." as a word-constituent
       (define-key map "\M-."
@@ -994,13 +1000,13 @@ been inserted so far \(prefix and tab-completion combined\).")
       (lambda () "Cycle backwards through completions."
 	(interactive) (completion-cycle -1)))
     ;; C-<space> abandons
-    (define-key map "\C- " 'completion-reject)
+    (define-key map [?\C- ] 'completion-reject)
     ;; M-<space> abandons and inserts a space
     (define-key map "\M- "
-      (lambda ()
+      (lambda (&optional arg)
 	"Reject current provisional completion and insert a space."
-	(interactive)
-	(completion-reject)
+	(interactive "P")
+	(completion-reject arg)
 	(insert " ")))
     ;; M-. inserts "." as a word-constituent
     (define-key map "\M-."

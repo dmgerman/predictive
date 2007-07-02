@@ -42,7 +42,7 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.16.1 (pending)
+;; Version 0.16.1
 ;; * added `predcitive-reset-weight' command to facilitate resetting word
 ;;   weights
 ;;
