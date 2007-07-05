@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8.1
+;; Version: 0.8.2
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -33,6 +33,8 @@
 ;; Version 0.8.2
 ;; * fixed bug that arose when buffer was narrowed by widening before
 ;;   scheduling updates and before parsing lines in `auto-overlay-update'
+;; * fixed `auto-overlay-load-overlays' so that it doesn't parse matches that
+;;   are within higher priority exclusive overlays
 ;; * improved update scheduling by collapsing updates for overlapping regions
 ;;
 ;; Version 0.8.1
@@ -780,19 +782,26 @@ was saved."
 	    (setq o-match (auto-o-make-match
 			   set-id (nth 0 data) (nth 1 data) (nth 2 data)
 			   (nth 3 data)(nth 4 data) (nth 5 data)))
-	    ;; call the appropriate parse function
-	    (setq o-new
-		  (funcall (auto-o-parse-function o-match) o-match))
-	    (unless (listp o-new) (setq o-new (list o-new)))
-	    ;; give any new overlays some basic properties
-	    (mapc (lambda (o)
-		    (overlay-put o 'auto-overlay t)
-		    (overlay-put o 'set-id set-id)
-		    (overlay-put o 'entry-id (overlay-get o-match 'entry-id)))
-		  o-new)
-	    ;; run match function if there is one
-	    (let ((match-func (auto-o-match-function o-match)))
-	      (when match-func (funcall match-func o-match)))
+	    ;; call the appropriate parse function, unless match overlay is
+	    ;; within a higher priority exclusive overlay
+	    (unless (auto-o-within-exclusive-p
+		     (overlay-get o-match 'delim-start)
+		     (overlay-get o-match 'delim-end)
+		     (assq 'priority (auto-o-entry-props
+				      (overlay-get o-match 'entry-id)
+				      (overlay-get o-match 'subentry-id))))
+	      (setq o-new
+		    (funcall (auto-o-parse-function o-match) o-match))
+	      (unless (listp o-new) (setq o-new (list o-new)))
+	      ;; give any new overlays some basic properties
+	      (mapc (lambda (o)
+		      (overlay-put o 'auto-overlay t)
+		      (overlay-put o 'set-id set-id)
+		      (overlay-put o 'entry-id (overlay-get o-match 'entry-id)))
+		    o-new)
+	      ;; run match function if there is one
+	      (let ((match-func (auto-o-match-function o-match)))
+		(when match-func (funcall match-func o-match))))
 	    ;; display progress message
 	    (setq i (1+ i))
 	    (when (= 0 (mod i 10))
@@ -833,7 +842,8 @@ was saved."
       (setq auto-o-pending-post-suicide nil))
     ;; run updates
     (when auto-o-pending-updates
-      (mapc (lambda (l) (apply 'auto-overlay-update l)) auto-o-pending-updates)
+      (mapc (lambda (l) (auto-overlay-update (car l) (cdr l)))
+	    auto-o-pending-updates)
       (setq auto-o-pending-updates nil))
     ;; run pending post-update functions
     (when auto-o-pending-post-update
@@ -990,8 +1000,9 @@ was saved."
 					 subentry-id (match-beginning group)
 					 (match-end group)))
 			  (when (overlay-get o-overlap 'parent)
-			    (auto-o-match-overlay (overlay-get o-overlap 'parent)
-						  o-match))
+			    (auto-o-match-overlay
+			     (overlay-get o-overlap 'parent)
+			     o-match))
 			  ;; run match function if there is one
 			  (let ((match-func (auto-o-match-function o-match)))
 			    (when match-func (funcall match-func o-match)))))
