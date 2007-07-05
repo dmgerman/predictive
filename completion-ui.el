@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.3
+;; Version: 0.6.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -97,6 +97,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.4
+;; * defined properties to make delete-selection-mode work correctly (thanks
+;;   to Sivaram for drawing my attention to this)
 ;;
 ;; Version 0.6.3
 ;; * fixed M-<space> bindings so that prefix argument is passed to
@@ -602,6 +606,18 @@ prefix argument supplied to an interactive rejection command.")
 
 (add-hook 'after-change-functions
 	  (lambda (&rest unused) (completion-cancel-tooltip)))
+
+
+
+
+;;; =================================================================
+;;;            Set properties for delete-selection-mode
+
+(put 'completion-self-insert 'delete-selection t)
+(put 'completion-accept-and-newline 'delete-selection t)
+(put 'completion-backward-delete-char 'delete-selection 'supersede)
+(put 'completion-backward-delete-char-untabify 'delete-selection 'supersede)
+(put 'completion-delete-char 'delete-selection 'supersede)
 
 
 
