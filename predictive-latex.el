@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.1
+;; Version: 0.7.2
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.2
+;; * added `predictive-latex-reparse-buffer' command to allow easy reparsing
+;;   of auto-overlays if they get in a mess due to bugs in the auto-overlays
+;;   code :-(
 ;;
 ;; Version 0.7.1
 ;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
@@ -1747,6 +1752,15 @@ Intended to be used as the \"resolve\" entry in
 	  (unless (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
 	    (goto-char (point-max)))))
       ))
+)
+
+
+
+(defun predictive-latex-reparse-buffer ()
+  "Clear all auto-overlays, then reparse buffer from scratch."
+  (interactive)
+  (auto-overlay-stop 'predictive)
+  (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)
 )
 
 ;;; predictive-latex.el ends here
