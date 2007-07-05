@@ -30,6 +30,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.8.2
+;; * fixed bug that arose when buffer was narrowed by widening before
+;;   scheduling updates and before parsing lines in `auto-overlay-update'
+;; * improved update scheduling by collapsing updates for overlapping regions
+;;
 ;; Version 0.8.1
 ;; * modified `auto-o-run-after-change-functions' to cope more robustly with
 ;;   the pending functions that it calls themselves scheduling other functions
@@ -850,12 +855,51 @@ was saved."
   ;; FIXME: we should do more to avoid doing multiple, redundant
   ;;        updates. Currently, only updates for identical regions are
   ;;        filtered (by add-to-list), not updates for overlapping regions.
-  (add-to-list 'auto-o-pending-updates
-	       (list (setq start (line-number-at-pos start))
-		     (when (and end (setq end (line-number-at-pos end))
-				(not (= start end)))
-		       end)
-		     set-id))
+  (save-restriction
+    (widen)   ; need to widen, since goto-line goes to absolute line
+    (setq start (line-number-at-pos start))
+    (setq end (if end (line-number-at-pos end) start))
+
+    (let ((pending auto-o-pending-updates))
+      (cond
+       ;; if pending list is empty, just add new entry to the list
+       ((null pending)
+	(setq auto-o-pending-updates (list (cons start end))))
+       
+       ;; if start of the new entry is before start of the first entry in
+       ;; pending list, add new entry to front of the list
+       ((<= start (caar pending))
+	(setq auto-o-pending-updates (nconc (list (cons start end)) pending))
+	(setq pending auto-o-pending-updates))
+       
+       ;; otherwise...
+       (t
+	;; search for entry in pending list that new one should come after
+	;; Note: we do an O(n) linear search here, as opposed to the O(log n)
+	;; we would get were we to store the entries in a binary tree. But the
+	;; pending list is unlikely to ever be all that long, so the
+	;; optimisation almost certainly isn't worth the effort.
+	(catch 'found
+	  (while (cdr pending)
+	    (when (<= start (caadr pending)) (throw 'found t))
+	    (setq pending (cdr pending))))
+	;; if start of new entry is before end of entry it should come after,
+	;; merge it with that entry
+	(if (<= start (1+ (cdar pending)))
+	    (when (> end (cdar pending)) (setcdr (car pending) end))
+	  ;; otherwise, insert new entry after it
+	  (setcdr pending (nconc (list (cons start end)) (cdr pending)))
+	  (setq pending (cdr pending)))
+	))
+      
+      ;; merge new entry with successive entries until end of merged entry is
+      ;; before start of next entry
+      ;; (See above note about O(n) vs. O(log n))
+      (while (and (cdr pending)
+		  (>= (1+ (cdar pending)) (caadr pending)))
+	(setcdr (car pending) (max (cdar pending) (cdadr pending)))
+	(setcdr pending (cddr pending)))
+      ))
 )
 
 
@@ -874,123 +918,125 @@ was saved."
   ;; supplied, just parse that line. If neither are supplied, parse line
   ;; containing the point. If SET-ID is specified, only look for matches in
   ;; that set of overlay regexps definitions.
-  
-  (let (regexp-entry entry-id class regexp group priority set-id subentry-id
-		     o-match o-overlap o-new)
-    (unless start (setq start (line-number-at-pos)))
-    (save-excursion
-      (save-match-data
-	(goto-line start)
-	(dotimes (i (if end (1+ (- end start)) 1))
+
+  (save-restriction
+    (widen)
+    (let (regexp-entry entry-id class regexp group priority set-id subentry-id
+		       o-match o-overlap o-new)
+      (unless start (setq start (line-number-at-pos)))
+      (save-excursion
+	(save-match-data
+	  (goto-line start)
+	  (dotimes (i (if end (1+ (- end start)) 1))
 	  
-	  ;; check each enabled set of overlays, or just the specified set
-	  (dotimes (s (if set-id 1 (length auto-overlay-regexps)))
-	    (setq set-id (or set-id (car (nth s auto-overlay-regexps))))
-	    (when (auto-o-enabled-p set-id)
-	      ;; check each regexp entry in regexp set
-	      (dolist (regexp-entry (auto-o-get-regexps set-id))
-		(setq entry-id (car regexp-entry))
-		(setq class (nth 1 regexp-entry))
-		(setq regexp-entry (cdr regexp-entry)) ; remove entry-id
-		(if (auto-o-entry-compound-class-p set-id entry-id)
-		    (pop regexp-entry)		       ; remove class
-		  (setq regexp-entry (list regexp-entry))) ; bundle in list
+	    ;; check each enabled set of overlays, or just the specified set
+	    (dotimes (s (if set-id 1 (length auto-overlay-regexps)))
+	      (setq set-id (or set-id (car (nth s auto-overlay-regexps))))
+	      (when (auto-o-enabled-p set-id)
+		;; check each regexp entry in regexp set
+		(dolist (regexp-entry (auto-o-get-regexps set-id))
+		  (setq entry-id (car regexp-entry))
+		  (setq class (nth 1 regexp-entry))
+		  (setq regexp-entry (cdr regexp-entry)) ; remove entry-id
+		  (if (auto-o-entry-compound-class-p set-id entry-id)
+		      (pop regexp-entry)		   ; remove class
+		    (setq regexp-entry (list regexp-entry))) ; bundle in list
 	      
-		;; check all regexps for current entry if it has a compound
-		;; class
-		(dotimes (rank (length regexp-entry))
-		  (if (> (length regexp-entry) 1)
-		      (setq subentry-id (car (nth rank regexp-entry)))
-		    (setq subentry-id nil))
+		  ;; check all regexps for current entry if it has a compound
+		  ;; class
+		  (dotimes (rank (length regexp-entry))
+		    (if (> (length regexp-entry) 1)
+			(setq subentry-id (car (nth rank regexp-entry)))
+		      (setq subentry-id nil))
 		  
-		  ;; extract regexp properties from current entry
-		  (setq regexp (auto-o-entry-regexp set-id entry-id
-						    subentry-id))
-		  (setq group (auto-o-entry-regexp-group
-			       set-id entry-id subentry-id))
-		  (setq priority
-			(cdr (assq 'priority
-				   (auto-o-entry-props
-				    set-id entry-id subentry-id))))
+		    ;; extract regexp properties from current entry
+		    (setq regexp (auto-o-entry-regexp set-id entry-id
+						      subentry-id))
+		    (setq group (auto-o-entry-regexp-group
+				 set-id entry-id subentry-id))
+		    (setq priority
+			  (cdr (assq 'priority
+				     (auto-o-entry-props
+				      set-id entry-id subentry-id))))
 		  
 		  
-		  ;; look for matches in current line, ensuring case *is*
-		  ;; significant
-		  (forward-line 0)
-		  (while (let ((case-fold-search nil))
-			   (re-search-forward regexp (line-end-position) t))
-		    (cond
-		     ;; ignore match if it already has a match overlay
-		     ((auto-o-matched-p (match-beginning 0) (match-end 0)
-					set-id entry-id subentry-id))
+		    ;; look for matches in current line, ensuring case *is*
+		    ;; significant
+		    (forward-line 0)
+		    (while (let ((case-fold-search nil))
+			     (re-search-forward regexp (line-end-position) t))
+		      (cond
+		       ;; ignore match if it already has a match overlay
+		       ((auto-o-matched-p (match-beginning 0) (match-end 0)
+					  set-id entry-id subentry-id))
 		     
 		     
-		     ;; if existing match overlay corresponding to same entry
-		     ;; and edge but different subentry overlaps new match...
-		     ((and (auto-o-entry-compound-class-p set-id entry-id)
-			   (setq o-overlap
-				 (auto-o-overlapping-match
-				  (match-beginning group) (match-end group)
-				  set-id entry-id subentry-id
-				  (auto-o-entry-edge set-id entry-id
-						     subentry-id))))
-		      ;; if new match takes precedence, replace existing one
-		      ;; with new one, otherwise ignore new match
-		      (when (< rank (auto-o-compound-rank o-overlap))
-			(delete-overlay o-overlap)
-			(setq o-match (auto-o-make-match
-				       set-id entry-id
-				       (match-beginning 0) (match-end 0)
-				       subentry-id (match-beginning group)
-				       (match-end group)))
-			(when (overlay-get o-overlap 'parent)
-			  (auto-o-match-overlay (overlay-get o-overlap 'parent)
-						o-match))
-			;; run match function if there is one
-			(let ((match-func (auto-o-match-function o-match)))
-			  (when match-func (funcall match-func o-match)))))
-		     
-		     ;; if match is within a higher priority exclusive
-		     ;; overlay, create match overlay but don't parse it
-		     ((auto-o-within-exclusive-p (match-beginning group)
-						 (match-end group)
-						 priority)
-		      (auto-o-make-match set-id entry-id
+		       ;; if existing match overlay corresponding to same entry
+		       ;; and edge but different subentry overlaps new match...
+		       ((and (auto-o-entry-compound-class-p set-id entry-id)
+			     (setq o-overlap
+				   (auto-o-overlapping-match
+				    (match-beginning group) (match-end group)
+				    set-id entry-id subentry-id
+				    (auto-o-entry-edge set-id entry-id
+						       subentry-id))))
+			;; if new match takes precedence, replace existing one
+			;; with new one, otherwise ignore new match
+			(when (< rank (auto-o-compound-rank o-overlap))
+			  (delete-overlay o-overlap)
+			  (setq o-match (auto-o-make-match
+					 set-id entry-id
 					 (match-beginning 0) (match-end 0)
 					 subentry-id (match-beginning group)
 					 (match-end group)))
+			  (when (overlay-get o-overlap 'parent)
+			    (auto-o-match-overlay (overlay-get o-overlap 'parent)
+						  o-match))
+			  ;; run match function if there is one
+			  (let ((match-func (auto-o-match-function o-match)))
+			    (when match-func (funcall match-func o-match)))))
+		     
+		       ;; if match is within a higher priority exclusive
+		       ;; overlay, create match overlay but don't parse it
+		       ((auto-o-within-exclusive-p (match-beginning group)
+						   (match-end group)
+						   priority)
+			(auto-o-make-match set-id entry-id
+					   (match-beginning 0) (match-end 0)
+					   subentry-id (match-beginning group)
+					   (match-end group)))
 		     
 		     
-		     ;; if we're going to parse the new match...
-		     (t
-		      ;; create a match overlay for it
-		      (setq o-match (auto-o-make-match
-				     set-id entry-id
-				     (match-beginning 0) (match-end 0)
-				     subentry-id
-				     (match-beginning group)
-				     (match-end group)))
-		      ;; call the appropriate parse function
-		      (setq o-new
-			    (funcall (auto-o-parse-function o-match) o-match))
-		      (unless (listp o-new) (setq o-new (list o-new)))
-		      ;; give any new overlays some basic properties
-		      (mapc (lambda (o)
-			      (overlay-put o 'auto-overlay t)
-			      (overlay-put o 'set-id set-id)
-			      (overlay-put o 'entry-id entry-id))
-			    o-new)
-		      ;; run match function if there is one
-		      (let ((match-func (auto-o-match-function o-match)))
-			(when match-func (funcall match-func o-match)))))
+		       ;; if we're going to parse the new match...
+		       (t
+			;; create a match overlay for it
+			(setq o-match (auto-o-make-match
+				       set-id entry-id
+				       (match-beginning 0) (match-end 0)
+				       subentry-id
+				       (match-beginning group)
+				       (match-end group)))
+			;; call the appropriate parse function
+			(setq o-new
+			      (funcall (auto-o-parse-function o-match) o-match))
+			(unless (listp o-new) (setq o-new (list o-new)))
+			;; give any new overlays some basic properties
+			(mapc (lambda (o)
+				(overlay-put o 'auto-overlay t)
+				(overlay-put o 'set-id set-id)
+				(overlay-put o 'entry-id entry-id))
+			      o-new)
+			;; run match function if there is one
+			(let ((match-func (auto-o-match-function o-match)))
+			  (when match-func (funcall match-func o-match)))))
 		    
 		    
-		    ;; go to character one beyond the start of the match, to
-		    ;; make sure we don't miss the next match (if we find the
-		    ;; same one again, it will just be ignored)
-		    (goto-char (+ (match-beginning 0) 1)))))
-	      (forward-line 1))
-	    )))))
+		      ;; go to character one beyond the start of the match, to
+		      ;; make sure we don't miss the next match (if we find the
+		      ;; same one again, it will just be ignored)
+		      (goto-char (+ (match-beginning 0) 1)))))
+		(forward-line 1))
+	      ))))))
 )
 
 
