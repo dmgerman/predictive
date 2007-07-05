@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.4
+;; Version: 0.1.5
 ;; Keywords: automatic, overlays, nested
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.5
+;; * set overlay properties straight after creation in `auto-o-make-nest',
+;;   rather than leaving it to `auto-overlay-update', in case matching causes
+;;   exclusive reparsing, for which properties are already required
 ;;
 ;; Version 0.1.4
 ;; * removed `auto-overlay-functions' and changed to use new interface
@@ -141,11 +146,17 @@
      ((eq (auto-o-edge o-match) 'start)
       (setq pos (overlay-get o-match 'delim-end))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
+      (overlay-put o-new 'auto-overlay t)
+      (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
+      (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
       (auto-o-match-overlay o-new o-match 'unmatched))
      
      ((eq (auto-o-edge o-match) 'end)
       (setq pos (overlay-get o-match 'delim-start))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
+      (overlay-put o-new 'auto-overlay t)
+      (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
+      (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
       (auto-o-match-overlay o-new 'unmatched o-match)))
 
     ;; return the new overlay

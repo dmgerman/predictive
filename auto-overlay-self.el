@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.5
+;; Version: 0.2.6
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.6
+;; * set overlay properties straight after creation in `auto-o-make-self',
+;;   rather than leaving it to `auto-overlay-update', in case matching causes
+;;   exclusive reparsing, for which properties are already required
 ;;
 ;; Version 0.2.5
 ;; * removed `auto-overlay-functions' and changed to use new interface
@@ -205,7 +210,12 @@
        ((number-or-marker-p end) (setq pos end))
        (t (setq pos (point-max))))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance)))
-      
+    
+    ;; give overlay some basic properties
+    (overlay-put o-new 'auto-overlay t)
+    (overlay-put o-new 'set-id (overlay-get o-start 'set-id))
+    (overlay-put o-new 'entry-id (overlay-get o-start 'entry-id))
+    
     ;; if overlay is end-unmatched, add it to the list of uncascaded overlays
     (unless (overlayp end) (push o-new auto-o-pending-self-cascade))
     

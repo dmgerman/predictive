@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Keywords: automatic, overlays, word
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.3
+;; * set overlay properties straight after creation, rather than leaving it to
+;;   `auto-overlay-update', in case overlay is exclusive and we reparse, for
+;;   which properties are already required
 ;;
 ;; Version 0.1.2
 ;; * removed `auto-overlay-functions' and changed to use new interface
@@ -61,9 +66,12 @@
 			     (overlay-get o-match 'delim-end)
 			     nil nil 'rear-advance)))
     ;; give overlays appropriate properties
+    (overlay-put o-new 'auto-overlay t)
+    (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
+    (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
     (overlay-put o-new 'start o-match)
     (overlay-put o-match 'parent o-new)
-    ;; bundle properties inside list if not already, then update set overlay
+    ;; bundle properties inside list if not already, then update overlay
     ;; properties
     (let ((props (auto-o-props o-match)))
       (when (symbolp (car props)) (setq props (list props)))

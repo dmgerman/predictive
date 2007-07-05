@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.2
+;; Version: 0.3.3
 ;; Keywords: automatic, overlays, line
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.3
+;; * set overlay properties straight after creation, rather than leaving it to
+;;   `auto-overlay-update', in case matching causes exclusive reparsing, for
+;;   which properties are already required
 ;;
 ;; Version 0.3.2
 ;; * removed `auto-overlay-functions' and changed to use new interface
@@ -74,6 +79,10 @@
 			       (goto-char (overlay-get o-match 'delim-end))
 			       (1+ (line-end-position))))))
     
+    ;; give new overlay some basic properties
+    (overlay-put o-new 'auto-overlay t)
+    (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
+    (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
     ;; match start of new overlay with match
     (auto-o-match-overlay o-new o-match nil)
     ;; set overlay's modification hooks to ensure that it always extends to
