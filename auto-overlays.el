@@ -1058,26 +1058,30 @@ was saved."
   ;; calls the appropriate suicide function for match overlay O-SELF.
   ;; If FORCE is non-nil, O-SELF is deleted irrespective of whether its
   ;; overlay still matches.
-  
-  ;; this is here to avoid a weird bug(?) where the modification-hooks seem
-  ;; to be called occasionally for overlays that have already been deleted
-  (when (overlay-buffer o-self)
-    ;; if match overlay no longer matches the text it covers...
-    (unless (and (not force)
-		 (save-excursion
-		  (goto-char (overlay-start o-self))
-		  (looking-at (auto-o-regexp o-self)))
-		 (= (match-end 0) (overlay-end o-self)))
-      ;; if we have a parent overlay, call appropriate suicide function,
-      ;; schedule an update (necessary since if match regexp contains
-      ;; "context", we may be comitting suicide only for the match overlay to
-      ;; be recreated in a slightly different place), then delete ourselves
-      (when (overlay-get o-self 'parent)
-	(funcall (auto-o-suicide-function o-self) o-self))
-      ;; Note: not supplying the 'set-id can avoid multiple, effectively
-      ;; identical auto-overlay-update calls
-      (auto-o-schedule-update (overlay-start o-self))
-      (delete-overlay o-self)))
+
+  (save-restriction
+    (widen)
+    ;; this is here to avoid a weird bug(?) where the modification-hooks seem
+    ;; to be called occasionally for overlays that have already been deleted
+    (when (overlay-buffer o-self)
+      ;; if match overlay no longer matches the text it covers...
+      (unless (and (not force)
+		   (save-excursion
+		     (goto-char (overlay-start o-self))
+		     (looking-at (auto-o-regexp o-self)))
+		   (= (match-end 0) (overlay-end o-self)))
+	;; if we have a parent overlay, call appropriate suicide function,
+	;; schedule an update (necessary since if match regexp contains
+	;; "context", we may be comitting suicide only for the match overlay
+	;; to be recreated in a slightly different place), then delete
+	;; ourselves
+	(when (overlay-get o-self 'parent)
+	  (funcall (auto-o-suicide-function o-self) o-self))
+	;; Note: not supplying the 'set-id can avoid multiple, effectively
+	;; identical auto-overlay-update calls
+	(auto-o-schedule-update (overlay-start o-self))
+	(delete-overlay o-self)))
+    )
 )
 
 
