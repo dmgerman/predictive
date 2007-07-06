@@ -36,6 +36,8 @@
 ;; * fixed `auto-overlay-load-overlays' so that it doesn't parse matches that
 ;;   are within higher priority exclusive overlays
 ;; * improved update scheduling by collapsing updates for overlapping regions
+;; * fixed `auto-o-match-overlay' to remove properties due to old matches
+;;   before setting new properties
 ;;
 ;; Version 0.8.1
 ;; * modified `auto-o-run-after-change-functions' to cope more robustly with
@@ -1240,6 +1242,8 @@ properties)."
   
   (let ((old-start (overlay-start overlay))
 	(old-end (overlay-end overlay))
+	(old-o-start (overlay-get overlay 'start))
+	(old-o-end (overlay-get overlay 'end))
 	(old-exclusive (overlay-get overlay 'exclusive))
 	(old-priority (overlay-get overlay 'priority)))
     
@@ -1263,32 +1267,28 @@ properties)."
 		   ((number-or-marker-p end) end)
 		   (end (point-max))
 		   (t (overlay-end overlay))))
-    ;; sort out start and end properties
-    (let (o-match)
-      ;; if unmatching start...
-      (when (and start (not (overlayp start)))
-	(setq o-match (overlay-get overlay 'start))
-	(when (and o-match (null protect-match))
-	  (overlay-put o-match 'parent nil))
-	(overlay-put overlay 'start nil))
-      ;; if unmatching end...
-      (when (and end (not (overlayp end)))
-	(setq o-match (overlay-get overlay 'end))
-	(when (and o-match (null protect-match))
-	  (overlay-put o-match 'parent nil))
-	(overlay-put overlay 'end nil))
-      ;; if matching start...
-      (when (overlayp start)
-	(setq o-match (overlay-get overlay 'start))
-	(when (and o-match (null protect-match))
-	  (overlay-put o-match 'parent nil))
+    
+    ;; if changing start match...
+    (when start
+      ;; sort out parent property of old start match
+      (when (and old-o-start (null protect-match))
+	(overlay-put old-o-start 'parent nil))
+      ;; if unmatching start, set start property to nil
+      (if (null (overlayp start))
+	  (overlay-put overlay 'start nil)
+	;; if matching start, set start property to new start match
 	(overlay-put overlay 'start start)
-	(overlay-put start 'parent overlay))
-      ;; if matching end...
-      (when (overlayp end)
-	(setq o-match (overlay-get overlay 'end))
-	(when (and o-match (null protect-match))
-	  (overlay-put o-match 'parent nil))
+	(overlay-put start 'parent overlay)))
+    
+    ;; if changing end match...
+    (when end
+      ;; sort out parent property of old end match
+      (when (and old-o-end (null protect-match))
+	(overlay-put old-o-end 'parent nil))
+      ;; if unmatching end, set end property to nil
+      (if (null (overlayp end))
+	  (overlay-put overlay 'end nil)
+	;; if matching end, set end property to new end match
 	(overlay-put overlay 'end end)
 	(overlay-put end 'parent overlay)))
     
@@ -1297,6 +1297,17 @@ properties)."
     ;; (Note: this sometimes sets the overlay's properties to the ones it
     ;; already had, but it hardly seems worth checking for that)
     (unless no-props
+      ;; when start was matched before and is being changed, remove properties
+      ;; due to old start match
+      (when (and start old-o-start)
+	(dolist (p (auto-o-props old-o-start))
+	  (overlay-put overlay (car p) nil)))
+      ;; when end was matched before and is being changed, remove properties
+      ;; due to old end match
+      (when (and end old-o-end)
+	(dolist (p (auto-o-props old-o-end))
+	  (overlay-put overlay (car p) nil)))
+      ;; sort out properties due to new matches
       (let (props)
 	(cond
 	 ;; if start has been unmatched, use properties of end match
