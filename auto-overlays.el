@@ -36,8 +36,8 @@
 ;; * fixed `auto-overlay-load-overlays' so that it doesn't parse matches that
 ;;   are within higher priority exclusive overlays
 ;; * improved update scheduling by collapsing updates for overlapping regions
-;; * fixed `auto-o-match-overlay' to remove properties due to old matches
-;;   before setting new properties
+;; * fixed `auto-o-match-overlay' and `auto-o-suicide' to remove properties
+;;   due to old matches before setting new properties
 ;;
 ;; Version 0.8.1
 ;; * modified `auto-o-run-after-change-functions' to cope more robustly with
@@ -1061,10 +1061,12 @@ was saved."
   ;; If FORCE is non-nil, O-SELF is deleted irrespective of whether its
   ;; overlay still matches.
 
+  ;; have to widen temporarily
   (save-restriction
     (widen)
-    ;; this is here to avoid a weird bug(?) where the modification-hooks seem
-    ;; to be called occasionally for overlays that have already been deleted
+    ;; this condition is here to avoid a weird Emacs bug(?) where the
+    ;; modification-hooks seem to be called occasionally for overlays that
+    ;; have already been deleted
     (when (overlay-buffer o-self)
       ;; if match overlay no longer matches the text it covers...
       (unless (and (not force)
@@ -1072,16 +1074,26 @@ was saved."
 		     (goto-char (overlay-start o-self))
 		     (looking-at (auto-o-regexp o-self)))
 		   (= (match-end 0) (overlay-end o-self)))
-	;; if we have a parent overlay, call appropriate suicide function,
+	
+	;; if we have a parent overlay...
+	(let* ((o-parent (overlay-get o-self 'parent))
+	       (o-other (overlay-get o-parent
+				     (if (eq (auto-o-edge o-self) 'start)
+					 'start 'end))))
+	  (when o-parent
+	    ;; if parent's properties have been set by us, remove them
+	    (when (or (null o-other)
+		      (>= (auto-o-compound-rank o-self)
+			  (auto-o-compound-rank o-other)))
+	      (dolist (p (auto-o-props o-self))
+		(overlay-put o-parent (car p) nil)))
+	    ;; call appropriate suicide function
+	    (funcall (auto-o-suicide-function o-self) o-self)))
 	;; schedule an update (necessary since if match regexp contains
 	;; "context", we may be comitting suicide only for the match overlay
-	;; to be recreated in a slightly different place), then delete
-	;; ourselves
-	(when (overlay-get o-self 'parent)
-	  (funcall (auto-o-suicide-function o-self) o-self))
-	;; Note: not supplying the 'set-id can avoid multiple, effectively
-	;; identical auto-overlay-update calls
+	;; to be recreated in a slightly different place)
 	(auto-o-schedule-update (overlay-start o-self))
+	;; delete ourselves
 	(delete-overlay o-self)))
     )
 )
@@ -1297,13 +1309,15 @@ properties)."
     ;; (Note: this sometimes sets the overlay's properties to the ones it
     ;; already had, but it hardly seems worth checking for that)
     (unless no-props
-      ;; when start was matched before and is being changed, remove properties
-      ;; due to old start match
+      ;; when start was previously matched and is being changed, remove
+      ;; properties due to old start match
+      ;; Note: no need to check if properties were really set by start match,
+      ;; since if not they will be recreated below
       (when (and start old-o-start)
 	(dolist (p (auto-o-props old-o-start))
 	  (overlay-put overlay (car p) nil)))
-      ;; when end was matched before and is being changed, remove properties
-      ;; due to old end match
+      ;; when end was previously matched and is being changed, remove
+      ;; properties due to old end match (see note above)
       (when (and end old-o-end)
 	(dolist (p (auto-o-props old-o-end))
 	  (overlay-put overlay (car p) nil)))
