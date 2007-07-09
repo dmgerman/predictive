@@ -35,6 +35,10 @@
 ;; * added `predictive-latex-reparse-buffer' command to allow easy reparsing
 ;;   of auto-overlays if they get in a mess due to bugs in the auto-overlays
 ;;   code :-(
+;; * restore buffer's modified flag after enabling predictive mode, since
+;;   automatic synchronization of LaTeX envionments can modify buffer without
+;;   actually changing buffer text
+;; * renamed "nest" regexps to "nested" regexps
 ;;
 ;; Version 0.7.1
 ;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
@@ -140,7 +144,7 @@
 (require 'auto-overlay-word)
 (require 'auto-overlay-line)
 (require 'auto-overlay-self)
-(require 'auto-overlay-nest)
+(require 'auto-overlay-nested)
 
 (provide 'predictive-latex)
 
@@ -282,8 +286,12 @@ When a document class is in the list, "
       (setq predictive-latex-preamble-dict preamble-dict)
       (setq predictive-latex-env-dict env-dict)
       (setq predictive-latex-label-dict label-dict)
-      ;; start the auto-overlays
-      (auto-overlay-start 'predictive)
+      ;; start the auto-overlays, restoring buffer's modified flag afterwards,
+      ;; since automatic synchronization of LaTeX envionments can modify
+      ;; buffer without actually changing buffer text
+      (let ((restore-modified (buffer-modified-p)))
+	(auto-overlay-start 'predictive)
+	(set-buffer-modified-p restore-modified))
       ))
    
    
@@ -326,8 +334,13 @@ When a document class is in the list, "
     (predictive-latex-load-regexps)
     
     ;; start the auto-overlays, skipping the check that regexp definitions
-    ;; haven't changed if there's a file of saved overlay data to use
-    (auto-overlay-start 'predictive nil nil 'no-regexp-check)
+    ;; haven't changed if there's a file of saved overlay data to use, and
+    ;; restoring buffer's modified flag afterwards since automatic
+    ;; synchronization of LaTeX envionments can modify buffer without actually
+    ;; changing buffer text
+    (let ((restore-modified (buffer-modified-p)))
+      (auto-overlay-start 'predictive nil nil 'no-regexp-check)
+      (set-buffer-modified-p restore-modified))
     ))
   
   
@@ -336,7 +349,8 @@ When a document class is in the list, "
   ;; consider \ as start of a word
   (setq completion-word-thing 'predictive-latex-word)
   (set (make-local-variable 'words-include-escapes) nil)
-  
+
+  ;; unset modified flag, 
   t  ; indicate succesful setup
 )
 
@@ -405,7 +419,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   ;; ...as do \[ and \], but not \\[ and \\] etc.
   ;; Note: regexps contain a lot of \'s because it has to check whether number
   ;; of \'s in front of { is even or odd
-  (auto-overlay-load-regexp '(nest) 'predictive nil 'display-math)
+  (auto-overlay-load-regexp '(nested) 'predictive nil 'display-math)
   (auto-overlay-load-compound-regexp
    `(start ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
 	   (dict . predictive-latex-math-dict) (priority . 40)
@@ -434,7 +448,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
   ;; included to ensure all { and } match, but \{ is excluded
-  (auto-overlay-load-regexp '(nest) 'predictive nil 'brace)
+  (auto-overlay-load-regexp '(nested) 'predictive nil 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\usepackage{" (dict . t) (priority . 30)
 	   (face . (background-color . ,predictive-latex-debug-color)))
@@ -534,7 +548,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   
   
   ;; preamble lives between \documentclass{...} and \begin{document}
-  (auto-overlay-load-regexp '(nest) 'predictive nil 'preamble)
+  (auto-overlay-load-regexp '(nested) 'predictive nil 'preamble)
   (auto-overlay-load-compound-regexp
    '(start "\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
 	   (dict . predictive-latex-preamble-dict) (priority . 20)
@@ -553,7 +567,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   (if predictive-latex-electric-environments
       (auto-overlay-load-regexp '(predictive-latex-env)
 				'predictive nil 'environment)
-    (auto-overlay-load-regexp '(nest)
+    (auto-overlay-load-regexp '(nested)
 			      'predictive nil 'environment))
   (auto-overlay-load-compound-regexp
    `(start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
@@ -1043,7 +1057,7 @@ refers to."
 ;;;  Automatic synchronization of LaTeX \begin{...} \end{...} environments
 
 ;;; FIXME: The features provided by this new auto-overlay class should be
-;;;        integrated into the standard nest class once they work reliably
+;;;        integrated into the standard nested class once they work reliably
 
 (put 'predictive-latex-env 'auto-overlay-parse-function
      'predictive-latex-parse-env-match)
@@ -1053,8 +1067,8 @@ refers to."
 
 
 (defun predictive-latex-parse-env-match (o-match)
-  ;; Perform any necessary updates of auto overlays due to a match for a nest
-  ;; regexp.
+  ;; Perform any necessary updates of auto overlays due to a match for a
+  ;; nested regexp.
 
   ;; add synchronization function to match overlay's modification hooks
   (overlay-put o-match 'modification-hooks
@@ -1068,7 +1082,7 @@ refers to."
     (cond
      ;; if the stack is empty, just create and return a new unmatched overlay
      ((null overlay-stack)
-      (auto-o-make-nest o-match 'unmatched))
+      (auto-o-make-nested o-match 'unmatched))
      
      ;; if appropriate edge of innermost overlay is unmatched, just match it
      ((or (and (eq (auto-o-edge o-match) 'start)
@@ -1082,7 +1096,7 @@ refers to."
      ;; otherwise...
      (t
       ;; create new innermost overlay and add it to the overlay stack
-      (push (auto-o-make-nest o-match) overlay-stack)
+      (push (auto-o-make-nested o-match) overlay-stack)
       ;; sort out the overlay stack
       (predictive-latex-env-stack-cascade overlay-stack)
       ;; return newly created overlay
