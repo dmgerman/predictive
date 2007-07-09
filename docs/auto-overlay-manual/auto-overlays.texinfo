@@ -31,7 +31,7 @@ least one of each must be defined, but multiple start and end regexps
 are also allowed, any of which will start or end the overlay. If more
 than one of the regexps matches overlapping regions of text, the one
 that appears earlier in the list will take precedence. The predefined
-regexp classes are: @code{word}, @code{line}, @code{self}, @code{nest}
+regexp classes are: @code{word}, @code{line}, @code{self}, @code{nested}
 and @code{flat}, but the auto-overlay package can easily be extended
 with new classes.
 
@@ -70,10 +70,10 @@ overlays are updated @emph{up to} that position. The update occurs just
 given buffer position will not necessarily be correct until a
 modification is made at or after that position (@xref{To-Do}.)
 
-@item nest
-@cindex nest overlay class
-@cindex overlay class, nest
-@cindex class, nest
+@item nested
+@cindex nested overlay class
+@cindex overlay class, nested
+@cindex class, nested
 These are used to define overlays that start and end at different regexp
 matches, and that can be nested one inside another. This is a compound
 class, requiring separate start and end regexps. An example use would be
@@ -96,7 +96,7 @@ by @samp{/*} and @samp{*/}.
 @cindex grouping in regexps
 By default, the entire text matching a regexp acts as the
 ``delimeter''. For example, a @code{word} overlay will cover all the
-text matching its regexp, and a @code{nest} overlay will start at the
+text matching its regexp, and a @code{nested} overlay will start at the
 end of the text matching its start regexp. Sometimes it is useful to be
 able to have only part of the regexp match act as the delimeter. This
 can be done by grouping that part of the regexp (@pxref{Defining
@@ -146,7 +146,7 @@ overlay classes that you require by including lines of the form
 @end lisp
 near the beginning of your package, where @var{class} is the class
 name. The standard classes are: @code{word}, @code{line}, @code{self},
-@code{nest} and @code{flat} (@pxref{Overview}), though new classes can
+@code{nested} and @code{flat} (@pxref{Overview}), though new classes can
 easily be added (@pxref{Extending the Auto-Overlays Package}).
 
 Sometimes it is useful for a package to make use of auto-overlays if any
@@ -244,7 +244,7 @@ later.
 @cindex regexps, defining compound
 To define a compound overlay, @command{auto-overlay-load-regexp} must
 first be called with @var{entry} being a list containing just the
-overlay class, e.g. @code{('nest)}, and an @var{entry-id} must be
+overlay class, e.g. @code{('nested)}, and an @var{entry-id} must be
 supplied. @command{auto-overlay-load-compound-regexp} can then be called
 to actually load the start and end regexp definitions themselves.
 
@@ -624,21 +624,21 @@ priority regexp definitions before lower priority ones, so we get:
 @end lisp
 
 
-@cindex nest overlay class example
-@cindex overlay class, nest example
-@cindex example, nest class
-@cindex class, nest example
+@cindex nested overlay class example
+@cindex overlay class, nested example
+@cindex example, nested class
+@cindex class, nested example
 The @samp{\begin@{equation@}} and @samp{\end@{equation@}} commands also
 enclose maths regions, which we would like to highlight in yellow. Since
 the opening and closing delimiters are different in this case, we must
-use @code{nest} overlays (@pxref{Overview}). Our example now looks like:
+use @code{nested} overlays (@pxref{Overview}). Our example now looks like:
 
 @lisp
 (auto-overlay-load-regexp
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -674,7 +674,7 @@ a perfect demonstration of a @code{line} regexp. Here's a first attempt:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -720,7 +720,7 @@ regexp matches:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -737,10 +737,10 @@ regexp matches:
 @end lisp
 
 
-@cindex nest overlay class example
-@cindex overlay class, nest example
-@cindex example, nest class
-@cindex class, nest example
+@cindex nested overlay class example
+@cindex overlay class, nested example
+@cindex example, nested class
+@cindex class, nested example
 We're well on our way to creating a useful setup, at least for the
 La@TeX{} commands we're considering in this example. There is one last
 type of overlay to create, but it is the most complicated. We want
@@ -758,7 +758,7 @@ environment names to be highlighted in pink, i.e. the region between
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{" (priority . 2)
          (face . (background-color . "pink")))
@@ -768,7 +768,7 @@ environment names to be highlighted in pink, i.e. the region between
        (face . (background-color . "pink")))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -805,7 +805,7 @@ need something more along the lines of:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{" (priority . 2)
          (face . (background-color . "pink")))
@@ -819,7 +819,7 @@ need something more along the lines of:
        (face . (background-color . "pink")))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -856,7 +856,7 @@ commands. Instead, we can just add @samp{@{} to the list:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "@{" (priority . 2))
  'latex 'environment)
@@ -872,7 +872,7 @@ commands. Instead, we can just add @samp{@{} to the list:
  '(end "@}" (priority . 2))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -920,7 +920,7 @@ after the @code{\start@{} and @code{\end@{} regexps:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{" (priority . 2)
          (face . (background-color . "pink")))
@@ -936,7 +936,7 @@ after the @code{\start@{} and @code{\end@{} regexps:
  '(end "@}" (priority . 2))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -969,7 +969,7 @@ the @code{@{} and @code{@}} regexps to exclude these cases:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{" (priority . 2)
          (face . (background-color . "pink")))
@@ -985,7 +985,7 @@ the @code{@{} and @code{@}} regexps to exclude these cases:
  '(end "\\([^\\]\\|^\\)@}" (priority . 2))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -1036,7 +1036,7 @@ version looks like this:
  '(self "\\$" (priority . 3) (face . (background-color . "green")))
  'latex)
 
-(auto-overlay-load-regexp '(nest) 'latex 'environment)
+(auto-overlay-load-regexp '(nested) 'latex 'environment)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{" (priority . 2)
          (face . (background-color . "pink")))
@@ -1052,7 +1052,7 @@ version looks like this:
  '(end ("\\([^\\]\\|^\\)\\(@}\\)" . 2) (priority . 2))
  'latex 'environment)
 
-(auto-overlay-load-regexp '(nest) 'latex 'equation)
+(auto-overlay-load-regexp '(nested) 'latex 'equation)
 (auto-overlay-load-compound-regexp
  '(start "\\begin@{equation@}"  (priority . 1)
          (face . (background-color . "yellow")))
@@ -1301,7 +1301,7 @@ overlay.
 All the standard parse and suicide functions following the naming
 convention (@pxref{Integrating New Overlay Classes}), where @var{class}
 is the name of the overlay class (one of @code{word}, @code{line},
-@code{self}, @code{nest} or @code{flat}, @pxref{Overview}):
+@code{self}, @code{nested} or @code{flat}, @pxref{Overview}):
 
 @table @code
 @item (auto-o-parse-@var{class}-match @var{o-match})
@@ -1567,7 +1567,7 @@ were active when the data was saved. If implemented, it should be
 possible to override it.
 
 @item
-Currently, it's difficult to deal with @code{nest} class regexps for
+Currently, it's difficult to deal with @code{nested} class regexps for
 which the @code{end} regexps match some @code{start} regexps of interest
 but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
 @LaTeX{} when you're only interested in @samp{\somecommand@{}
@@ -1575,6 +1575,6 @@ but also others that are irrelevant. E.g. @samp{@{} and @samp{@}} in
 interested in function bodies, say. The only solution is to include all
 @code{start} regexps and give the irrelevant ones a null @code{dict}
 property. This can end up creating a lot of overlays! A variant of the
-@code{nest} class that avoids this problem is needed.
+@code{nested} class that avoids this problem is needed.
 @end enumerate
 

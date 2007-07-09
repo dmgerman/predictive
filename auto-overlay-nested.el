@@ -1,11 +1,11 @@
 
-;;; auto-overlay-nest.el --- nested start/end-delimited automatic overlays
+;;; auto-overlay-nested.el --- nested start/end-delimited automatic overlays
 
 
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.5
+;; Version: 0.1.6
 ;; Keywords: automatic, overlays, nested
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.6
+;; * renamed from "nest" to "nested"
+;; 
 ;; Version 0.1.5
 ;; * set overlay properties straight after creation in `auto-o-make-nest',
 ;;   rather than leaving it to `auto-overlay-update', in case matching causes
@@ -57,25 +60,25 @@
 
 
 (require 'auto-overlays)
-(provide 'auto-overlay-nest)
+(provide 'auto-overlay-nested)
 
 
-;; set nest overlay parsing and suicide functions
-(put 'nest 'auto-overlay-parse-function 'auto-o-parse-nest-match)
-(put 'nest 'auto-overlay-suicide-function 'auto-o-nest-suicide)
+;; set nested overlay parsing and suicide functions
+(put 'nested 'auto-overlay-parse-function 'auto-o-parse-nested-match)
+(put 'nested 'auto-overlay-suicide-function 'auto-o-nested-suicide)
 
 
 
-(defun auto-o-parse-nest-match (o-match)
-  ;; Perform any necessary updates of auto overlays due to a match for a nest
-  ;; regexp.
+(defun auto-o-parse-nested-match (o-match)
+  ;; Perform any necessary updates of auto overlays due to a match for a
+  ;; nested regexp.
 
   (let* ((overlay-stack (auto-o-nested-stack o-match))
 	 (o (car overlay-stack)))
     (cond
      ;; if the stack is empty, just create and return a new unmatched overlay
      ((null overlay-stack)
-      (auto-o-make-nest o-match 'unmatched))
+      (auto-o-make-nested o-match 'unmatched))
      
      ;; if appropriate edge of innermost overlay is unmatched, just match it
      ((or (and (eq (auto-o-edge o-match) 'start)
@@ -89,7 +92,7 @@
      ;; otherwise...
      (t
       ;; create new innermost overlay and add it to the overlay stack
-      (push (auto-o-make-nest o-match) overlay-stack)
+      (push (auto-o-make-nested o-match) overlay-stack)
       ;; sort out the overlay stack
       (auto-o-nested-stack-cascade overlay-stack)
       ;; return newly created overlay
@@ -100,7 +103,7 @@
 
 
 
-(defun auto-o-nest-suicide (o-self)
+(defun auto-o-nested-suicide (o-self)
   ;; Called when match no longer matches. Unmatch the match overlay O-SELF, if
   ;; necessary deleting its parent overlay or cascading the stack.
   
@@ -133,15 +136,15 @@
       
 
 
-(defun auto-o-make-nest (o-match &optional unmatched)
-  ;; Create a nest overlay for match overlay O-MATCH.
+(defun auto-o-make-nested (o-match &optional unmatched)
+  ;; Create a nested overlay for match overlay O-MATCH.
   ;; If UNMATCHED is nil, overlay will start and end at O-MATCH.
   ;; If non-nil, overlay will start or end from O-MATCH (depending on whether
   ;; O-MATCH is a 'start or 'end match) and stretch till end or beginning of
   ;; buffer.
 
   (let (o-new pos)
-    ;; create new nest overlay and match it with O-MATCH
+    ;; create new nested overlay and match it with O-MATCH
     (cond
      ((eq (auto-o-edge o-match) 'start)
       (setq pos (overlay-get o-match 'delim-end))
@@ -247,4 +250,4 @@
 )
 
 
-;; auto-overlay-nest.el ends here
+;; auto-overlay-nested.el ends here
