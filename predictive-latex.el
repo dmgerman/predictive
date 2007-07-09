@@ -36,9 +36,12 @@
 ;;   of auto-overlays if they get in a mess due to bugs in the auto-overlays
 ;;   code :-(
 ;; * restore buffer's modified flag after enabling predictive mode, since
-;;   automatic synchronization of LaTeX envionments can modify buffer without
+;;   "electric" synchronization of LaTeX envionments can modify buffer without
 ;;   actually changing buffer text
 ;; * renamed "nest" regexps to "nested" regexps
+;; * prevent scheduling of "electric" environment syncronization when blocked
+;;   by `predictive-latex-disable-env-synchronize', as well as synchronization
+;;   itself
 ;;
 ;; Version 0.7.1
 ;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
@@ -1146,7 +1149,7 @@ refers to."
 (defun predictive-latex-schedule-env-synchronize
   (o-self &optional modified &rest unused)
   ;; Schedule synchronization of \begin{...} and \end{...} environment names
-  (unless modified
+  (unless (or modified predictive-latex-disable-env-synchronize)
     (add-to-list 'auto-o-pending-post-suicide
 		 (list 'predictive-latex-env-synchronize o-self))))
 
@@ -1178,17 +1181,14 @@ refers to."
 		;; Have to force `auto-o-run-after-update-functions' to
 		;; (recursively) call itself a second time, since doing the
 		;; replace-match will schedule some suicides and updates.
-		;; Note: not supplying the 'set-id can avoid multiple,
-		;; effectively identical auto-overlay-update calls
-		(add-to-list 'auto-o-pending-updates
-			     (list (line-number-at-pos (point)) nil nil))
+		(auto-o-schedule-update (line-number-at-pos (point)))
 		;; Note: the replace-match will *not* in fact cause a
 		;; synchronization to be scheduled for the other match
 		;; overlay, since it is impossible for a function called by
 		;; `auto-o-run-after-change-functions' to schedule something
 		;; else in the same pending list as itself. Therefore, the
 		;; `predictive-latex-disable-env-synchronization' mechanism to
-		;; protext against recursion is probably redundant.
+		;; protect against recursion is probably redundant.
 		(replace-match env t t nil 1)))
 	    )))
       ))
