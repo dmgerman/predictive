@@ -17,7 +17,7 @@ This manual documents the Emacs Predictive Completion package, version
 0.17
 @c --version--
 
-Copyright @copyright{} 2005 2006 Toby Cubitt
+Copyright @copyright{} 2005 2006 2007 Toby Cubitt
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -147,6 +147,7 @@ Copying this Manual
 
 
 
+
 @node What is predictive completion?
 @chapter What is predictive completion?
 @cindex What is predictive completion?
@@ -222,6 +223,7 @@ sentences preceding it.)
 
 
 
+
 @node Obtaining and Installing
 @chapter Obtaining and Installing
 @cindex obtaining and installing
@@ -272,6 +274,7 @@ command), by putting the following in your @file{.emacs} file instead:
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
+
 
 
 
@@ -373,6 +376,8 @@ writing. @xref{Dictionaries}.
 
 
 
+
+
 @node Completing Words
 @chapter Completing Words
 @cindex completing words
@@ -404,7 +409,6 @@ type.
 * Completion Menu and Browser::  
 * Miscellaneous Options::       
 @end menu
-
 
 
 
@@ -493,6 +497,7 @@ of the other key bindings are active until you have started completing a
 word.
 
 
+
 @node Deleting Characters
 @subsection Deleting Characters
 @cindex deleting characters
@@ -572,6 +577,31 @@ also automatically enable or disable @command{auto-completion-mode}, without
 needing to run the @command{auto-completion-mode} command manually.
 @end vtable
 
+The following variables control the behaviour of
+@command{auto-completion-mode}:
+
+@vtable @env
+@item auto-completion-min-chars
+Minimum number of characters that must be typed before the various
+completion mechanisms are activated when using
+@command{auto-completion-mode} (@pxref{Auto-Completion mode}). Note that
+you can still explicitly invoke completion on a shorter prefix using the
+@command{complete-word-at-point} command (@pxref{Inserting
+Completions}).
+
+@item auto-completion-delay
+Number of seconds Emacs must be idle before the various completion
+mechanisms are activated when using
+@command{auto-completion-mode} (@pxref{Auto-Completion mode}).
+
+@item auto-completion-backward-delete-delay
+Number of seconds Emacs must be idle after a backwards deletion
+(@pxref{Deleting Characters}) before the various completion mechanisms
+are activated when using @command{auto-completion-mode}
+(@pxref{Auto-Completion mode}). Having a small delay is useful when the
+delete key is held down continuously. Default is 0.1 seconds.
+@end vtable
+
 
 
 
@@ -599,8 +629,8 @@ determines which characters are word-constituents and which are not
 you want to exceptionally insert a punctuation character as though it is
 a word-constituent, such as the @samp{.} in @samp{e.g.}, without
 changing the default behaviour, you can often prefix the character key
-with @kbd{M-}. The bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} set up by
-default, but you can easily add more using the
+with @kbd{M-}. The bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} are
+already set up by default, but you can easily add more using the
 @command{completion-define-word-constituent-binding} convenience
 function in your @file{.emacs} file. @xref{Character Syntax and Key
 Bindings}, for more details about all the syntax and key binding
@@ -614,6 +644,13 @@ when @command{auto-completion-mode} is enabled. @xref{Inserting
 Completions}, and @ref{Auto-Completion Mode}.
 @findex complete-word-at-point
 @findex auto-completion-mode
+
+@vtable @env
+@item completion-dynamic-face
+The face used to highlight the provisional dynamic completion
+(@pxref{Dynamic Completion}).
+@end vtable
+
 
 
 
@@ -672,24 +709,21 @@ The following variables control the completion tooltip:
 @vtable @env
 @item completion-tooltip-delay
 The number of seconds Emacs must be idle before the completion tooltip
-is displayed. If nil, the tooltip is displayed immediately.
+is displayed. If nil, the tooltip is displayed immediately. Default is 3
+seconds.
 
-@c @item completion-tooltip-x-offset
-@c The horizontal offset for the tooltip, in pixels.
-@c
-@c @item completion-tooltip-y-offset
-@c The vertical offset for the tooltip, in pixels.
+@item completion-tooltip-timeout
+The number of seconds to display the tooltip. Default is 15.
+
+@item completion-tooltip-offset
+A cons cell containing the number of pixels (an integer) by which to
+offset the tooltip by in the x and y directions (car and cdr
+respectively).
+
+@item completion-tooltip-face
+The face to use in the tooltip. Only the @code{:foreground} and
+@code{:background} attributes are actually used.
 @end vtable
-
-@c Unfortunately, there is currently no way in Emacs to reliably display a
-@c tooltip at the point@footnote{A tooltip can be displayed at a given
-@c pixel position relative to the entire screen, whereas we want to display
-@c a tooltip at a position relative to the Emacs frame. Emacs provides a
-@c way to get the pixel position of the top-left of the text area of the
-@c frame relative to the screen, but window managers usually decorate the
-@c frame with a border and titlebar, and Emacs doesn't provide a way to
-@c calculate their size.}. Therefore, you will have to set the x- and
-@c y-offset trial and error to get the tooltip in the correct location.
 
 
 
@@ -714,6 +748,34 @@ lists @emph{all} possible completions, irrespective of the setting of
 it's taking too long to construct the browser, you can hit @kbd{C-g} to
 cancel it.
 
+The following variables affect the behaviour of the completion menu and
+browser:
+
+@vtable @env
+@item completion-auto-show-menu
+When non-nil, the completion menu will automatically be displayed
+whenever completion is invoked. Since menus steal the keyboard focus
+from Emacs, this is unuseable if @command{auto-completion-mode} is
+enabled (@pxref{Auto-Completion Mode}, but may be useful if
+auto-completion is not being used.
+
+@item completion-browser-max-items
+Maximum number of completions to display in a completion browser
+menu. If there are more completions than this in a menu, the menu will
+be divided into submenus, and if necessary the submenus will be further
+divided into subsubmenus, and so on ad infinitum. Default is to 25.
+
+@item completion-browser-buckets
+Chooses the algorithm used to subdivide browser menus into submenus. The
+symbol @code{balance} causes the number of entries in all menus,
+submenus, subsubmenus etc. to be made as equal as possible. The symbol
+@code{max} maximizes the number of entries in higher level menus (and
+hence minimizes the number of entries in lower level submenus), whereas
+@code{minimize} does the opposite. Note that none of these options
+affect the number of levels of submenu required in a given browser
+instance.
+@end vtable
+
 
 
 
@@ -726,11 +788,11 @@ cancel it.
 The following variables affect the overall behaviour of predictive mode:
 
 @vtable @env
-@item predictive-max-completions
+@item completion-max-candidates
 Maximum number of completions to find. Default is 10.
 @end vtable
 
-Setting @env{predictive-max-completions} to a large number is probably
+Setting @env{completion-max-candidates} to a large number is probably
 not useful, and will slow predictive mode down. It is easier to type a
 few extra characters than cycle through lots of completions, and the
 number available via hotkeys is limited by the number of characters that
@@ -749,17 +811,6 @@ Only the @emph{first} capital letter of a string is ignored. Thus typing
 @samp{ANSI}, whilst typing @kbd{a} would only find @samp{and}.
 
 @vtable @env
-@item completion-min-chars
-Minimum number of characters that must be typed before the various
-completion mechanisms are activated. Note that you can still explicitly
-invoke completion on a shorter prefix using the
-@command{completion-tab-complete} or @command{completion-cycle}
-commands (@pxref{Inserting Completions}).
-
-@item completion-delay
-Number of seconds Emacs must be idle before the various completion
-mechanisms are activated.
-
 @item completion-resolve-old-method
 Determines what to do with a provisional completion if you move the
 point away from it and start typing elsewhere. The options are:
@@ -768,6 +819,7 @@ to return to later if you so desire, @code{'accept} and @code{'reject},
 which accept or reject the old completion, and @code{'ask}, which asks
 you whether you want to accept or reject.
 @end vtable
+
 
 
 
@@ -915,6 +967,7 @@ saved manually. @xref{Loading and Saving Dictionaries}.
 
 
 
+
 @node Loading and Saving Dictionaries
 @section Loading and Saving Dictionaries
 @cindex loading and saving dictionaries
@@ -1010,6 +1063,7 @@ when you exit Emacs.
 
 
 
+
 @node Basic Dictionary Usage
 @section Basic Dictionary Usage
 @cindex basic dictionary usage
@@ -1060,6 +1114,7 @@ predictive-programmer-guide, Predictive Programmer Guide}.
 
 
 
+
 @node Dictionary Learning
 @section Dictionary Learning
 @cindex dictionaries, learning
@@ -1088,6 +1143,7 @@ learning from existing files, and automatic learning as you type.
 * Automatic Learning::          
 * Relationships Between Words::  
 @end menu
+
 
 
 @node Learning from Buffers and Files
@@ -1140,6 +1196,7 @@ only words consisting entirely of word- or symbol-constituent characters
 Like @command{predictive-fast-learn-from-buffer}, but learns from a file
 instead of a buffer.
 @end ftable
+
 
 
 @node Automatic Learning
@@ -1222,6 +1279,7 @@ to the first dictionary in the list (assuming
 ensure that dictionaries in the list do not duplicate any words.
 @vindex predictive-main-dict
 @cindex dictionary, buffer
+
 
 
 @node Relationships Between Words
@@ -1314,6 +1372,7 @@ will take precedence over it.
 
 
 
+
 @node Advanced Customisation
 @chapter Advanced Customisation
 @cindex customisation, advanced
@@ -1330,7 +1389,6 @@ scope of this user guide.
 * Character Syntax and Key Bindings::  
 * Major Modes::                 
 @end menu
-
 
 
 
@@ -1405,8 +1463,8 @@ Menu and Browser}.
 @end vtable
 
 @findex predictive-self-insert.
-@vindex predictive-syntax-alist
-@vindex predictive-override-syntax-alist
+@vindex predictive-dynamic-syntax-alist
+@vindex predictive-override-dynamic-syntax-alist
 
 The various keymaps define key bindings for different situations that
 arise in predictive mode. The main @env{completion-map} keymap is
@@ -1418,8 +1476,8 @@ Note: if you find yourself thinking of re-binding printable characters
 in @env{completion-map} to something other than
 @command{completion-self-insert}, don't! (at least not until you've read
 on a bit). What you probably want to change are the
-@env{completion-syntax-alist} and @env{completion-override-syntax-alist}
-variables. @xref{Syntax}.
+@env{completion-dynamic-syntax-alist} and
+@env{completion-dynamic-override-syntax-alist} variables. @xref{Syntax}.
 
 The @env{completion-dynamic-map} is provided for future versions of
 Emacs, and does not work properly at the moment. Someday, it will
@@ -1456,12 +1514,12 @@ way.
 @cindex characters, syntax
 
 @vtable @env
-@item completion-syntax-alist
+@item completion-dynamic-syntax-alist
 Alist associating character syntax descriptors with completion
 functions. Used by the @command{completion-self-insert} function to
 decide what to do based on a typed character's syntax.
 
-@item completion-override-syntax-alist
+@item completion-dynamic-override-syntax-alist
 Alist associating characters with completion functions. Overrides the
 default function for a typed character's syntax. Used by
 @command{completion-self-insert}.
@@ -1489,7 +1547,7 @@ that character's syntax, as defined by the current syntax table
 (@pxref{Syntax, , , emacs, GNU Emacs Manual}). All printable characters
 are bound by default to the function @command{completion-self-insert},
 which inserts the character, looks up the character's syntax descriptor
-in @env{completion-syntax-alist}, and carries out the associated
+in @env{completion-dynamic-syntax-alist}, and carries out the associated
 actions.
 @findex completion-self-insert
 
@@ -1500,15 +1558,17 @@ any provisional completion and insert the character, and anything else
 rejects any provisional completion and inserts the character.
 
 Occasionally, the syntax-derived behaviour needs to be overridden for
-individual characters. The @env{completion-override-syntax-alist}
-associates characters with completion behaviour and takes precedence
-over @env{completion-syntax-alist}.
+individual characters. The
+@env{completion-dynamic-override-syntax-alist} associates characters
+with completion behaviour and takes precedence over
+@env{completion-dynamic-syntax-alist}.
 
-Each association in @env{completion-syntax-alist} and
-@env{completion-override-syntax-alist} is a three-element list of the
-form@footnote{Lisp packages can additionally set the second element to
-nil, and can replace any element with a function that returns one of
-these values or nil, but this is beyond the scope of this user-guide.}:
+Each association in @env{completion-dynamic-syntax-alist} and
+@env{completion-dynamic-override-syntax-alist} is a three-element list
+of the form@footnote{Lisp packages can additionally set the second
+element to nil, and can replace any element with a function that returns
+one of these values or nil, but this is beyond the scope of this
+user-guide.}:
 @lisp
 (<accept|reject|add> t <basic|word|none>)
 @end lisp
@@ -1638,31 +1698,36 @@ By default, predictive mode will use the usual main dictionary in
 @LaTeX{} mode, determined by @env{predictive-main-dict} (@pxref{Basic
 Dictionary Usage}). However, by customizing
 @env{predictive-latex-docclass-alist}, the main dictionary can be
-selected automatically based on the document class. In addition to the
-main dictionary, a number of @LaTeX{} dictionaries are also used,
-grouped into four main categories: text-mode @LaTeX{} commands,
-maths-mode @LaTeX{} commands, preamble @LaTeX{} commands, and @LaTeX{}
-environments. The dictionaries in the different categories are used to
-look for completions in different contexts in the @LaTeX{} document. The
-main @LaTeX{} dictionaries in these categories are, respectively,
-@code{dict-latex}, @code{dict-latex-math}, @code{dict-latex-preamble}
-and @code{dict-latex-env}. In addition, there are dictionaries for
-@LaTeX{} document classes (@code{dict-latex-docclass}), bibliography
-styles (@code{dict-latex-bibstyle}), and an automatically generated
-dictionary of cross-reference labels.
+selected automatically based on the document class.
+
+In addition to the main dictionary, a number of @LaTeX{} dictionaries
+are also used, grouped into four main categories: text-mode @LaTeX{}
+commands, maths-mode @LaTeX{} commands, preamble @LaTeX{} commands, and
+@LaTeX{} environments. The dictionaries in the different categories are
+used to look for completions in different contexts in the @LaTeX{}
+document. The main @LaTeX{} dictionaries in these categories are,
+respectively, @code{dict-latex}, @code{dict-latex-math},
+@code{dict-latex-preamble} and @code{dict-latex-env}. In addition, there
+are dictionaries for @LaTeX{} document classes
+(@code{dict-latex-docclass}), bibliography styles
+(@code{dict-latex-bibstyle}), and an automatically generated dictionary
+of cross-reference labels (@pxref{Automatically Created Files}).
 
 Predictive mode will automatically complete words from the correct
 dictionary in different regions of your @LaTeX{} document@footnote{The
 automatic dictionary switching is implemented using the
 @dfn{auto-overlays} Elisp package.}. In the main body of the document it
-will complete from the usual main dictionary and from the dictionaries
-of text-mode @LaTeX{} commands. Inside an @samp{equation} or other
-display-mode environments, between @samp{$}'s, or between @samp{\[} and
-@samp{\]} it will use the dictionaries of maths-commands. Inside
-@samp{\begin@{@dots{}@}} it will use the dictionaries of @LaTeX{}
-environments. Inside @samp{\ref@{@dots{}@}} it will use the dictionary
-of cross-reference labels, which is created and updated automatically
-for each @LaTeX{} document.
+will complete from the main dictionary, as usual, and also from the
+dictionaries of text-mode @LaTeX{} commands. Inside @samp{equation} or
+other display-mode environments, between @samp{$}'s, or between
+@samp{\[} and @samp{\]}, it will use the dictionaries of maths
+commands. Inside @samp{\begin@{@dots{}@}} it will use the dictionaries
+of @LaTeX{} environments. Inside @samp{\ref@{@dots{}@}} it will use the
+dictionary of cross-reference labels, which is created and updated
+automatically for each @LaTeX{} document. Inside
+@samp{\documentclass@{@dots{}@}} and
+@samp{\bibliographystyle@{@dots{}@}}, it will use the document class and
+bibliography style dictionaries, respectively.
 
 When @env{predictive-latex-electric-environments} is enabled, the
 environment name appearing inside a @LaTeX{}
@@ -1670,10 +1735,11 @@ environment name appearing inside a @LaTeX{}
 with its matching @code{\begin@{<@env{environment}>@}} command. The
 synchronization doesn't just occur when the @code{\end} command is first
 typed; it is kept synchronized at all times, even when the @code{\begin}
-command that it matches changes. Also, when the environment name within
-either a @code{\begin} @emph{or} an @code{\end} command is modified, the
-environment name within its matching partner is also modified
-accordingly.
+command that it originally matched is deleted, causing it to match a
+different @code{\begin} somewhere else in the document. Also, when the
+environment name within either a @code{\begin} @emph{or} an @code{\end}
+command is modified, the environment name within its matching partner is
+also modified accordingly.
 
 The behaviour of different character syntax classes, and the behaviour
 of certain individual characters, is set up appropriately for @LaTeX{}
@@ -1707,19 +1773,17 @@ functions when a @samp{\usepackage} command is typed, and unloading them
 again if it is modified or deleted.
 
 When a @samp{\usepackage@{@var{package}@}} command is typed, predictive
-@LaTeX{} mode looks for three
-@c four
-dictionaries based on the @var{package} name:
-@code{dict-latex-@var{package}}, @code{dict-latex-math-@var{package}},
-@c @code{dict-latex-preamble}@var{package},
-and @code{dict-latex-env-@var{package}}. These correspond to the three
-@c four
+@LaTeX{} mode looks for four dictionaries based on the @var{package}
+name: @code{dict-latex-@var{package}},
+@code{dict-latex-math-@var{package}},
+@code{dict-latex-preamble}@var{package}, and
+@code{dict-latex-env-@var{package}}. These correspond to the four
 categories of @LaTeX{} dictionary (@pxref{LaTeX Support}). If any of
-these dictionaries are found, they are added to the corresponding
-category and will be active in the appropriate regions of the
-document. If the text of the @samp{\usepackage@{@var{package}@}} command
-is modified or deleted, the dictionaries are removed again and will no
-longer be active in the buffer.
+these dictionaries are found, they are added to the list of dictionaries
+for the corresponding category, and will be active in the appropriate
+regions of the document. If the text of the
+@samp{\usepackage@{@var{package}@}} command is modified or deleted, the
+dictionaries are removed again.
 
 In addition, when a @samp{\usepackage} command is typed, modified or
 deleted, predictive @LaTeX{} mode will try to load an Elisp file called
@@ -1739,13 +1803,13 @@ Alist associating @LaTeX{} @var{package} names (strings) with a list
 containg two functions: a function to be called when loading the package
 with that name (i.e. when @samp{\usepackage@{@var{package}@}} is typed),
 and a function to be called when unloading the package (i.e. when the
-@samp{\usepackage@{@var{package}@}} is modified or deleted). Entires
+@samp{\usepackage@{@var{package}@}} is modified or deleted). Entries
 should be added to this variable by the corresponding Elisp file,
 @file{predictive-latex-}@var{package}@samp{.el[c]}.
 @end vtable
 
-The predictive completion package comes with support for some @LaTeX{}
-packages, though by no means all or even the most
+The predictive completion package already comes with support for some
+@LaTeX{} packages, though by no means all or even the most
 important@footnote{Dictionaries and Elisp code welcome!}.
 
 
@@ -1759,7 +1823,7 @@ The dictionary of cross-reference labels is saved to the same directory
 as the @LaTeX{} file, under the name
 @file{dict-latex-label-@var{filename}.elc}, where @var{filename} is the
 name of the @LaTeX{} file. Note that the label dictionary is shared
-across all buffer with the same @env{TeX-master}, and the file it is
+across all buffers with the same @env{TeX-master}, and the file it is
 saved to will be based on the @env{TeX-master} file's name and
 directory.
 
@@ -1768,6 +1832,7 @@ containing information about the location of different regions within
 the document is saved to @file{auto-overlays-@var{filename}} within
 the same directory as the @LaTeX{} file. (Separate files are created
 even for buffers that share the same @env{TeX-master}.)
+
 
 
 
@@ -1799,7 +1864,6 @@ is not already listed).
 
 
 
-
 @node Known Bugs
 @section Known Bugs
 @cindex known bugs
@@ -1816,7 +1880,7 @@ some compatibility work, but should be possible.
 @item
 There are probably still bugs remaining in the @code{auto-overlay} code,
 used in some major modes to set up region-local dictionaries. If you
-find one, please report it along with precise instructions on how to
+find one, please report it, along with precise instructions on how to
 reproduce it. They're fiendishly difficult to track down!
 @end enumerate
 
@@ -1848,10 +1912,6 @@ More predictive mode configuration variables could be allowed to have
 completion-menu function, and @env{completion-word-thing}.
 
 @item
-It would be nice to be able to select the main dictionary automatically
-based on the @code{\documentclass} in @LaTeX{} modes.
-
-@item
 Predictive mode should be integrated with the @dfn{semantic} package, to
 make it more useful for programming languages. At the moment, it works
 best with plain text and markup languages.
@@ -1870,7 +1930,7 @@ similar package written for the @dfn{nedit} editor by Christian
 Merkwirth.
 @c (@uref{http://www.physik3.gwdg.de/~cmerk/prog/nedit/index.html})
 Most significantly, it provided the clue that ternary search trees are
-the best structure to use for the dictionaries.
+the best data structure to use for the dictionaries.
 
 Ternary search trees are described in a very readable article by Jon
 Bentley and Robert Sedgewick in Dr. Dobb's Journal, among other
@@ -1878,8 +1938,8 @@ places. The article can be found via
 @uref{http://www.ddj.com/articles/1998/9804/}.
 
 Finally, the English dictionary supplied with the predictive completion
-package was based on the British National Corpus frequency tables,
-available from
+package was originally based on the British National Corpus frequency
+tables, available from
 @uref{http://www.itri.brighton.ac.uk/~Adam.Kilgarriff/bnc-readme.html}.
 
 

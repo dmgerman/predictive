@@ -43,8 +43,10 @@
 ;;; Change Log:
 ;;
 ;; Version 0.16.1
-;; * added `predcitive-reset-weight' command to facilitate resetting word
+;; * added `predictive-reset-weight' command to facilitate resetting word
 ;;   weights
+;; * remove `predictive-max-completions' customization option, long since
+;;   superseded by completion-ui
 ;;
 ;; Version 0.16
 ;; * `predictive-add-to-dict' can once again be set to 'buffer, to auto-add
@@ -249,10 +251,10 @@ is set to t, words will be added to the first dictionary in the list \(see
   :type 'symbol)
 
 
-(defcustom predictive-max-completions 10
-  "*Maximum number of completions to return in predictive mode."
-  :group 'predictive
-  :type 'integer)
+;; (defcustom predictive-max-completions 10
+;;   "*Maximum number of completions to return in predictive mode."
+;;   :group 'predictive
+;;   :type 'integer)
 
 
 (defcustom predictive-completion-speed 0.1
