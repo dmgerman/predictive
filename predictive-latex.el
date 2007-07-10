@@ -40,8 +40,8 @@
 ;;   actually changing buffer text
 ;; * renamed "nest" regexps to "nested" regexps
 ;; * prevent scheduling of "electric" environment syncronization when blocked
-;;   by `predictive-latex-disable-env-synchronize', as well as synchronization
-;;   itself
+;;   by `predictive-latex-disable-env-synchronize'
+;; * don't bother synchronizing if environments are already synchronized
 ;;
 ;; Version 0.7.1
 ;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
@@ -1175,8 +1175,9 @@ refers to."
 	    (setq env (match-string-no-properties 1))
 	    ;; replace environment name in other edge
 	    (goto-char (overlay-start o-other))
-	    (when (search-forward-regexp "{\\(.*?\\)}"
-					 (overlay-end o-other) t)
+	    (when (and (search-forward-regexp "{\\(.*?\\)}"
+					      (overlay-end o-other) t)
+		       (not (string= env (match-string-no-properties 1))))
 	      (let ((predictive-latex-disable-env-synchronize t))
 		;; Have to force `auto-o-run-after-update-functions' to
 		;; (recursively) call itself a second time, since doing the
@@ -1266,7 +1267,8 @@ refers to."
 	  (setq env (match-string-no-properties 1))
 	  ;; replace environment name in end
 	  (goto-char (overlay-start end))
-	  (when (search-forward-regexp "{\\(.*?\\)}" (overlay-end end) t)
+	  (when (and (search-forward-regexp "{\\(.*?\\)}" (overlay-end end) t)
+		     (not (string= env (match-string-no-properties 1))))
 	    (let ((predictive-latex-disable-env-synchronize t))
 	      (replace-match env t t nil 1)))
 	  ))))
