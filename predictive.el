@@ -493,6 +493,14 @@ Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
+(defvar predictive-auto-add-filter nil
+  "Function called to decide whether to auto-add a word to a dictionary.
+When set, this function is called with one argument, the word
+potentially being added. It should return non-nil if the word
+should be added to the dictionary, nil if it should not. Only
+used when `predictive-auto-add-to-dict' is enabled.")
+
+
 (defvar predictive-map nil "Keymap used in predictive mode.")
 
 
@@ -823,6 +831,8 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
       ;; asked, then add the new word to the appropriate dictionary
       (if (null found)
 	  (when (and predictive-auto-add-to-dict
+		     (or (null predictive-auto-add-filter)
+			 (funcall predictive-auto-add-filter word))
 		     (or (not predictive-add-to-dict-ask)
 			 (y-or-n-p
 			  (format "Add word \"%s\" to dictionary? " word))))
