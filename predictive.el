@@ -474,7 +474,9 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 
 
 ;; FIXME: should this be a customization option?
-(defvar predictive-major-mode-alist nil
+(defvar predictive-major-mode-alist
+  '((LaTeX-mode . predictive-setup-latex)
+    (latex-mode . predictive-setup-latex))
   "Alist associating major mode symols with functions.
 The alist is checked whenever predictive mode is turned on in a
 buffer, and if the buffer's major made matches one in the alist,
