@@ -831,8 +831,6 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
       ;; asked, then add the new word to the appropriate dictionary
       (if (null found)
 	  (when (and predictive-auto-add-to-dict
-		     (or (null predictive-auto-add-filter)
-			 (funcall predictive-auto-add-filter word))
 		     (or (not predictive-add-to-dict-ask)
 			 (y-or-n-p
 			  (format "Add word \"%s\" to dictionary? " word))))
@@ -844,8 +842,11 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 	      ;; if caching auto-added words, do so
 	      (if predictive-use-auto-learn-cache
 		  (push (cons word (car dict)) predictive-auto-add-cache)
-		;; otherwise, add it to the dictionary
-		(predictive-add-to-dict (car dict) word)))
+		;; otherwise, check it pases the filter (if there is one),
+		;; then add it to the dictionary
+		(when (or (null predictive-auto-add-filter)
+			  (funcall predictive-auto-add-filter word))
+		  (predictive-add-to-dict (car dict) word))))
 	     
 	     ;; if adding to the buffer-local dictionary...
 	     ((eq predictive-auto-add-to-dict 'buffer)
@@ -854,25 +855,31 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 	      (if (null predictive-use-buffer-local-dict)
 		  (message "The setting of `predictive-auto-add-to-dict'\
  specifies adding to the buffer-local dictionary, but buffer-local\
- dictionaries are disabled by `predictive-use-buffer-local-dict'")
+ dictionaries are not enabled by `predictive-use-buffer-local-dict'")
 		;; if caching auto-added words, do so
 		(if predictive-use-auto-learn-cache
 		    (push (cons word (predictive-buffer-local-dict-name))
 			  predictive-auto-add-cache)
-		  ;; otherwise, add it to the dictionary
-		  (predictive-add-to-dict (predictive-buffer-local-dict-name)
-					  word))))
+		  ;; otherwise, check it passes the filter (if there is one),
+		  ;; then add it to the dictionary
+		  (when (or (null predictive-auto-add-filter)
+			    (funcall predictive-auto-add-filter word))
+		    (predictive-add-to-dict (predictive-buffer-local-dict-name)
+					    word)))))
 	     
 	     ;; anything else specifies an explicit dictionary to add to
 	     (t
 	      (setq dict (eval predictive-auto-add-to-dict))
 	      ;; check `predictive-auto-add-to-dict' is a dictionary
 	      (if (dictree-p dict)
-		  (if (not predictive-use-auto-learn-cache)
-		      ;; if caching is off, add word to the dictionary
-		      (predictive-add-to-dict dict word)
-		    ;; if caching is on, cache word
-		    (push (cons word dict) predictive-auto-add-cache))
+		  ;; if caching auto-added words, do so
+		  (if predictive-use-auto-learn-cache
+		      (push (cons word dict) predictive-auto-add-cache)
+		    ;; otherwise, check is passes the filter (if there is
+		    ;; one), then add it to the dictionary
+		    (when (or (null predictive-auto-add-filter)
+			      (funcall predictive-auto-add-filter word))
+		      (predictive-add-to-dict dict word)))
 		;; display error message if not a dictionary
 		(beep)
 		(message
@@ -983,9 +990,11 @@ for uncapitalized version."
       (unless idle
 	(message "Flushing predictive mode auto-learn caches...(word\
  %d of %d)" i count))
-      
-      ;; add word to whichever dictionary is in the cache
-      (predictive-add-to-dict dict word)))
+      ;; check word passes the filter (if there is one), then add it to
+      ;; whichever dictionary is in the cache
+      (when (or (null predictive-auto-add-filter)
+		(funcall predictive-auto-add-filter word))
+	(predictive-add-to-dict dict word))))
   
   (unless idle (message "Flushing predictive mode auto-learn caches...done"))
 )

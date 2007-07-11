@@ -1217,16 +1217,15 @@ The following variables control automatic learning:
 
 @vtable @env
 @item predictive-auto-learn
-Controls automatic word frequency learning. When non-nil, the weight for
-a word in is incremented each time it is accepted as a completion,
-making the word more likely to be offered higher up the list of
-completions in the future. Words that are not already in the dictionary
-are ignored unless @env{predictive-auto-add-to-dict} is set. Auto learn
-is disabled by default.
+Controls automatic word frequency learning. When non-nil (the default),
+the weight for a word in is incremented each time it is accepted as a
+completion, making the word more likely to be offered higher up the list
+of completions in the future. Words that are not already in the
+dictionary are ignored unless @env{predictive-auto-add-to-dict} is set.
 
 @item predictive-auto-add-to-dict
 Controls automatic adding of new words to dictionaries. If nil (the
-default), words are never automatically added to a dictionary. If
+default), new words are never automatically added to a dictionary. If
 @code{t}, new words are automatically added to the active dictionary.
 If set to a dictionary name, new words are automatically added to that
 dictionary instead of the active one.
@@ -1268,6 +1267,15 @@ and only actually added to the dictionary when Emacs has been idle for
 @env{predictive-auto-add-to-dict} is also set). This avoids small but
 sometimes noticeable delays when typing. New words or word weights will
 not be taken into account until the cache is fully flushed.
+
+@item predictive-auto-add-filter
+When this variable is set to a function, and when
+@env{predictive-auto-add-to-dict} is enabled, the function will called
+whenever a word is going to be auto-added to the dictionary, passing the
+word as an argument. The word will only be added if the function returns
+non-nil. If @env{predictive-use-auto-learn-cache} is enabled, the filter
+function will be called when cached entries are flushed, allowing even
+time-consuming filter functions to be used.
 @end vtable
 
 Note that if @env{predictive-main-dict} contains a list of dictionary
@@ -1279,6 +1287,12 @@ to the first dictionary in the list (assuming
 ensure that dictionaries in the list do not duplicate any words.
 @vindex predictive-main-dict
 @cindex dictionary, buffer
+
+The @env{predictive-auto-add-filter} is not a customization option, so
+it can only be set from Lisp code (e.g. a setup function, @pxref{Major
+Modes}). One example of its use would be to check words are spelled
+correctly using ispell, before auto-adding them to a dictionary.
+@c FIXME: add example code
 
 
 
