@@ -353,7 +353,17 @@ place."
 					  (const :tag "none" none)))))
 
 
-(defcustom completion-dynamic-override-syntax-alist nil
+(defcustom completion-dynamic-override-syntax-alist
+  '((?0 . (reject t none))
+    (?1 . (reject t none))
+    (?2 . (reject t none))
+    (?3 . (reject t none))
+    (?4 . (reject t none))
+    (?5 . (reject t none))
+    (?6 . (reject t none))
+    (?7 . (reject t none))
+    (?8 . (reject t none))
+    (?9 . (reject t none)))
   "*Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
 in `completion-dynamic-syntax-alist'. The format is the same as for
