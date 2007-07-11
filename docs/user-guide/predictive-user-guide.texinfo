@@ -51,7 +51,7 @@ Documentation License".
 
 The package adds a new predictive completion minor-mode, called
 @dfn{predictive} mode, to the GNU Emacs editor. Although there are many
-options and customisations, the easiest way to start using it is to
+options and customizations, the easiest way to start using it is to
 simply install the package (@pxref{Obtaining and Installing}), turn on
 the minor-mode by running the @command{predictive-mode} command, and
 start typing. Then come back and read up on how to tailor it to your
@@ -99,6 +99,7 @@ Dictionaries
 * Basic Dictionary Usage::      
 * Region-Local Dictionaries::   
 * Dictionary Learning::         
+* Getting the Most out of Dictionaries::  
 
 Dictionary Learning
 
@@ -203,7 +204,7 @@ Automatic spelling assistance: when you type the first few characters of
 a word, only correct spellings of the whole word are offered. This is
 not only useful for human languages. The predictive completion mode can
 be set up to complete on variable and function names in a program,
-helping avoid bugs due to misspelled names.
+helping avoid bugs due to misspelt names.
 @cindex automatic spelling assistance
 @cindex spelling
 
@@ -386,7 +387,7 @@ writing. @xref{Dictionaries}.
 As you type, predictive mode is continually searching behind the scenes
 for the most likely completions of the words you are typing. However,
 how you make use of these depends on how intrusive you want it to
-be. The many options and settings let you customise it to your needs.
+be. The many options and settings let you customize it to your needs.
 
 Predictive mode can work completely unobtrusively, so that using it has
 no discernible effect until you issue a command to insert a completion
@@ -584,7 +585,7 @@ The following variables control the behaviour of
 @item auto-completion-min-chars
 Minimum number of characters that must be typed before the various
 completion mechanisms are activated when using
-@command{auto-completion-mode} (@pxref{Auto-Completion mode}). Note that
+@command{auto-completion-mode} (@pxref{Auto-Completion Mode}). Note that
 you can still explicitly invoke completion on a shorter prefix using the
 @command{complete-word-at-point} command (@pxref{Inserting
 Completions}).
@@ -592,13 +593,13 @@ Completions}).
 @item auto-completion-delay
 Number of seconds Emacs must be idle before the various completion
 mechanisms are activated when using
-@command{auto-completion-mode} (@pxref{Auto-Completion mode}).
+@command{auto-completion-mode} (@pxref{Auto-Completion Mode}).
 
 @item auto-completion-backward-delete-delay
 Number of seconds Emacs must be idle after a backwards deletion
 (@pxref{Deleting Characters}) before the various completion mechanisms
 are activated when using @command{auto-completion-mode}
-(@pxref{Auto-Completion mode}). Having a small delay is useful when the
+(@pxref{Auto-Completion Mode}). Having a small delay is useful when the
 delete key is held down continuously. Default is 0.1 seconds.
 @end vtable
 
@@ -755,15 +756,16 @@ browser:
 @item completion-auto-show-menu
 When non-nil, the completion menu will automatically be displayed
 whenever completion is invoked. Since menus steal the keyboard focus
-from Emacs, this is unuseable if @command{auto-completion-mode} is
+from Emacs, this is unusable if @command{auto-completion-mode} is
 enabled (@pxref{Auto-Completion Mode}, but may be useful if
 auto-completion is not being used.
 
 @item completion-browser-max-items
 Maximum number of completions to display in a completion browser
 menu. If there are more completions than this in a menu, the menu will
-be divided into submenus, and if necessary the submenus will be further
-divided into subsubmenus, and so on ad infinitum. Default is to 25.
+be divided into submenus, and if necessary the submenus will be
+further divided into subsubmenus, and so on ad infinitum. Default is
+to 25.
 
 @item completion-browser-buckets
 Chooses the algorithm used to subdivide browser menus into submenus. The
@@ -855,6 +857,7 @@ dictionaries. (As soon as Emacs becomes sentient -- surely not far off
 * Basic Dictionary Usage::      
 * Region-Local Dictionaries::   
 * Dictionary Learning::         
+* Getting the Most out of Dictionaries::  
 @end menu
 
 
@@ -862,7 +865,7 @@ dictionaries. (As soon as Emacs becomes sentient -- surely not far off
 @node Creating Dictionaries
 @section Creating Dictionaries
 @cindex creating dictionaries
-@cindex dictionary, creating
+@cindex dictionaries, creating
 
 Predictive mode dictionaries store words along with their associated
 weights, used to rank the words in order of likelihood. The weight is
@@ -922,11 +925,11 @@ Display the number of words in a dictionary.
 
 The file containing the list of words used to populate a dictionary has
 to conform to a specific format. Each line contains one word, delimited
-by @samp{""}, optionally followed by an integer separated by whitespace
+by @samp{""}, optionally followed by an integer separated by white-space
 from the word itself, which specifies the word's weight. Any characters
 before the first @samp{"} are ignored. Note that the `words' in a
 dictionary do not have to be words in the usual sense. They can be
-arbitrary sequences of characters, including whitespace and punctuation
+arbitrary sequences of characters, including white-space and punctuation
 characters. The quote character @samp{"} can be included by escaping it:
 @samp{\"}. (@xref{Known Bugs}, however.)
 
@@ -1024,7 +1027,7 @@ in your load path, this can be done manually using the
 @command{load-library} or @command{predictive-load-dict} commands. The
 @command{predictive-load-dict} command additionally adds it to the list
 of dictionaries used by the current buffer. This has two implications:
-the dictionary will automaticall be saved when the buffer is killed
+the dictionary will automatically be saved when the buffer is killed
 (assuming its autosave flag is non-nil, @pxref{Creating Dictionaries}),
 and it will be included when learning from the buffer (@pxref{Learning
 from Buffers and Files}). Alternatively, you can manually load a
@@ -1157,7 +1160,7 @@ Predictive mode can learn word weights from existing text. The following
 commands can be used to do this. Note that they will not add new words
 to a dictionary; they only update weights of words that are already in
 the dictionary. The learning commands take account of region-local
-dictionaries, and will ensure words are learned in the correct
+dictionaries, and will ensure words are learnt in the correct
 dictionaries (@pxref{Region-Local Dictionaries}).
 
 Usually, you want to accumulate knowledge from each new piece of
@@ -1203,14 +1206,15 @@ instead of a buffer.
 @subsection Automatic Learning
 @cindex automatic learning
 @cindex learning, automatic
-@cindex dictionary, automatic learn
+@cindex dictionaries, automatic learn
 
 Predictive mode can automatically learn which words you use most often
 as you type, in order to make better predictions. This feature is
 especially useful when you first start using a dictionary, to adapt it
-to your writing style. Once a dictionary has `learned' and is making
+to your writing style. Once a dictionary has been trained and is making
 good predictions, it can be turned off to fix the order in which
-completions are offered (@pxref{What is predictive completion?}).
+completions are offered (@pxref{What is predictive completion?}), though
+leaving it on usually doesn't cause the order to change that much.
 
 @noindent
 The following variables control automatic learning:
@@ -1240,9 +1244,11 @@ If non-nil, a special, buffer-local dictionary will be created for each
 predictive mode buffer. The buffer-local dictionary is used in
 conjunction with the @env{predictive-main-dict}, and the two act as a
 single, combined main dictionary for the buffer.
+@cindex dictionaries, buffer-local
+@cindex buffer-local dictionary
 
 The buffer-local dictionary is initially empty, but whenever a word is
-learned (auto-learned, auto-added, or learned from a buffer or file), it
+learnt (auto-learnt, auto-added, or learnt from a buffer or file), it
 is added to the buffer-local dictionary, and its weight there is
 incremented by a value @env{predictive-buffer-local-learn-multiplier}
 times higher than for normal dictionaries. Thus the buffer-local
@@ -1257,10 +1263,11 @@ be created in the directory).
 @item predictive-buffer-local-learn-multiplier
 Sets the learning speed for buffer-local dictionaries. Whenever a word
 is added to a buffer-local dictionary, the weight increment is
-multiplied by this value before being added to any existing word weight.
+multiplied by this value before being added to any existing word
+weight. The default is 50.
 
 @item predictive-use-auto-learn-cache
-If non-nil (the default), auto-learned and auto-added words are cached,
+If non-nil (the default), auto-learnt and auto-added words are cached,
 and only actually added to the dictionary when Emacs has been idle for
 @env{predictive-flush-auto-learn-delay} seconds or the buffer is killed
 (it has no effect unless at least one of @env{predictive-auto-learn} or
@@ -1279,20 +1286,49 @@ time-consuming filter functions to be used.
 @end vtable
 
 Note that if @env{predictive-main-dict} contains a list of dictionary
-names (@pxref{Basic Dictionary Usage}), an automatically learned or
+names (@pxref{Basic Dictionary Usage}), an automatically learnt or
 added word may not end up where you want it. The weight of a word is
 incremented in the first dictionary it is found in, and words are added
 to the first dictionary in the list (assuming
 @env{predictive-auto-add-to-dict} is set to @code{t}). It is best to
 ensure that dictionaries in the list do not duplicate any words.
 @vindex predictive-main-dict
-@cindex dictionary, buffer
+@cindex dictionaries, main
 
 The @env{predictive-auto-add-filter} is not a customization option, so
 it can only be set from Lisp code (e.g. a setup function, @pxref{Major
-Modes}). One example of its use would be to check words are spelled
-correctly using ispell, before auto-adding them to a dictionary.
-@c FIXME: add example code
+Modes}). One example of its use would be to filter out words that
+contain non-letter characters (though it may be better to customize
+@env{completion-dynamic-syntax-alist} and
+@env{completion-dynamic-override-syntax-alist} instead,
+@pxref{Syntax}). The following will accomplish this:
+@lisp
+(setq predictive-auto-add-filter
+      (lambda (word) (string-match "^[[:alpha:]]$" word)))
+@end lisp
+
+Another example would be to check that words are spelt correctly before
+auto-adding them to a dictionary, either using @command{ispell} or using
+the English dictionary that comes with predictive mode. This sounds
+tautological, but it does make sense: the dictionary you use for
+predictive completion will only contain words you've used at least once,
+but typos and spelling mistakes won't make it into the dictionary
+(@pxref{Getting the Most out of Dictionaries}).
+@lisp
+(setq predictive-auto-add-filter (lambda (word) (lookup-words word)))
+@end lisp
+Using the supplied predictive English dictionary will be faster than
+@command{ispell}, since it is optimised for looking up words, though
+this isn't such an issue if @env{predictive-use-auto-learn-cache} is
+enabled (the following assumes @code{dict-english} is already loaded,
+@pxref{Loading and Saving Dictionaries}).
+@lisp
+(setq predictive-auto-add-filter
+      (lambda (word) (dictree-member-p dict-english word)))
+@end lisp
+
+Other possible uses for @env{predictive-auto-add-filter} are limited
+only by your imagination!
 
 
 
@@ -1301,7 +1337,7 @@ correctly using ispell, before auto-adding them to a dictionary.
 @cindex relationship between words
 @cindex prefix words
 @cindex words, relationships
-@cindex words, prefices
+@cindex words, prefixes
 
 As well as word frequencies, predictive mode dictionaries can store
 certain relationships between words, to make learning more
@@ -1370,7 +1406,7 @@ Ensuring that prefixes take precedence when completing words is almost
 always a good idea. It makes predictive completion much more convenient
 (especially dynamic completion, @pxref{Dynamic Completion}). Therefore,
 predictive mode includes a feature that, when enabled (the default),
-automatically defines all the necesary prefix relationships whenever a
+automatically defines all the necessary prefix relationships whenever a
 word is added to a dictionary.
 
 @vtable @env
@@ -1382,6 +1418,128 @@ of it, and in their turn any words that are prefixes of the new word
 will take precedence over it.
 @end vtable
 
+
+
+
+@node Getting the Most out of Dictionaries
+@section Getting the Most out of Dictionaries
+@cindex Getting the most out of dictionaries
+@cindex dictionaries, getting the most out of
+@cindex dictionaries, tips and tricks
+@cindex dictionaries, discussion
+@cindex automatic learning
+@cindex learning, automatic
+@cindex dictionaries, automatic learning
+
+As it says at the beginning of this chapter, predictive completion is
+only as good as the dictionary it uses. The English dictionary supplied
+with the predictive package is trained on a large body of (British)
+English text, so the words and word weights it contains accurately
+reflect average English usage. But you are very unlikely to write
+``average'' English (whatever that is!). To get the most out of
+predictive completion, it is better to train your dictionary on your own
+writing style, rather than someone else's.
+
+There are two approaches to this. The first is to create a copy of the
+supplied English dictionary containing the all same words, but with all
+their weights reset to zero. You can then either use the auto-learn
+feature to slowly train the dictionary as you write (@pxref{Automatic
+Learning}, or better still, kick-start things by training it on text you
+have already written by learning from existing files (@pxref{Learning
+from Buffers and Files}). You can of course still leave auto-learn
+enabled in order to refine the dictionary, or even use the auto-add
+feature to automatically add missing words as you type them (see below).
+
+A variant of this approach, if you don't like the supplied English
+dictionary, is to create the initial dictionary from some other list of
+words, e.g. the @file{/usr/dict/words} file on Unix systems. You will
+first need to massage the list into the format required by
+@command{predictive-create-dict} (@pxref{Creating Dictionaries}), which
+is the same as the format produced by the dump commands (@pxref{Loading
+and Saving Dictionaries}), but this should be easy for even a moderately
+savvy Emacs user@footnote{Keyboard macros may help here...}!
+
+The second approach is to start from a completely empty dictionary, and
+use the auto-add feature to automatically add words as you type them
+(@pxref{Automatic Learning}). The auto-add feature adds words when you
+``accept'' them. In this case, since the words aren't already in the
+dictionary, the only way to accept words while typing is by typing an
+end-of-word characters (such as a space or punctuation character) at the
+end of the word. You will need dynamic completion enabled for this to
+work. Alternatively, you can use the fast learning commands
+@command{predictive-fast-learn-from-buffer} and
+@command{predictive-fast-learn-from-file} to add words from existing
+text (note that you @emph{must} use the fast learning commands for this;
+the normal ones will only increment the weights of words that are
+already in the dictionary).
+@cindex relationship between words
+@cindex prefix words
+@cindex words, relationships
+@cindex words, prefixes
+
+However you auto-add the words, there is a risk that some words that you
+don't want will make their way into the dictionary, for example typos
+and misspellings, or possibly words containing non-letter
+characters. The latter are best dealt with by appropriate entries in
+@env{completion-dynamic-syntax-alist} and
+@env{completion-dynamic-override-syntax-alist} (@pxref{Syntax}). The
+former are best dealt with by setting a @env{predictive-auto-add-filter}
+function (@pxref{Automatic Learning}). It's still a good idea to
+occasionally check which words are in the dictionary by dumping it to a
+buffer and scanning through it by hand or with @command{ispell}
+(@pxref{Loading and Saving Dictionaries}).
+
+So which approach is better? Each has advantages and disadvantages, and
+it comes down to personal preference. Training a reset copy of the
+supplied English dictionary (or one built from another word list)
+ensures that all the words in the dictionary are spelt correctly
+(assuming the words in the list were correct in the first place). It
+also means that predictive mode will provide spelling assistance even
+when you type an obscure word that you've never used before. On the
+other hand, the dictionary will contain many words that you will never
+use, and may lack words that you do use, which will have to be added by
+hand (unless you enable auto-add).
+
+If you write different types of text (e.g. your novel, academic papers,
+and emails), the vocabulary you use will differ significantly between
+the different types of text. You will get more out of predictive
+completion by creating separate dictionaries for each. You can then set
+up predictive mode to select the appropriate dictionary automatically,
+either based on the major mode (@pxref{Major Modes}) or, in the case of
+@LaTeX{} documents, based on the document class (@pxref{LaTeX Support}).
+@cindex dictionaries, using multiple
+@cindex using multiple dictionaries
+@cindex dictionaries, selecting automatically
+@cindex automatic dictionary selection
+
+Once you've created your dictionaries, you can use the many features of
+predictive mode to tweak the dictionary training and behaviour to suit
+your every desire. Using buffer-local dictionaries can help predictive
+mode adapt faster to the specific vocabulary you are using in an
+individual document, especially if you set a large
+@env{predictive-buffer-local-learn-multiplier} (@pxref{Automatic
+Learning}). Defining sensible prefix relationships between words makes
+sure predictive completion doesn't ``get in your way'' when you're
+typing fast (@pxref{Relationships Between Words}). The
+@env{predictive-auto-define-prefixes} option and the
+@command{predictive-define-all-prefixes} command make defining prefix
+relationships very easy.
+@cindex dictionaries, buffer-local
+@cindex buffer-local dictionary
+
+Finally, having gone to all this effort to create the perfect
+dictionary, it would be tragic to lose it all! Make sure you
+occasionally backup your dictionaries by dumping them to a plain text
+file using @command{predictive-dump-dict-to-file} (@pxref{Loading and
+Saving Dictionaries}). This is vital before upgrading to a new version
+of Emacs, since there's no guarantee that the dictionary will be
+readable in the new version@footnote{The dictionaries are saved as
+compiled Elisp code for efficiency reasons, and the byte-code format can
+change even between minor Emacs versions.}.
+@cindex dictionaries, backup
+@cindex dictionaries, dumping
+@cindex backing-up dictionaries
+@cindex dumping dictionaries
 
 
 
@@ -1420,7 +1578,7 @@ current word, updating the completions, whereas punctuation characters
 end the completion process.
 
 This chapter describes the mechanisms that determine the behaviour of
-different characters, and how to customise them.
+different characters, and how to customize them.
 
 @menu
 * Keymaps and Key Bindings::    
@@ -1648,7 +1806,7 @@ checked whenever predictive mode is switched on in a buffer using the
 @command{predictive-mode} or @command{turn-on-predictive-mode} commands
 (@pxref{Basic Completion Commands}), and if the buffer's major-mode
 matches one in the alist, the associated function is called. This makes
-it easier to customise predictive mode for different major modes.
+it easier to customize predictive mode for different major modes.
 @findex predictive-mode
 @findex turn-on-predictive-mode
 @end vtable
@@ -1705,7 +1863,7 @@ inside @code{\documentclass@{<@env{docclass}>@}} with dictionaries.
 @item predictive-latex-electric-environments
 When non-nil, environment names appearing inside
 @code{\begin@{<@env{environment}>@}} and
-@code{\end@{<@env{environment}>@}} are automatically synchronized.
+@code{\end@{<@env{environment}>@}} are automatically synchronised.
 @end vtable
 
 By default, predictive mode will use the usual main dictionary in
@@ -1745,10 +1903,10 @@ bibliography style dictionaries, respectively.
 
 When @env{predictive-latex-electric-environments} is enabled, the
 environment name appearing inside a @LaTeX{}
-@code{\end@{<@env{environment}>@}} command is automatically synchronized
+@code{\end@{<@env{environment}>@}} command is automatically synchronised
 with its matching @code{\begin@{<@env{environment}>@}} command. The
-synchronization doesn't just occur when the @code{\end} command is first
-typed; it is kept synchronized at all times, even when the @code{\begin}
+synchronisation doesn't just occur when the @code{\end} command is first
+typed; it is kept synchronised at all times, even when the @code{\begin}
 command that it originally matched is deleted, causing it to match a
 different @code{\begin} somewhere else in the document. Also, when the
 environment name within either a @code{\begin} @emph{or} an @code{\end}
@@ -1814,7 +1972,7 @@ Predictive Programmer Guide}.)
 @vtable @env
 @item predictive-latex-usepackage-functions
 Alist associating @LaTeX{} @var{package} names (strings) with a list
-containg two functions: a function to be called when loading the package
+containing two functions: a function to be called when loading the package
 with that name (i.e. when @samp{\usepackage@{@var{package}@}} is typed),
 and a function to be called when unloading the package (i.e. when the
 @samp{\usepackage@{@var{package}@}} is modified or deleted). Entries
@@ -1992,4 +2150,4 @@ tables, available from
 
 @bye
 
-@c  LocalWords:  Regexps regexps maths
+@c  LocalWords:  Regexps regexps maths customization
