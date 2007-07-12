@@ -396,7 +396,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'completion-dynamic-override-syntax-alist)
     (setq completion-dynamic-override-syntax-alist
 	  predictive-restore-override-syntax-alist)
-    (kill-local-variable predictive-restore-override-syntax-alist)
+    (kill-local-variable 'predictive-restore-override-syntax-alist)
     ;; remove other local variable settings
     (kill-local-variable 'completion-menu)
     (kill-local-variable 'words-include-escapes)

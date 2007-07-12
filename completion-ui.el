@@ -2054,24 +2054,23 @@ complete what remains of that word."
       ;; and delete backwards
       (if (not auto-completion-mode)
 	  (progn
-	    (delete-region (overlay-start overlay)
-			   (overlay-end overlay))
-	    (delete-overlay overlay)
-	    (setq completion-overlay-list
-		  (delq overlay completion-overlay-list))
+	    (when overlay
+	      (delete-region (overlay-start overlay)
+			     (overlay-end overlay))
+	      (delete-overlay overlay)
+	      (setq completion-overlay-list
+		    (delq overlay completion-overlay-list)))
 	    (completion-resolve-old)
 	    (apply command args))
-
-
-	;; if auto-completing...
 	
+	
+	;; if auto-completing...
 	;; resolve any old provisional completions
 	(completion-resolve-old overlay)
 	;; delete current provisional completion
 	(when overlay
 	  (delete-region (overlay-start overlay)
 			 (overlay-end overlay)))
-	
 	;; delete backwards
 	(apply command args)
 
@@ -2084,7 +2083,6 @@ complete what remains of that word."
 	  (when (timerp completion-backward-delete-timer)
 	    (cancel-timer completion-backward-delete-timer))
 	  (setq completion-backward-delete-timer nil))
-	 
 	 
 	 ;; otherwise, we're in or at the end of a word, so if
 	 ;; auto-completion is enabled we're going to complete the word
@@ -2121,7 +2119,6 @@ complete what remains of that word."
 		 (lambda ()
 		   (complete-word-at-point)
 		   (setq completion-backward-delete-timer nil)))))
-	 
 	 
 	 ;; if auto-completion isn't enabled, delete the overlay and do
 	 ;; nothing

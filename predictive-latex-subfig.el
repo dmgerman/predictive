@@ -67,7 +67,7 @@
 			(predictive-latex-completion-add-to-regexp "\\W"))
 		      t word))
 	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace t 'subref)
 )
 

@@ -87,7 +87,7 @@
 		      t word))
 	       (?, . (accept t none))
 	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace t 'cref)
   (auto-overlay-load-compound-regexp
    `(start "\\\\Cref{" (dict . predictive-latex-label-dict) (priority . 2)
@@ -107,7 +107,7 @@
 		      t word))
 	       (?, . (accept t none))
 	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace t 'Cref)
 )
 

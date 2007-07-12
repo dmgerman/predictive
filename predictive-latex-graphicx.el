@@ -53,7 +53,7 @@
   (auto-overlay-load-compound-regexp
    `(start "\\\\includegraphics\\(\\[.*?\\]\\)?{"
 	   (dict . t) (priority . 2)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace t 'graphicx)
 )
 
