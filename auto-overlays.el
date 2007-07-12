@@ -38,6 +38,9 @@
 ;; * improved update scheduling by collapsing updates for overlapping regions
 ;; * fixed `auto-o-match-overlay' and `auto-o-suicide' to remove properties
 ;;   due to old matches before setting new properties
+;; * fixed `auto-o-match-overlay' so that it sets parent property correctly
+;;   when old start/end overlay is the new end/start overlay (as happens when
+;;   'self regexps are cascaded)
 ;;
 ;; Version 0.8.1
 ;; * modified `auto-o-run-after-change-functions' to cope more robustly with
@@ -360,6 +363,12 @@
 	 (or (symbolp (cdr entry))
 	     (and (listp (cdr entry)) (symbolp (cadr entry)))))))
 
+(defmacro auto-o-compound-class-p (o-match)
+  ;; Return non-nil if O-MATCH's regexp class is a compound class
+  ;; (can just check for 'subentry-id property instead of checking regexp
+  ;; definitions, since this is always set for such match overlays)
+  `(overlay-get ,o-match 'subentry-id))
+
 
 (defmacro auto-o-compound-rank (o-match)
   ;; Return the rank of match overlay O-MATCH, which should have a compound
@@ -623,20 +632,21 @@ the same as when the overlays were saved."
   "Clear all auto-overlays in the set identified by SET-ID
 from BUFFER, or the current buffer if none is specified.
 
-If SAVE is non-nil, save the overlays to a file to speed up
-loading if the same set of regexp definitions is enabled
-again. If LEAVE-OVERLAYS is non-nil, don't bother deleting the
-overlays from the buffer \(this is generally a bad idea, unless
-the buffer is about to be killed in which case it speeds things
-up a bit\)."
+If SAVE is non-nil and the buffer is associated with a file, save
+the overlays to a file in the same directory to speed up loading
+if the same set of regexp definitions is enabled again. If
+LEAVE-OVERLAYS is non-nil, don't bother deleting the overlays
+from the buffer \(this is generally a bad idea, unless the buffer
+is about to be killed in which case it speeds things up a bit\)."
 
   (save-excursion
     (when buffer (set-buffer buffer))
     ;; disable overlay set
     (auto-o-disable-set set-id (current-buffer))
 
-    ;; if SAVE is non-nil, save overlays to a file
-    (when save (auto-overlay-save-overlays set-id))
+    ;; if SAVE is non-nil and buffer is associated with a file, save overlays
+    ;; to the default filename
+    (when (and save (buffer-file-name)) (auto-overlay-save-overlays set-id))
     
     ;; delete overlays unless told not to bother
     (unless leave-overlays
@@ -670,8 +680,10 @@ up a bit\)."
 
 (defun auto-overlay-save-overlays (set-id &optional buffer file)
   "Save overlays in set SET-ID in BUFFER to FILE.
-Defaults to the current buffer. If FILE is nil, the filename is
-constructed from the buffer name and SET-ID.
+Defaults to the current buffer. If FILE is nil and the buffer is
+associated with a file, the filename is constructed from the
+buffer's file name and SET-ID. If the buffer is not associated with a file and
+FILE isn't explicitly specified, an error occurs.
 
 They can be loaded again later using `auto-overlay-load-overlays'."
 
@@ -679,7 +691,11 @@ They can be loaded again later using `auto-overlay-load-overlays'."
     (when buffer (set-buffer buffer))
     
     ;; construct filename if none specified
-    (unless file (setq file (auto-o-overlay-filename set-id)))
+    (unless file
+      (if (buffer-file-name)
+	  (setq file (auto-o-overlay-filename set-id))
+	(error "Can't save overlays to default file when buffer isn't\
+ visiting a file")))
     
     ;; create temporary buffer
     (let ((buff (generate-new-buffer " *auto-overlay-save*"))
@@ -1064,37 +1080,42 @@ was saved."
   ;; have to widen temporarily
   (save-restriction
     (widen)
-    ;; this condition is here to avoid a weird Emacs bug(?) where the
-    ;; modification-hooks seem to be called occasionally for overlays that
-    ;; have already been deleted
-    (when (overlay-buffer o-self)
+;;     ;; this condition is here to avoid a weird Emacs bug(?) where the
+;;     ;; modification-hooks seem to be called occasionally for overlays that
+;;     ;; have already been deleted
+;;     (when (overlay-buffer o-self)
       ;; if match overlay no longer matches the text it covers...
       (unless (and (not force)
+		   (overlay-buffer o-self)
 		   (save-excursion
 		     (goto-char (overlay-start o-self))
 		     (looking-at (auto-o-regexp o-self)))
 		   (= (match-end 0) (overlay-end o-self)))
 	
 	;; if we have a parent overlay...
-	(let* ((o-parent (overlay-get o-self 'parent))
-	       (o-other (overlay-get o-parent
-				     (if (eq (auto-o-edge o-self) 'start)
-					 'start 'end))))
+	(let ((o-parent (overlay-get o-self 'parent))
+	      o-other)
 	  (when o-parent
-	    ;; if parent's properties have been set by us, remove them
-	    (when (or (null o-other)
-		      (>= (auto-o-compound-rank o-self)
-			  (auto-o-compound-rank o-other)))
-	      (dolist (p (auto-o-props o-self))
-		(overlay-put o-parent (car p) nil)))
+	    ;; if our regexp class is a compound class...
+	    (when (auto-o-compound-class-p o-self)
+	      (setq o-other
+		    (overlay-get o-parent (if (eq (auto-o-edge o-self) 'start)
+					      'start 'end)))
+	      ;; if parent's properties have been set by us, remove them
+	      (when (or (null o-other)
+			(>= (auto-o-compound-rank o-self)
+			    (auto-o-compound-rank o-other)))
+		(dolist (p (auto-o-props o-self))
+		  (overlay-put o-parent (car p) nil))))
 	    ;; call appropriate suicide function
 	    (funcall (auto-o-suicide-function o-self) o-self)))
+	
 	;; schedule an update (necessary since if match regexp contains
 	;; "context", we may be comitting suicide only for the match overlay
 	;; to be recreated in a slightly different place)
 	(auto-o-schedule-update (overlay-start o-self))
 	;; delete ourselves
-	(delete-overlay o-self)))
+	(delete-overlay o-self));)
     )
 )
 
@@ -1283,7 +1304,7 @@ properties)."
     ;; if changing start match...
     (when start
       ;; sort out parent property of old start match
-      (when (and old-o-start (null protect-match))
+      (when (and old-o-start (not (eq old-o-start end)) (null protect-match))
 	(overlay-put old-o-start 'parent nil))
       ;; if unmatching start, set start property to nil
       (if (null (overlayp start))
@@ -1295,7 +1316,7 @@ properties)."
     ;; if changing end match...
     (when end
       ;; sort out parent property of old end match
-      (when (and old-o-end (null protect-match))
+      (when (and old-o-end (not (eq old-o-end start)) (null protect-match))
 	(overlay-put old-o-end 'parent nil))
       ;; if unmatching end, set end property to nil
       (if (null (overlayp end))
