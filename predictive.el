@@ -43,8 +43,10 @@
 ;;; Change Log:
 ;;
 ;; Version 0.16.2
-;; * changes how `predictive-major-mode-alist' functions are called: now
+;; * changed how `predictive-major-mode-alist' functions are called: now
 ;;   called with one argument, positive if enabling, negative if disabling
+;; * added `predictive-auto-add-filter' to allow unwanted auto-added words to
+;;   be filtered out before they're added to the dictionary
 ;;
 ;; Version 0.16.1
 ;; * added `predictive-reset-weight' command to facilitate resetting word
