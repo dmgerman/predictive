@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.16.1
+;; Version: 0.16.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.16.2
+;; * changes how `predictive-major-mode-alist' functions are called: now
+;;   called with one argument, positive if enabling, negative if disabling
 ;;
 ;; Version 0.16.1
 ;; * added `predictive-reset-weight' command to facilitate resetting word
@@ -474,9 +478,7 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 
 
 ;; FIXME: should this be a customization option?
-(defvar predictive-major-mode-alist
-  '((LaTeX-mode . predictive-setup-latex)
-    (latex-mode . predictive-setup-latex))
+(defvar predictive-major-mode-alist nil
   "Alist associating major mode symols with functions.
 The alist is checked whenever predictive mode is turned on in a
 buffer, and if the buffer's major made matches one in the alist,
@@ -728,11 +730,12 @@ do: emails, academic research articles, letters...)"
 		(when arg (predictive-auto-learn prefix prefix)))
 	      nil 'local)
     
-    ;; look up major mode in major-mode-alist and run any matching function
+    ;; look up major mode in major-mode-alist and call any matching function
+    ;; with a positive argument to indicate enabling
     (let ((modefunc (assq major-mode predictive-major-mode-alist)))
       (when modefunc
 	(if (functionp (cdr modefunc))
-	    (funcall (cdr modefunc))
+	    (funcall (cdr modefunc) 1)
 	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
 		 (prin1-to-string (cdr modefunc))))))
 
@@ -756,18 +759,29 @@ do: emails, academic research articles, letters...)"
    (predictive-mode
     ;; unset the completion function
     (setq completion-function nil)
-    ;; turn onff auto-completion mode if necessary
+    ;; turn off auto-completion mode if necessary
     (when predictive-auto-complete (auto-completion-mode -1))
     ;; turn off which-dict mode
     (predictive-which-dict-mode -1)
     ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)
     (predictive-flush-auto-learn-caches)
+    
     ;; save the dictionaries
     (when predictive-dict-autosave-on-mode-disable
       (dictree-save-modified predictive-used-dict-list))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
+    
+    ;; look up major mode in major-mode-alist and call any matching function
+    ;; with a negative argument to indicate disabling
+    (let ((modefunc (assq major-mode predictive-major-mode-alist)))
+      (when modefunc
+	(if (functionp (cdr modefunc))
+	    (funcall (cdr modefunc) -1)
+	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
+		 (prin1-to-string (cdr modefunc))))))
+    
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
     (remove-hook 'kill-buffer-hook
@@ -779,6 +793,7 @@ do: emails, academic research articles, letters...)"
 		 (lambda (prefix word arg)
 		   (when arg (predictive-auto-learn prefix word)))
 		 'local)
+    
     ;; delete local variable bindings
     (kill-local-variable 'predictive-used-dict-list)
     (kill-local-variable 'completion-menu)

@@ -31,6 +31,12 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.7.3
+;; * updated `predictive-latex-setup' to conform to new way major-mode setup
+;;   functions are called by `predictive-mode', and deleted now redundant
+;;   `predictive-latex-disable'
+;; * avoid clobbering `completion-dynamic-syntax-override-alist' settings
+;;
 ;; Version 0.7.2
 ;; * added `predictive-latex-reparse-buffer' command to allow easy reparsing
 ;;   of auto-overlays if they get in a mess due to bugs in the auto-overlays
@@ -150,6 +156,10 @@
 (require 'auto-overlay-nested)
 
 (provide 'predictive-latex)
+(add-to-list 'predictive-major-mode-alist
+	     '(LaTeX-mode . predictive-setup-latex))
+(add-to-list 'predictive-major-mode-alist
+	     '(latex-mode . predictive-setup-latex))
 
 
 
@@ -213,10 +223,12 @@ When a document class is in the list, "
     (predictive-latex-env-dict . "dict-latex-env-")))
 
 
-;; variable used to restore local setting of predictive-main-dict when
-;; predictive mode is disabled in a LaTeX buffer
-(defvar predictive-latex-restore-main-dict nil)
-(make-variable-buffer-local 'predictive-latex-restore-main-dict)
+;; variables used to restore local settings of variables when predictive mode
+;; is disabled in a LaTeX buffer
+(defvar predictive-restore-main-dict nil)
+(make-variable-buffer-local 'predictive-restore-main-dict)
+(defvar predictive-restore-override-syntax-alist nil)
+(make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
 
 ;; prevent bogus compiler warnings
@@ -227,7 +239,7 @@ When a document class is in the list, "
 
 
 ;; background color for certain auto-overlays to aid debugging
-(defvar predictive-latex-debug-color nil)
+(defvar predictive-overlay-debug-color nil)
 
 
 
@@ -235,188 +247,191 @@ When a document class is in the list, "
 ;;;=========================================================
 ;;;                  Setup function
 
-(defun predictive-setup-latex ()
-  "Sets up predictive mode for use with LaTeX major modes."
-  (interactive)
-  
-  ;; clear overlays and reset variables when predictive mode is disabled
-  (add-hook 'predictive-mode-disable-hook 'predictive-latex-disable nil t)
-  ;; save overlays and unload regexp definitions before killing buffer
-  (add-hook 'kill-buffer-hook
-	    (lambda ()
-	      (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-	      (auto-overlay-unload-regexp 'predictive))
-	    nil t)
-  
-  ;; use latex browser menu if first character of prefix is "\"
-  (make-local-variable 'completion-menu)
-  (setq completion-menu
-	(lambda (prefix completions)
-	  (if (string= (substring prefix 0 1) "\\")
-	      (predictive-latex-construct-browser-menu prefix completions)
-	    (completion-construct-menu prefix completions))
-	  ))
-
-  ;; save predictive-main-dict; restored when predictive mode is disabled
-  (setq predictive-latex-restore-main-dict predictive-main-dict)
-  
+(defun predictive-setup-latex (arg)
+  "With a positive ARG, set up predictive mode for use with LaTeX major modes.
+With a negative ARG, undo these changes. Called when predictive
+mode is enabled via entry in `predictive-major-mode-alist'."
   
   (cond
-   ;; if we're not the TeX master, visit the TeX master buffer, enable
-   ;; predictive mode in it, and share buffer-local settings with it
-   ((and (boundp 'TeX-master) (stringp TeX-master))
-    (let (filename buff used-dicts main-dict latex-dict math-dict
-		   preamble-dict env-dict label-dict)
-      (setq filename (expand-file-name TeX-master))
-      (unless (string= (substring filename -4) ".tex")
-	(setq filename (concat filename ".tex")))
-      (save-window-excursion
-	(find-file filename)
-	(turn-on-predictive-mode)
-	(setq buff (current-buffer))
-	(setq used-dicts predictive-used-dict-list)
-	(setq main-dict predictive-main-dict)
-	(setq latex-dict predictive-latex-dict)
-	(setq math-dict predictive-latex-math-dict)
-	(setq preamble-dict predictive-latex-preamble-dict)
-	(setq env-dict predictive-latex-env-dict)
-	(setq label-dict predictive-latex-label-dict))
-      (auto-overlay-share-regexp-set 'predictive buff)
-      (setq predictive-used-dict-list used-dicts)
-      (setq predictive-main-dict main-dict)
-      (setq predictive-latex-dict latex-dict)
-      (setq predictive-latex-math-dict math-dict)
-      (setq predictive-latex-preamble-dict preamble-dict)
-      (setq predictive-latex-env-dict env-dict)
-      (setq predictive-latex-label-dict label-dict)
-      ;; start the auto-overlays, restoring buffer's modified flag afterwards,
-      ;; since automatic synchronization of LaTeX envionments can modify
-      ;; buffer without actually changing buffer text
-      (let ((restore-modified (buffer-modified-p)))
-	(auto-overlay-start 'predictive)
-	(set-buffer-modified-p restore-modified))
-      ))
-   
-   
-   ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
-   ;; FIXME: probably need to handle null TeX-master case differently
-   (t
-    ;; load the latex dictionaries
-    (when predictive-latex-dict
-      (when (atom predictive-latex-dict)
+   ;; ----- enabling LaTeX setup -----
+   ((> arg 0)
+    
+    ;; save overlays and unload regexp definitions before killing buffer
+    (add-hook 'kill-buffer-hook
+	      (lambda ()
+		(auto-overlay-stop 'predictive nil 'save 'leave-overlays)
+	      (auto-overlay-unload-regexp 'predictive))
+	    nil t)
+    
+    ;; use latex browser menu if first character of prefix is "\"
+    (make-local-variable 'completion-menu)
+    (setq completion-menu
+	  (lambda (prefix completions)
+	    (if (string= (substring prefix 0 1) "\\")
+		(predictive-latex-construct-browser-menu prefix completions)
+	      (completion-construct-menu prefix completions))
+	    ))
+    ;; save predictive-main-dict; restored when predictive mode is disabled
+    (setq predictive-restore-main-dict predictive-main-dict)
+
+    
+    (cond
+     ;; if we're not the TeX master, visit the TeX master buffer, enable
+     ;; predictive mode in it, and share buffer-local settings with it
+     ((and (boundp 'TeX-master) (stringp TeX-master))
+      (let (filename buff used-dicts main-dict latex-dict math-dict
+		     preamble-dict env-dict label-dict)
+	(setq filename (expand-file-name TeX-master))
+	(unless (string= (substring filename -4) ".tex")
+	  (setq filename (concat filename ".tex")))
+	(save-window-excursion
+	  (find-file filename)
+	  (turn-on-predictive-mode)
+	  (setq buff (current-buffer))
+	  (setq used-dicts predictive-used-dict-list)
+	  (setq main-dict predictive-main-dict)
+	  (setq latex-dict predictive-latex-dict)
+	  (setq math-dict predictive-latex-math-dict)
+	  (setq preamble-dict predictive-latex-preamble-dict)
+	  (setq env-dict predictive-latex-env-dict)
+	  (setq label-dict predictive-latex-label-dict))
+	(auto-overlay-share-regexp-set 'predictive buff)
+	(setq predictive-used-dict-list used-dicts)
+	(setq predictive-main-dict main-dict)
+	(setq predictive-latex-dict latex-dict)
+	(setq predictive-latex-math-dict math-dict)
+	(setq predictive-latex-preamble-dict preamble-dict)
+	(setq predictive-latex-env-dict env-dict)
+	(setq predictive-latex-label-dict label-dict)
+	;; start the auto-overlays, restoring buffer's modified flag afterwards,
+	;; since automatic synchronization of LaTeX envionments can modify
+	;; buffer without actually changing buffer text
+	(let ((restore-modified (buffer-modified-p)))
+	  (auto-overlay-start 'predictive)
+	  (set-buffer-modified-p restore-modified))
+	))
+
+     
+     ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
+     ;; FIXME: probably need to handle null TeX-master case differently
+     (t
+      ;; load the latex dictionaries
+      (when predictive-latex-dict
+	(when (atom predictive-latex-dict)
 	  (setq predictive-latex-dict (list predictive-latex-dict)))
-      (mapc 'predictive-load-dict predictive-latex-dict))
-    (when predictive-latex-math-dict
-      (when (atom predictive-latex-math-dict)
+	(mapc 'predictive-load-dict predictive-latex-dict))
+      (when predictive-latex-math-dict
+	(when (atom predictive-latex-math-dict)
 	  (setq predictive-latex-math-dict (list predictive-latex-math-dict)))
-      (mapc 'predictive-load-dict predictive-latex-math-dict))
-    (when predictive-latex-preamble-dict
-      (when (atom predictive-latex-preamble-dict)
+	(mapc 'predictive-load-dict predictive-latex-math-dict))
+      (when predictive-latex-preamble-dict
+	(when (atom predictive-latex-preamble-dict)
 	  (setq predictive-latex-preamble-dict
 		(list predictive-latex-preamble-dict)))
-      (mapc 'predictive-load-dict predictive-latex-preamble-dict))
-    (when predictive-latex-env-dict
-      (when (atom predictive-latex-env-dict)
+	(mapc 'predictive-load-dict predictive-latex-preamble-dict))
+      (when predictive-latex-env-dict
+	(when (atom predictive-latex-env-dict)
 	  (setq predictive-latex-env-dict (list predictive-latex-env-dict)))
-      (mapc 'predictive-load-dict predictive-latex-env-dict))
-    (predictive-load-dict 'dict-latex-docclass)
-    (predictive-load-dict 'dict-latex-bibstyle)
-    ;; load the label dictionary
-    (predictive-latex-load-label-dict)
+	(mapc 'predictive-load-dict predictive-latex-env-dict))
+      (predictive-load-dict 'dict-latex-docclass)
+      (predictive-load-dict 'dict-latex-bibstyle)
+      ;; load the label dictionary
+      (predictive-latex-load-label-dict)
+      
+      ;; add main latex dictionary list to main dictionary list
+      (make-local-variable 'predictive-main-dict)
+      (when (atom predictive-main-dict)
+	(setq predictive-main-dict (list predictive-main-dict)))
+      (setq predictive-main-dict
+	    (append predictive-main-dict predictive-latex-dict))
+      
+      ;; delete any existing predictive auto-overlay regexps and load latex
+      ;; auto-overlay regexps
+      (auto-overlay-unload-regexp 'predictive)
+      (predictive-latex-load-regexps)
+      
+      ;; start the auto-overlays, skipping the check that regexp definitions
+      ;; haven't changed if there's a file of saved overlay data to use, and
+      ;; restoring buffer's modified flag afterwards since automatic
+      ;; synchronization of LaTeX envionments can modify buffer without
+      ;; actually changing buffer text
+      (let ((restore-modified (buffer-modified-p)))
+	(auto-overlay-start 'predictive nil nil 'no-regexp-check)
+	(set-buffer-modified-p restore-modified))
+      ))
+
     
-    ;; add main latex dictionary list to main dictionary list
-    (make-local-variable 'predictive-main-dict)
-    (when (atom predictive-main-dict)
-      (setq predictive-main-dict (list predictive-main-dict)))
-    (setq predictive-main-dict
-	  (append predictive-main-dict predictive-latex-dict))
+    ;; load the keybindings and related settings
+    (predictive-latex-load-keybindings)
+    ;; consider \ as start of a word
+    (setq completion-word-thing 'predictive-latex-word)
+    (set (make-local-variable 'words-include-escapes) nil)
+
+    t)  ; indicate successful setup
+   
+   
+   
+   ;; ----- Disabling LaTeX setup -----
+   ((< arg 0)
+    ;; if we're the TeX-master, first disable predictive mode in all related
+    ;; LaTeX buffers, which we find by looking for buffers that share the
+    ;; auto-overlays 'predictive regexp set
+    (when (eq TeX-master t)
+      (dolist (buff (auto-o-get-buffer-list 'predictive))
+	;; TeX-master itself will be in list of buffers sharing regexp set, so
+	;; need to filter it out
+	(unless (eq buff (current-buffer))
+	  (save-excursion
+	    (set-buffer buff)
+	    (predictive-mode -1)))))
     
-    ;; delete any existing predictive auto-overlay regexps and load latex
-    ;; auto-overlay regexps
+    ;; stop predictive auto overlays
+    (auto-overlay-stop 'predictive nil 'save)
     (auto-overlay-unload-regexp 'predictive)
-    (predictive-latex-load-regexps)
+    ;; restore predictive-main-dict to saved setting
+    (kill-local-variable 'predictive-main-dict)
+    (setq predictive-main-dict predictive-restore-main-dict)
+    (kill-local-variable 'predictive-restore-main-dict)
+    ;; restore completion-dynamic-override-syntax-alist to saved setting
+    (kill-local-variable 'completion-dynamic-override-syntax-alist)
+    (setq completion-dynamic-override-syntax-alist
+	  predictive-restore-override-syntax-alist)
+    (kill-local-variable predictive-restore-override-syntax-alist)
+    ;; remove other local variable settings
+    (kill-local-variable 'completion-menu)
+    (kill-local-variable 'words-include-escapes)
+    (kill-local-variable 'predictive-latex-dict)
+    (kill-local-variable 'predictive-latex-math-dict)
+    (kill-local-variable 'predictive-latex-env-dict)
+    (kill-local-variable 'predictive-latex-label-dict)
+    ;; remove hook function that saves overlays
+    (remove-hook 'kill-buffer-hook
+		 (lambda ()
+		   (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
+		   (auto-overlay-unload-regexp 'predictive))
+		 t)
     
-    ;; start the auto-overlays, skipping the check that regexp definitions
-    ;; haven't changed if there's a file of saved overlay data to use, and
-    ;; restoring buffer's modified flag afterwards since automatic
-    ;; synchronization of LaTeX envionments can modify buffer without actually
-    ;; changing buffer text
-    (let ((restore-modified (buffer-modified-p)))
-      (auto-overlay-start 'predictive nil nil 'no-regexp-check)
-      (set-buffer-modified-p restore-modified))
-    ))
-  
-  
-  ;; load the keybindings and related settings
-  (predictive-latex-load-keybindings)
-  ;; consider \ as start of a word
-  (setq completion-word-thing 'predictive-latex-word)
-  (set (make-local-variable 'words-include-escapes) nil)
-
-  ;; unset modified flag, 
-  t  ; indicate succesful setup
+    t))  ; indicate successful reversion of changes
 )
 
-
-
-(defun predictive-latex-disable ()
-  "Disables predictive mode LaTeX settings.
-Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
-
-  ;; if we're the TeX-master, first disable predictive mode in all related
-  ;; LaTeX buffers, which we find by looking for buffers that share the
-  ;; auto-overlays 'predictive regexp set
-  (when (eq TeX-master t)
-    (dolist (buff (auto-o-get-buffer-list 'predictive))
-      ;; TeX-master itself will be in list of buffers sharing regexp set, so
-      ;; need to filter it out
-      (unless (eq buff (current-buffer))
-	(save-excursion
-	  (set-buffer buff)
-	  (predictive-mode -1)))))
-  
-  ;; stop predictive auto overlays
-  (auto-overlay-stop 'predictive nil 'save)  ; non-nil arg saves overlays
-  (auto-overlay-unload-regexp 'predictive)
-  ;; restore predictive-main-dict to saved setting
-  (kill-local-variable 'predictive-main-dict)
-  (setq predictive-main-dict predictive-latex-restore-main-dict)
-  (kill-local-variable 'predictive-latex-restore-main-dict)
-  ;; remove other local variable settings
-  (kill-local-variable 'completion-dynamic-override-syntax-alist)
-  (kill-local-variable 'completion-menu)
-  (kill-local-variable 'words-include-escapes)
-  (kill-local-variable 'predictive-latex-dict)
-  (kill-local-variable 'predictive-latex-math-dict)
-  (kill-local-variable 'predictive-latex-env-dict)
-  (kill-local-variable 'predictive-latex-label-dict)
-  ;; remove this function from the predictive mode disable hook
-  (remove-hook 'predictive-mode-disable-hook 'predictive-latex-disable t)
-  ;; remove hook function that saves overlays
-  (remove-hook 'kill-buffer-hook
-	       (lambda ()
-		 (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		 (auto-overlay-unload-regexp 'predictive))
-	       t)
-)
 
 
 
 (defun predictive-latex-load-regexps ()
-  "Load the predictive mode LaTeX auto-overlay latex regexp definitions."
+  "Load the predictive mode LaTeX auto-overlay regexp definitions."
 
   ;; %'s start comments that last till end of line
   (auto-overlay-load-regexp
    `(line "%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
 	  (completion-menu . predictive-latex-construct-browser-menu)
-	  (face . (background-color . ,predictive-latex-debug-color)))
+	  (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive)
     
   ;; $'s delimit the start and end of maths regions...
   (auto-overlay-load-regexp
    `(self "\\$" (dict . predictive-latex-math-dict) (priority . 40)
 	  (completion-menu . predictive-latex-construct-browser-menu)
-	  (face . (background-color . ,predictive-latex-debug-color)))
+	  (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive nil 'inline-math)
   
   ;; ...as do \[ and \], but not \\[ and \\] etc.
@@ -427,25 +442,25 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
    `(start ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
 	   (dict . predictive-latex-math-dict) (priority . 40)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(start ("^\\(\\\\\\[\\)" . 1)
 	   (dict . predictive-latex-math-dict) (priority . 40)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(end ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
 	 (dict . predictive-latex-math-dict) (priority . 40)
 	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-latex-debug-color)))
+	 (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(end ("^\\(\\\\\\]\\)" . 1)
 	 (dict . predictive-latex-math-dict) (priority . 40)
 	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-latex-debug-color)))
+	 (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
@@ -454,11 +469,11 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   (auto-overlay-load-regexp '(nested) 'predictive nil 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\usepackage{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\label{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\ref{" (dict . predictive-latex-label-dict) (priority . 30)
@@ -477,7 +492,7 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 			(predictive-latex-completion-add-to-regexp "\\W"))
 		      t word))
 	       (?} . (accept t none))))			       
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\eqref{" (dict . predictive-latex-label-dict) (priority . 30)
@@ -494,39 +509,39 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 			 ":"))
 		      t word))
 	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\cite{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\begin{" (dict . predictive-latex-env-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\end{" (dict . predictive-latex-env-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\text{"
 	   (dict . predictive-main-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\documentclass\\(\\[.*\\]\\)?{"
 	   (dict . dict-latex-docclass) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 	   (dict . dict-latex-bibstyle) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   ;; Note: regexps contain a lot of \'s because it has to check whether number
   ;; of \'s in front of { is even or odd. Also, since auto-overlay regexps
@@ -534,19 +549,19 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   ;; or } at the start of a line separately.
   (auto-overlay-load-compound-regexp
    `(start ("^\\({\\)" . 1) (priority . 30)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start ("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2) (priority . 30)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(end ("^\\(}\\)" . 1) (priority . 30)
-	 (face . (background-color . ,predictive-latex-debug-color)))
+	 (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(end ("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2) (priority . 30)
-	 (face . (background-color . ,predictive-latex-debug-color)))
+	 (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   
   
@@ -577,14 +592,14 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 	    0 1)
 	   (dict . predictive-latex-math-dict) (priority . 10)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-latex-debug-color)))
+	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'environment)
   (auto-overlay-load-compound-regexp
    `(end ("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 	  0 1)
 	 (dict . predictive-latex-math-dict) (priority . 10)
 	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-latex-debug-color)))
+	 (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'environment)
   (auto-overlay-load-compound-regexp
    `(start ("\\\\begin{\\(.*?\\)}" 0 1) (priority . 10) (dict . nil)
@@ -637,99 +652,55 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
   (local-unset-key [?-])
   
   ;; make "\", "$", "{" and "}" do the right thing
+  (setq predictive-restore-override-syntax-alist
+	completion-dynamic-override-syntax-alist)
   (make-local-variable 'completion-dynamic-override-syntax-alist)
   (setq completion-dynamic-override-syntax-alist
-	'((?\\ . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\)
-			     (or (not (char-before (1- (point))))
-				 (not (= (char-before (1- (point)))
-					 ?\\))))
-			'add 'accept))
-		  t word))
-	  (?$  . (accept t none))
-	  (?_ . (accept t none))
-	  (?^ . (accept t none))
-	  (?{ . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (cond
-		    ((auto-overlays-at-point
-		      nil '(eq dict predictive-latex-env-dict))
-		     (complete-in-buffer ""))
-		    ((and (char-before) (= (char-before) ?\\))
-		     'word)
-		    (t 'none)))))
-	  (?} . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'word 'none))))
-	  (?\" . ((lambda ()
+	(append
+	 completion-dynamic-override-syntax-alist
+	 '((?\\ . ((lambda ()
+		     (if (and (char-before) (= (char-before) ?\\)
+			      (or (not (char-before (1- (point))))
+				  (not (= (char-before (1- (point)))
+					  ?\\))))
+			 'add 'accept))
+		   t word))
+	   (?$  . (accept t none))
+	   (?_ . (accept t none))
+	   (?^ . (accept t none))
+	   (?{ . ((lambda ()
 		    (if (and (char-before) (= (char-before) ?\\))
 			'add 'accept))
+		  t
 		  (lambda ()
-		    (if (or (and (char-before) (= (char-before) ?\\))
-			    (not (fboundp 'TeX-insert-quote)))
-			t
-		      (TeX-insert-quote nil)
-		      nil))
+		    (cond
+		     ((auto-overlays-at-point
+		       nil '(eq dict predictive-latex-env-dict))
+		      (complete-in-buffer ""))
+		     ((and (char-before) (= (char-before) ?\\))
+		      'word)
+		     (t 'none)))))
+	   (?} . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
 		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
+		    (if (and (char-before) (= (char-before) ?\\))
 			'word 'none))))
-	  (?' . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?( . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	    (?) . ((lambda ()
+	   (?\" . ((lambda ()
 		     (if (and (char-before) (= (char-before) ?\\))
 			 'add 'accept))
-		   t
+		   (lambda ()
+		     (if (or (and (char-before) (= (char-before) ?\\))
+			     (not (fboundp 'TeX-insert-quote)))
+			 t
+		       (TeX-insert-quote nil)
+		       nil))
 		   (lambda ()
 		     (if (and (char-before (1- (point)))
 			      (= (char-before (1- (point))) ?\\))
 			 'word 'none))))
-	  (?+ . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?, . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?- . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?\; . ((lambda ()
+	   (?' . ((lambda ()
 		    (if (and (char-before) (= (char-before) ?\\))
 			'add 'accept))
 		  t
@@ -737,39 +708,47 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 		    (if (and (char-before (1- (point)))
 			     (= (char-before (1- (point))) ?\\))
 			'word 'none))))
-	  (?< . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?= . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?> . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  (?[ . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	    (?] . ((lambda ()
+	   (?( . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	     (?) . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add 'accept))
+		    t
+		    (lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  'word 'none))))
+	   (?+ . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?, . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?- . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?\; . ((lambda ()
 		     (if (and (char-before) (= (char-before) ?\\))
 			 'add 'accept))
 		   t
@@ -777,15 +756,55 @@ Added to `predictive-mode-disable-hook' by `predictive-setup-latex'."
 		     (if (and (char-before (1- (point)))
 			      (= (char-before (1- (point))) ?\\))
 			 'word 'none))))
-	  (?` . ((lambda ()
-		   (if (and (char-before) (= (char-before) ?\\))
-		       'add 'accept))
-		 t
-		 (lambda ()
-		   (if (and (char-before (1- (point)))
-			    (= (char-before (1- (point))) ?\\))
-		       'word 'none))))
-	  ))
+	   (?< . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?= . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?> . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   (?[ . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	     (?] . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add 'accept))
+		    t
+		    (lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  'word 'none))))
+	   (?` . ((lambda ()
+		    (if (and (char-before) (= (char-before) ?\\))
+			'add 'accept))
+		  t
+		  (lambda ()
+		    (if (and (char-before (1- (point)))
+			     (= (char-before (1- (point))) ?\\))
+			'word 'none))))
+	   )))
 )
 
 
@@ -1031,7 +1050,7 @@ refers to."
 		       dict-list)))
 	  (mapc 'predictive-unload-dict dict-list)
 	;; otherwise, unload the old main dictionary and change to the new one
-	(let ((old-dict predictive-latex-restore-main-dict))
+	(let ((old-dict predictive-restore-main-dict))
 	  (when (atom old-dict) (setq old-dict (list old-dict)))
 	  (mapc 'predictive-unload-dict old-dict))
 	(setq predictive-main-dict (append dict-list predictive-latex-dict))
@@ -1048,7 +1067,7 @@ refers to."
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (mapc 'predictive-unload-dict dict-list)
-      (setq dict-list predictive-latex-restore-main-dict)
+      (setq dict-list predictive-restore-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (setq predictive-main-dict (append dict-list predictive-latex-dict))))
 )
@@ -1607,7 +1626,7 @@ Intended to be used as the \"resolve\" entry in
 ;;;                Completion-browser functions
 
 (defun predictive-latex-construct-browser-menu (prefix completions)
-  "Construct the AMS-LaTeX browser menu keymap."
+  "Construct the LaTeX browser menu keymap."
 
   ;; construct menu, dropping the last two entries which are a separator and a
   ;; link back to the basic completion menu (would just redisplay this menu,
