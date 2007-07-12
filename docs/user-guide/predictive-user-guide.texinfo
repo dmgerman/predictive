@@ -585,8 +585,8 @@ The following variables control the behaviour of
 @item auto-completion-min-chars
 Minimum number of characters that must be typed before the various
 completion mechanisms are activated when using
-@command{auto-completion-mode} (@pxref{Auto-Completion Mode}). Note that
-you can still explicitly invoke completion on a shorter prefix using the
+@command{auto-completion-mode}. Note that you can still explicitly
+invoke completion on a shorter prefix using the
 @command{complete-word-at-point} command (@pxref{Inserting
 Completions}).
 
@@ -1463,11 +1463,11 @@ The second approach is to start from a completely empty dictionary, and
 use the auto-add feature to automatically add words as you type them
 (@pxref{Automatic Learning}). The auto-add feature adds words when you
 ``accept'' them. In this case, since the words aren't already in the
-dictionary, the only way to accept words while typing is by typing an
-end-of-word characters (such as a space or punctuation character) at the
-end of the word. You will need dynamic completion enabled for this to
-work. Alternatively, you can use the fast learning commands
-@command{predictive-fast-learn-from-buffer} and
+dictionary, the only way to accept words while typing is to ensure
+dynamic completion is enabled, and type an end-of-word character (such
+as a space or punctuation character) at the end of the word
+(@pxref{Dynamic Completion}). Alternatively, you can use the fast
+learning commands @command{predictive-fast-learn-from-buffer} and
 @command{predictive-fast-learn-from-file} to add words from existing
 text (note that you @emph{must} use the fast learning commands for this;
 the normal ones will only increment the weights of words that are
