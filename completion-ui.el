@@ -101,6 +101,8 @@
 ;; Version 0.6.4
 ;; * defined properties to make delete-selection-mode work correctly (thanks
 ;;   to Sivaram for drawing my attention to this)
+;; * minor improvement to text displayed in completion browser bucket menu
+;;   entries
 ;;
 ;; Version 0.6.3
 ;; * fixed M-<space> bindings so that prefix argument is passed to
@@ -2923,14 +2925,14 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 		       (if (< b num-small-buckets) 0 1)))
 	    ;; add bucket menu to keymap
 	    (define-key-after menu
-	      (vector (intern (concat "bucket-"
-				      (number-to-string b))))
-	      (list 'menu-item (concat "From: " prefix
-				       (nth i completions))
+	      (vector (intern (concat "bucket-" (number-to-string b))))
+	      (list 'menu-item (concat "From \""
+				       prefix (nth i completions)
+				       "\" to \""
+				       prefix (nth j completions) "\"")
 		    ;; call function to generate sub-menu
 		    (funcall sub-menu-func
-			     prefix (completion--sublist completions
-							 i j)
+			     prefix (completion--sublist completions i j)
 			     menu-item-func sub-menu-func))))
 	)))
     
