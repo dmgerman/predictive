@@ -260,10 +260,13 @@ Libraries, , , emacs, GNU Emacs Manual}). You can view the current
 If you want the predictive completion minor-mode to be available
 whenever you start Emacs, put the following line in your @file{.emacs}
 file:
+@cindex .emacs file
+@cindex startup file
+@cindex configuration file
 
-@example
+@lisp
 (require 'predictive)
-@end example
+@end lisp
 
 Alternatively, you can save memory and only load the lisp libraries when
 they're needed (i.e. when you first run the @command{predictive-mode}
@@ -272,10 +275,22 @@ command), by putting the following in your @file{.emacs} file instead:
 @lisp
 (autoload 'predictive-mode "@var{/path/to/predictive.elc}" t)
 @end lisp
-@cindex .emacs file
-@cindex startup file
-@cindex configuration file
 
+If you want to use the included predictive mode @LaTeX{} and/or html in
+the corresponding major-modes (recommended!), you will additionally need
+to add the following lines to your @file{.emacs} file:
+
+@lisp
+(require 'predictive-latex)
+(require 'predictive-html)
+@end lisp
+
+Again, there is an autoload alternative:
+
+@lisp
+(autoload 'predictive-setup-latex "@var{/path/to/predictive-latex.elc}" t)
+(autoload 'predictive-setup-html "@var{/path/to/predictive-html.elc}" t)
+@end lisp
 
 
 
