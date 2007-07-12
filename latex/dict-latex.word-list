@@ -118,9 +118,9 @@
 "\\newsavebox"
 "\\newtheorem"
 "\\nobreakdash"
-"\\nobreakdash-" ("\\nobreakdash")
-"\\nobreakdash--" ("\\nobreakdash" "\\nobreakdash-")
-"\\nobreakdash---" ("\\nobreakdash" "\\nobreakdash-" "nobreakdash--")
+"\\nobreakdash-" nil ("\\nobreakdash")
+"\\nobreakdash--" nil ("\\nobreakdash" "\\nobreakdash-")
+"\\nobreakdash---" nil ("\\nobreakdash" "\\nobreakdash-" "nobreakdash--")
 "\\nocite"
 "\\nofiles"
 "\\noindent"
