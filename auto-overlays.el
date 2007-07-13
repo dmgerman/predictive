@@ -909,7 +909,7 @@ was saved."
 	;; optimisation almost certainly isn't worth the effort.
 	(catch 'found
 	  (while (cdr pending)
-	    (when (<= start (caadr pending)) (throw 'found t))
+	    (when (<= start (car (cadr pending))) (throw 'found t))
 	    (setq pending (cdr pending))))
 	;; if start of new entry is before end of entry it should come after,
 	;; merge it with that entry
@@ -924,8 +924,8 @@ was saved."
       ;; before start of next entry
       ;; (See above note about O(n) vs. O(log n))
       (while (and (cdr pending)
-		  (>= (1+ (cdar pending)) (caadr pending)))
-	(setcdr (car pending) (max (cdar pending) (cdadr pending)))
+		  (>= (1+ (cdar pending)) (car (cadr pending))))
+	(setcdr (car pending) (max (cdar pending) (cdr (cadr pending))))
 	(setcdr pending (cddr pending)))
       ))
 )
