@@ -253,9 +253,13 @@ Lisp files by running @kbd{make} in the @file{predictive/} subdirectory.
 
 Finally, move the Lisp files (files with extension @file{.el} and
 @file{.elc}) to a directory in your Emacs load-path (@pxref{Lisp
-Libraries, , , emacs, GNU Emacs Manual}). You can view the current
-@env{load-path} using @kbd{C-h v load-path} within Emacs. See the
-@file{INSTALL} file for more detailed installation instructions.
+Libraries, , , emacs, GNU Emacs Manual}). Note that if you want to use
+the included @LaTeX{} and html support (see below), some of the required
+Lisp files are in the @file{latex} and @file{html} subdirectories, and
+these also have to be moved to somewhere in your @env{load-path}. You
+can view the current @env{load-path} using @kbd{C-h v load-path} within
+Emacs. See the @file{INSTALL} file for more detailed installation
+instructions.
 
 If you want the predictive completion minor-mode to be available
 whenever you start Emacs, put the following line in your @file{.emacs}
@@ -273,12 +277,15 @@ they're needed (i.e. when you first run the @command{predictive-mode}
 command), by putting the following in your @file{.emacs} file instead:
 
 @lisp
-(autoload 'predictive-mode "@var{/path/to/predictive.elc}" t)
+(autoload 'predictive-mode "@var{/path/to/predictive}"
+          "Toggle Predictive Completion mode." t)
 @end lisp
 
 If you want to use the included predictive mode @LaTeX{} and/or html in
-the corresponding major-modes (recommended!), you will additionally need
-to add the following lines to your @file{.emacs} file:
+the corresponding major-modes (recommended!), you will need to make sure
+the Lisp files in the @file{latex} and @file{html} subdirectories are
+somewhere in your @env{load-path} where Emacs can find them, and
+then add the following lines to your @file{.emacs} file:
 
 @lisp
 (require 'predictive-latex)
@@ -288,8 +295,8 @@ to add the following lines to your @file{.emacs} file:
 Again, there is an autoload alternative:
 
 @lisp
-(autoload 'predictive-setup-latex "@var{/path/to/predictive-latex.elc}" t)
-(autoload 'predictive-setup-html "@var{/path/to/predictive-html.elc}" t)
+(autoload 'predictive-setup-latex "@var{/path/to/predictive-latex}")
+(autoload 'predictive-setup-html "@var{/path/to/predictive-html}")
 @end lisp
 
 
