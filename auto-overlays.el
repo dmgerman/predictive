@@ -1164,7 +1164,7 @@ was saved."
 		   ;; in progress, so need to check overlay has a parent first
 		   '(identity parent)
 		   (list (lambda (parent)
-			   (null (overlay-get parent 'inactive)))
+			   (not (overlay-get parent 'inactive)))
 			 'parent)
 		   (list (lambda (set-id entry-id subentry-id new-pri)
 			   (let ((pri (cdr (assq
@@ -1307,7 +1307,7 @@ properties)."
       (when (and old-o-start (not (eq old-o-start end)) (null protect-match))
 	(overlay-put old-o-start 'parent nil))
       ;; if unmatching start, set start property to nil
-      (if (null (overlayp start))
+      (if (not (overlayp start))
 	  (overlay-put overlay 'start nil)
 	;; if matching start, set start property to new start match
 	(overlay-put overlay 'start start)
@@ -1319,7 +1319,7 @@ properties)."
       (when (and old-o-end (not (eq old-o-end start)) (null protect-match))
 	(overlay-put old-o-end 'parent nil))
       ;; if unmatching end, set end property to nil
-      (if (null (overlayp end))
+      (if (not (overlayp end))
 	  (overlay-put overlay 'end nil)
 	;; if matching end, set end property to new end match
 	(overlay-put overlay 'end end)
@@ -1346,10 +1346,10 @@ properties)."
       (let (props)
 	(cond
 	 ;; if start has been unmatched, use properties of end match
-	 ((null (overlay-get overlay 'start))
+	 ((not (auto-o-start-matched-p overlay))
 	  (setq props (auto-o-props (overlay-get overlay 'end))))
 	 ;; if end has been unmatched, use properties of start match
-	 ((null (overlay-get overlay 'end))
+	 ((not (auto-o-end-matched-p overlay))
 	  (setq props (auto-o-props (overlay-get overlay 'start))))
 	 (t  ;; otherwise, use properties of whichever match takes precedence
 	  (let ((o-start (overlay-get overlay 'start))
@@ -1549,7 +1549,7 @@ overlay changes."
 (unless (fboundp 'replace-regexp-in-string)
   (require 'auto-overlays-compat)
   (defalias 'replace-regexp-in-string
-            'auto-overlays-compat-replace-regexp-in-string)
+    'auto-overlays-compat-replace-regexp-in-string)
 )
 
 ;;; auto-overlays.el ends here

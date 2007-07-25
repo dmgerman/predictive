@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.16.2
+;; Version: 0.16.3
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.16.3
+;; * simplified `predictive-define-all-prefixes'
 ;;
 ;; Version 0.16.2
 ;; * changed how `predictive-major-mode-alist' functions are called: now
@@ -1356,7 +1359,8 @@ specified by the prefix argument."
     ;; if adding a new word, and we're automatically defining prefixes...
     (when defpref
       ;; define new word to be a prefix of all its completions
-      (predictive-define-all-prefixes dict word)
+      (dolist (w (cdr (dictree-complete dict word)))
+	(predictive-define-prefix dict w word))
       ;; define all prefixes of new word (note: `predictive-define-prefix'
       ;; does nothing if prefix isn't in dict, so no need to check that here)
       (dotimes (i (1- (length word)))
@@ -1820,51 +1824,27 @@ least as large as the weight of WORD."
 
 
 
-(defun predictive-define-all-prefixes (dict &optional prefix)
-  "Increase the weight of words in dictionary DICT that are also
-prefixes for other words. Predictive mode will then automatically
-ensure that the weight of the prefix word is always at least as
-great as the weight of any word it is a prefix for.
+(defun predictive-define-all-prefixes (dict &optional length)
+  "Define prefix relationships for all words in dictionary DICT.
+Any word in the dictionary that is also a prefix for other words
+will be added to the latter's prefix lists. Predictive mode will
+then automatically ensure that the weight of the prefix word is
+always at least as great as the weight of any word it is a
+prefix for.
 
-Optional argument PREFIX can be an integer or a string. If it is
-an integer, it specifies a minimum length for a prefix word;
-prefix words shorter than this minimum will be ignored. If it is
-zero or negative, all prefix words will be included. If PREFIX is
-a string, only that prefix word will have its weight increased.
+Optional argument LENGTH specifies a minimum length for a prefix
+word\; prefix words shorter than this minimum will be
+ignored. If it is zero or negative, all prefix words will be
+included.
 
-Interactively, DICT is read from the minibuffer. PREFIX is the
-integer prefix argument if one is supplied, otherwise a string is
-read from the minibuffer instead."
-  (interactive (list (read-dict "Dictionary: ") current-prefix-arg))
+Interactively, DICT is read from the minibuffer, and LENGTH is the
+integer prefix argument."
+  (interactive (list (read-dict "Dictionary: ")
+		     (prefix-numeric-value current-prefix-arg)))
   
-  ;; when being called interactively, sort out arguments
+  ;; when being called interactively, throw error if no dict supplied
   (when (interactive-p)
-    ;; throw error if no dict supplied
-    (unless dict (beep) (error "No dictionary supplied"))
-    
-    ;; if no prefix or min length was supplied, prompt for a prefix
-    (if (null prefix)
-	(let ((str (thing-at-point 'word)))
-	  (when (string= str "") (setq str nil))
-	  (setq prefix (read-from-minibuffer
-			(concat "Prefix to boost"
-				(when str (concat " (default \"" str "\")"))
-				": ")))
-	  (when (string= prefix "")
-	    (if str
-		(setq prefix str)
-	      (beep)
-	      (error "No prefix supplied"))))
-      
-      ;; otherwise, extract numeric value of prefix argument
-      (setq prefix (prefix-numeric-value prefix))
-      ))
-
-  
-  ;; if neither length nor prefix was supplied, throw error
-  (unless (or (stringp prefix) (numberp prefix))
-    (error "Wrong type argument in `predictive-boost-prefix-weight':\
- stringp or numberp %s" (prin1-to-string prefix)))
+    (unless dict (beep) (error "No dictionary supplied")))
   
   
   (let (prefix-fun)  
@@ -1891,37 +1871,25 @@ read from the minibuffer instead."
 	      )))
     
     
-    ;; if a single prefix was supplied, define it
-    (if (stringp prefix)
-	(when (dictree-member-p dict prefix)
-	  (when (interactive-p)
-	    (message "Defining \"%s\" as a prefix in %s..."
-		     prefix (dictree-name dict)))
-	  (funcall prefix-fun prefix)
-	  (when (interactive-p)
-	    (message "Defining \"%s\" as a prefix in %s...done"
-		     prefix (dictree-name dict))))
-      
-      ;; otherwise, define all prefixes longer than min length
+    ;; define all prefixes longer than min length
+    (when (interactive-p)
+      (message "Defining prefixes in %s..." (dictree-name dict)))
+    (let ((i 0) (count (dictree-size dict)))
       (when (interactive-p)
-	(message "Defining prefixes in %s..." (dictree-name dict)))
-      (let ((i 0) (count (dictree-size dict)))
-	(when (interactive-p)
-	  (message "Defining prefixes in %s...(word 1 of %d)"
-		   (dictree-name dict) count))
-	(dictree-map
-	 (lambda (word weight)
-	   (setq i (1+ i))
-	   (when (= 0 (mod i 50))
-	     (when (interactive-p)
-	       (message "Defining prefixes in %s...(word %d of %d)"
-			(dictree-name dict) i count)))
-	   ;; ignore word if it's too short
-	   (unless (< (length word) prefix) (funcall prefix-fun word)))
-	 dict 'string)
-	(when (interactive-p)
-	  (message "Defining prefixes in %s...done" (dictree-name dict)))))
-    )
+	(message "Defining prefixes in %s...(word 1 of %d)"
+		 (dictree-name dict) count))
+      (dictree-map
+       (lambda (word weight)
+	 (setq i (1+ i))
+	 (when (= 0 (mod i 50))
+	   (when (interactive-p)
+	     (message "Defining prefixes in %s...(word %d of %d)"
+		      (dictree-name dict) i count)))
+	 ;; ignore word if it's too short
+	 (unless (< (length word) length) (funcall prefix-fun word)))
+       dict 'string)
+      (when (interactive-p)
+	(message "Defining prefixes in %s...done" (dictree-name dict)))))
 )
 
 
