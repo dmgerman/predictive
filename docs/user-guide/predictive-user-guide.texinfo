@@ -1297,6 +1297,10 @@ and only actually added to the dictionary when Emacs has been idle for
 sometimes noticeable delays when typing. New words or word weights will
 not be taken into account until the cache is fully flushed.
 
+@item predictive-auto-add-min-chars
+Minimum length of words auto-added to the dictionary. When enabled,
+words shorter than this will be ignored when auto-add is used.
+
 @item predictive-auto-add-filter
 When this variable is set to a function, and when
 @env{predictive-auto-add-to-dict} is enabled, the function will called

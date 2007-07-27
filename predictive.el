@@ -44,6 +44,9 @@
 ;;
 ;; Version 0.16.3
 ;; * simplified `predictive-define-all-prefixes'
+;; * added `predictive-auto-add-min-chars' option to filter auto-added words
+;;   that are shorter than this value
+;; * added var aliases for completion-UI variables
 ;;
 ;; Version 0.16.2
 ;; * changed how `predictive-major-mode-alist' functions are called: now
@@ -375,6 +378,15 @@ to a dictionary. Enabled by default. This has no effect unless
   :type 'boolean)
 
 
+(defcustom predictive-auto-add-min-chars nil
+  "*Minimum length of auto-added words.
+Words shorter than this will not be automatically added to the
+  dictionary when `predictive-auto-add-to-dict' is enabled."
+  :group 'predictive
+  :type '(choice (const :tag "Off" nil)
+		 (integer :tag "On")))
+  
+
 (defcustom predictive-auto-define-prefixes t
   "*Controls automatic prefix definitions in predictive mode.
 
@@ -461,6 +473,52 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   "List of possible suffixes. Earlier entries take precedence."
   :group 'predictive
   :type '(repeat string))
+
+
+
+;;; ==================================================================
+;;;          Aliases for completion-UI customization options
+;;;
+
+(defvaralias 'predictive-completion-max-candidates
+  'completion-max-candidates)
+(defalias 'predictive-completion-resolve-old-method
+  'completion-resolve-old-method)
+(defvaralias 'predictive-auto-completion-min-chars
+  'auto-completion-min-chars)
+(defvaralias 'predictive-auto-completion-delay
+  'auto-completion-delay)
+(defvaralias 'predictive-auto-completion-backward-delete-delay
+  'auto-completion-backward-delete-delay)
+(defvaralias 'predictive-completion-use-dynamic
+  'completion-use-dynamic)
+(defvaralias 'predictive-completion-dynamic-syntax-alist
+  'completion-dynamic-syntax-alist)
+(defvaralias 'predictive-completion-dynamic-override-syntax-alist
+  'completion-dynamic-override-syntax-alist)
+(defvaralias 'predictive-completion-use-hotkeys
+  'completion-use-hotkeys)
+(defvaralias 'predictive-completion-hotkey-list
+  'completion-hotkey-list)
+(defvaralias 'predictive-completion-use-tooltip
+  'completion-use-tooltip)
+(defvaralias 'predictive-completion-tooltip-delay
+  'completion-tooltip-delay)
+(defvaralias 'predictive-completion-tooltip-timeout
+  'completion-tooltip-timeout)
+(defvaralias 'predictive-completion-tooltip-offset
+  'completion-tooltip-offset)
+(defvaralias 'predictive-completion-tooltip-face
+  'completion-tooltip-face)
+(defvaralias 'predictive-completion-auto-show-menu
+  'completion-auto-show-menu)
+(defvaralias 'predictive-completion-browser-max-items
+  'completion-browser-max-items)
+(defvaralias 'predictive-completion-browser-buckets
+  'completion-browser-buckets)
+(defvaralias 'predictive-completion-use-echo
+  'completion-use-echo)
+
 
 
 
@@ -866,8 +924,11 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 		  (push (cons word (car dict)) predictive-auto-add-cache)
 		;; otherwise, check it pases the filter (if there is one),
 		;; then add it to the dictionary
-		(when (or (null predictive-auto-add-filter)
-			  (funcall predictive-auto-add-filter word))
+		(when (and (or (null predictive-auto-add-min-chars)
+			       (>= (length word)
+				   predictive-auto-add-min-chars))
+			   (or (null predictive-auto-add-filter)
+			       (funcall predictive-auto-add-filter word)))
 		  (predictive-add-to-dict (car dict) word))))
 	     
 	     ;; if adding to the buffer-local dictionary...
@@ -884,8 +945,11 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 			  predictive-auto-add-cache)
 		  ;; otherwise, check it passes the filter (if there is one),
 		  ;; then add it to the dictionary
-		  (when (or (null predictive-auto-add-filter)
-			    (funcall predictive-auto-add-filter word))
+		  (when (and (or (null predictive-auto-add-min-chars)
+				 (>= (length word)
+				     predictive-auto-add-min-chars))
+			     (or (null predictive-auto-add-filter)
+				 (funcall predictive-auto-add-filter word)))
 		    (predictive-add-to-dict (predictive-buffer-local-dict-name)
 					    word)))))
 	     
@@ -899,8 +963,11 @@ Usually called after a completion is accepted. Note that PREFIX is ignored."
 		      (push (cons word dict) predictive-auto-add-cache)
 		    ;; otherwise, check is passes the filter (if there is
 		    ;; one), then add it to the dictionary
-		    (when (or (null predictive-auto-add-filter)
-			      (funcall predictive-auto-add-filter word))
+		    (when (and (or (null predictive-auto-add-min-chars)
+				   (>= (length word)
+				       predictive-auto-add-min-chars))
+			       (or (null predictive-auto-add-filter)
+				   (funcall predictive-auto-add-filter word)))
 		      (predictive-add-to-dict dict word)))
 		;; display error message if not a dictionary
 		(beep)
@@ -1014,8 +1081,11 @@ for uncapitalized version."
  %d of %d)" i count))
       ;; check word passes the filter (if there is one), then add it to
       ;; whichever dictionary is in the cache
-      (when (or (null predictive-auto-add-filter)
-		(funcall predictive-auto-add-filter word))
+      (when (and (or (null predictive-auto-add-min-chars)
+		     (>= (length word)
+			 predictive-auto-add-min-chars))
+		 (or (null predictive-auto-add-filter)
+		     (funcall predictive-auto-add-filter word)))
 	(predictive-add-to-dict dict word))))
   
   (unless idle (message "Flushing predictive mode auto-learn caches...done"))
