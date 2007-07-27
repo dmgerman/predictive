@@ -1401,17 +1401,10 @@ Remove a ``prefix'' definition. (As for
 be a prefix of the other.)
 
 @item predictive-define-all-prefixes
-Define all possible prefix relationships for a word. If called without a
-prefix argument (nothing to do with the prefix @emph{word}!), this
-command prompts for a word, and that word is defined to be a prefix of
-all its extensions (i.e. all words that it is a prefix for). Predictive
-mode will then automatically ensure that the weight of the prefix word
-is kept at least as large as that of all of its extensions.
-
-If called with a numerical prefix argument, this command defines the
-same prefix relationships, but for @emph{all} words in the dictionary
-that are longer than the numerical value of the prefix argument. Use a 0
-or negative prefix argument to define the relationships for all words.
+Define all possible prefix relationships. If called with a numerical
+prefix argument, prefix relationships are only defined for words that
+are at least this long (the @emph{prefixes} defined for those words can
+still be any length).
 @end ftable
 
 
