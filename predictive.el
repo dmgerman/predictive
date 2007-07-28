@@ -543,10 +543,13 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 ;; FIXME: should this be a customization option?
 (defvar predictive-major-mode-alist nil
   "Alist associating major mode symols with functions.
-The alist is checked whenever predictive mode is turned on in a
-buffer, and if the buffer's major made matches one in the alist,
-the associated function is called. This makes it easier to
-customize predictive mode for different major modes.")
+The functions should take one argument. The alist is checked
+whenever predictive mode is enabled or disabled in a buffer. If
+the buffer's major made matches an entry in the alist, the
+associated function is called, with a positive argument if
+predictive mode is being enabled or a negative one if it is being
+disabled. This makes it easier to customize predictive mode for
+different major modes.")
 
 
 (defvar predictive-completion-filter nil

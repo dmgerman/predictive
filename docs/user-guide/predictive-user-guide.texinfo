@@ -1270,12 +1270,13 @@ single, combined main dictionary for the buffer.
 @cindex buffer-local dictionary
 
 The buffer-local dictionary is initially empty, but whenever a word is
-learnt (auto-learnt, auto-added, or learnt from a buffer or file), it
-is added to the buffer-local dictionary, and its weight there is
-incremented by a value @env{predictive-buffer-local-learn-multiplier}
-times higher than for normal dictionaries. Thus the buffer-local
-dictionary will help predictive mode adapt much faster to the vocabulary
-used in a specific buffer than global dictionaries alone can.
+learnt (auto-learnt, auto-added, learnt from a buffer or file, or added
+manually), it is added to the buffer-local dictionary, and its weight
+there is incremented by a value
+@env{predictive-buffer-local-learn-multiplier} times higher than for
+normal dictionaries. Thus the buffer-local dictionary will help
+predictive mode adapt much faster to the vocabulary used in a specific
+buffer than global dictionaries alone can.
 
 If @env{predictive-dict-autosave} is enabled and the buffer is
 associated with a file, the buffer-local dictionary will automatically
@@ -1820,12 +1821,14 @@ you want to switch it on and off whilst within the mode.
 
 @vtable @env
 @item predictive-major-mode-alist
-Alist associating a major-mode symbol with a function. The alist is
-checked whenever predictive mode is switched on in a buffer using the
-@command{predictive-mode} or @command{turn-on-predictive-mode} commands
-(@pxref{Basic Completion Commands}), and if the buffer's major-mode
-matches one in the alist, the associated function is called. This makes
-it easier to customize predictive mode for different major modes.
+Alist associating a major-mode symbol with a function, which should take
+one argument. The alist is checked whenever predictive mode is enabled
+or disabled in a buffer using the @command{predictive-mode} or
+@command{turn-on-predictive-mode} commands (@pxref{Basic Completion
+Commands}). If the buffer's major-mode matches one in the alist, the
+associated function is called with a positive argument if predictive
+mode is being enabled or a negative one if it is being disabled. This
+makes it easier to customize predictive mode for different major modes.
 @findex predictive-mode
 @findex turn-on-predictive-mode
 @end vtable
