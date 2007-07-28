@@ -2644,7 +2644,8 @@ Optional argument NUM specifies the number of the currently
 inserted dynamic completion."
   
   (let* ((text "") str
-	 (maxlen (apply 'max (mapcar 'length completions))))
+	 (maxlen (if (null completions) 0
+		   (apply 'max (mapcar 'length completions)))))
     
     (dotimes (i (length completions))
       ;; pad all strings to same length
