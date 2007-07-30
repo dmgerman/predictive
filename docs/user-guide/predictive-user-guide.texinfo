@@ -1198,14 +1198,15 @@ long time to run.
 
 @ftable @command
 @item predictive-learn-from-buffer
-Learns weights for words in a dictionary from text in a buffer. By
-default, learns word weights for all dictionaries used by the current
-buffer when predictive mode is enabled (@pxref{Loading and Saving
+Learns weights for words in a dictionary from text in a buffer. If no
+explicit dictionary is specified, this learns word weights for all
+dictionaries used by the current buffer (@pxref{Loading and Saving
 Dictionaries}). Each occurrence of a word increments its weight in the
 dictionary. By default, only occurrences that occur in a region where
 the dictionary is active are taken into account (@pxref{Region-Local
-Dictionaries}). This can be overridden by supplying a prefix argument,
-in which case all occurrences are taken into account.
+Dictionaries}). When an explicit dictionary is specified, this can be
+overridden by supplying a prefix argument, in which case all occurrences
+are taken into account.
 
 @item predictive-learn-from-file
 Like @command{predictive-learn-from-buffer}, but learns from a file
@@ -1215,7 +1216,15 @@ instead of a buffer.
 Similar to @command{predictive-learn-from-buffer}. It runs faster for
 large dictionaries, at the expense of missing some words. Specifically,
 only words consisting entirely of word- or symbol-constituent characters
-(according to the buffer's syntax table) will be taken into account.
+(according to the buffer's syntax table) will be taken into
+account. Also, unlike @command{predictive-learn-from-buffer}, this
+command takes into account the setting of the
+@env{predictive-auto-add-to-dict} option. If an explicit dictionary is
+specified, words that are not already in the dictionary will be added to
+it if @env{predictive-auto-add-to-dict} has any non-nil
+value. Otherwise, @env{predictive-auto-add-to-dict} has the usual
+effect, as do the other auto-add-related options (@pxref{Automatic
+Learning}).
 
 @item predictive-fast-learn-from-file
 Like @command{predictive-fast-learn-from-buffer}, but learns from a file

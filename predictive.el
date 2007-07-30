@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.16.3
+;; Version: 0.16.4
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.16.4
+;; * modified `predictive-fast-learn-from-buffer' to honour
+;;   `predictive-auto-add-to-dict' setting
 ;;
 ;; Version 0.16.3
 ;; * simplified `predictive-define-all-prefixes'
@@ -885,14 +889,14 @@ do: emails, academic research articles, letters...)"
 
 (defun predictive-auto-learn (ignored1 word &optional ignored2)
   "Function to deal with auto-learning WORD.
-Usually called after a completion is accepted. Note that PREFIX is ignored."
+Usually called after a completion is accepted."
   
   (let ((dict (predictive-current-dict))
 	found dic)
     
     ;; if there is a current dict...
     (unless (eq dict t)     
-      (let ((dictlist dict)  wordlist)
+      (let ((dictlist dict) wordlist)
 	(when (dictree-p dict) (setq dictlist (list dict)))
 	;; if ignoring initial caps, look for uncapitalized word too
 	(if (and predictive-ignore-initial-caps
@@ -1622,23 +1626,39 @@ specified by the presence of a prefix argument."
 (defun predictive-fast-learn-from-buffer (&optional buffer dict all)
   "Learn word weights from BUFFER (defaults to the current buffer).
 
-The word weight of each word in dictionary DICT is incremented by the number
-of occurences of that word in the buffer. DICT can either be a dictionary, or
-a list of dictionaries. If DICT is not supplied, it defaults to all
-dictionaries used by BUFFER. However, DICT must be supplied if ALL is
-specified, see below.
+The word weight of each word in dictionary DICT is incremented by
+the number of occurences of that word in the buffer. DICT can
+either be a dictionary, or a list of dictionaries. If DICT is not
+supplied, it defaults to all dictionaries used by
+BUFFER. However, DICT must be supplied if ALL is specified, see
+below.
 
-By default, only occurences of a word that occur in a region where the
-dictionary is active are taken into account. If optional argument ALL is
-non-nil, all occurences are taken into account. In this case, a dictionary
-must be sprecified.
+By default, only occurences of a word that occur in a region
+where the dictionary is active are taken into account. If
+optional argument ALL is non-nil, all occurences are taken into
+account. In this case, a dictionary must be sprecified.
 
-Interactively, BUFFER and DICT are read from the mini-buffer, and ALL is
-specified by the presence of a prefix argument.
+Note that this function takes the setting of
+`predictive-auto-add-to-dict' and related options into
+account. If an explicit dictionary is supplied, new words will be
+added to that dictionary if `predictive-auto-add-to-dict' has any
+non-nil value. If DICT is not supplied, the
+`predictive-auto-add-to-dict' setting has the usual effect
+\(which see\). If `predictive-add-to-dict-ask' is non-nil, you
+will be prompted to confirm each and every word before it is
+added \(so you may well wish to temporarily set
+`predictive-add-to-dict-ask to nil before using this
+function\). The `predictive-auto-add-min-chars' and
+`predictive-auto-add-filter' variables also have their usual
+effect.
 
-This function is faster then `predictive-learn-from-buffer' for large
-dictionaries, but will miss any words not consisting entirely of word- or
-symbol-constituent characters according to the buffer's syntax table."
+Interactively, BUFFER and DICT are read from the mini-buffer, and
+ALL is specified by the presence of a prefix argument.
+
+This function is faster then `predictive-learn-from-buffer' for
+large dictionaries, but will miss any words not consisting
+entirely of word- or symbol-constituent characters according to
+the buffer's syntax table."
   
   (interactive (list (read-buffer "Buffer to learn from: "
 				  (buffer-name (current-buffer)) t)
@@ -1664,35 +1684,93 @@ symbol-constituent characters according to the buffer's syntax table."
       (setq percent 0)
       (message "Learning words for dictionary %s...(0%%)" (dictree-name dict))
       (while (re-search-forward "\\b\\(\\sw\\|\\s_\\)+\\b" nil t)
-	(setq word (match-string 0))
+	(setq word (match-string-no-properties 0))
 	(when (and predictive-ignore-initial-caps
 		   (predictive-capitalized-p word))
 	  (setq word (downcase word)))
 	(cond
+	 
 	 ;; if ALL was specified, learn current word
 	 (all
-	  (when (dictree-member-p dict (match-string 0))
-	    (predictive-add-to-dict dict (match-string 0))))
+	  (when (or (dictree-member-p dict word)
+		    (and predictive-auto-add-to-dict
+			 (or (not predictive-add-to-dict-ask)
+			     (y-or-n-p
+			      (format "Add word \"%s\" to dictionary? " word))
+			     )))
+	    (predictive-add-to-dict dict word)))
+	 
 	 ;; if ALL was not specified and a dictionary has been specified, only
 	 ;; increment the current word's weight if dictionary is active there
 	 (dict
 	  (setq currdict (predictive-current-dict))
 	  (when (and (or (and (listp currdict) (memq dict currdict))
 			 (eq dict currdict))
-		     (dictree-member-p dict word))
+		     (or (dictree-member-p dict word)
+			 (and predictive-auto-add-to-dict
+			      (or (not predictive-add-to-dict-ask)
+				  (y-or-n-p
+				   (format "Add word \"%s\" to dictionary? "
+					   word))
+				  ))))
 	    (predictive-add-to-dict dict word)))
+	 
+	 
 	 ;; if ALL is not specified and no dictionary was specified, increment
 	 ;; its weight in first dictionary active there that contains the word
-	 ;; (unless no dictionary is active, indicated by t)
 	 (t
 	  (setq currdict (predictive-current-dict))
 	  (when currdict
 	    (when (dictree-p currdict) (setq currdict (list currdict)))
-	    (catch 'learned
-	      (dotimes (i (length currdict))
-		(when (dictree-member-p (nth i currdict) word)
-		  (predictive-add-to-dict (nth i currdict) word)
-		  (throw 'learned t)))))))
+	    (unless (catch 'learned
+		      (dotimes (i (length currdict))
+			(when (dictree-member-p (nth i currdict) word)
+			  (predictive-add-to-dict (nth i currdict) word)
+			  (throw 'learned t))))
+	      
+	      ;; if word wasn't in any dictionary, but auto-add is enabled and
+	      ;; the word passes the filter (if any), add the word to the
+	      ;; appropriate dictionary
+	      (when (and predictive-auto-add-to-dict
+			 (or (not predictive-add-to-dict-ask)
+			     (y-or-n-p
+			      (format "Add word \"%s\" to dictionary? "
+				      word)))
+			 (or (null predictive-auto-add-min-chars)
+			     (>= (length word) predictive-auto-add-min-chars))
+			 (or (null predictive-auto-add-filter)
+			     (funcall predictive-auto-add-filter word)))
+		(cond
+		 
+		 ;; adding to the current dictionary, or first dictionary in
+		 ;; the list if current dictionary is a list of dictionaries
+		 ((eq predictive-auto-add-to-dict t)
+		  (predictive-add-to-dict (car currdict) word))
+		 
+		 ;; if adding to the buffer-local dictionary, do so
+		 ((eq predictive-auto-add-to-dict 'buffer)
+		  ;; if buffer-local dictionaries are not enabled, display an
+		  ;; error message
+		  (if (null predictive-use-buffer-local-dict)
+		      (message "The setting of `predictive-auto-add-to-dict'\
+ specifies adding to the buffer-local dictionary, but buffer-local\
+ dictionaries are not enabled by `predictive-use-buffer-local-dict'")
+		    (predictive-add-to-dict
+		     (eval (predictive-buffer-local-dict-name)) word)))
+		 
+		 ;; anything else specifies an explicit dictionary to add to
+		 (t
+		  (setq currdict (eval predictive-auto-add-to-dict))
+		  ;; check `predictive-auto-add-to-dict' is a dictionary
+		  (if (dictree-p dict)
+		      (predictive-add-to-dict dict word))
+		  ;; display error message if not a dictionary
+		  (beep)
+		  (message
+		   "Wrong type in `predictive-auto-add-to-dict': dictp"))
+		 )))))
+	 )
+	
 	
 	(when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
 	  (setq percent (/ (float (point)) (point-max)))
@@ -1703,10 +1781,11 @@ symbol-constituent characters according to the buffer's syntax table."
 				   (prin1-to-string (* 100 percent)))
 		     (match-string 0 (prin1-to-string (* 100 percent))))
 		   ))
-      )  ; end while loop
+	)  ; end while loop
       
       (unless (or all restore-mode) (predictive-mode -1))
-      (message "Learning words for dictionary %s...done" (dictree-name dict))))
+      (message "Learning words for dictionary %s...done" (dictree-name dict))
+      ))
 )
 
 
@@ -1725,6 +1804,20 @@ By default, only occurences of a word that occur in a region
 where the dictionary is active are taken into account. If
 optional argument ALL is non-nil, all occurences are taken into
 account. In this case, a dictionary must be specified.
+
+Note that this function takes the setting of
+`predictive-auto-add-to-dict' and related options into
+account. If an explicit dictionary is supplied, new words will be
+added to that dictionary if `predictive-auto-add-to-dict' has any
+non-nil value. If DICT is not supplied, the
+`predictive-auto-add-to-dict' setting has the usual effect
+\(which see\). If `predictive-add-to-dict-ask' is non-nil, you
+will be prompted to confirm each and every word before it is
+added \(so you may well wish to temporarily set
+`predictive-add-to-dict-ask to nil before using this
+function\). The `predictive-auto-add-min-chars' and
+`predictive-auto-add-filter' variables also have their usual
+effect.
 
 Interactively, FILE and DICT are read from the mini-buffer, and
 ALL is specified by the presence of a prefix argument.
@@ -2222,7 +2315,7 @@ predictive mode."
        (t
 	(setq name (mapconcat
 		    (lambda (dic)
-		      (if (and (>= (length (dictree-name dict)) 10)
+		      (if (and (>= (length (dictree-name dic)) 10)
 			       (string= (substring (dictree-name dic) 0 10)
 					"dict-meta-")
 			       (dictree--meta-dict-p dic))
