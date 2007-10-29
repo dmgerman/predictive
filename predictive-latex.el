@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.2
+;; Version: 0.7.4
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.4
+;; * modified `predictive-latex-reparse-buffer' to kill local values of
+;;   dictionary lists, to avoid duplicate dictionaries being added to them
+;;   by usepackage overlays when buffer is reparsed
 ;;
 ;; Version 0.7.3
 ;; * updated `predictive-latex-setup' to conform to new way major-mode setup
@@ -171,7 +176,7 @@
   :group 'predictive)
 
 
-(defcustom predictive-latex-electric-environments t
+(defcustom predictive-latex-electric-environments nil
   "*When enabled, environment names are automatically synchronized
 between \\begin{...} and \\end{...} commands."
   :group 'predictive-latex
@@ -191,14 +196,16 @@ When a document class is in the list, "
 ;;;                       Variables 
 
 ;; variables holding dictionaries for different LaTeX contexts
-(defvar predictive-latex-dict 'dict-latex)
+(defvar predictive-latex-dict '(dict-latex))
 (make-variable-buffer-local 'predictive-latex-dict)
-(defvar predictive-latex-math-dict 'dict-latex-math)
+(defvar predictive-latex-math-dict '(dict-latex-math))
 (make-variable-buffer-local 'predictive-latex-math-dict)
-(defvar predictive-latex-preamble-dict 'dict-latex-preamble)
+(defvar predictive-latex-preamble-dict '(dict-latex-preamble))
 (make-variable-buffer-local 'predictive-latex-preamble-dict)
-(defvar predictive-latex-env-dict 'dict-latex-env)
+(defvar predictive-latex-env-dict '(dict-latex-env))
 (make-variable-buffer-local 'predictive-latex-env-dict)
+(defvar predictive-latex-bibstyle-dict '(dict-latex-bibstyle))
+(make-variable-buffer-local 'predictive-latex-bibstyle-dict)
 (defvar predictive-latex-label-dict nil)
 (make-variable-buffer-local 'predictive-latex-label-dict)
 
@@ -234,7 +241,6 @@ When a document class is in the list, "
 ;; prevent bogus compiler warnings
 (eval-when-compile
   (defvar dict-latex-docclass)
-  (defvar dict-latex-bibstyle)
   (defvar TeX-master))
 
 
@@ -316,25 +322,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      ;; FIXME: probably need to handle null TeX-master case differently
      (t
       ;; load the latex dictionaries
-      (when predictive-latex-dict
-	(when (atom predictive-latex-dict)
-	  (setq predictive-latex-dict (list predictive-latex-dict)))
-	(mapc 'predictive-load-dict predictive-latex-dict))
-      (when predictive-latex-math-dict
-	(when (atom predictive-latex-math-dict)
-	  (setq predictive-latex-math-dict (list predictive-latex-math-dict)))
-	(mapc 'predictive-load-dict predictive-latex-math-dict))
-      (when predictive-latex-preamble-dict
-	(when (atom predictive-latex-preamble-dict)
-	  (setq predictive-latex-preamble-dict
-		(list predictive-latex-preamble-dict)))
-	(mapc 'predictive-load-dict predictive-latex-preamble-dict))
-      (when predictive-latex-env-dict
-	(when (atom predictive-latex-env-dict)
-	  (setq predictive-latex-env-dict (list predictive-latex-env-dict)))
-	(mapc 'predictive-load-dict predictive-latex-env-dict))
       (predictive-load-dict 'dict-latex-docclass)
-      (predictive-load-dict 'dict-latex-bibstyle)
+      (mapc 'predictive-load-dict predictive-latex-dict)
+      (mapc 'predictive-load-dict predictive-latex-math-dict)
+      (mapc 'predictive-load-dict predictive-latex-preamble-dict)
+      (mapc 'predictive-load-dict predictive-latex-env-dict)
+      (mapc 'predictive-load-dict predictive-latex-bibstyle-dict)
       ;; load the label dictionary
       (predictive-latex-load-label-dict)
       
@@ -811,6 +804,26 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 ;;;=======================================================================
 ;;;                 Miscelaneous interactive commands
+
+(defun predictive-latex-reparse-buffer ()
+  "Clear all auto-overlays, then reparse buffer from scratch."
+  (interactive)
+  
+  ;; stop the predictive auto-overlays
+  (auto-overlay-stop 'predictive)
+  ;; kill local modifications to dict lists (dictionaries are added again when
+  ;; usepackage overlays are reparsed)
+  (kill-local-variable 'predictive-latex-dict)
+  (kill-local-variable 'predictive-latex-math-dict)
+  (kill-local-variable 'predictive-latex-preamble-dict)
+  (kill-local-variable 'predictive-latex-env-dict)
+  (kill-local-variable 'predictive-latex-env-dict)
+  (kill-local-variable 'predictive-latex-bibstyle-dict)
+  ;; restart the predictive auto-overlays
+  (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)
+)
+
+
 
 (defun predictive-latex-goto-matching-delim ()
   "If the point is currently on some kind of LaTeX delimeter
@@ -1384,9 +1397,11 @@ refers to."
 
 
 (defun predictive-latex-load-package (package)
-  "Try to load the package dictionary and run the load functions
-for LaTeX PACKAGE."
-
+  "Load a LaTeX PACKAGE into the current buffer.
+This loads the package dictionary and runs the load functions for
+the package, if they exist."
+  (interactive "sPackage name: ")
+  
   (let (dict)
     ;; try to load package dictionaries and add them to the appropriate lists
     ;; if they exists
@@ -1411,9 +1426,13 @@ for LaTeX PACKAGE."
 
 
 (defun predictive-latex-unload-package (package)
-  "Unload the package dictionary and run the unload functions
-for LaTeX package PACKAGE."
-
+  "Unload a LaTeX PACKAGE from the current buffer.
+This unloads the dictionary and runs the unload functions, if
+they exist."
+  (interactive "sPackage name: ")
+  ;; FIXME: ought to complete on loaded package names when called
+  ;;        interactively
+  
   (let (dict)
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
@@ -1790,12 +1809,5 @@ Intended to be used as the \"resolve\" entry in
 )
 
 
-
-(defun predictive-latex-reparse-buffer ()
-  "Clear all auto-overlays, then reparse buffer from scratch."
-  (interactive)
-  (auto-overlay-stop 'predictive)
-  (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)
-)
 
 ;;; predictive-latex.el ends here

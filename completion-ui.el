@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.4
+;; Version: 0.6.5
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -97,6 +97,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.5
+;; * bug-fixes to interactive definitions
+;; * moved modification hook setting to end of file
 ;;
 ;; Version 0.6.4
 ;; * defined properties to make delete-selection-mode work correctly (thanks
@@ -609,15 +613,6 @@ prefix argument supplied to an interactive rejection command.")
 
 (defvar completion-trap-recursion nil
   "Used to trap recursive calls to certain completion functions")
-
-
-
-
-;;; =================================================================
-;;;                 Set modification hook functions
-
-(add-hook 'after-change-functions
-	  (lambda (&rest unused) (completion-cancel-tooltip)))
 
 
 
@@ -2156,11 +2151,12 @@ If there is a provisional completion at point after deleting,
 reject it.  \(If N is negative, behaviour is instead as for
 `completion-backward-delete-char'.\)
 
-Optional second arg KILLFLAG non-nil means kill instead (save in
+Non-nil optional second arg KILLFLAG means kill instead (save in
 kill ring). Interactively, N is the prefix arg (default 1), and
 KILLFLAG is set if n was explicitly specified."
-  (interactive "p")
+  (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
+  (setq n (prefix-numeric-value n))
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -2180,8 +2176,9 @@ behaviour is instead as for `completion-delete-char'.\)
 Optional second arg KILLFLAG non-nil means kill instead (save in
 kill ring). Interactively, N is the prefix arg (default 1), and
 KILLFLAG is set if N was explicitly specified."
-  (interactive "p")
+  (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
+  (setq n (prefix-numeric-value n))
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -2203,8 +2200,9 @@ kill ring). Interactively, N is the prefix arg (default 1), and
 KILLFLAG is set if N was explicitly specified.
 
 The exact behavior depends on `backward-delete-char-untabify-method'."
-  (interactive "p")
+  (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
+  (setq n (prefix-numeric-value n))
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3228,6 +3226,14 @@ in WINDOW'S frame."
   (defalias 'completion-frame-posn-at-point
     'completion-compat-frame-posn-at-point)
 )
+
+
+
+;;; =================================================================
+;;;                 Set modification hook functions
+
+(add-hook 'after-change-functions
+	  (lambda (&rest unused) (completion-cancel-tooltip)))
 
 
 ;;; completion-ui.el ends here

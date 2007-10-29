@@ -65,7 +65,7 @@ prog-guide: $(PROGDIR)/predictive-prog-guide.info.gz \
             $(PROGDIR)/predictive-prog-guide.pdf
 
 
-auto-o-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
+auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
                $(AUTOODIR)/auto-overlay-manual-html \
 	       $(AUTOODIR)/auto-overlay-manual-html.tar.gz \
                $(AUTOODIR)/auto-overlay-manual.txt.gz \

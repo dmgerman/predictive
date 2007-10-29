@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.6
+;; Version: 0.2.7
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.7
+;; * fixed bug in `auto-o-parse-self-match' which caused a matched self match
+;;   to have null 'parent property if a new self match was created inside an
+;;   existing self overlay
 ;;
 ;; Version 0.2.6
 ;; * set overlay properties straight after creation in `auto-o-make-self',
@@ -143,8 +148,9 @@
 		       (when overlay-list
 			 (overlay-get (overlay-get (car overlay-list) 'start)
 				      'delim-start))))
-	  ;; match existing one with the new match
-	  (auto-o-match-overlay o nil o-match 'no-props))
+	  ;; match end of existing one with the new match, protecting its old
+	  ;; end match which is now matched with start of new one
+	  (auto-o-match-overlay o nil o-match 'no-props nil 'protect-match))
       
       ;; return newly created overlay
       o-new))

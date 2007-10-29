@@ -5,9 +5,9 @@
 "\\|"
 "\\Arrowvert"
 "\\Biggl"
-"\\Biggr"
+"\\Biggr" nil "\\Biggl"
 "\\Bigl"
-"\\Bigr"
+"\\Bigr" nil "\\Bigl"
 "\\Box"
 "\\Delta"
 "\\Diamond"
@@ -53,9 +53,9 @@
 "\\begin"
 "\\beta"
 "\\biggl"
-"\\biggr"
+"\\biggr" nil "\\biggl"
 "\\bigl"
-"\\bigr"
+"\\bigr" nil "\\bigl"
 "\\bigcap"
 "\\bigcirc"
 "\\bigcup"
@@ -206,6 +206,7 @@
 "\\overleftarrow"
 "\\overline"
 "\\overrightarrow"
+"\\overset"
 "\\parallel"
 "\\partial"
 "\\perp"
@@ -228,7 +229,7 @@
 "\\rgroup"
 "\\rhd"
 "\\rho"
-"\\right"
+"\\right" nil ("\\left")
 "\\rightarrow" nil ("\\right")
 "\\rightharpoondown" nil ("\\right")
 "\\rightharpoonup" nil ("\\right")
@@ -278,6 +279,7 @@
 "\\triangleright" nil ("\\triangle")
 "\\underbrace"
 "\\underline"
+"\\underset"
 "\\unlhd"
 "\\unrhd"
 "\\uparrow"

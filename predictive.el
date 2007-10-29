@@ -484,44 +484,46 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 ;;;          Aliases for completion-UI customization options
 ;;;
 
-(defvaralias 'predictive-completion-max-candidates
-  'completion-max-candidates)
-(defalias 'predictive-completion-resolve-old-method
-  'completion-resolve-old-method)
-(defvaralias 'predictive-auto-completion-min-chars
-  'auto-completion-min-chars)
-(defvaralias 'predictive-auto-completion-delay
-  'auto-completion-delay)
-(defvaralias 'predictive-auto-completion-backward-delete-delay
-  'auto-completion-backward-delete-delay)
-(defvaralias 'predictive-completion-use-dynamic
-  'completion-use-dynamic)
-(defvaralias 'predictive-completion-dynamic-syntax-alist
-  'completion-dynamic-syntax-alist)
-(defvaralias 'predictive-completion-dynamic-override-syntax-alist
-  'completion-dynamic-override-syntax-alist)
-(defvaralias 'predictive-completion-use-hotkeys
-  'completion-use-hotkeys)
-(defvaralias 'predictive-completion-hotkey-list
-  'completion-hotkey-list)
-(defvaralias 'predictive-completion-use-tooltip
-  'completion-use-tooltip)
-(defvaralias 'predictive-completion-tooltip-delay
-  'completion-tooltip-delay)
-(defvaralias 'predictive-completion-tooltip-timeout
-  'completion-tooltip-timeout)
-(defvaralias 'predictive-completion-tooltip-offset
-  'completion-tooltip-offset)
-(defvaralias 'predictive-completion-tooltip-face
-  'completion-tooltip-face)
-(defvaralias 'predictive-completion-auto-show-menu
-  'completion-auto-show-menu)
-(defvaralias 'predictive-completion-browser-max-items
-  'completion-browser-max-items)
-(defvaralias 'predictive-completion-browser-buckets
-  'completion-browser-buckets)
-(defvaralias 'predictive-completion-use-echo
-  'completion-use-echo)
+(when (fboundp 'defvaralias)
+  (defvaralias 'predictive-completion-max-candidates
+    'completion-max-candidates)
+  (defalias 'predictive-completion-resolve-old-method
+    'completion-resolve-old-method)
+  (defvaralias 'predictive-auto-completion-min-chars
+    'auto-completion-min-chars)
+  (defvaralias 'predictive-auto-completion-delay
+    'auto-completion-delay)
+  (defvaralias 'predictive-auto-completion-backward-delete-delay
+    'auto-completion-backward-delete-delay)
+  (defvaralias 'predictive-completion-use-dynamic
+    'completion-use-dynamic)
+  (defvaralias 'predictive-completion-dynamic-syntax-alist
+    'completion-dynamic-syntax-alist)
+  (defvaralias 'predictive-completion-dynamic-override-syntax-alist
+    'completion-dynamic-override-syntax-alist)
+  (defvaralias 'predictive-completion-use-hotkeys
+    'completion-use-hotkeys)
+  (defvaralias 'predictive-completion-hotkey-list
+    'completion-hotkey-list)
+  (defvaralias 'predictive-completion-use-tooltip
+    'completion-use-tooltip)
+  (defvaralias 'predictive-completion-tooltip-delay
+    'completion-tooltip-delay)
+  (defvaralias 'predictive-completion-tooltip-timeout
+    'completion-tooltip-timeout)
+  (defvaralias 'predictive-completion-tooltip-offset
+    'completion-tooltip-offset)
+  (defvaralias 'predictive-completion-tooltip-face
+    'completion-tooltip-face)
+  (defvaralias 'predictive-completion-auto-show-menu
+    'completion-auto-show-menu)
+  (defvaralias 'predictive-completion-browser-max-items
+    'completion-browser-max-items)
+  (defvaralias 'predictive-completion-browser-buckets
+    'completion-browser-buckets)
+  (defvaralias 'predictive-completion-use-echo
+    'completion-use-echo)
+)
 
 
 

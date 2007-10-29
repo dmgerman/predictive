@@ -63,7 +63,7 @@ html_dicts: $(html_dicts)
 
 # implicit rule for creating dictionaries
 dict-%.elc: dict-%.word-list dict-tree.el
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-save-modified))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
 
 
 # implicit rule for byte-compiling elisp files

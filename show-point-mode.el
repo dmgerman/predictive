@@ -75,7 +75,11 @@ A null prefix argument turns it off.
 
 Note that simply setting the minor-mode variable
 `predictive-which-dict-mode' is not sufficient to enable
-predictive mode."
+show-point-mode mode.
+
+When enabled, the value of `point' is displayed in the
+mode-line (after the line and column numbers, if those are being
+displayed too)."
 
   ;; initial value, mode-line indicator, and keymap
   nil nil nil
