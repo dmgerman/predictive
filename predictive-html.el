@@ -166,7 +166,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-restore-main-dict)
     ;; restore completion-dynamic-override-syntax-alist to saved setting
     (kill-local-variable 'completion-dynamic-override-syntax-alist)
-    (setq completion-dynamic-override-syntax-alist
+    (setq auto-completion-override-syntax-alist
 	  predictive-restore-override-syntax-alist)
     (kill-local-variable 'predictive-restore-override-syntax-alist)
     ;; remove other local variable settings
@@ -430,14 +430,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   
   ;; make "<", ">", and "&" do the right thing
   (setq predictive-restore-override-syntax-alist
-	completion-dynamic-override-syntax-alist)
+	auto-completion-override-syntax-alist)
   (make-local-variable 'completion-dynamic-override-syntax-alist)
-  (setq completion-dynamic-override-syntax-alist
-	(append completion-dynamic-override-syntax-alist
-		'((?< . (accept t word))
-		  (?> . (accept t none))
-		  (?& . (accept t word)))
-		))
+  (setq auto-completion-override-syntax-alist
+	(append '((?< . (word accept))
+		  (?> . (none accept))
+		  (?& . (word accept)))
+		auto-completion-override-syntax-alist))
 )
 
 

@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.4
+;; Version: 0.7.5
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.7.5
+;; * updated to conform to completion-ui.el version 0.7
+;; * renamed `predictive-latex-completion-add-to-regexp' to
+;;   `predictive-latex-completion-add-till-regexp'
+;; 
 ;; Version 0.7.4
 ;; * modified `predictive-latex-reparse-buffer' to kill local values of
 ;;   dictionary lists, to avoid duplicate dictionaries being added to them
@@ -241,6 +246,7 @@ When a document class is in the list, "
 ;; prevent bogus compiler warnings
 (eval-when-compile
   (defvar dict-latex-docclass)
+  (defvar dict-latex-bibstyle)
   (defvar TeX-master))
 
 
@@ -385,9 +391,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-main-dict)
     (setq predictive-main-dict predictive-restore-main-dict)
     (kill-local-variable 'predictive-restore-main-dict)
-    ;; restore completion-dynamic-override-syntax-alist to saved setting
-    (kill-local-variable 'completion-dynamic-override-syntax-alist)
-    (setq completion-dynamic-override-syntax-alist
+    ;; restore `auto-completion-override-syntax-alist' to saved setting
+    (kill-local-variable 'auto-completion-override-syntax-alist)
+    (setq auto-completion-override-syntax-alist
 	  predictive-restore-override-syntax-alist)
     (kill-local-variable 'predictive-restore-override-syntax-alist)
     ;; remove other local variable settings
@@ -434,13 +440,15 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (auto-overlay-load-compound-regexp
    `(start ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
 	   (dict . predictive-latex-math-dict) (priority . 40)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
    `(start ("^\\(\\\\\\[\\)" . 1)
 	   (dict . predictive-latex-math-dict) (priority . 40)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'display-math)
   (auto-overlay-load-compound-regexp
@@ -470,37 +478,39 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\ref{" (dict . predictive-latex-label-dict) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-dynamic-syntax-alist . ((?w . (add t word))
-					       (?_ . (add t word))
-					       (?  . (accept t none))
-					       (?. . (add t word))
-					       (t  . (reject t none))))
-	   (completion-dynamic-override-syntax-alist
-	    . ((?: . ((lambda ()
-			(predictive-latex-completion-add-to-regexp ":"))
-		      t word))
-	       (?_ . ((lambda ()
-			(predictive-latex-completion-add-to-regexp "\\W"))
-		      t word))
-	       (?} . (accept t none))))			       
+	   (auto-completion-syntax-alist . ((?w . (word add))
+					    (?_ . (word add))
+					    (?  . (none accept))
+					    (?. . (word add))
+					    (t  . (none reject))))
+	   (auto-completion-override-syntax-alist
+	    . ((?: . (word
+		      (lambda ()
+			(predictive-latex-completion-add-till-regexp ":"))))
+	       (?_ . (word
+		      (lambda ()
+			(predictive-latex-completion-add-till-regexp "\\W"))))
+	       (?} . (none accept))))
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\eqref{" (dict . predictive-latex-label-dict) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-dynamic-syntax-alist . ((?w . (add t word))
-				       (?_ . (add t word))
-				       (?  . (accept t none))
-				       (?. . (add t word))
-				       (t  . (reject t none))))
-	   (completion-dynamic-override-syntax-alist
-	    . ((?: . ((lambda ()
-			(predictive-latex-completion-add-to-regexp
-			 ":"))
-		      t word))
+	   (auto-completion-syntax-alist . ((?w . (word add))
+					    (?_ . (word add))
+					    (?  . (none accept))
+					    (?. . (word add))
+					    (t  . (none reject))))
+	   (auto-completion-override-syntax-alist
+	    . ((?: . (word
+		      (lambda ()
+			(predictive-latex-completion-add-till-regexp
+			 ":"))))
 	       (?} . (accept t none))))
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
@@ -510,30 +520,35 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\begin{" (dict . predictive-latex-env-dict) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\end{" (dict . predictive-latex-env-dict) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\text{"
 	   (dict . predictive-main-dict) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\documentclass\\(\\[.*\\]\\)?{"
 	   (dict . dict-latex-docclass) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   (auto-overlay-load-compound-regexp
    `(start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 	   (dict . dict-latex-bibstyle) (priority . 30)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'brace)
   ;; Note: regexps contain a lot of \'s because it has to check whether number
@@ -563,12 +578,14 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (auto-overlay-load-compound-regexp
    '(start "\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
 	   (dict . predictive-latex-preamble-dict) (priority . 20)
-	   (completion-menu . predictive-latex-construct-browser-menu))
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu))
    'predictive 'preamble)
   (auto-overlay-load-compound-regexp
    '(end "\\\\begin{document}"
 	   (dict . predictive-latex-preamble-dict) (priority . 20)
-	   (completion-menu . predictive-latex-construct-browser-menu))
+	   (completion-menu
+  . predictive-latex-construct-browser-menu))
    'predictive 'preamble)
 	   
   
@@ -584,7 +601,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    `(start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
 	    0 1)
 	   (dict . predictive-latex-math-dict) (priority . 10)
-	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (completion-menu
+	    . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
    'predictive 'environment)
   (auto-overlay-load-compound-regexp
@@ -644,160 +662,151 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (local-unset-key [?\\])
   (local-unset-key [?-])
   
-  ;; make "\", "$", "{" and "}" do the right thing
   (setq predictive-restore-override-syntax-alist
-	completion-dynamic-override-syntax-alist)
-  (make-local-variable 'completion-dynamic-override-syntax-alist)
-  (setq completion-dynamic-override-syntax-alist
-	(append
-	 completion-dynamic-override-syntax-alist
-	 '((?\\ . ((lambda ()
-		     (if (and (char-before) (= (char-before) ?\\)
-			      (or (not (char-before (1- (point))))
-				  (not (= (char-before (1- (point)))
-					  ?\\))))
-			 'add 'accept))
-		   t word))
-	   (?$  . (accept t none))
-	   (?_ . (accept t none))
-	   (?^ . (accept t none))
-	   (?{ . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (cond
-		     ((auto-overlays-at-point
-		       nil '(eq dict predictive-latex-env-dict))
-		      (complete-in-buffer ""))
-		     ((and (char-before) (= (char-before) ?\\))
-		      'word)
-		     (t 'none)))))
-	   (?} . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'word 'none))))
-	   (?\" . ((lambda ()
-		     (if (and (char-before) (= (char-before) ?\\))
-			 'add 'accept))
-		   (lambda ()
-		     (if (or (and (char-before) (= (char-before) ?\\))
-			     (not (fboundp 'TeX-insert-quote)))
-			 t
-		       (TeX-insert-quote nil)
-		       nil))
-		   (lambda ()
-		     (if (and (char-before (1- (point)))
-			      (= (char-before (1- (point))) ?\\))
-			 'word 'none))))
-	   (?' . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?( . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	     (?) . ((lambda ()
-		      (if (and (char-before) (= (char-before) ?\\))
-			  'add 'accept))
-		    t
+	auto-completion-override-syntax-alist)
+  (make-local-variable 'auto-completion-override-syntax-alist)
+  ;; get behaviours defined in `auto-completion-syntax-alist'
+  (let* ((behaviour (completion-lookup-behaviour nil ?.))
+	 (complete-behaviour (completion-get-completion-behaviour behaviour))
+	 (resolve-behaviour (completion-get-resolve-behaviour behaviour)))
+    ;; make "\", "$", "{" and "}" do the right thing
+    (setq auto-completion-override-syntax-alist
+	  (append
+	   `((?\\ . (word
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\)
+				(or (not (char-before (1- (point))))
+				    (not (= (char-before (1- (point)))
+					    ?\\))))
+			   'add ',resolve-behaviour))))
+	     (?$ . (none ,resolve-behaviour))
+	     (?_ . (none ,resolve-behaviour))
+	     (?^ . (none ,resolve-behaviour))
+	     (?{ . ((lambda ()
+		      (cond
+		       ((auto-overlays-at-point
+			 nil '(eq dict predictive-latex-env-dict))
+			(complete-in-buffer ""))
+		       ((and (char-before) (= (char-before) ?\\))
+			',complete-behaviour)
+		       (t 'none)))
 		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?} . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?\" . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))
+		     (lambda ()
+		       (if (or (and (char-before) (= (char-before) ?\\))
+			       (not (fboundp 'TeX-insert-quote)))
+			   t
+			 (TeX-insert-quote nil)
+			 nil))))
+	     (?' . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  'word 'none))))
-	   (?+ . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?, . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?- . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?\; . ((lambda ()
-		     (if (and (char-before) (= (char-before) ?\\))
-			 'add 'accept))
-		   t
-		   (lambda ()
-		     (if (and (char-before (1- (point)))
-			      (= (char-before (1- (point))) ?\\))
-			 'word 'none))))
-	   (?< . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?= . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?> . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   (?[ . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	     (?] . ((lambda ()
-		      (if (and (char-before) (= (char-before) ?\\))
-			  'add 'accept))
-		    t
+			  ',complete-behaviour 'none))
 		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?\( . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))))
+	     (?\) . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))))
+	     (?+ . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  'word 'none))))
-	   (?` . ((lambda ()
-		    (if (and (char-before) (= (char-before) ?\\))
-			'add 'accept))
-		  t
-		  (lambda ()
-		    (if (and (char-before (1- (point)))
-			     (= (char-before (1- (point))) ?\\))
-			'word 'none))))
-	   )))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?, . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?- . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?\; . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))))
+	     (?< . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?= . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?> . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+	     (?\[ . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))))
+	     (?\] . ((lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',complete-behaviour 'none))
+		     (lambda ()
+		       (if (and (char-before) (= (char-before) ?\\))
+			   'add ',resolve-behaviour))))
+	     (?` . ((lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',complete-behaviour 'none))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',resolve-behaviour))))
+ 	     )
+	   auto-completion-override-syntax-alist) ; append
+	  )
+    )
 )
 
 
@@ -1610,7 +1619,7 @@ they exist."
 
 
 
-(defun predictive-latex-completion-add-to-regexp (regexp)
+(defun predictive-latex-completion-add-till-regexp (regexp)
   "Add characters up to REGEXP from a completion candidate,
 then cause `completion-self-insert' to add the last typed
 character and re-complete.

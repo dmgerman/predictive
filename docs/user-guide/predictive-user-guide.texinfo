@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.18
+0.19
 @c --version--
 
 Copyright @copyright{} 2005--2007 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.18
+@subtitle Version 0.19
 @c --version--
 @author Toby Cubitt
 
@@ -79,11 +79,26 @@ liking.
 
 Completing Words
 
+* Overview::                    
 * Basic Completion Commands::   
 * Auto-Completion Mode::        
 * Dynamic Completion::          
 * Completion Hotkeys::          
-* Displaying a List of Candidates::  
+* Displaying Completions in the Echo Area ::  
+* Completion Tooltip::          
+* Pop-Up Frame::                
+* Completion Menu and Browser::  
+* Miscellaneous Options::       
+
+Overview
+
+* Basic Completion Commands::   
+* Auto-Completion Mode::        
+* Dynamic Completion::          
+* Completion Hotkeys::          
+* Displaying Completions in the Echo Area ::  
+* Completion Tooltip::          
+* Pop-Up Frame::                
 * Completion Menu and Browser::  
 * Miscellaneous Options::       
 
@@ -174,22 +189,23 @@ a sentence, based on grammar and usage), and perhaps even on higher
 levels. Predictive completion exploits this redundancy by attempting to
 complete what you are trying to type before you've finished typing it.
 
-The predictive completion mode described here is an add-on to the GNU
-Emacs editor, which implements a new minor-mode called @dfn{predictive
-completion mode} (@pxref{Minor Modes, , , emacs, GNU emacs
-manual}). When the predictive completion minor-mode is switched on,
+The predictive completion package described here is an add-on to the GNU
+Emacs editor, which implements a new minor-mode called
+@code{predictive-mode} (@pxref{Minor Modes, , , emacs, GNU emacs
+manual}). When this predictive completion minor-mode is switched on,
 Emacs will try to complete the word you are typing based on the
-characters typed so far. As you add characters, it looks up words
-starting with those characters in a dictionary, and offers to insert the
+characters typed so far. As you add characters, it can look up words
+starting with those characters in a dictionary, and offer to insert the
 most likely ones. How you choose which completion (if any) to insert
-depends on various settings, some more intrusive than others.
+depends on various customization settings, some more intrusive than
+others.
 
 Note that by only taking into account characters belonging to the
 current word when predicting how to complete it, much of the redundancy
 in language remains unexploited. This limitation is partly for
-simplicity. But also, some of the benefits of predictive completion
-would be lost if context (i.e. the preceding words and sentences) was
-also taken into account.
+simplicity, but also because some of the benefits of predictive
+completion would be lost if context (i.e. the preceding words and
+sentences) was also taken into account.
 
 @noindent
 What benefits does predictive completion bring?
@@ -310,48 +326,54 @@ Again, there is an autoload alternative:
 @cindex predictive mode, using
 
 Use the @command{predictive-mode} command to switch the predictive
-minor-mode on. The same command will also switch it off again.
+minor-mode on. The same command will also switch it off again. This
+section only covers (some of) the @emph{default} behaviour of
+@code{predictive-mode}. The way that @code{predictive-mode} works can be
+radically changed via numerous customization options, which are
+described in detail in the rest of this user-guide.
 @findex predictive-mode
 
 As you add characters to a word, predictive mode searches in a
 dictionary for words starting with those characters. There are a number
-of different ways to choose which word to use (if any) to complete what
-you've already typed.
+of different ways to choose which word (if any) should be used to
+complete what you've typed.
 
-With the default settings, the most likely completion is provisionally
-inserted in the buffer after the point, and highlighted to indicate that
-it has not yet been accepted. The most likely completion is updated as
-you add more characters to the word. Typing any end-of-word character
-(such as a space or a punctuation character) accepts the
+The most likely completion is provisionally inserted in the buffer after
+the point, and highlighted to indicate that it has not yet been
+accepted. The most likely completion is updated as you add more
+characters to the word. Use @kbd{C-RET} to accept a
 completion. @xref{Dynamic Completion}, for details.
 @findex completion-accept
 
 What if you don't want to use the most likely completion? As you type, a
-list of the ten most likely completions is displayed in the echo area,
-and after a short delay in a tooltip, ranked according to
-likelihood. Typing a number 0--9 will insert the corresponding
-completion. @xref{Completion Hotkeys}, and @ref{Displaying a List of
-Candidates} for details.
+list of the ten most likely completions is displayed in the echo area
+and, after a short delay, in a tooltip. They are ranked according to
+likelihood. Typing a number @kbd{0}--@kbd{9} will insert the
+corresponding completion. @xref{Completion Hotkeys}, @ref{Displaying
+Completions in the Echo Area}, and @ref{Completion Tooltip} for details.
+@cindex completions, selecting
+@cindex selecting completions
+@cindex completion, hotkeys
+@cindex hotkeys
 @findex completion-select
 
-Typing @kbd{M-Down} will display a menu from which you can select a
-completion (@pxref{Completion Menu and Browser}). From this menu, you
-can also bring up the completion browser menu, which hierarchically
-lists all possible completions (@pxref{Completion Menu and
-Browser}). (It can sometimes take a while to construct the completion
-browser, but you can always hit @kbd{C-g} to cancel
-it). @xref{Completion Menu and Browser}, for details.
-@findex completion-show-menu
+You can also display the completion tooltip manually, using
+@kbd{S-down}. When the tooltip is displayed, the @kbd{up} and @kbd{down}
+keys can be used to select a completion from the list in tooltip.
+@cidnex completion tooltip
+@cindex tooltip
+@findex completion-show-tooltip
 
-You can cycle through the available completions using @kbd{M-TAB} and
-@kbd{M-SHIFT-TAB}. As you cycle, the next available completion is
-provisionally inserted after the point and highlighted. Typing any
-end-of-word character accepts the completion, as usual.
+You can cycle forwards and backwards through the available completions
+even when the tooltip isn't displayed, using @kbd{M-TAB} or @kbd{M-/}
+and @kbd{M-SHIFT-TAB} or @kbd{M-?}. As you cycle, the next completion is
+provisionally inserted after the point and highlighted. @kbd{C-RET}
+accepts the completion, as usual.
 @findex completion-cycle
 
-Typing @kbd{TAB} will, by default, do traditional ``tab-completion'' on
-the word: the word will be completed up to the longest common prefix of
-the available completions.
+Hitting @kbd{TAB} whilst completing will perform traditional
+``tab-completion'' on the word: the word will be completed up to the
+longest common prefix of the available completions.
 @findex completion-tab-complete
 
 Another useful command is @kbd{C-TAB}. This accepts all the characters
@@ -362,28 +384,39 @@ word just needs a suffix adding, for instance.
 
 @xref{Basic Completion Commands}, for details of cycling and
 tab-completion.
+@cindex basic completion commands
+@cindex completion, basic commands
+@cindex commands, basic
 
-Finally, to get rid of a provisional completion and just leave the
-characters you've typed, use @kbd{C-SPC}.
-@findex completion-reject
+@kbd{M-Down} will display a menu from which you can select a completion
+(@pxref{Completion Menu and Browser}). There is also a @samp{Browser}
+menu item, which brings up the completion browser. This hierarchically
+lists @emph{all} possible completions, not just the most likely
+ones. (It can sometimes take a while to construct the completion
+browser, but you can always hit @kbd{C-g} to cancel
+it). @xref{Completion Menu and Browser}, for details.
+@cindex completion menu
+@cindex completion browser
+@cindex menu
+@findex completion-show-menu
+
+@kbd{C-Down} displays a pop-up frame, in which you can use the usual
+Emacs motion keys to select a completion. @kbd{M-Tab} or @kbd(M-/} in
+the pop-up frame toggles between displaying the most likely completions
+and displaying all possible completions. To get rid of the pop-up frame,
+use @kbd{C-Up}.
+@cindex completion pop-up frame
+@cindex pop-up frames
+@findex completion-popup-frame
 
 This ``Quick-Start'' describes the default behaviour. However,
 predictive completion mode can be heavily customized, allowing its
 behaviour to be radically changed. The many and various predictive
 completion mode customization options can be found in the
-@env{predictive} and @env{completion-ui} customization groups.
-
-For a start, all the features described above can be individually
-enabled and disabled. They can also be individually customized. For
-example, if you don't like the way completions are automatically
-accepted when an end-of-word character is typed, you can change things
-so that completions have to be accepted manually by hitting @kbd{ENTER},
-say. Or, if you don't want predictive completion mode to look for
-completions until you tell it to, you can turn off the automatic
-completion so that nothing will happen until you hit @kbd{M-TAB} to
-complete the word next to the point. If you like the idea of predictive
-completion, but don't like the way it works ``out-of-the-box'' the rest
-of this guide explains all the customization options in detail.
+@env{predictive} and @env{completion-ui} customization groups. If you
+like the idea of predictive completion, but don't like the way it works
+``out-of-the-box'' the rest of this guide explains all the options and
+features in detail.
 
 The predictive completion package comes with an English dictionary,
 which is used by default. However, this is only really included to make
@@ -406,41 +439,6 @@ writing. @xref{Dictionaries}.
 @cindex completing words
 @cindex completion
 
-As you type, predictive mode is continually searching behind the scenes
-for the most likely completions of the words you are typing. However,
-how you make use of these depends on how intrusive you want it to
-be. The many options and settings let you customize it to your needs.
-
-Predictive mode can work completely unobtrusively, so that using it has
-no discernible effect until you issue a command to insert a completion
-(@pxref{Basic Completion Commands}). It can be slightly more intrusive,
-so that you always see which completions are available, but can still
-ignore them and type normally (@pxref{Displaying a List of
-Candidates}). It can let you select a completion candidate by hitting a
-hotkey (@pxref{Completion Hotkeys}). Or it can work more intrusively
-still, by always provisionally inserting the most likely completion
-(@pxref{Dynamic Completion}). This is probably the most effective way to
-use predictive mode, but it does mean slightly changing the way you
-type.
-
-@menu
-* Basic Completion Commands::   
-* Auto-Completion Mode::        
-* Dynamic Completion::          
-* Completion Hotkeys::          
-* Displaying a List of Candidates::  
-* Completion Menu and Browser::  
-* Miscellaneous Options::       
-@end menu
-
-
-
-@node Basic Completion Commands
-@section Basic Completion Commands
-@cindex basic completion commands
-@cindex completion, basic commands
-@cindex commands, basic
-
 The minor-mode command @command{predictive-mode} toggles the mode on and
 off. With a positive prefix argument it switches the mode on, whilst a
 negative prefix argument turns it off and a zero prefix argument
@@ -449,11 +447,181 @@ convenience for use in hooks.
 @findex predictive-mode
 @findex turn-on-predictive-mode
 
+
+
+@menu
+* Overview::                    
+* Basic Completion Commands::   
+* Auto-Completion Mode::        
+* Dynamic Completion::          
+* Completion Hotkeys::          
+* Displaying Completions in the Echo Area ::  
+* Completion Tooltip::          
+* Pop-Up Frame::                
+* Completion Menu and Browser::  
+* Miscellaneous Options::       
+@end menu
+
+@node Overview
+@section Overview
+@cindex overview
+@cindex completion, overview
+
+Predictive mode is extremely flexible, and how you interact with it
+depends heavily on how you customize it. Broadly, there are two ways to
+use predictive mode: it can either do nothing until you ask it to
+complete a word, or it can automatically search for the most likely
+completions as you type. (You may have seen something similar to the
+latter on certain models of mobile phone, though predictive mode is far
+more powerful.)  This behaviour is controlled by enabling or disabling
+@command{auto-completion-mode} (@pxref{Auto-Completion Mode}). It is
+enabled for you automatically if the @env{predictive-auto-complete}
+customization option is enabled (the default).
+
+If you are using @command{auto-completion-mode}, you can (by default)
+continue to type normally. The completion candidates will be displayed,
+but will not be accepted unless you do so explicitly using
+@command{completion-accept}, bound to @kbd{C-RET}. However, since it
+learns as you type, predictive mode can become very good at predicting
+the word you want, and it can become tedious to have to hit @kbd{C-RET}
+all the time. In that case, you can customize
+@env{auto-completion-syntax-alist} so that typing a punctuation or
+white-space character automatically accepts the current completion,
+before inserting the character. This lets you skip typing the rest of
+the characters in a word as soon as predictive mode has found the
+completion you want. However, the down side is that you have to slightly
+change the way you type, and it can take a little while until your
+fingers ``get used to it''. If you need to reject a completion candidate
+when @command{auto-completion-mode} is enabled, you can do so using
+@kbd{C-SPC}.
+@cindex completion, automatic
+@cindex auto-completion mode
+@findex auto-completion-mode
+
+If aren't using @command{auto-completion-mode}, you will need to call
+the @command{complete-word-at-point} command whenever you want to
+complete the word at or next to the point. This is bound to @kbd{M-TAB},
+@kbd{M-SHIFT-TAB}, @kbd{M-/} and @kbd{M-?}. There are then two
+``styles'' of behaviour: completions can either be ephemeral, acting
+purely as a visual indicator, and disappearing unless you explicitly
+accept them using @command{completion-accept}, bound to
+@kbd{C-RET}. (You may be used to this style of behaviour from word
+processing software such as OpenOffice Writer). Or alternatively,
+completions can be permanent, so that completing a word really does
+insert those characters into the buffer unless you explicitly reject it
+using @command{completion-reject}, bound to @kbd{C-DEL}. (This the more
+traditional Emacs-style behaviour, that you may be used to from using
+@command{dabbrev}s, for example.) The choice is yours, and is controlled
+by the @env{completion-resolve-behaviour} customization option
+(@pxref{Miscelaneous Options}). (Note that these two different
+``styles'' of behaviour are mainly relevant when Dynamic Completion is
+enabled, as it is by default. This is described below.)
+@findex complete-word-at-point
+
+Whether you are using @command{auto-completion-mode} or not, there are
+various ways to display and select completions. All of them can be
+enabled or disabled indepentently, and many of them can be extensively
+customized.
+
+Perhaps the simplest is to display the most likely completion in the
+buffer (@pxref{Dynamic Completion}). You can then cycle through the
+other completion candidates using the @command{completion-cycle}
+command. @kbd{M-TAB} and @kbd{M-/} cycle forwards, whereas
+@kbd{M-SHIFT-TAB} and @kbd{M-?} cycle backwards. (These are the same key
+bindings used to manually complete the word at point. Hitting them for
+the first time will bring up the possible completions, hitting them
+again will cycle.)
+
+You can also insert a completion candidate directly, without having to
+cycle through them until you get to the one you want, by using a
+completion hot-key (@pxref{Completion Hotkeys}). By default, the
+hot-keys are the number keys @kbd{0}--@kbd{9}, which insert the first
+through to the tenth candidate, respectively.
+
+Of course, you won't know which completion candidate you want unless you
+can see which candidates are available! The candidates can be displayed
+in the echo area, and/or in a tooltip below the point (@pxref{Displaying
+a List of Candidates}). When completion hot-keys are enabled, these
+also indicate which completion candidate corresponds to which hot-key.
+
+The completion tooltip is more than just a visual reminder of which
+completions are available. When it is displayed, you can select a
+completion from the list using the @kbd{up} and @kbd{down} arrow
+keys. When completing a word, you can display the tooltip at any time
+using @command{completion-show-tooltip}, bound to @kbd{S-down}.
+
+A slightly more powerful alternative to the completion tooltip is a
+pop-up frame, displayed using @command{completion-popup-frame}, bound to
+@kbd{C-down} (@pxref{Pop-Up Frame}. This lists the completion candidates
+in a separate Emacs frame positioned below the point, and you can use
+the usual Emacs motion keys to move through the list and select a
+candidate. However, you can also toggle between displaying just the most
+likely completion candidates and displaying all possible completions,
+using @command{completion-popup-frame-toggle-all}, bound to @kbd{M-Tab}
+and @kbd{M-/}. To get rid of a pop-up frame, use
+@command{completion-popup-frame-cancel}, bound to @kbd{C-up} and
+@kbd{M-up}. Note that all of these key bindings are only active when the
+pop-up frame has the focus. If you manually switch the focus back to the
+original frame, the pop-up frame will disappear as soon as you type
+anything.
+
+The completion menu is the most flexible way of selecting completions,
+and can be displayed using @command{completion-show-menu}, bound to
+@kbd{M-down}. Again, it displays the completion candidates and lets you
+select them, and like the pop-up frame, it also allows you to see all
+possible completions, rather than just displaying the most likely ones,
+by bringing up the completion browser. But selecting the @samp{Browser}
+menu item doesn't just display all possible completions in a big
+list. Instead, it organises them hierarchically, making it easy to
+browse through them until you find the one you want.
+
+The completion tooltip, pop-up frame, and menu all display a list of
+completion candidates, but each has its own advantages and
+disadvantages. The tooltip is visually and functionally least intrusive,
+but also gives you fewer ways to find the completion you want. The
+pop-up frame is encumbered by your window manager's frame decoration
+(though some window managers allow you to disable this for specific
+windows, which are called frames in Emacs). But it can display large
+numbers of completion candidates far more effectively than a
+tooltip. The completion menu and completion browser make finding the
+desired completion much easier, especially when you're not sure
+precisely what it is you're looking for. But menus steal the keyboard
+focus in Emacs, so you can no longer type in the buffer until you
+dismiss the menu.
+
+You can select one of these three, tooltip, pop-up frame or menu, to be
+displayed automatically when you complete a word, by setting the
+@env{completion-auto-show} customization option. You can optionally
+leave a short delay before it is displayed, by setting
+@env{completion-auto-show-delay}@footnote{Although you can choose to
+display the completion menu automatically, because it steals the
+keyboard focus this probably isn't all that useful, at least not without
+a long delay.}.
+
+
+@menu
+* Basic Completion Commands::   
+* Auto-Completion Mode::        
+* Dynamic Completion::          
+* Completion Hotkeys::          
+* Displaying Completions in the Echo Area ::  
+* Completion Tooltip::          
+* Pop-Up Frame::                
+* Completion Menu and Browser::  
+* Miscellaneous Options::       
+@end menu
+
+
+@node Basic Completion Commands
+@section Basic Completion Commands
+@cindex basic completion commands
+@cindex completion, basic commands
+@cindex commands, basic
+
 @menu
 * Inserting Completions::       
 * Deleting Characters::         
 @end menu
-
 
 
 @node Inserting Completions
@@ -463,26 +631,30 @@ convenience for use in hooks.
 
 @ftable @command
 @item complete-word-at-point
-(@kbd{M-TAB}, @kbd{M-SHIFT-TAB}) Find completions for the word at or
-next to the point.
+(@kbd{M-TAB}, @kbd{M-SHIFT-TAB}, @kbd{M-/}, @kbd{M-?}) Find completions
+for the word at or next to the point.
 
 @item completion-cycle
-(@kbd{M-TAB}, @kbd{M-SHIFT-TAB}) Cycle through available completion
-candidates. When supplied with a prefix argument, it will jump that many
-completions forwards (or backwards if the prefix argument is negative).
+(@kbd{M-TAB}, @kbd{M-SHIFT-TAB}, @kbd{M-/}, @kbd{M-?}) Cycle through
+available completion candidates. When supplied with a prefix argument,
+it will jump that many completions forwards (or backwards if the prefix
+argument is negative). @kbd{M-/} and @kbd{M-?} cycle backwards (so a
+negative argument will cause them to jump @emph{forwards} that number of
+completions).
 
 @item completion-accept
-Accept the current completion, and move the point just beyond it. If
-@env{predictive-auto-learn} and/or @env{predictive-auto-add} are
-enabled, predictive mode will also learn the word (@pxref{Dictionary
-Learning}).
+(@kbd{C-RET}) Accept the current completion, and move the point just
+beyond it. If @env{predictive-auto-learn} and/or
+@env{predictive-auto-add} are enabled, predictive mode will also learn
+the word (@pxref{Dictionary Learning}).
 
 @item completion-reject
-(@kbd{C-SPC}) Abandon the current completion, removing the provisionally
-inserted (i.e. highlighted) characters. If a prefix argument is
-supplied, predictive mode will also learn the resulting word, i.e. the
-prefix with the provisional completion removed (@pxref{Dictionary
-Learning}).
+(@kbd{C-Backspace}, @kbd{C-SPC}) Abandon the current completion,
+removing the provisionally inserted (i.e. highlighted) characters. If a
+prefix argument is supplied, predictive mode will also learn the
+resulting word, i.e. the prefix with the provisional completion removed
+(@pxref{Dictionary Learning}). The @kbd{C-SPC} binding is only active in
+@commad{auto-completion-mode} (@pxref{Auto-Completion Mode}).
 
 @item completion-tab-complete
 (@kbd{TAB}) Do ``traditional'' tab-completion, i.e. insert the longest
@@ -497,28 +669,14 @@ string.
 @findex completion-scoot-ahead
 @end ftable
 
-Unless you are using @command{auto-completion-mode},
-@command{complete-word-at-point}, bound to both @kbd{M-TAB} and
-@kbd{M-SHIFT-TAB} by default, must be used to start completing a
-word. After running @command{complete-word-at-point},
-@command{completion-cycle} is probably the most useful completion
-command when dynamic completion and completion hotkeys are disabled. It
-cycles through the available completions for the current word,
-provisionally inserting them after the point and highlighting them to
-indicate they have not been accepted yet. In the default key bindings,
-@kbd{M-TAB} cycles forwards and @kbd{M-SHIFT-TAB} cycles backwards.
+Note that, apart from the @command{complete-word-at-point} bindings,
+none of the other key bindings are active until you have started
+completing a word, either using @command{complete-word-at-point} or
+automatically if you are using @command{auto-completion-mode}
+(@pxref{Auto-Completion Mode}).
+@cindex auto-completion mode
+@cindex completion, automatic
 @findex auto-completion-mode
-
-To accept a completion, simply type any end-of-word character
-(@pxref{Character Syntax and Key Bindings}), or use the
-@command{completion-accept} command. To reject a completion and end the
-completion process, use @command{completion-reject}, bound to
-@kbd{M-SPC} by default.
-
-Note that, apart from the @command{complete-word-at-point} binding, none
-of the other key bindings are active until you have started completing a
-word.
-
 
 
 @node Deleting Characters
@@ -537,17 +695,19 @@ Reject current completion, if there is one, and delete
 backwards. A prefix argument sets the number of characters to delete. If
 this deletes into a word and @command{auto-completion-mode} is enabled,
 complete what remains of that word.
+@cindex completion, automatic
+@cindex auto-completion mode
 @findex auto-completion-mode
 
 @item completion-backward-delete-char-untabify
 (@kbd{DEL}) Similar to @command{completion-backward-delete-char}, but
-changes tabs to spaces.
+changes tabs to spaces as it deletes.
 
 @item completion-kill-word (@kbd{C-<delete>})
 @item completion-kill-sentence
 @item completion-kill-sexp
 @item completion-kill-paragraph
-Similar to @command{completion-delete-char}, only kill forward until the
+Similar to @command{completion-delete-char}, but kill forward until the
 end of the word/sentence/sexp/paragraph, instead of deleting individual
 characters.
 
@@ -555,7 +715,7 @@ characters.
 @item completion-backward-kill-sentence
 @item completion-backward-kill-sexp
 @item completion-backward-kill-paragraph
-Similar to @command{completion-backward-delete-char}, only kill backward
+Similar to @command{completion-backward-delete-char}, but kill backward
 until the end of the word/sentence/sexp/paragraph, instead of deleting
 individual characters.
 @end ftable
@@ -566,9 +726,8 @@ present in the region being deleted. If auto completion mode is enabled,
 the backwards deletion commands also re-complete any remaining prefix
 when they delete backwards into part of a word (@pxref{Auto-Completion
 Mode}). In all other respects, these commands are identical to the
-equivalent standard deletion commands with similar names.
+equivalent standard deletion commands with corresponding names.
 @findex backward-delete
-@findex auto-completion-mode
 
 
 
@@ -578,14 +737,14 @@ equivalent standard deletion commands with similar names.
 @cindex auto-completion mode
 @cindex completion, automatic
 
-When the @command{auto-completion} minor mode is enabled by running the
+When the @command{auto-completion} minor mode is enabled by calling the
 @command{auto-completion-mode} command, predictive mode will
 automatically look for completions of words as you type. This is
 especially useful when used in conjunction with dynamic completion
 (@pxref{Dynamic Completion}). If you would like
 @command{auto-completion-mode} to be enabled automatically whenever
 predictive mode is enabled, set the @env{predictive-auto-complete}
-variable.
+variable (set by default).
 
 @ftable @command
 @item auto-completion-mode
@@ -600,10 +759,37 @@ also automatically enable or disable @command{auto-completion-mode}, without
 needing to run the @command{auto-completion-mode} command manually.
 @end vtable
 
-The following variables control the behaviour of
+Word-constituent characters are added to the current word before finding
+new completions. The current syntax table (@pxref{Syntax, , , emacs, GNU
+Emacs Manual}) determines which characters are word-constituents and
+which are not (although the behaviour of individual characters can be
+overridden).
+
+By customizing @env{auto-completion-syntax-alist}, you can make
+punctuation and white-space characters automatically accept the current
+completion. If you want to exceptionally insert a punctuation character
+as though it were a word-constituent (such as the @samp{.} in
+@samp{e.g.}), you can often prefix the character key with @kbd{M-}. The
+bindings @kbd{M-.} and @kbd{M--} @c and @kbd{M-/}
+are already set up by default, but you can easily add more using the
+@command{completion-define-word-constituent-binding} convenience
+function in your @file{.emacs} file. @xref{Character Syntax and Key
+Bindings}, for more details about the syntax and key binding features.
+@findex completion-define-word-constituent-binding
+
+The following variables affect the behaviour of
 @command{auto-completion-mode}:
 
 @vtable @env
+@item auto-completion-syntax-alist
+Whether @command{auto-completion-mode} allows you to type normally,
+ignoring the provisional completions until you want to use one (select
+@samp{type normally} in the customization buffer), or whether
+punctuation characters automatically accept the current provisional
+completion before the character is inserted (select @samp{punctuation
+accepts} in the customization buffer). For full details, see
+@xref{Character Syntax and Key Bindings}.
+
 @item auto-completion-min-chars
 Minimum number of characters that must be typed before the various
 completion mechanisms are activated when using
@@ -636,39 +822,27 @@ delete key is held down continuously. Default is 0.1 seconds.
 
 Dynamic completion is controlled by the @env{completion-use-dynamic}
 customisation variable. When it is non-nil, the most likely completion
-is provisionally inserted in the buffer after the point and highlighted
-to indicate that it has not yet been accepted. If
-@command{auto-completion-mode} is enabled, typing more word-constituent
-characters will add them to the word, and update the most likely
-completion (@pxref{Auto-Completion Mode}). Typing any end-of-word
-character (such as a space or a punctuation character) will accept the
-completion. Typing @kbd{M-SPC} will reject the completion and insert a
-space.
+is provisionally inserted in the buffer after the point and
+highlighted. If @command{auto-completion-mode} is enabled, typing more
+word-constituent characters will add them to the word, updating the most
+likely completion (@pxref{Auto-Completion Mode}).
+@cindex completion, automatic
+@cindex auto-completion mode
 @findex auto-completion-mode
 
-The current syntax table (@pxref{Syntax, , , emacs, GNU Emacs Manual})
-determines which characters are word-constituents and which are not
-(although the behaviour of individual characters can be overridden). If
-you want to exceptionally insert a punctuation character as though it is
-a word-constituent, such as the @samp{.} in @samp{e.g.}, without
-changing the default behaviour, you can often prefix the character key
-with @kbd{M-}. The bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} are
-already set up by default, but you can easily add more using the
-@command{completion-define-word-constituent-binding} convenience
-function in your @file{.emacs} file. @xref{Character Syntax and Key
-Bindings}, for more details about all the syntax and key binding
-features.
-@findex completion-define-word-constituent-binding
-
 Note that since the @command{completion-reject} command ends the
-completion process, if you want to find completions for the word again
-you have to do it manually with @command{complete-word-at-point} even
-when @command{auto-completion-mode} is enabled. @xref{Inserting
+completion process, if you want to find completions for the same prefix
+again you have to do it manually with @command{complete-word-at-point}
+even when @command{auto-completion-mode} is enabled. @xref{Inserting
 Completions}, and @ref{Auto-Completion Mode}.
 @findex complete-word-at-point
 @findex auto-completion-mode
 
 @vtable @env
+@item completion-use-dynamic
+When non-nil, enable dynamic completion, which provisionally inserts the
+most likely conpletion in the buffer.
+
 @item completion-dynamic-face
 The face used to highlight the provisional dynamic completion
 (@pxref{Dynamic Completion}).
@@ -684,16 +858,20 @@ The face used to highlight the provisional dynamic completion
 
 When the customisation variable @env{completion-use-hotkeys} is non-nil,
 you will be able to select a completion by typing a single character
-(the numerical characters 0--9 are used by default).
+(the numerical characters @kbd{0}--@kbd{9} are used by default).
 
 You will probably also want to display a list of the possible
-completions, so that you know which completion each character will
-select (@pxref{Displaying a List of Candidates}).
+completions, so that you know which completion will be selected by each
+of these ``hotkeys'' (@pxref{Displaying Completions in the Echo Area}).
 
 @noindent
 The following variables affect the behaviour of the completion hotkeys:
 
 @vtable @env
+@item completion-use-hotkeys
+When non-nil, enable completion hotkeys, allowing completion candidates
+to be selected by hitting a single key.
+
 @item completion-hotkey-list
 List of keys to use for selecting completions. Default is numerical
 characters 0 to 9. Note that this variable must be set @emph{before}
@@ -701,46 +879,67 @@ loading the predictive mode libraries, e.g. in your @file{.emacs}
 file. @xref{Keymaps and Key Bindings}.
 @end vtable
 
-However many characters are in @env{completion-hotkey-list}, there
-cannot be more completions available than the number actually found!
-The maximum number to find is limited by
+Of course, however many characters are in @env{completion-hotkey-list},
+there cannot be more completions available than the number actually
+found! The maximum number to find is limited by
 @env{predictive-max-completions}, @ref{Miscellaneous Options}.
 @vindex predictive-max-completions
 
 
 
 
-@node Displaying a List of Candidates
-@section Displaying a List of Candidates
+@node Displaying Completions in the Echo Area 
+@section Displaying Completions in the Echo Area
 @cindex completion help-echo
-@cindex completion tooltip
 @cindex help-echo
+@cindex displaying completion candidates
+@cindex completion, displaying candidates
+@cindex completion, displaying list of
+@cindex completion, echo area
+@cindex echo area
+
+If the customisation variable @env{completion-use-help-echo} is non-nil,
+a list of completion candidates is displayed in the echo
+area. If @env{completion-use-hotkeys} is also enabled
+(@pxref{Completion Hotkeys}, the hot-key characters will be displayed
+next to the completions they select.
+
+@vtable @env
+@item completion-use-help-echo
+When non-nil, a list of completion candidates (along with the hotkeys
+that select them, if enabled) is displayed in the echo area.
+@end vtable
+
+
+
+
+@node Completion Tooltip
+@section Completion Tooltip
+@cindex completion tooltip
 @cindex tooltip
 @cindex displaying completion candidates
 @cindex completion, displaying candidates
 @cindex completion, displaying list of
 
-If the customisation variable @env{completion-use-help-echo} is non-nil,
-a list of completion candidates to be displayed in the echo
-area. Similarly, if the customisation variable @env{completion-tooltip}
-is non-nil, completion candidates will be displayed in a tooltip beneath
-the point. If @env{completion-use-hotkeys} is also enabled, hotkey
-characters will be displayed next to the completions they select.
+Calling @command{completion-show-tooltip} when completing, bound to
+@kbd{S-Down}, displays a list of available completions in a tooltip. The
+@kbd{up} and @kbd{down} arrow keys can then be used to select a
+completion from the list. The following variables affect the completion
+tooltip:
 
-The following variables control the completion tooltip:
+The tooltip can also be displayed automatically when completing,
+optionally after a time-delay. @cref{Auto-Show a List of Completions}.
 
 @vtable @env
-@item completion-tooltip-delay
-The number of seconds Emacs must be idle before the completion tooltip
-is displayed. If nil, the tooltip is displayed immediately. Default is 3
-seconds.
-
 @item completion-tooltip-timeout
-The number of seconds to display the tooltip. Default is 15.
+The number of seconds to display the tooltip. The tooltip is hidden
+automatically when it is no longer needed, but it is impossible to
+display a tooltip indefinitely in Emacs. The work-around is to set this
+to a very large value. Default is 86400.
 
 @item completion-tooltip-offset
 A cons cell containing the number of pixels (an integer) by which to
-offset the tooltip by in the x and y directions (car and cdr
+offset the tooltip by in the x and y directions (car and cdr,
 respectively).
 
 @item completion-tooltip-face
@@ -751,18 +950,70 @@ The face to use in the tooltip. Only the @code{:foreground} and
 
 
 
+@node Pop-Up Frame
+@section Pop-Up Frame
+@cindex pop-up frame
+@cindex completion pop-up frame
+
+Calling @command{completion-popup-frame} when completing, bound to
+@kbd{C-Down}, displays the available completions in a separate Emacs
+frame positioned below the point. You can then use the usual Emacs
+motion keys to select a completion candidate and provisionally insert it
+in the buffer (@kbd{up}, @kbd{down}, @kbd{M-p}, @kbd{M-n}, @kbd{C-p},
+@kbd{C-n}, @kbd{pageup}, @kbd{C-v}, @kbd{M-v}, @kbd{pagedown},
+@kbd{home}, @kbd{M-<}, @kbd{end} and @kbd{M->}; you can also supply
+numerical optional arguments to these, as usual).
+
+You can also toggle between displaying just the most likely completions
+or displaying all possible completions using
+@command{completion-popup-toggle-all}, bound to @kbd{M-tab} and
+@kbd{M-/}. If there are a lot of possible completions, it can take a
+while before they're displayed. If it's taking too long, use @kbd{C-g}
+to cancel. To dismiss the pop-up frame, use
+@command{completion-popup-frame-dismiss}, bound to @kbd{C-up} and
+@kbd{M-up}.
+
+The pop-up frame can also be displayed automatically when completing,
+optionally after a time-delay. @cref{Auto-Show a List of Completions}.
+
+@ftable @command
+@item completion-popup-frame
+(@kbd{C-down}) Display completion candidates in a pop-up frame.
+
+@item completion-popup-frame-toggle-all
+(@kbd{M-tab}, @kbd{M-/}) Toggle between displaying the most likely
+completion candidates and displaying all possible completions.
+
+@item completion-popup-frame-dismiss
+(@kbd{C-up}, @kbd{M-up}) Dismiss the pop-up frame.
+@end ftable
+
+The following variables affect the pop-up frame:
+
+@vtable @env
+@item completion-popup-frame-max-height
+An integer specifying the maximum height (in rows) of pop-up frames.
+
+@item completion-popup-frame-offset
+A cons cell containing the number of pixels (an integer) by which to
+offset the pop-up frame by in the x and y directions (car and cdr,
+respectively).
+@end vtable
+
+
+
+
 @node Completion Menu and Browser
 @section Completion Menu and Browser
 @cindex completion menu
 @cindex completion browser
 
-When @env{completion-use-menu} is non-nil, running
-@command{completion-show-menu} (or hitting @kbd{M-Down}) when completing
-will bring up the completion menu, from which you can select a
-completion to insert. If @env{completion-use-hotkeys} is enabled, the
-menu will also display the hotkeys next to the completions they select,
-although you will have to exit the menu before you can use them
-(@pxref{Completion Hotkeys}).
+Calling @command{completion-show-menu} when completing, bound to
+@kbd{M-Down}, will bring up the completion menu, from which you can
+select a completion to insert. If @env{completion-use-hotkeys} is
+enabled, the menu will also display the hotkeys next to the completions
+they select, although you will have to exit the menu before you can use
+them (@pxref{Completion Hotkeys}).
 
 The completion menu also contains a @code{Browser} entry, which replaces
 the completion menu with the completion browser. This hierarchically
@@ -771,16 +1022,19 @@ lists @emph{all} possible completions, irrespective of the setting of
 it's taking too long to construct the browser, you can hit @kbd{C-g} to
 cancel it.
 
+The completion menu can be displayed automatically when completing,
+optionally after a time-delay, though because it steals the keyboard
+focus this is less useful than auto-displaying the tooltip or pop-up
+frame. @cref{Auto-Show a List of Completions}.
+
 The following variables affect the behaviour of the completion menu and
 browser:
 
 @vtable @env
-@item completion-auto-show-menu
-When non-nil, the completion menu will automatically be displayed
-whenever completion is invoked. Since menus steal the keyboard focus
-from Emacs, this is unusable if @command{auto-completion-mode} is
-enabled (@pxref{Auto-Completion Mode}, but may be useful if
-auto-completion is not being used.
+@item completion-menu-offset
+A cons cell containing the number of pixels (an integer) by which to
+offset the menu by in the x and y directions (car and cdr,
+respectively).
 
 @item completion-browser-max-items
 Maximum number of completions to display in a completion browser
@@ -803,6 +1057,40 @@ instance.
 
 
 
+@section Auto-Show a List of Completions
+@node Auto-Show a List of Completions
+@cindex auto-show a list of completions
+@cindex list of completions, automatically showing
+@cindex completion, auto-show
+@cindex completion tooltip, auto-show
+@cindex tooltip, auto-show
+@cindex completion pop-up frame, auto-show
+@cindex pop-up frame, auto-show
+@cindex completion menu, auto-show
+@cindex menu, auto-show
+
+One out of the completion tooltip, pop-up frame, or menu can be
+displayed automatically when you start completing (it makes no sense to
+display more than one of them at a time; they would simply mask each
+other). It can either be displayed immediately, or only after Emacs has
+been idle for a number of seconds. The following variables control this
+feature:
+
+@vtable @env
+@item completion-auto-show
+When set to 'tooltip, 'pop-up or 'menu, the corresponding list of
+completions is displayed automatically when completing. When nil,
+nothing is displayed automatically (they can still be displayed manually
+when required).
+
+@item completion-auto-show-delay
+Number of seconds (integer) that Emacs must be idle before the list of
+completions is displayed.
+@end vtable
+
+
+
+
 @node Miscellaneous Options
 @section Miscellaneous Options
 @cindex miscellaneous options
@@ -812,6 +1100,57 @@ instance.
 The following variables affect the overall behaviour of predictive mode:
 
 @vtable @env
+@item completion-resolve-behaviour
+Determines what to do with dynamics completions that have not explicitly
+been accepted or rejected. The options are: @code{'leave}, which just
+leaves the old provisional completion in place to return to later if you
+so desire, @code{'accept} and @code{'reject}, which accept or reject the
+completion, and @code{'ask}, which asks you whether you want to accept
+or reject.
+@end vtable
+
+@env{completion-resolve-behaviour} controls what happens when you move
+the point away from a provisional dynamic completion (@pxref{Dynamic
+Completion}) and start typing elsewhere in the buffer. When
+@command{auto-completion-mode} is disabled, it also determines how the
+@emph{current} dynamic completion behaves. If
+@env{completion-resolve-behaviour} is set to @code{'reject}, the current
+dynamic completion only serves as a visual indicator; it disappears
+unless you explicitly accept it. If @env{completion-resolve-behaviour}
+is set to anything else, dynamic completions really are part of the
+buffer, and you must explicitly reject them to get rid of the inserted
+characters.
+
+There is one exception to this behaviour: whether or not
+@command{auto-completion-mode} is enabled, if you move the point to
+somewhere @emph{within} a dynamic completion and start typing, that
+completion is always accepted. This is almost always what you intended,
+and leads to less surprises.
+@cindex completion, automatic
+@cindex auto-completion mode
+@findex complete-word-at-point
+
+@vtable @env
+@item completion-overwrite
+When non-nil, completions overwrite the rest of the word after point,
+both when you manually call @command{complete-word-at-point} with the
+point positioned in the middle of a word, and when
+@command{auto-completion-mode} is enabled and you type a new character
+in the middle of a word. Enabled by default.
+@end vtable
+@findex complete-word-at-point
+
+Predictive mode doesn't play all that well with
+@command{overwrite-mode}. The @env{completion-overwrite} option
+implements an intelligent, partial over-write behaviour for
+completions. This only has an effect if you try to start completing with
+the point in the middle of a word. When @env{completion-overwrite} is
+enabled, the part of the word at point that comes after the point will
+be over-written by the completion. When disabled, the completion is
+simply inserted in the middle of the word, without deleting the rest of
+it.
+
+@vtable @env
 @item completion-max-candidates
 Maximum number of completions to find. Default is 10.
 @end vtable
@@ -819,8 +1158,9 @@ Maximum number of completions to find. Default is 10.
 Setting @env{completion-max-candidates} to a large number is probably
 not useful, and will slow predictive mode down. It is easier to type a
 few extra characters than cycle through lots of completions, and the
-number available via hotkeys is limited by the number of characters that
-can be used to select them (@pxref{Completion Hotkeys}).
+number available directly via hotkeys is limited by the number of keys
+you are prepared to set aside for selecting completions
+(@pxref{Completion Hotkeys}).
 
 @vtable @env
 @item predictive-ignore-initial-caps
@@ -833,17 +1173,6 @@ Only the @emph{first} capital letter of a string is ignored. Thus typing
 @kbd{A} would find @samp{and} (which would complete to @samp{And}),
 @samp{Alaska} and @samp{ANSI}, but typing @kbd{AN} would only find
 @samp{ANSI}, whilst typing @kbd{a} would only find @samp{and}.
-
-@vtable @env
-@item completion-resolve-old-method
-Determines what to do with a provisional completion if you move the
-point away from it and start typing elsewhere. The options are:
-@code{'leave}, which just leaves the old provisional completion in place
-to return to later if you so desire, @code{'accept} and @code{'reject},
-which accept or reject the old completion, and @code{'ask}, which asks
-you whether you want to accept or reject.
-@end vtable
-
 
 
 
