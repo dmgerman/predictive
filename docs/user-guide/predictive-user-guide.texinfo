@@ -88,6 +88,7 @@ Completing Words
 * Completion Tooltip::          
 * Pop-Up Frame::                
 * Completion Menu and Browser::  
+* Auto-Show a List of Completions::  
 * Miscellaneous Options::       
 
 Overview
@@ -360,7 +361,7 @@ Completions in the Echo Area}, and @ref{Completion Tooltip} for details.
 You can also display the completion tooltip manually, using
 @kbd{S-down}. When the tooltip is displayed, the @kbd{up} and @kbd{down}
 keys can be used to select a completion from the list in tooltip.
-@cidnex completion tooltip
+@cindex completion tooltip
 @cindex tooltip
 @findex completion-show-tooltip
 
@@ -401,7 +402,7 @@ it). @xref{Completion Menu and Browser}, for details.
 @findex completion-show-menu
 
 @kbd{C-Down} displays a pop-up frame, in which you can use the usual
-Emacs motion keys to select a completion. @kbd{M-Tab} or @kbd(M-/} in
+Emacs motion keys to select a completion. @kbd{M-Tab} or @kbd{M-/} in
 the pop-up frame toggles between displaying the most likely completions
 and displaying all possible completions. To get rid of the pop-up frame,
 use @kbd{C-Up}.
@@ -459,6 +460,7 @@ convenience for use in hooks.
 * Completion Tooltip::          
 * Pop-Up Frame::                
 * Completion Menu and Browser::  
+* Auto-Show a List of Completions::  
 * Miscellaneous Options::       
 @end menu
 
@@ -513,7 +515,7 @@ using @command{completion-reject}, bound to @kbd{C-DEL}. (This the more
 traditional Emacs-style behaviour, that you may be used to from using
 @command{dabbrev}s, for example.) The choice is yours, and is controlled
 by the @env{completion-resolve-behaviour} customization option
-(@pxref{Miscelaneous Options}). (Note that these two different
+(@pxref{Miscellaneous Options}). (Note that these two different
 ``styles'' of behaviour are mainly relevant when Dynamic Completion is
 enabled, as it is by default. This is described below.)
 @findex complete-word-at-point
@@ -541,14 +543,16 @@ through to the tenth candidate, respectively.
 Of course, you won't know which completion candidate you want unless you
 can see which candidates are available! The candidates can be displayed
 in the echo area, and/or in a tooltip below the point (@pxref{Displaying
-a List of Candidates}). When completion hot-keys are enabled, these
-also indicate which completion candidate corresponds to which hot-key.
+Completions in the Echo Area}, and @pxref{Completion Tooltip}). When
+completion hot-keys are enabled, these also indicate which completion
+candidate corresponds to which hot-key.
 
 The completion tooltip is more than just a visual reminder of which
 completions are available. When it is displayed, you can select a
 completion from the list using the @kbd{up} and @kbd{down} arrow
 keys. When completing a word, you can display the tooltip at any time
-using @command{completion-show-tooltip}, bound to @kbd{S-down}.
+using @command{completion-show-tooltip}, bound to
+@kbd{S-down}. @xref{Completion Tooltip}.
 
 A slightly more powerful alternative to the completion tooltip is a
 pop-up frame, displayed using @command{completion-popup-frame}, bound to
@@ -654,7 +658,7 @@ removing the provisionally inserted (i.e. highlighted) characters. If a
 prefix argument is supplied, predictive mode will also learn the
 resulting word, i.e. the prefix with the provisional completion removed
 (@pxref{Dictionary Learning}). The @kbd{C-SPC} binding is only active in
-@commad{auto-completion-mode} (@pxref{Auto-Completion Mode}).
+@command{auto-completion-mode} (@pxref{Auto-Completion Mode}).
 
 @item completion-tab-complete
 (@kbd{TAB}) Do ``traditional'' tab-completion, i.e. insert the longest
@@ -928,7 +932,7 @@ completion from the list. The following variables affect the completion
 tooltip:
 
 The tooltip can also be displayed automatically when completing,
-optionally after a time-delay. @cref{Auto-Show a List of Completions}.
+optionally after a time-delay. @xref{Auto-Show a List of Completions}.
 
 @vtable @env
 @item completion-tooltip-timeout
@@ -974,7 +978,7 @@ to cancel. To dismiss the pop-up frame, use
 @kbd{M-up}.
 
 The pop-up frame can also be displayed automatically when completing,
-optionally after a time-delay. @cref{Auto-Show a List of Completions}.
+optionally after a time-delay. @xref{Auto-Show a List of Completions}.
 
 @ftable @command
 @item completion-popup-frame
@@ -1025,7 +1029,7 @@ cancel it.
 The completion menu can be displayed automatically when completing,
 optionally after a time-delay, though because it steals the keyboard
 focus this is less useful than auto-displaying the tooltip or pop-up
-frame. @cref{Auto-Show a List of Completions}.
+frame. @xref{Auto-Show a List of Completions}.
 
 The following variables affect the behaviour of the completion menu and
 browser:
@@ -1057,8 +1061,8 @@ instance.
 
 
 
-@section Auto-Show a List of Completions
 @node Auto-Show a List of Completions
+@section Auto-Show a List of Completions
 @cindex auto-show a list of completions
 @cindex list of completions, automatically showing
 @cindex completion, auto-show

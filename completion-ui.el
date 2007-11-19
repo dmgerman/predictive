@@ -76,13 +76,19 @@
 ;;   echo-area.
 ;;
 ;; * Tooltip: display a list of completion candidates in a tool-tip
-;;   located below the point.
+;;   located below the point, from which completions can be selected.
+;;
+;; * Pop-up frame: display a list of completion candidates in a pop-up
+;;   frame located below the point, which can be toggled between display
+;;   some or all completions, and from which completions can be
+;;   selected.
 ;;
 ;; * Completion menu: allow completion candidates to be selected from
 ;;   a drop-down menu located below the point.
 ;;
 ;; * Completion browser: browse through all possible completion
-;;   candidates in a hierarchical menu located below the point.
+;;   candidates in a hierarchical deck-of-cards menu located below the
+;;   point.
 ;;
 ;; Completion-UI also provides a new minor mode, called
 ;; auto-completion-mode. When enabled, Emacs will automatically complete
@@ -112,11 +118,13 @@
 ;; * renamed `completion-dynamic-*syntax-alist' to
 ;;   `auto-completion-*syntax-alist' and modified their format somewhat;
 ;;   behaviour now accessed through interface macros
-;; * added new pop-up frame completion method
+;; * added new pop-up frame completion method (thanks to anon. on the
+;;   Emacs wiki for the suggestion)
 ;; * auto-show can now display one out of the tooltip, completion menu,
 ;;   or pop-up frame
 ;; * `completion-tooltip-delay' and `completion-auto-show-menu' options
-;;   subsumed into `completion-auto-show' and `completion-auto-show-delay'
+;;   subsumed into `completion-auto-show' and
+;;   `completion-auto-show-delay'
 ;; * RET binding now respects customization options
 ;;
 ;; Version 0.6.5
@@ -124,10 +132,10 @@
 ;; * moved modification hook setting to end of file
 ;;
 ;; Version 0.6.4
-;; * defined properties to make delete-selection-mode work correctly (thanks
-;;   to Sivaram for drawing my attention to this)
-;; * minor improvement to text displayed in completion browser bucket menu
-;;   entries
+;; * defined properties to make delete-selection-mode work correctly
+;;   (thanks to Sivaram for drawing my attention to this)
+;; * minor improvement to text displayed in completion browser bucket
+;;   menu entries
 ;;
 ;; Version 0.6.3
 ;; * fixed M-<space> bindings so that prefix argument is passed to
@@ -137,11 +145,11 @@
 ;; * modified the default `completion-dynamic-syntax-alist' to make
 ;;   parentheses behave like punctuation
 ;; * minor bug-fix to `completion-show-menu-if-within-overlay'
-;; * fixed `completion-self-insert' again so that it works if called with an
-;;   explicit char (auto-fill will not work in that case)
-;; * fixed `complete-dynamic' so that the completion overlay ends up in the
-;;   right place even when modification hooks cause text to be inserted in the
-;;   buffer during its execution
+;; * fixed `completion-self-insert' again so that it works if called with
+;;   an explicit char (auto-fill will not work in that case)
+;; * fixed `complete-dynamic' so that the completion overlay ends up in
+;;   the right place even when modification hooks cause text to be
+;;   inserted in the buffer during its execution
 ;;
 ;; Version 0.6.1
 ;; * modified define-minor-mode usage for auto-completion-mode to work in
@@ -754,7 +762,8 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 (put 'completion-self-insert 'delete-selection t)
 (put 'completion-accept-and-newline 'delete-selection t)
 (put 'completion-backward-delete-char 'delete-selection 'supersede)
-(put 'completion-backward-delete-char-untabify 'delete-selection 'supersede)
+(put 'completion-backward-delete-char-untabify
+     'delete-selection 'supersede)
 (put 'completion-delete-char 'delete-selection 'supersede)
 
 
@@ -1495,8 +1504,9 @@ cauliflower will start growing out of your ears."
 	(let ((overwrite-mode nil)) (insert (car completions)))
 	(move-overlay overlay pos (+ pos (length (car completions))))
 	(overlay-put overlay 'completion-num 0))
-      ;; move point to appropriate position (start of overlay, unless we're
-      ;; not auto-completing but are accepting or leaving old completions)
+      ;; move point to appropriate position (start of overlay, unless
+      ;; we're not auto-completing but are accepting or leaving old
+      ;; completions)
       (if (or auto-completion-mode
 	      (eq completion-resolve-behaviour 'reject))
 	  (goto-char (overlay-start overlay))
@@ -1647,7 +1657,7 @@ point is at POINT."
 
 
 (defun completion-show-tooltip-if-within-overlay ()
-  "Display completion tooltip for the current completion, if there is one,
+  "Display completion tooltip for the current completion, if any,
 otherwise run whatever command would normally be bound to the key
 sequence used to invoke this command."
   (interactive)
@@ -2114,7 +2124,8 @@ The Emacs `self-insert-command' is remapped to this when
 	  ;; no completion was in progress
 	  (if (/= (point) (overlay-start overlay))
 	      (completion-delete-overlay overlay)
-	    ;; otherwise, delete old completion and add character to prefix
+	    ;; otherwise, delete old completion and add character to
+	    ;; prefix
 	    (delete-region (overlay-start overlay)
 			   (overlay-end overlay))
 	    (setq prefix (concat (overlay-get overlay 'prefix)
@@ -2161,7 +2172,8 @@ The Emacs `self-insert-command' is remapped to this when
 	  (completion-delete-overlay overlay)))
        
        ;; if completing...
-       ((or (eq complete-behaviour 'string) (eq complete-behaviour 'word))
+       ((or (eq complete-behaviour 'string)
+	    (eq complete-behaviour 'word))
 	;; if point is in middle of a word, `completion-overwrite' is
 	;; set, and overwriting hasn't been disabled, delete rest of word
 	;; prior to completing
