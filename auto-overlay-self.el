@@ -2,10 +2,10 @@
 ;;; auto-overlay-self.el --- self-delimited automatic overlays
 
 
-;; Copyright (C) 2005 2006 Toby Cubitt
+;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.7
+;; Version: 0.2.8
 ;; Keywords: automatic, overlays, self
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.8
+;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
 ;;
 ;; Version 0.2.7
 ;; * fixed bug in `auto-o-parse-self-match' which caused a matched self match
@@ -220,7 +223,7 @@
     ;; give overlay some basic properties
     (overlay-put o-new 'auto-overlay t)
     (overlay-put o-new 'set-id (overlay-get o-start 'set-id))
-    (overlay-put o-new 'entry-id (overlay-get o-start 'entry-id))
+    (overlay-put o-new 'definition-id (overlay-get o-start 'definition-id))
     
     ;; if overlay is end-unmatched, add it to the list of uncascaded overlays
     (unless (overlayp end) (push o-new auto-o-pending-self-cascade))
@@ -325,7 +328,7 @@
 ;; 	   (list
 ;; 	    '(identity auto-overlay)
 ;; 	    (list 'eq 'set-id (overlay-get o-start 'set-id))
-;; 	    (list 'eq 'entry-id (overlay-get o-start 'entry-id)))))
+;; 	    (list 'eq 'definition-id (overlay-get o-start 'definition-id)))))
 ;;     ;; sort the list by start position, from first to last
 ;;     (sort overlay-list
 ;; 	  (lambda (a b) (< (overlay-start a) (overlay-start b)))))
@@ -353,7 +356,7 @@
 	   (list
 	    '(identity auto-overlay)
 	    (list 'eq 'set-id (overlay-get o-start 'set-id))
-	    (list 'eq 'entry-id (overlay-get o-start 'entry-id)))))
+	    (list 'eq 'definition-id (overlay-get o-start 'definition-id)))))
     ;; sort the list by start position, from first to last
     (sort overlay-list
 	  (lambda (a b) (< (overlay-start a) (overlay-start b)))))

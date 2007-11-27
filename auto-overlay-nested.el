@@ -2,10 +2,10 @@
 ;;; auto-overlay-nested.el --- nested start/end-delimited automatic overlays
 
 
-;; Copyright (C) 2005 2006 Toby Cubitt
+;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.6
+;; Version: 0.1.7
 ;; Keywords: automatic, overlays, nested
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.7
+;; * added new `auto-overlay-complex-class' property
+;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
 ;;
 ;; Version 0.1.6
 ;; * renamed from "nest" to "nested"
@@ -63,9 +67,11 @@
 (provide 'auto-overlay-nested)
 
 
-;; set nested overlay parsing and suicide functions
+;; set nested overlay parsing and suicide functions, and indicate class
+;; requires separate start and end regexps
 (put 'nested 'auto-overlay-parse-function 'auto-o-parse-nested-match)
 (put 'nested 'auto-overlay-suicide-function 'auto-o-nested-suicide)
+(put 'nested 'auto-overlay-complex-class t)
 
 
 
@@ -151,7 +157,7 @@
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
       (overlay-put o-new 'auto-overlay t)
       (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
-      (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
+      (overlay-put o-new 'definition-id (overlay-get o-match 'definition-id))
       (auto-o-match-overlay o-new o-match 'unmatched))
      
      ((eq (auto-o-edge o-match) 'end)
@@ -159,7 +165,7 @@
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
       (overlay-put o-new 'auto-overlay t)
       (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
-      (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
+      (overlay-put o-new 'definition-id (overlay-get o-match 'definition-id))
       (auto-o-match-overlay o-new 'unmatched o-match)))
 
     ;; return the new overlay
@@ -235,8 +241,8 @@
 			  (overlay-get o-match 'delim-start))
 			(list '(eq auto-overlay t)
 			      (list 'eq 'set-id (overlay-get o-match 'set-id))
-			      (list 'eq 'entry-id
-				    (overlay-get o-match 'entry-id)))))
+			      (list 'eq 'definition-id
+				    (overlay-get o-match 'definition-id)))))
 	(o-parent (overlay-get o-match 'parent)))
     ;; sort the list by overlay length, i.e. from innermost to outermose
     (sort overlay-stack

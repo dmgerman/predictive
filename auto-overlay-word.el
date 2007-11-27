@@ -2,10 +2,10 @@
 ;;; auto-overlay-word.el --- automatic overlays for single "words"
 
 
-;; Copyright (C) 2005 Toby Cubitt
+;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Keywords: automatic, overlays, word
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.4
+;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
 ;;
 ;; Version 0.1.3
 ;; * set overlay properties straight after creation, rather than leaving it to
@@ -68,7 +71,7 @@
     ;; give overlays appropriate properties
     (overlay-put o-new 'auto-overlay t)
     (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
-    (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
+    (overlay-put o-new 'definition-id (overlay-get o-match 'definition-id))
     (overlay-put o-new 'start o-match)
     (overlay-put o-match 'parent o-new)
     ;; bundle properties inside list if not already, then update overlay

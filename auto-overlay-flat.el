@@ -2,10 +2,10 @@
 ;;; auto-overlay-flat.el --- flat start/end-delimited automatic overlays
 
 
-;; Copyright (C) 2006 Toby Cubitt
+;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: automatic, overlays, flat, unnested
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.2
+;; * added new `auto-overlay-complex-class' property
+;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
+;;
 ;; Version 0.1.1
 ;; * set overlay properties straight after creation, rather than leaving it to
 ;;   `auto-overlay-update', in case matching causes exclusive reparsing, for
@@ -47,9 +51,11 @@
 (provide 'auto-overlay-flat)
 
 
-;; set nest overlay parsing and suicide functions
+;; set nest overlay parsing and suicide functions, and indicate class requires
+;; separate start and end regexps
 (put 'flat 'auto-overlay-parse-function 'auto-o-parse-flat-match)
 (put 'flat 'auto-overlay-suicide-function 'auto-o-flat-suicide)
+(put 'flat 'auto-overlay-complex-class t)
 
 
 
@@ -67,7 +73,7 @@
 	       (overlay-get o-match 'delim-end)  ; FIXME: is this right?
 	       `((identity auto-overlay)
 		 (eq set-id ,(overlay-get o-match 'set-id))
-		 (eq entry-id ,(overlay-get o-match 'entry-id))))
+		 (eq definition-id ,(overlay-get o-match 'definition-id))))
 	
 	;; otherwise, look for next end-match...
 	(let ((o-end (auto-o-next-flat-match o-match 'end)))
@@ -85,7 +91,7 @@
 	      (setq o-parent (make-overlay pos pos nil nil 'rear-advance)))
 	    (overlay-put o-parent 'auto-overlay t)
 	    (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	    (overlay-put o-parent 'entry-id (overlay-get o-match 'entry-id))
+	    (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
 	    (auto-o-match-overlay o-parent o-match o-end)
 	    o-parent)
 	   
@@ -94,21 +100,21 @@
 	      (setq o-parent (make-overlay pos pos nil nil 'read-advance))
 	      (overlay-put o-parent 'auto-overlay t)
 	      (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	      (overlay-put o-parent 'entry-id (overlay-get o-match 'entry-id))
+	      (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
 	      (auto-o-match-overlay o-parent o-match 'unmatched)
 	      o-parent))
 	   ))))
      
      
      (t ;; if match is for an end regexp...
-      ;; if match is within existing overlay with same set-d and entry-id...
+      ;; if match is within existing overlay with same set-d and definition-id...
       (when (setq o-parent
 		(car  ; FIXME: is this right?
 		 (auto-overlays-at-point
 		  (overlay-get o-match 'delim-start)  ; FIXME: is this right?
 		  `((identity auto-overlay)
 		    (eq set-id ,(overlay-get o-match 'set-id))
-		    (eq entry-id ,(overlay-get o-match 'entry-id))))))
+		    (eq definition-id ,(overlay-get o-match 'definition-id))))))
 	
 	;; if overlay can simply be re-matched with new end-match, do so
 	(let ((o-end (overlay-get o-parent 'end))
@@ -127,7 +133,7 @@
 	      (setq o-parent (make-overlay pos pos nil nil 'read-advance))
 	      (overlay-put o-parent 'auto-overlay t)
 	      (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	      (overlay-put o-parent 'entry-id (overlay-get o-match 'entry-id))
+	      (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
 	      (auto-o-match-overlay o-parent o-start o-end))
 	    o-parent))  ; return newly created overlay
 	))))
@@ -181,7 +187,7 @@
 
 (defun auto-o-next-flat-match (o-match edge)
   ;; Find first match overlay for EDGE ('start of 'end) after match overlay
-  ;; O-MATCH in buffer, with same set-id and entry-id as O-MATCH.
+  ;; O-MATCH in buffer, with same set-id and definition-id as O-MATCH.
 
   ;; get sorted list of matching overlays after O-MATCH
   (let ((o-list
@@ -189,10 +195,11 @@
 		(overlay-start o-match) (point-max)  ; FIXME: is start right?
 		`((identity auto-overlay-match)
 		  (eq set-id ,(overlay-get o-match 'set-id))
-		  (eq entry-id ,(overlay-get o-match 'entry-id))
-		  (,(lambda (set-id entry-id subentry-id edge)
-		      (eq (auto-o-entry-edge set-id entry-id subentry-id) edge))
-		   (set-id entry-id subentry-id) (,edge))))
+		  (eq definition-id ,(overlay-get o-match 'definition-id))
+		  (,(lambda (set-id definition-id regexp-id edge)
+		      (eq (auto-o-entry-edge set-id definition-id regexp-id)
+			  edge))
+		   (set-id definition-id regexp-id) (,edge))))
 	       (lambda (a b) (<= (overlay-start a) (overlay-start b))))))
     ;; if searching for same EDGE as O-MATCH, first overlay in list is always
     ;; O-MATCH itself, so we drop it

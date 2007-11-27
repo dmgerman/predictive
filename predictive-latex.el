@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.5
+;; Version: 0.8
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8
+;; * updated for new auto-overlay regexp definition interface
 ;;
 ;; Version 0.7.5
 ;; * updated to conform to completion-ui.el version 0.7
@@ -272,7 +275,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (add-hook 'kill-buffer-hook
 	      (lambda ()
 		(auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-	      (auto-overlay-unload-regexp 'predictive))
+	      (auto-overlay-unload-set 'predictive))
 	    nil t)
     
     ;; use latex browser menu if first character of prefix is "\"
@@ -346,7 +349,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       
       ;; delete any existing predictive auto-overlay regexps and load latex
       ;; auto-overlay regexps
-      (auto-overlay-unload-regexp 'predictive)
+      (auto-overlay-unload-set 'predictive)
       (predictive-latex-load-regexps)
       
       ;; start the auto-overlays, skipping the check that regexp definitions
@@ -386,7 +389,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     
     ;; stop predictive auto overlays
     (auto-overlay-stop 'predictive nil 'save)
-    (auto-overlay-unload-regexp 'predictive)
+    (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict to saved setting
     (kill-local-variable 'predictive-main-dict)
     (setq predictive-main-dict predictive-restore-main-dict)
@@ -407,7 +410,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (remove-hook 'kill-buffer-hook
 		 (lambda ()
 		   (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		   (auto-overlay-unload-regexp 'predictive))
+		   (auto-overlay-unload-set 'predictive))
 		 t)
     
     t))  ; indicate successful reversion of changes
@@ -420,233 +423,252 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
 
   ;; %'s start comments that last till end of line
-  (auto-overlay-load-regexp
-   `(line "%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
-	  (completion-menu . predictive-latex-construct-browser-menu)
-	  (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive)
-    
+  (auto-overlay-load-definition
+   'predictive
+   `(line :id comment
+	  ("%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
+	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (face . (background-color . ,predictive-overlay-debug-color)))))
+  
   ;; $'s delimit the start and end of maths regions...
-  (auto-overlay-load-regexp
-   `(self "\\$" (dict . predictive-latex-math-dict) (priority . 40)
-	  (completion-menu . predictive-latex-construct-browser-menu)
-	  (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive nil 'inline-math)
+  (auto-overlay-load-definition
+   'predictive
+   `(self :id inline-math
+	  ("\\$" (dict . predictive-latex-math-dict) (priority . 40)
+	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (face . (background-color . ,predictive-overlay-debug-color)))))
   
   ;; ...as do \[ and \], but not \\[ and \\] etc.
   ;; Note: regexps contain a lot of \'s because it has to check whether number
   ;; of \'s in front of { is even or odd
-  (auto-overlay-load-regexp '(nested) 'predictive nil 'display-math)
-  (auto-overlay-load-compound-regexp
-   `(start ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
-	   (dict . predictive-latex-math-dict) (priority . 40)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'display-math)
-  (auto-overlay-load-compound-regexp
-   `(start ("^\\(\\\\\\[\\)" . 1)
-	   (dict . predictive-latex-math-dict) (priority . 40)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'display-math)
-  (auto-overlay-load-compound-regexp
-   `(end ("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
-	 (dict . predictive-latex-math-dict) (priority . 40)
-	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'display-math)
-  (auto-overlay-load-compound-regexp
-   `(end ("^\\(\\\\\\]\\)" . 1)
-	 (dict . predictive-latex-math-dict) (priority . 40)
-	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'display-math)
+  (auto-overlay-load-definition
+   'predictive
+   `(nested :id display-math
+	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
+	     :edge start
+	     (dict . predictive-latex-math-dict) (priority . 40)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("^\\(\\\\\\[\\)" . 1)
+	     :edge start
+	     (dict . predictive-latex-math-dict) (priority . 40)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
+	     :edge end
+	     (dict . predictive-latex-math-dict) (priority . 40)
+	     (completion-menu . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("^\\(\\\\\\]\\)" . 1)
+	     :edge end
+	     (dict . predictive-latex-math-dict) (priority . 40)
+	     (completion-menu . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ))
   
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
   ;; included to ensure all { and } match, but \{ is excluded
-  (auto-overlay-load-regexp '(nested) 'predictive nil 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\usepackage{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\label{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\ref{" (dict . predictive-latex-label-dict) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (completion-word-thing . predictive-latex-label-word)
-	   (auto-completion-syntax-alist . ((?w . (word add))
-					    (?_ . (word add))
-					    (?  . (none accept))
-					    (?. . (word add))
-					    (t  . (none reject))))
-	   (auto-completion-override-syntax-alist
-	    . ((?: . (word
-		      (lambda ()
-			(predictive-latex-completion-add-till-regexp ":"))))
-	       (?_ . (word
-		      (lambda ()
-			(predictive-latex-completion-add-till-regexp "\\W"))))
-	       (?} . (none accept))))
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\eqref{" (dict . predictive-latex-label-dict) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (completion-word-thing . predictive-latex-label-word)
-	   (auto-completion-syntax-alist . ((?w . (word add))
-					    (?_ . (word add))
-					    (?  . (none accept))
-					    (?. . (word add))
-					    (t  . (none reject))))
-	   (auto-completion-override-syntax-alist
-	    . ((?: . (word
-		      (lambda ()
-			(predictive-latex-completion-add-till-regexp
-			 ":"))))
-	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\cite{" (dict . t) (priority . 30)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\begin{" (dict . predictive-latex-env-dict) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\end{" (dict . predictive-latex-env-dict) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\text{"
-	   (dict . predictive-main-dict) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\documentclass\\(\\[.*\\]\\)?{"
-	   (dict . dict-latex-docclass) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\bibliographystyle\\(\\[.*\\]\\)?{"
-	   (dict . dict-latex-bibstyle) (priority . 30)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  ;; Note: regexps contain a lot of \'s because it has to check whether number
-  ;; of \'s in front of { is even or odd. Also, since auto-overlay regexps
-  ;; aren't allowed to match across lines, we have to deal with the case of {
-  ;; or } at the start of a line separately.
-  (auto-overlay-load-compound-regexp
-   `(start ("^\\({\\)" . 1) (priority . 30)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(start ("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2) (priority . 30)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(end ("^\\(}\\)" . 1) (priority . 30)
-	 (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
-  (auto-overlay-load-compound-regexp
-   `(end ("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2) (priority . 30)
-	 (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace)
+  (auto-overlay-load-definition
+   'predictive
+   `(nested :id brace
+	    ("\\\\usepackage{"
+	     :edge start
+	     (dict . t)
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\label{"
+	     :edge start
+	     (dict . t)
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\ref{"
+	     :edge start
+	     (dict . predictive-latex-label-dict)
+	     (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (completion-word-thing . predictive-latex-label-word)
+	     (auto-completion-syntax-alist . ((?w . (word add))
+					      (?_ . (word add))
+					      (?  . (none accept))
+					      (?. . (word add))
+					      (t  . (none reject))))
+	     (auto-completion-override-syntax-alist
+	      . ((?:
+		  . (word
+		     (lambda ()
+		       (predictive-latex-completion-add-till-regexp ":"))))
+		 (?_
+		  . (word
+		     (lambda ()
+		       (predictive-latex-completion-add-till-regexp "\\W"))))
+		 (?} . (none accept))))
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\eqref{"
+	     :edge start
+	     (dict . predictive-latex-label-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (completion-word-thing . predictive-latex-label-word)
+	     (auto-completion-syntax-alist . ((?w . (word add))
+					      (?_ . (word add))
+					      (?  . (none accept))
+					      (?. . (word add))
+					      (t  . (none reject))))
+	     (auto-completion-override-syntax-alist
+	      . ((?: . (word
+			(lambda ()
+			  (predictive-latex-completion-add-till-regexp
+			   ":"))))
+		 (?} . (accept t none))))
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\cite{"
+	     :edge start
+	     (dict . t) (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\begin{"
+	     :edge start
+	     (dict . predictive-latex-env-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\end{"
+	     :edge start
+	     (dict . predictive-latex-env-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\text{"
+	     :edge start
+	     (dict . predictive-main-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\documentclass\\(\\[.*\\]\\)?{"
+	     :edge start
+	     (dict . dict-latex-docclass) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ("\\\\bibliographystyle\\(\\[.*\\]\\)?{"
+	     :edge start
+	     (dict . dict-latex-bibstyle)
+	     (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ;; Note: regexps contain a lot of \'s because it has to check
+	    ;; whether number of \'s in front of { is even or odd. Also, since
+	    ;; auto-overlay regexps aren't allowed to match across lines, we
+	    ;; have to deal with the case of { or } at the start of a line
+	    ;; separately.
+	    (("^\\({\\)" . 1)
+	     :edge start
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2)
+	     :edge start
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("^\\(}\\)" . 1)
+	     :edge end
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2)
+	     :edge end
+	     (priority . 30)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ))
   
   
   ;; preamble lives between \documentclass{...} and \begin{document}
-  (auto-overlay-load-regexp '(nested) 'predictive nil 'preamble)
-  (auto-overlay-load-compound-regexp
-   '(start "\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
-	   (dict . predictive-latex-preamble-dict) (priority . 20)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu))
-   'predictive 'preamble)
-  (auto-overlay-load-compound-regexp
-   '(end "\\\\begin{document}"
-	   (dict . predictive-latex-preamble-dict) (priority . 20)
-	   (completion-menu
-  . predictive-latex-construct-browser-menu))
-   'predictive 'preamble)
-	   
+  (auto-overlay-load-definition
+   'predictive
+   `(nested :id preamble
+	    ("\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
+	     :edge start
+	     (dict . predictive-latex-preamble-dict)
+	     (priority . 20)
+	     (completion-menu . predictive-latex-construct-browser-menu))
+	    ("\\\\begin{document}"
+	     :edge end
+	     (dict . predictive-latex-preamble-dict)
+	     (priority . 20)
+	     (completion-menu . predictive-latex-construct-browser-menu))
+	    ))
+  
   
   ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
   ;; "electric" by using a special env overlay class (defined below) if the
   ;; corresponding customization option is enabled
   (if predictive-latex-electric-environments
-      (auto-overlay-load-regexp '(predictive-latex-env)
-				'predictive nil 'environment)
-    (auto-overlay-load-regexp '(nested)
-			      'predictive nil 'environment))
-  (auto-overlay-load-compound-regexp
-   `(start ("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
-	    0 1)
-	   (dict . predictive-latex-math-dict) (priority . 10)
-	   (completion-menu
-	    . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'environment)
-  (auto-overlay-load-compound-regexp
-   `(end ("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
-	  0 1)
-	 (dict . predictive-latex-math-dict) (priority . 10)
-	 (completion-menu . predictive-latex-construct-browser-menu)
-	 (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'environment)
-  (auto-overlay-load-compound-regexp
-   `(start ("\\\\begin{\\(.*?\\)}" 0 1) (priority . 10) (dict . nil)
-	   (face . nil))
-   'predictive 'environment)
-  (auto-overlay-load-compound-regexp
-   `(end ("\\\\end{\\(.*?\\)}" 0 1) (priority . 10) (dict . nil)
-	 (face . nil))
-   'predictive 'environment)
-
+      (auto-overlay-load-definition
+       'predictive
+       '(predictive-latex-env :id environment))
+    (auto-overlay-load-definition
+     'predictive
+     '(nested :id environment)))
+  ;; load the regexps into the list
+  (auto-overlay-load-regexp
+   'predictive 'environment
+   `(("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+     :edge start
+     (dict . predictive-latex-math-dict)
+     (priority . 10)
+     (completion-menu . predictive-latex-construct-browser-menu)
+     (face . (background-color . ,predictive-overlay-debug-color))))
+  (auto-overlay-load-regexp
+   'predictive 'environment
+   `(("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+     :edge end
+     (dict . predictive-latex-math-dict)
+     (priority . 10)
+     (completion-menu . predictive-latex-construct-browser-menu)
+     (face . (background-color . ,predictive-overlay-debug-color))))
+  (auto-overlay-load-regexp
+   'predictive 'environment
+   '(("\\\\begin{\\(.*?\\)}" 0 1)
+     :edge start
+     (priority . 10)
+     (dict . nil)
+     (face . nil)))
+  (auto-overlay-load-regexp
+   'predictive 'environment
+   `(("\\\\end{\\(.*?\\)}" 0 1)
+     :edge end
+     (priority . 10)
+     (dict . nil)
+     (face . nil)))
+  
   
   ;; \documentclass defines the document type. Through the use of a special
   ;; "docclass" regexp class defined below, this automagically changes the
   ;; main dictionary if one is defined for the docclass in
   ;; `predictive-latex-docclass-alist'
-  (auto-overlay-load-regexp
+  (auto-overlay-load-definition
+   'predictive
    '(predictive-latex-docclass
-     ("\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))
-   'predictive)
+     (("\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
   
   
   ;; \usepackage loads a latex package. Through the use of a special
   ;; "usepackage" regexp class defined below, this automagically loads new
   ;; dictionaries and auto-overlay regexps.
-  (auto-overlay-load-regexp
+  (auto-overlay-load-definition
+   'predictive
    '(predictive-latex-usepackage
-     ("\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))
-   'predictive)
-
+     (("\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
+  
   
   ;; \label creates a cross-reference label. Through the use of a special
   ;; "label" regexp class defined below, this automagically adds the label to
   ;; the label dictionary.
-  (auto-overlay-load-regexp
-   '(predictive-latex-label ("\\\\label{\\(.*?\\)}" . 1))
-   'predictive nil 'label)
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-label :id label (("\\\\label{\\(.*?\\)}" . 1))))
 )
 
 
@@ -1107,6 +1129,7 @@ refers to."
      'predictive-latex-parse-env-match)
 (put 'predictive-latex-env 'auto-overlay-suicide-function
      'predictive-latex-env-suicide)
+(put 'predictive-latex-env 'auto-overlay-complex-class t)
 
 
 

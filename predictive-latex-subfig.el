@@ -6,7 +6,7 @@
 ;; Copyright (C) 2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: predictive, latex, package, subref, subfloat, subfig
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2
+;; * updated for new auto-overlay regexp definition interface
+;;
 ;; Version 0.1
 ;; * initial version
 
@@ -50,25 +53,30 @@
 
 (defun predictive-latex-load-subfig ()
   ;; Load subfig regexps
-  (auto-overlay-load-compound-regexp
-   `(start "\\\\subref{" (dict . predictive-latex-label-dict) (priority . 2)
-	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (completion-word-thing . predictive-latex-label-word)
-	   (completion-dynamic-syntax-alist . ((?w . (add t word))
-					       (?_ . (add t word))
-					       (?  . (accept t none))
-					       (?. . (add t word))
-					       (t  . (reject t none))))
-	   (completion-dynamic-override-syntax-alist
-	    . ((?: . ((lambda ()
-			(predictive-latex-completion-add-to-regexp ":"))
-		      t word))
-	       (?_ . ((lambda ()
-			(predictive-latex-completion-add-to-regexp "\\W"))
-		      t word))
-	       (?} . (accept t none))))
-	   (face . (background-color . ,predictive-overlay-debug-color)))
-   'predictive 'brace t 'subref)
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `("\\\\subref{"
+     :id subref
+     :edge start
+     (dict . predictive-latex-label-dict)
+     (priority . 2)
+     (completion-menu . predictive-latex-construct-browser-menu)
+     (completion-word-thing . predictive-latex-label-word)
+     (completion-dynamic-syntax-alist . ((?w . (add t word))
+					 (?_ . (add t word))
+					 (?  . (accept t none))
+					 (?. . (add t word))
+					 (t  . (reject t none))))
+     (completion-dynamic-override-syntax-alist
+      . ((?: . ((lambda ()
+		  (predictive-latex-completion-add-to-regexp ":"))
+		t word))
+	 (?_ . ((lambda ()
+		  (predictive-latex-completion-add-to-regexp "\\W"))
+		t word))
+	 (?} . (accept t none))))
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
 )
 
 

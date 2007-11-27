@@ -20,20 +20,16 @@ same buffer.
 
 @cindex overlay classes
 @cindex classes of overlay
-@cindex compound overlay classes
-@cindex overlay classes, compound
 There are different ``classes'' of auto-overlay, used to define
-different kinds of overlay behaviour. Some classes require a single
+different kinds of overlay behaviour. Some classes only require a single
 regexp, others require separate regexps to define the start and end of
-the overlay (@pxref{Defining Regexps}). For the latter ``compound''
-classes, the overlay is defined by a list of start and end regexps. At
-least one of each must be defined, but multiple start and end regexps
-are also allowed, any of which will start or end the overlay. If more
-than one of the regexps matches overlapping regions of text, the one
-that appears earlier in the list will take precedence. The predefined
-regexp classes are: @code{word}, @code{line}, @code{self}, @code{nested}
-and @code{flat}, but the auto-overlay package can easily be extended
-with new classes.
+the overlay (@pxref{Defining Regexps}). Any additional regexps, beyond
+the minimum requirements, act as alternatives; if more than one of the
+regexps matches overlapping regions of text, the one that appears
+earlier in the list will take precedence. The predefined regexp classes
+are: @code{word}, @code{line}, @code{self}, @code{nested} and
+@code{flat}, but the auto-overlay package can easily be extended with
+new classes.
 
 @table @code
 @item word
@@ -75,9 +71,9 @@ modification is made at or after that position (@xref{To-Do}.)
 @cindex overlay class, nested
 @cindex class, nested
 These are used to define overlays that start and end at different regexp
-matches, and that can be nested one inside another. This is a compound
-class, requiring separate start and end regexps. An example use would be
-to create overlays between matching braces @samp{@{@}}.
+matches, and that can be nested one inside another. This class requires
+separate start and end regexps. An example use would be to create
+overlays between matching braces @samp{@{@}}.
 
 @item flat
 @cindex flat overlay class
@@ -85,10 +81,10 @@ to create overlays between matching braces @samp{@{@}}.
 @cindex class, flat
 These are used to define overlays that start and end at different regexp
 matches, but that can not be nested. Extra start matches within one of
-these overlays are ignored. This is a compound class, requiring separate
-start and end regexps. An example use would be to create overlays
-covering multi-line comments in code, e.g. c++ block comments delimited
-by @samp{/*} and @samp{*/}.
+these overlays are ignored. This class requires separate start and end
+regexps. An example use would be to create overlays covering multi-line
+comments in code, e.g. c++ block comments delimited by @samp{/*} and
+@samp{*/}.
 @end table
 
 @cindex delimeter
@@ -114,9 +110,10 @@ have implications for auto-overlay behaviour.
 This is a standard Emacs overlay property (@pxref{Overlay
 Properties,,,elisp, GNU Emacs Lisp Reference Manual}), but it is also
 used to determine which regexp takes precedence when more than two or
-more regexps defining a compound class overlay match overlapping
-text. It is also used to determine which regexp's properties take
-precedence for overlays that are defined by start and end matches.
+more regexps in the same auto-overlay definition match overlapping
+regions of text. It is also used to determine which regexp's properties
+take precedence for overlays that are defined by separate start and end
+matches.
 
 @item exclusive
 @cindex exclusive property
@@ -182,36 +179,53 @@ package. @xref{Extending the Auto-Overlays Package}.
 @cindex functions, defining regexps
 @cindex functions, loading and unloading regexps
 
-An auto-overlay regexp entry is defined by a list of the form:
+An auto-overlay definition is a list of the form:
 @lisp
-(@var{class} @var{regexp} &rest @var{properties})
+(@var{class} &optional :id @var{entry-id} @var{regexp1} @var{regexp2} ...)
 @end lisp
 @var{class} is one of the regexp classes described in the previous
-section (@pxref{Overview}). @var{regexp} is a regular expression. Any
-further elements in the list are cons cells with overlay property names
-(symbols) in their cars and the property values in their cdrs.
+section (@pxref{Overview}). The optional @code{:id} property should be a
+symbol that can be used to uniquely identify the auto-overlay
+definition.
+
+Each @var{regexp} defines one of the regexps that make up the
+auto-overlay definition. It should be a list of the form
+@lisp
+(@var{rgxp} &optional :edge @var{edge} :id @var{subentry-id} @rest @var{property1} @var{property2} ...)
+@end lisp
+The @code{:edge} property should be one of the symbols @code{'start} or
+@code{'end}, and determines which edge of the auto-overlay this regexp
+corresponds to. If @code{:edge} is not specified, it is assumed to be
+@code{'start}. Auto-overlay classes that do not require separate
+@code{start} and @code{end} regexps ignore this property. The @code{:id}
+property should be a symbol that can be used to uniquely identify the
+regexp. Any further elements in the list are cons cells of the form
+@code{(property . value)}, where @var{property} is an overlay property
+name (a symbol) and @var{value} its value. In its simplest form,
+@var{rgxp} is a single regular expression.
 
 If only part of the regexp should act as the delimeter
-(@pxref{Overview}), @var{regexp} should instead be a cons cell:
+(@pxref{Overview}), @var{rgxp} should instead be a cons cell:
 @lisp
-(@var{regexp} . @var{group})
+(@var{rx} . @var{group})
 @end lisp
-where @var{regexp} is a regexp that contains at least one group
+where @var{rx} is a regexp that contains at least one group
 (@pxref{Regular Expressions,,,elisp, GNU Emacs Lisp Reference Manual}),
 and @var{group} is an integer identifying which group should act as the
 delimeter.
 
-If the overlay class requires additional groups to be specified, it
-@var{regexp} should instead be a list:
+If the overlay class requires additional groups to be specified,
+@var{rgxp} should instead be a list:
 @lisp
-(@var{regexp} @var{group0} @var{group1} ...)
+(@var{rx} @var{group0} @var{group1} ...)
 @end lisp
-The first @var{group0} still specifies the part that acts as the
-delimeter, as before. If the entire regexp should act as the delimeter,
-@var{group0} must still be supplied but should be set to 0 (meaning the
-entire regexp). None of the standard classes make use of any additional
-groups, but extensions to the auto-overlays package that define new
-classes may. @xref{Extending the Auto-Overlays Package}.
+where @var{rx} is a regexp. The first @var{group0} still specifies the
+part that acts as the delimeter, as before. If the entire regexp should
+act as the delimeter, @var{group0} must still be supplied but should be
+set to 0 (meaning the entire regexp). None of the standard classes make
+use of any additional groups, but extensions to the auto-overlays
+package that define new classes may. @xref{Extending the Auto-Overlays
+Package}.
 
 
 The following functions are used to load and unload regexp definitions.
@@ -222,71 +236,59 @@ The following functions are used to load and unload regexp definitions.
 @cindex functions, loading and unloading regexps
 
 @table @code
-@item (auto-overlay-load-regexp @var{entry} @var{set-id} &optional @var{pos} @var{entry-id})
+@item (auto-overlay-load-definition @var{set-id} @var{definition} &optional @var{pos})
+@findex auto-overlay-load-definition
+@cindex auto-overlay definitions
+@cindex auto-overlays, defining
+@cindex auto-overlays, loading
+@cindex loading auto-overlay definitions
+@cindex defining auto-overlays
+Load a new auto-overlay @var{definition}, which should be a list of the
+form described above, into the set identified by the symbol
+@var{set-id}. The optional parameter @var{pos} determines where in the
+set's regexp list the new regexp is inserted. If it is @code{nil}, the
+regexp is added at the end. If it is @code{t}, the regexp is added at
+the beginning. If it is an integer, the regexp is added at that position
+in the list. Whilst the position in the list has no effect on overlay
+behaviour, it does determine the order in which regexps are checked, so
+can affect efficiency.
+
+@item (auto-overlay-load-regexp @var{set-id} @var{entry-id} @var{regexp} &optional @var{pos})
 @findex auto-overlay-load-regexp
 @cindex defining regexps
+@cindex loading regexps
 @cindex regexps, defining
 @cindex regexps, loading
-Load an auto-overlay regexp defined by @var{entry}, which should be a
-list of the form described above. @var{set-id} is a symbol identifying a
-set of auto-overlay regexps. The optional parameter @var{pos} determines
-where in the set's regexp list the new regexp is inserted. If it is
-@code{nil}, the regexp is added at the end. If it is @code{t}, the
-regexp is added at the beginning. If it is an integer, the regexp is
-added at that position in the list. Whilst the position in the list has
-no effect on overlay behaviour, it does determine the order in which
-regexps are checked, so can affect efficiency. The optional
-@var{entry-id} is a symbol that can be used to identify the regexp
-later.
+Load a new @var{regexp}, which should be a list of the form described
+above, into the auto-overlay definition identified by the symbol
+@var{entry-id}, in the set identified by the symbol
+@var{set-id}. @var{regexp} should be a list of the form described above.
+The optional @var{pos} determines the position of the regexp in the list
+of regexps defining the auto-overlay, which can be significant for
+overlay behaviour since it determines which regexp takes precedence when
+two match the same text.
 
-@cindex compound regexp
-@cindex defining compound regexps
-@cindex regexps, defining compound
-To define a compound overlay, @command{auto-overlay-load-regexp} must
-first be called with @var{entry} being a list containing just the
-overlay class, e.g. @code{('nested)}, and an @var{entry-id} must be
-supplied. @command{auto-overlay-load-compound-regexp} can then be called
-to actually load the start and end regexp definitions themselves.
+@item (auto-overlay-unload-set @var{set-id})
+@findex auto-overlay-unload-set
+@cindex unloading regexp sets
+@cindex regexp sets, unloading
+@cindex auto-overlay definitions, unloading
+Unload the entire regexp set identified by the symbol @var{set-id}.
 
+@item (auto-overlay-unload-definition @var{set-id} @var{entry-id})
+@findex auto-overlay-unload-definition
+@cindex unloading regexp definitions
+@cindex regexp definitions, unloading
+Unload the auto-overlay definition identified by the symbol
+@var{entry-id} from the set identified by the symbol @var{set-id}.
 
-@item (auto-overlay-load-compound-regexp @var{entry} @var{set-id} @var{entry-id} &optional @var{pos} @var{subentry-id})
-@findex auto-overlay-load-compound-regexp
-@cindex compound regexp
-@cindex defining compound regexps
-@cindex loading compound regexps
-@cindex regexps, defining compound
-@cindex regexps, loading compound
-Load a start or end regexp into the list defining a compound
-regexp. @command{auto-overlay-load-regexp} must first be called as
-described above. @var{entry} is the regexp definition, but the first
-element of the list should be one of the symbols @code{start} or
-@code{end}, rather than the overlay class. @var{set-id} is a symbol
-identifying the auto-overlay regexp set as before, and @var{entry-id} is
-the symbol that was supplied to the @command{auto-overlay-load-regexp}
-call. The optional @var{pos} determines the position of the regexp, as
-for @command{auto-overlay-load-regexp}, but this time it is the position
-in the list of regexps defining the compound overlay, which can be
-significant for overlay behaviour since it determines which regexp takes
-precedence when two match the same text. The optional @var{subentry-id}
-is a symbol that can be used to identify the regexp later.
-
-
-@item (auto-overlay-unload-regexp @var{set-id} &optional @var{entry-id} @var{subentry-id})
+@item (auto-overlay-unload-regexp @var{set-id} @var{entry-id} @var{subentry-id})
 @findex auto-overlay-unload-regexp
 @cindex unloading regexps
 @cindex regexps, unloading
-Unload one or more regexp definitions. @var{set-id}, @var{entry-id} and
-@var{subentry-id} are symbols identifying the regexp to unload, and
-correspond to those supplied when loading the regexp using
-@command{auto-overlay-load-regexp} and
-@command{auto-overlay-load-compound-regexp}. @var{subentry-id} only
-needs to be supplied if unloading a start or end regexp from a compound
-class, and should be @code{nil} otherwise. Note that if @var{entry-id}
-is the symbol identifying a compound class regexp, and @var{subentry-id}
-is @emph{not} supplied, the entire list of start and end regexps will be
-unloaded. To unload an entire set of regexp definitions, simply specify
-@var{set-id} but leave @var{entry-id} and @var{subentry-id} null.
-
+Unload the auto-overlay regexp identified by the symbol
+@var{subentry-id} from the auto-overlay definition identified by the
+symbol @var{entry-id} in the set identified by the symbol @var{set-id}.
 
 @item (auto-overlay-share-regexp-set @var{set-id} @var{from-buffer} @@optional @var{to-buffer})
 @findex auto-overlay-share-regexp-set
@@ -537,10 +539,10 @@ expressions (@pxref{Overview}). The appropriate regexp definition is
 loaded by
 
 @lisp
-(auto-o-load-regexp
- '(word "\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)"
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)"
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
@@ -572,10 +574,10 @@ regexp inside a cons cell containing the regexp in its @code{car} and a
 number indicating which subgroup to use in its @code{cdr}:
 
 @lisp
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 
@@ -590,14 +592,14 @@ expressions, so it must be escaped with @samp{\} which itself must be
 escaped in lisp strings):
 
 @lisp
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (face . (background-color . "green")))))
 @end lisp
 
 @noindent
@@ -613,14 +615,14 @@ convenience). For efficiency reasons, it's a good idea to put higher
 priority regexp definitions before lower priority ones, so we get:
 
 @lisp
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 
@@ -634,29 +636,31 @@ the opening and closing delimiters are different in this case, we must
 use @code{nested} overlays (@pxref{Overview}). Our example now looks like:
 
 @lisp
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
-Notice how we've used @code{start} and @code{end} regexps to define the
-compound regexp. Once again, we have had to escape the @samp{\}
+Notice how we've used separate @code{start} and @code{end} regexps to
+define the auto-overlay. Once again, we have had to escape the @samp{\}
 characters, and increase the priority of the new regexp definition to
 avoid any La@TeX{} commands within the maths region being highlighted in
 blue.
@@ -670,30 +674,31 @@ La@TeX{} comments start with @samp{%} and last till the end of the line:
 a perfect demonstration of a @code{line} regexp. Here's a first attempt:
 
 @lisp
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 @end lisp
 @noindent
 We use the standard Emacs @command{face-attribute} function to retrieve
@@ -707,33 +712,36 @@ other regexps. In fact, creating overlays for @samp{\begin} and
 they don't occur in pairs within the commented region, they will
 erroneously pair up with ones outside the comment. We need comments to
 take precedence over everything else, and we need them to block other
-regexp matches:
+regexp matches, so we boost the overlay's priority and set the exclusive
+property:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 
@@ -748,40 +756,44 @@ environment names to be highlighted in pink, i.e. the region between
 @samp{\begin@{} and @samp{@}}. A first attempt at this might result in:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end "@}" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("@}"
+    :edge end
+    (priority . 2)
+    (face . (background-color . "pink")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
@@ -795,44 +807,48 @@ environment names between @samp{\end@{} and @samp{@}} to be pink, we
 need something more along the lines of:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\end@{" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end "@}" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\end@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("@}"
+    :edge end
+    (priority . 2)
+    (face . (background-color . "pink")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
@@ -846,46 +862,50 @@ incorrectly pairing the @samp{@}} characters used for other
 commands. Instead, we can just add @samp{@{} to the list:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "@{" (priority . 2))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\end@{" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end "@}" (priority . 2))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("@{"
+    :edge start
+    (priority . 2))
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\end@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("@}"
+    :edge end
+    (priority . 2))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
@@ -895,61 +915,60 @@ they create will have no effect other than making sure all @samp{@{} and
 @samp{@}} characters are correctly paired.
 
 We've made one mistake though: by putting the @code{@{} regexp at the
-beginning of the compound regexp list, it will take priority over any
-other regexp in the list that could match the same text. And since
-@code{@{} will match whenever @code{\begin@{} or @code{\end@{} matches,
-environments will never be highlighted! The @code{@{} regexp must come
-@emph{after} the @code{\begin@{} and @code{\end@{} regexps, to ensure it
-is only used if neither of them match (it doesn't matter whether it
-appears before or after the @code{@{} regexp, since the latter will
-never match the same text and neither set dictionaries). We can fix this
-either by passing a @var{pos} argument to
-@command{auto-overlay-load-compound-regexp} (@pxref{Defining Regexps}),
-or more simply, since regexps are entered at the end of the compound
-regep list by default, by moving the line defining the @code{@{} regexp
-after the @code{\start@{} and @code{\end@{} regexps:
+beginning of the list, it will take priority over any other regexp in
+the list that could match the same text. And since @code{@{} will match
+whenever @code{\begin@{} or @code{\end@{} matches, environments will
+never be highlighted! The @code{@{} regexp must come @emph{after} the
+@code{\begin@{} and @code{\end@{} regexps, to ensure it is only used if
+neither of them match (it doesn't matter whether it appears before or
+after the @code{@{} regexp, since the latter will never match the same
+text and neither set dictionaries):
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\end@{" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "@{" (priority . 2))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end "@}" (priority . 2))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\end@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("@{"
+    :edge start
+    (priority . 2))
+   ("@}"
+    :edge end
+    (priority . 2))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 There is one last issue. A literal @samp{@{} or @samp{@}} character can
@@ -959,46 +978,50 @@ match anything and should not be treated as delimiters. We can modify
 the @code{@{} and @code{@}} regexps to exclude these cases:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\end@{" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\([^\\]\\|^\\)@{" (priority . 2))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end "\\([^\\]\\|^\\)@}" (priority . 2))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\end@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\([^\\]\\|^\\)@{"
+    :edge start
+    (priority . 2))
+   ("\\([^\\]\\|^\\)@}"
+    :edge end
+    (priority . 2))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
 
 @noindent
@@ -1026,48 +1049,51 @@ since the regexp already included a group for other reasons). Our final
 version looks like this:
 
 @lisp
-(auto-overlay-load-regexp
- `(line "%" (priority . 4) (exclusive . t)
-        (face . (background-color
-                 . ,(face-attribute 'default :background)))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ `(line ("%" (priority . 4) (exclusive . t)
+             (face . (background-color
+                      . ,(face-attribute 'default :background))))))
 
-(auto-overlay-load-regexp
- '(self "\\$" (priority . 3) (face . (background-color . "green")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(self ("\\$" (priority . 3) (face . (background-color . "green")))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{" (priority . 2)
-         (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\end@{" (priority . 2)
-       (face . (background-color . "pink")))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(start "\\([^\\]\\|^\\)@{" (priority . 2))
- 'latex 'environment)
-(auto-overlay-load-compound-regexp
- '(end ("\\([^\\]\\|^\\)\\(@}\\)" . 2) (priority . 2))
- 'latex 'environment)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\end@{"
+    :edge start
+    (priority . 2)
+    (face . (background-color . "pink")))
+   ("\\([^\\]\\|^\\)@{"
+    :edge start
+    (priority . 2))
+   (("\\([^\\]\\|^\\)\\(@}\\)" . 2)
+    :edge end
+    (priority . 2))))
 
-(auto-overlay-load-regexp '(nested) 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(start "\\begin@{equation@}"  (priority . 1)
-         (face . (background-color . "yellow")))
- 'latex 'equation)
-(auto-overlay-load-compound-regexp
- '(end "\\end@{equation@}" (priority . 1)
-       (face . (background-color . "yellow")))
- 'latex 'equation)
+(auto-overlay-load-definition
+ 'latex
+ '(nested
+   ("\\begin@{equation@}"
+    :edge start
+    (priority . 1)
+    (face . (background-color . "yellow")))
+   ("\\end@{equation@}"
+    :edge end
+    (priority . 1)
+    (face . (background-color . "yellow")))))
 
-(auto-overlay-load-regexp
- '(word ("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
-        (face . (background-color . "blue")))
- 'latex)
+(auto-overlay-load-definition
+ 'latex
+ '(word (("\\\\[[:alpha:]]*?\\([^[:alpha:]]\\|$\\)" . 1)
+         (face . (background-color . "blue")))))
 @end lisp
-
 
 With these regexp definitions, La@TeX{} commands will automatically be
 highlighted in blue, equation environments in yellow, inline maths
@@ -1361,9 +1387,10 @@ match overlay, and the @code{parent} property of the match overlay and
 the @code{start} and @code{end} properties of @var{overlay} are updated
 accordingly. @var{start} should be a match overlay corresponding either
 to the unique regexp if only one is needed for that overlay class, or to
-a start regexp in a compound overlay class. @var{end} should be a match
-overlay corresponding to an end regexp in a compound overlay
-class. @xref{Overview}. However, no check is made to enforce this.
+a start regexp if overlay class uses separate start and end
+regexps. @var{end} should then be a match overlay corresponding to an
+end regexp in such a class. @xref{Overview}. However, no check is made
+to enforce this.
 
 If @var{start} or @var{end} are numbers or markes, move the
 corresponding edge of @var{overlay} to that location and make it
@@ -1439,7 +1466,7 @@ corresponding to match overlay @var{o-match} (@pxref{Defining Regexps}).
 @item (auto-o-edge @var{o-match})
 @findex auto-o-edge
 Return edge (the symbol @code{start} or @code{end}) of match overlay
-@var{o-match} (assumes that @var{o-match}'s class is a compound class).
+@var{o-match}.
 
 @item (auto-o-parse-function @var{o-match})
 @findex auto-o-parse-function

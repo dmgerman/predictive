@@ -2,10 +2,10 @@
 ;;; auto-overlay-line.el --- automatic overlays for single lines
 
 
-;; Copyright (C) 2005 2006 Toby Cubitt
+;; Copyright (C) 2005-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.3
+;; Version: 0.3.4
 ;; Keywords: automatic, overlays, line
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version0.3.4
+;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
 ;;
 ;; Version 0.3.3
 ;; * set overlay properties straight after creation, rather than leaving it to
@@ -82,7 +85,7 @@
     ;; give new overlay some basic properties
     (overlay-put o-new 'auto-overlay t)
     (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
-    (overlay-put o-new 'entry-id (overlay-get o-match 'entry-id))
+    (overlay-put o-new 'definition-id (overlay-get o-match 'definition-id))
     ;; match start of new overlay with match
     (auto-o-match-overlay o-new o-match nil)
     ;; set overlay's modification hooks to ensure that it always extends to
