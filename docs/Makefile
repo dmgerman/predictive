@@ -1,5 +1,5 @@
 
-all: user-guide programmer-guide auto-o-manual
+all: user-guide programmer-guide auto-overlay-manual
 
 
 DIR=~/programming/predictive/docs
@@ -57,12 +57,12 @@ user-guide: $(USERDIR)/predictive-user-guide.info.gz \
             $(USERDIR)/predictive-user-guide.pdf
 
 
-prog-guide: $(PROGDIR)/predictive-prog-guide.info.gz \
-            $(PROGDIR)/predictive-prog-guide-html \
-	    $(PROGDIR)/predictive-prog-guide-html.tar.gz \
-            $(PROGDIR)/predictive-prog-guide.txt.gz \
-            $(PROGDIR)/predictive-prog-guide.ps.gz \
-            $(PROGDIR)/predictive-prog-guide.pdf
+programmer-guide: $(PROGDIR)/predictive-prog-guide.info.gz \
+                  $(PROGDIR)/predictive-prog-guide-html \
+	          $(PROGDIR)/predictive-prog-guide-html.tar.gz \
+                  $(PROGDIR)/predictive-prog-guide.txt.gz \
+                  $(PROGDIR)/predictive-prog-guide.ps.gz \
+                  $(PROGDIR)/predictive-prog-guide.pdf
 
 
 auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
