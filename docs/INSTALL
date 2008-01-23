@@ -14,16 +14,30 @@ Backing-Up Dictionaries
                             * IMPORTANT *
                             *************
 If you are upgrading from a previous version of the predictive completion
-package, or are switching to a different version of Emacs, make sure you first
-backup any dictionaries you use by dumping the words and data they contain to
-files (unless you want to start from scratch). Use
+package, make sure you first backup any dictionaries you use by dumping the
+words and data they contain to files (unless you want to start from
+scratch). Use
 
   M-x predictive-dump-dict-to-file
 
 to make the backups (see Loading and Saving Dictionaries, Emacs Predictive
 Completion Manual). It is NOT enough to make a copy of the dictionary
 file. Only the plain-text "dumped" format is guaranteed to be portable across
-different versions of Emacs and predictive mode.
+different versions of predictive mode.
+
+Previous versions of the predictive completion package saved dictionaries in a
+compiled form that was not portable across different versions of Emacs. Newer
+versions now automatically save dictionaries in both compiled and uncompiled
+forms. If you are upgrading to a different version of Emacs, but continuing to
+use the same version of the predictive completion package, then it is
+sufficient to recompile the dictionaries from the uncompiled files (with
+extension ".el") using the `byte-compile-file' command from the new version of
+Emacs. Alternatively, you can delete the compiled dictionary files (extension
+".elc", but make sure you do NOT delete the uncompiled files!), and let
+predictive mode recompile them automatically when the dictionaries are saved.
+
+However, backing up your dictionaries by dumping them to plain-text files, as
+described above, is still a very good idea (just to be on the safe side!).
 
 
 

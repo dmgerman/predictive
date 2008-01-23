@@ -44,7 +44,7 @@ dict-english.elc: dict-english.el
 
 # in case dict-english.el doesn't exist (should be included in package)
 dict-english.el: dict-english.word-list dict-tree.el
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t t))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
 
 
 
