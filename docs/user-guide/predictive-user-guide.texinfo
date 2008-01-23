@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.19
+0.20
 @c --version--
 
 Copyright @copyright{} 2005--2007 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.19
+@subtitle Version 0.20
 @c --version--
 @author Toby Cubitt
 
@@ -1334,38 +1334,46 @@ saved manually. @xref{Loading and Saving Dictionaries}.
 @cindex dictionaries, saving
 
 @ftable @command
-@item dictree-load
-Load a dictionary from file. The name given to the loaded dictionary is
-the same as the file name, with the extension removed. This will not add
-it to the list of dictionaries used by the current buffer (see
-@command{predictive-load-dict}, below).
-
 @item predictive-load-dict
-Load a dictionary, and add it to the list of dictionaries used by the
-current buffer. The dictionary will be included when learning from the
-buffer, see @ref{Learning from Buffers and Files}, and if its autosave
-flag is set (@pxref{Creating Dictionaries}), it will automatically be
-saved when the buffer is killed. The dictionary file must be in your
-@env{load-path}.
+Load a dictionary by name, and add it to the list of dictionaries used
+by the current buffer. The dictionary will be included when learning
+from the buffer, see @ref{Learning from Buffers and Files}, and if its
+autosave flag is set (@pxref{Creating Dictionaries}), it will
+automatically be saved when the buffer is killed. The dictionary file
+must be in your @env{load-path}.
+
+@item dictree-load
+Load a dictionary from file. The name of the loaded dictionary is the
+same as the file name, with the extension removed. This will not add it
+to the list of dictionaries used by the current buffer (see
+@command{predictive-load-dict}, above).
+
+@item predictive-unload-dict
+Remove a dictionary from the list of dictionaries used by the current
+buffer. The dictionary will no longer be included when learning from the
+buffer, see @ref{Learning from Buffers and Files}, and it will not be
+saved when the buffer is killed. Note that this doesn't actually unload
+the dictionary from Emacs (see @command{dictree-unload}, below).
 
 @item dictree-unload
 Unload a dictionary. If the dictionary's autosave flag is set, this will
 also save it (@pxref{Creating Dictionaries}), unless overridden by
 supplying a prefix argument.
 
-@item dictree-save
+@item predictive-save-dict
 Save a dictionary to its associated file. Prompt for a file name if
 there is none associated with the dictionary.
 
-@item dictree-write
+@item predictive-write-dict
 Write a dictionary to a file specified via the mini-buffer. This also
 associates the dictionary with that file. If a prefix argument is
 supplied, you will @emph{not} be asked to confirm if over-writing an
 existing file.
 
-@item dictree-save-modified
+@item predictive-save-modified-dicts
 Save all modified dictionaries that have a non-nil autosave flag. If a
-prefix argument is supplied, confirm each dictionary before saving.
+prefix argument is supplied, prompt for confirmation before saving each
+dictionary.
 
 @item predictive-dump-dict-to-buffer
 Dump all words, weights and prefix relationships in the dictionary to a
@@ -1377,6 +1385,27 @@ Dump words, weights and prefix relationships to a text file rather than
 a buffer. If a prefix argument is supplied, you will @emph{not} be asked
 to confirm if over-writing an existing file.
 @end ftable
+
+@vtable @env
+@item predictive-dict-autosave
+Sets the default autosave property for dictionaries created with
+@command{predictive-create-dict}. If non-nil, modified dictionaries will
+automatically be saved when they are unloaded (either with the
+@command{predictive-dict-unload} command, or when exiting emacs). If
+nil, any unsaved modifications will be lost unless the dictionary is
+saved manually. @xref{Loading and Saving Dictionaries}.
+
+@item predictive-dict-compilation-mode
+Determines whether dictionaries are saved in compiled or uncompiled
+form, or both. If set to the symbol @code{'compiled}, dictionaries are
+saved in compiled form, if set to @code{'uncompiled} they are saved in
+uncompiled form, and if set to anything else they are saved in both
+forms (the default). A compiled dictionary can be loaded a lot faster,
+and is always used in preference to the uncompiled form if it
+exists. However, compiled dictionaries are not portable between
+different Emacs versions, whereas uncompiled ones are.
+@end vtable
+
 
 To use a dictionary, it must be loaded into memory. If the dictionary is
 in your load path, this can be done manually using the
@@ -1406,19 +1435,20 @@ automatically. @xref{Major Modes}.
 A buffer is usually associated with a file, and saving the buffer with
 the Emacs @command{save-buffer} command writes any changes back to that
 file. Similarly, dictionaries are usually associated with a dictionary
-file. The @command{dictree-save} command saves any changes back to that
-file. The @command{dictree-write} command is analogous to the Emacs
-@command{write-file} command.
+file. The @command{predictive-save-dict} command saves any changes back
+to that file. The @command{predictive-write-dict} command is analogous
+to the Emacs @command{write-file} command.
 
 Dictionaries can be modified by adding words to them with the
 @command{predictive-add-to-dict} command (@pxref{Creating
 Dictionaries}). If the auto-learn features are used, dictionaries are
 modified whenever a completion is accepted (@pxref{Automatic
-Learning}). The @command{dictree-save-modified} saves all modified
-dictionaries whose autosave flag is set. Modified dictionaries used in a
-buffer are automatically saved when that buffer is killed if they have
-their autosave flag set. All modified autosave dictionaries are saved
-when you exit Emacs.
+Learning}). The @command{predictive-save-modified-dicts} saves all
+modified dictionaries whose autosave flag is set. Modified dictionaries
+used in a buffer are automatically saved when that buffer is killed if
+they have their autosave flag set. All modified autosave dictionaries
+are saved when you exit Emacs.
+
 
 
 
@@ -1623,8 +1653,14 @@ buffer than global dictionaries alone can.
 
 If @env{predictive-dict-autosave} is enabled and the buffer is
 associated with a file, the buffer-local dictionary will automatically
-be saved to the directory containing the file (in fact, two files will
-be created in the directory).
+be saved to the directory containing the file@footnote{In fact, two
+dictionaries will be saved in the directory, since the buffer-local
+dictionary is composed of a meta-dictionary and a normal dictionary,
+@pxref{Creating Dictionaries}.}. When you load the file in the future,
+predictive mode will look for the buffer-local dictionary in the same
+directory; there is no need to add the directory to your load path. If
+the buffer is not associated with a file, the buffer-local dictionary
+will be discarded when you end the Emacs session.
 
 @item predictive-buffer-local-learn-multiplier
 Sets the learning speed for buffer-local dictionaries. Whenever a word

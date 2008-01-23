@@ -2,10 +2,10 @@
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
 
-;; Copyright (C) 2004-2007 Toby Cubitt
+;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.16.4
+;; Version: 0.17
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17
+;; * added `predictive-dict-compilation-mode' option which determines whether
+;;   dictionaries are saved in compiled or uncompiled form, or both
+;; * added `predictive-save-dict', `predictive-write-dict' and
+;;   `predictive-save-modified-dicts' commands; these are wrappers around the
+;;   corresponding dict-tree.el functions which are no longer interactive
 ;;
 ;; Version 0.16.4
 ;; * modified `predictive-fast-learn-from-buffer' to honour
@@ -294,7 +301,8 @@ automatically when unloaded (or when quitting Emacs). The symbol
 'ask' means you will be prompted to save modified dictionaries. A
 value of nil means dictionaries will not be saved automatically,
 and unless you save the dictionary manually all changes will be
-lost when the dictionary is unloaded. See also `dictree-save'."
+lost when the dictionary is unloaded. See also
+`predictive-save-dict'."
   :group 'predictive
   :type 'boolean)
 
@@ -319,6 +327,20 @@ disabled in that buffer, for dictionaries that have their
 autosave flag set (see `predictive-dict-autosave')."
   :group 'predictive
   :type 'boolean)
+
+
+(defcustom predictive-dict-compilation-mode nil
+  "*Whether to save dictionaries in compiled or uncompiled form.
+
+The default is to save both compiled and uncompiled forms. If set
+to 'compiled, only the compiled form is saved. If set to
+'uncompiled, only the uncompiled form is saved. The compiled form
+loads faster, but is not portable across different Emacs
+versions."
+  :group 'predictive
+  :type '(choice (const :tag "both" nil)
+		 (const compiled)
+		 (const uncompiled)))
 
 
 (defcustom predictive-ignore-initial-caps t
@@ -782,7 +804,9 @@ do: emails, academic research articles, letters...)"
     ;; bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
       (add-hook 'kill-buffer-hook
-		(lambda () (dictree-save-modified predictive-used-dict-list))
+		(lambda ()
+		  (dictree-save-modified predictive-used-dict-list
+					 predictive-dict-compilation-mode))
 		nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
@@ -841,7 +865,8 @@ do: emails, academic research articles, letters...)"
     
     ;; save the dictionaries
     (when predictive-dict-autosave-on-mode-disable
-      (dictree-save-modified predictive-used-dict-list))
+      (dictree-save-modified predictive-used-dict-list
+			     predictive-dict-compilation-mode))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
     
@@ -857,7 +882,9 @@ do: emails, academic research articles, letters...)"
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
     (remove-hook 'kill-buffer-hook
-		 (lambda () (dictree-save-modified predictive-used-dict-list))
+		 (lambda ()
+		   (dictree-save-modified predictive-used-dict-list
+					  predictive-dict-compilation-mode))
 		 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
@@ -1189,6 +1216,33 @@ disabled (see `predictive-dict-autosave-on-kill-buffer' and
 	   (dictree--name dict) (buffer-name (current-buffer)))
 )
 
+
+
+(defun predictive-save-dict (dict)
+  "Save dictionary DICT to its associated file.
+Use `predictive-write-dict' to save to a different file.
+
+See also `predictive-dict-compilation-mode'."
+  (interactive (list (read-dict "Dictionary to save: ")))
+  (dictree-save dict predictive-dict-compilation-mode)
+)
+
+
+
+(defun predictive-write-dict (dict filename &optional overwrite)
+  "Write dictionary DICT to file FILENAME.
+
+If optional argument OVERWRITE is non-nil, no confirmation will
+be asked for before overwriting an existing file.
+
+See also `predictive-dict-compilation-mode'."
+  (interactive (list (read-dict "Dictionary to write: ")
+		     (read-file-name "File to write to: ")
+		     current-prefix-arg))
+  
+  (dictree-write dict filename overwrite
+		 predictive-dict-compilation-mode)
+)
 
 
 
