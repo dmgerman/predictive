@@ -3,10 +3,10 @@
 ;;;                         (assumes AMSmath)
 
 
-;; Copyright (C) 2004-2007 Toby Cubitt
+;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8
+;; Version: 0.8.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.1
+;; * minor bug fixes to `predictive-latex-load-keybindings'
 ;;
 ;; Version 0.8
 ;; * updated for new auto-overlay regexp definition interface
@@ -271,12 +274,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
     
-    ;; save overlays and unload regexp definitions before killing buffer
-    (add-hook 'kill-buffer-hook
-	      (lambda ()
-		(auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-	      (auto-overlay-unload-set 'predictive))
-	    nil t)
+    ;; save overlays and unload regexp definitions along with buffer
+    (add-hook 'after-save-hook
+	      (lambda () (auto-overlay-save-overlays 'predictive))
+	      nil t)
     
     ;; use latex browser menu if first character of prefix is "\"
     (make-local-variable 'completion-menu)
@@ -406,12 +407,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-math-dict)
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-latex-label-dict)
+    (kill-local-variable 'predictive-map)
     ;; remove hook function that saves overlays
-    (remove-hook 'kill-buffer-hook
-		 (lambda ()
-		   (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		   (auto-overlay-unload-set 'predictive))
+    (remove-hook 'after-save-hook
+		 (lambda () (auto-overlay-save-overlays 'predictive))
 		 t)
+    ;; re-enable LaTeX-mode to restore key bindings etc.
+    (latex-mode)
     
     t))  ; indicate successful reversion of changes
 )
@@ -481,6 +483,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\label{"
 	     :edge start
+	     :id label
 	     (dict . t)
 	     (priority . 30)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
@@ -676,58 +679,62 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-latex-load-keybindings ()
   "Load the predictive mode LaTeX key bindings."
 
-  ;; remove AUCTeX bindings so completion ones work
-  (local-unset-key [?$])
-  (local-unset-key [?\"])
-  (local-unset-key [?_])
-  (local-unset-key [?^])
-  (local-unset-key [?\\])
-  (local-unset-key [?-])
+  ;; override AUCTeX bindings so completion works
+  (make-local-variable 'predictive-map)
+  (define-key predictive-map [?$]  'completion-self-insert)
+  (define-key predictive-map [?\"] 'completion-self-insert)
+  (define-key predictive-map [?_]  'completion-self-insert)
+  (define-key predictive-map [?^]  'completion-self-insert)
+  (define-key predictive-map [?\\] 'completion-self-insert)
+  (define-key predictive-map [?-]  'completion-self-insert)
   
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)
   ;; get behaviours defined in `auto-completion-syntax-alist'
-  (let* ((behaviour (completion-lookup-behaviour nil ?.))
-	 (complete-behaviour (completion-get-completion-behaviour behaviour))
-	 (resolve-behaviour (completion-get-resolve-behaviour behaviour)))
+  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+	 (word-complete (completion-get-completion-behaviour word-behaviour))
+	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour)))
     ;; make "\", "$", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist
 	  (append
-	   `((?\\ . (word
+	   `((?\\ . (,word-complete
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\)
 				(or (not (char-before (1- (point))))
 				    (not (= (char-before (1- (point)))
 					    ?\\))))
-			   'add ',resolve-behaviour))))
-	     (?$ . (none ,resolve-behaviour))
-	     (?_ . (none ,resolve-behaviour))
-	     (?^ . (none ,resolve-behaviour))
+			   'add ',punct-resolve))))
+	     (?$ . (none ,punct-resolve))
+	     (?_ . (none ,punct-resolve))
+	     (?^ . (none ,punct-resolve))
 	     (?{ . ((lambda ()
 		      (cond
 		       ((auto-overlays-at-point
 			 nil '(eq dict predictive-latex-env-dict))
-			(complete-in-buffer ""))
+			(complete-in-buffer "" 'auto) 'none)
 		       ((and (char-before) (= (char-before) ?\\))
-			',complete-behaviour)
+			',word-complete)
 		       (t 'none)))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?} . ((lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?\" . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))
+			   'add ',punct-resolve))
 		     (lambda ()
 		       (if (or (and (char-before) (= (char-before) ?\\))
 			       (not (fboundp 'TeX-insert-quote)))
@@ -737,94 +744,94 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (?' . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?\( . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))))
+			   'add ',punct-resolve))))
 	     (?\) . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))))
+			   'add ',punct-resolve))))
 	     (?+ . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?, . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?- . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?\; . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))))
+			   'add ',punct-resolve))))
 	     (?< . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?= . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?> . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
 	     (?\[ . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))))
+			   'add ',punct-resolve))))
 	     (?\] . ((lambda ()
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
-			   ',complete-behaviour 'none))
+			   ',punct-complete 'none))
 		     (lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
-			   'add ',resolve-behaviour))))
+			   'add ',punct-resolve))))
 	     (?` . ((lambda ()
 		      (if (and (char-before (1- (point)))
 			       (= (char-before (1- (point))) ?\\))
-			  ',complete-behaviour 'none))
+			  ',punct-complete 'none))
 		    (lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',resolve-behaviour))))
+			  'add ',punct-resolve))))
  	     )
 	   auto-completion-override-syntax-alist) ; append
 	  )
