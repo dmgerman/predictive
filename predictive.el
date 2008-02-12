@@ -48,6 +48,7 @@
 ;; * added `predictive-save-dict', `predictive-write-dict' and
 ;;   `predictive-save-modified-dicts' commands; these are wrappers around the
 ;;   corresponding dict-tree.el functions which are no longer interactive
+;; * auto-add filter functions now passed two arguments: prefix and dict
 ;;
 ;; Version 0.16.4
 ;; * modified `predictive-fast-learn-from-buffer' to honour
@@ -582,10 +583,10 @@ different major modes.")
 
 (defvar predictive-completion-filter nil
   "Function that returns a filter function for completions.
-
-Called with one argument: the prefix that is being completed.
-The function it returns should take two arguments: a word from a dictionary
-and the value stored for that word.
+When set, this function is called with one argument: the prefix
+that is being completed (a string). The function it returns
+should take two arguments: a word from a dictionary and the value
+stored for that word.
 
 Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
@@ -593,13 +594,15 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 (defvar predictive-auto-add-filter nil
   "Function called to decide whether to auto-add a word to a dictionary.
-When set, this function is called with one argument, the word
-potentially being added. It should return non-nil if the word
-should be added to the dictionary, nil if it should not. Only
-used when `predictive-auto-add-to-dict' is enabled.")
+When set, this function is called with two arguments: the word
+potentially being added (a string), and the dictionary it would
+be added to. It should return non-nil if the word should be added
+to the dictionary, nil if it should not. Only used when
+`predictive-auto-add-to-dict' is enabled.")
 
 
-(defvar predictive-map nil "Keymap used in predictive mode.")
+(defvar predictive-map (make-sparse-keymap)
+  "Keymap used in predictive mode.")
 
 
 
@@ -964,7 +967,8 @@ Usually called after a completion is accepted."
 			       (>= (length word)
 				   predictive-auto-add-min-chars))
 			   (or (null predictive-auto-add-filter)
-			       (funcall predictive-auto-add-filter word)))
+			       (funcall predictive-auto-add-filter
+					word (car dict))))
 		  (predictive-add-to-dict (car dict) word))))
 	     
 	     ;; if adding to the buffer-local dictionary...
@@ -977,7 +981,8 @@ Usually called after a completion is accepted."
  dictionaries are not enabled by `predictive-use-buffer-local-dict'")
 		;; if caching auto-added words, do so
 		(if predictive-use-auto-learn-cache
-		    (push (cons word (predictive-buffer-local-dict-name))
+		    (push (cons word
+				(eval (predictive-buffer-local-dict-name)))
 			  predictive-auto-add-cache)
 		  ;; otherwise, check it passes the filter (if there is one),
 		  ;; then add it to the dictionary
@@ -985,9 +990,14 @@ Usually called after a completion is accepted."
 				 (>= (length word)
 				     predictive-auto-add-min-chars))
 			     (or (null predictive-auto-add-filter)
-				 (funcall predictive-auto-add-filter word)))
-		    (predictive-add-to-dict (predictive-buffer-local-dict-name)
-					    word)))))
+				 (funcall
+				  predictive-auto-add-filter
+				  word
+				  (eval (predictive-buffer-local-dict-name)))
+				 ))
+		    (predictive-add-to-dict
+		     (eval (predictive-buffer-local-dict-name))
+		     word)))))
 	     
 	     ;; anything else specifies an explicit dictionary to add to
 	     (t
@@ -1003,7 +1013,8 @@ Usually called after a completion is accepted."
 				   (>= (length word)
 				       predictive-auto-add-min-chars))
 			       (or (null predictive-auto-add-filter)
-				   (funcall predictive-auto-add-filter word)))
+				   (funcall predictive-auto-add-filter
+					    word dict)))
 		      (predictive-add-to-dict dict word)))
 		;; display error message if not a dictionary
 		(beep)
@@ -1078,7 +1089,7 @@ for uncapitalized version."
 (defun predictive-flush-auto-learn-caches (&optional idle)
   ;; Flush entries from the auto-learn and auto-add caches, adding them to the
   ;; appropriate dictionary. If optional argument IDLE is supplied, no
-  ;; informative messages are displayed, and flushing will be only continue
+  ;; informative messages are displayed, and flushing will only continue
   ;; whilst emacs is idle
   
   (let ((learn-count (length predictive-auto-learn-cache))
@@ -1115,14 +1126,8 @@ for uncapitalized version."
       (unless idle
 	(message "Flushing predictive mode auto-learn caches...(word\
  %d of %d)" i count))
-      ;; check word passes the filter (if there is one), then add it to
-      ;; whichever dictionary is in the cache
-      (when (and (or (null predictive-auto-add-min-chars)
-		     (>= (length word)
-			 predictive-auto-add-min-chars))
-		 (or (null predictive-auto-add-filter)
-		     (funcall predictive-auto-add-filter word)))
-	(predictive-add-to-dict dict word))))
+      (predictive-add-to-dict dict word))
+    )
   
   (unless idle (message "Flushing predictive mode auto-learn caches...done"))
 )
@@ -1784,24 +1789,26 @@ the buffer's syntax table."
 			  (predictive-add-to-dict (nth i currdict) word)
 			  (throw 'learned t))))
 	      
-	      ;; if word wasn't in any dictionary, but auto-add is enabled and
-	      ;; the word passes the filter (if any), add the word to the
-	      ;; appropriate dictionary
+	      ;; if word wasn't in any dictionary but auto-add is enabled, add
+	      ;; the word to the appropriate dictionary
 	      (when (and predictive-auto-add-to-dict
 			 (or (not predictive-add-to-dict-ask)
 			     (y-or-n-p
 			      (format "Add word \"%s\" to dictionary? "
 				      word)))
 			 (or (null predictive-auto-add-min-chars)
-			     (>= (length word) predictive-auto-add-min-chars))
-			 (or (null predictive-auto-add-filter)
-			     (funcall predictive-auto-add-filter word)))
+			     (>= (length word)
+				 predictive-auto-add-min-chars)))
 		(cond
 		 
-		 ;; adding to the current dictionary, or first dictionary in
-		 ;; the list if current dictionary is a list of dictionaries
+		 ;; if adding to the current dictionary, or first dictionary
+		 ;; in the list if former is a list of dictionaries, then do
+		 ;; so if the word passes the filter (if any)
 		 ((eq predictive-auto-add-to-dict t)
-		  (predictive-add-to-dict (car currdict) word))
+		  (when (or (null predictive-auto-add-filter)
+			    (funcall predictive-auto-add-filter
+				     word (car currdict)))
+		    (predictive-add-to-dict (car currdict) word)))
 		 
 		 ;; if adding to the buffer-local dictionary, do so
 		 ((eq predictive-auto-add-to-dict 'buffer)
@@ -1811,21 +1818,30 @@ the buffer's syntax table."
 		      (message "The setting of `predictive-auto-add-to-dict'\
  specifies adding to the buffer-local dictionary, but buffer-local\
  dictionaries are not enabled by `predictive-use-buffer-local-dict'")
-		    (predictive-add-to-dict
-		     (eval (predictive-buffer-local-dict-name)) word)))
+		    ;; if word passes the filter (if any), add it to the
+		    ;; buffer-local dictionary
+		    (when (or (null predictive-auto-add-filter)
+			      (funcall
+			       predictive-auto-add-filter
+			       word
+			       (eval (predictive-buffer-local-dict-name))))
+		      (predictive-add-to-dict
+		       (eval (predictive-buffer-local-dict-name)) word))))
 		 
 		 ;; anything else specifies an explicit dictionary to add to
 		 (t
 		  (setq currdict (eval predictive-auto-add-to-dict))
 		  ;; check `predictive-auto-add-to-dict' is a dictionary
 		  (if (dictree-p dict)
-		      (predictive-add-to-dict dict word))
-		  ;; display error message if not a dictionary
-		  (beep)
-		  (message
-		   "Wrong type in `predictive-auto-add-to-dict': dictp"))
-		 )))))
-	 )
+		      (when (or (null predictive-auto-add-filter)
+				(funcall predictive-auto-add-filter
+					 word dict))
+			(predictive-add-to-dict dict word))
+		    ;; display error message if not a dictionary
+		    (beep)
+		    (message
+		     "Wrong type in `predictive-auto-add-to-dict': dictp")))
+		 ))))))
 	
 	
 	(when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
@@ -2379,7 +2395,7 @@ predictive mode."
 			(dictree-name dic)))
 		    dict ","))))
       
-      ;; filter string to remove "-dict-" and "-predictive-"
+      ;; filter string to remove "-dict-" and "-predictive-" prefixes
       (while (string-match "-*dict-*\\|-*predictive-*" name)
 	(setq name (replace-match "" nil nil name)))
       
