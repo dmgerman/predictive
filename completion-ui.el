@@ -2,10 +2,10 @@
 ;;; completion-ui.el --- in-buffer completion user interface
 
 
-;; Copyright (C) 2006-2007 Toby Cubitt
+;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7
+;; Version: 0.7.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.1
+;; * minor key binding fixes
+;; * `complete-in-buffer' can now take an optional prefix argument to override
+;;   automatically determined prefix
+;; * bug fixes to `completion-self-insert'
 ;;
 ;; Version 0.7
 ;; * modified core `complete-in-buffer', `complete-word-at-point',
@@ -975,29 +981,57 @@ run whatever would normally be bound to \"C-<SPC>\"."
   ;; M-<space> abandons and inserts a space
   (define-key auto-completion-map "\M- "
     (lambda (&optional arg)
-      "Reject any current provisional completion and insert a space."
-      (interactive "P") (completion-reject arg) (insert " ")))
+      "Reject any current provisional completion if any and insert a space,
+otherwise run whatever would normally be bound to \"M-<SPC>\"."
+      (interactive "P")
+      (completion-run-if-within-overlay
+       (lambda () (interactive) (completion-reject arg) (insert " "))
+       'auto-completion-mode)))
+
+  ;; M-S-<space> inserts a space as a word-constituent
+  (define-key auto-completion-map [?\M-\S- ]
+    (lambda ()
+      "Insert a space as though it were a word-constituent if
+there's a provisional completion at point, otherwise run whatever
+would normally be bound to \"M-S\\ \"."
+      (interactive)
+      (completion-run-if-within-overlay
+       (lambda () (interactive) (completion-self-insert ?\  ?w t))
+       'auto-completion-mode)))
+  
   
   ;; M-. inserts "." as a word-constituent
   (define-key auto-completion-map "\M-."
     (lambda ()
-      "Insert \".\" as though it were a word-constituent."
+      "Insert \".\" as though it were a word-constituent if
+there's a provisional completion at point, otherwise run whatever
+would normally be bound to \"M-.\"."
       (interactive)
-      (completion-self-insert ?. ?w)))
+      (completion-run-if-within-overlay
+       (lambda () (interactive) (completion-self-insert ?. ?w t))
+       'auto-completion-mode)))
   
   ;; M-- inserts "-" as a word-constituent
   (define-key auto-completion-map "\M--"
     (lambda ()
-      "Insert \"-\" as though it were a word-constituent."
+      "Insert \"-\" as though it were a word-constituent if
+there's a provisional completion at point, otherwise run whatever
+would normally be bounds to \"M--\"."
       (interactive)
-      (completion-self-insert ?- ?w)))
+      (completion-run-if-within-overlay
+       (lambda () (interactive) (completion-self-insert ?- ?w t))
+       'auto-completion-mode)))
   
-;;   ;; M-/ inserts "/" as a word-constituent
-;;   (define-key auto-completion-map "\M-/"
-;;     (lambda ()
-;;       "Insert \"/\" as though it were a word-constituent."
-;;       (interactive)
-;;       (completion-self-insert ?/ ?w)))
+;;;   ;; M-/ inserts "/" as a word-constituent
+;;;   (define-key auto-completion-map "\M-/"
+;;;     (lambda ()
+;;;       "Insert \"/\" as though it were a word-constituent if
+;;; there's a provisional completion at point, otherwise run whatever
+;;; would normally be bounds to \"M-/\"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive) (completion-self-insert ?/ ?w t))
+;;;        'auto-completion-mode)))
 )
 
 
@@ -1025,7 +1059,7 @@ run whatever would normally be bound to \"C-<SPC>\"."
     (completion-bind-self-insert completion-dynamic-map))
     
   ;; C-RET accepts, C-DEL rejects
-  (define-key completion-map "C-\r" 'completion-accept)
+  (define-key completion-map [?\C-\r] 'completion-accept)
   (define-key completion-map [(control backspace)] 'completion-reject)
   
   ;; <tab> does traditional tab-completion
@@ -1404,8 +1438,8 @@ major mode, or by another minor mode)."
 ;;; =======================================================
 ;;;              User-interface functions
 
-(defun complete-in-buffer (&optional auto pos)
-  "Complete prefix at point.
+(defun complete-in-buffer (&optional prefix auto pos)
+  "Complete PREFIX, or prefix at point if none specified.
 
 If AUTO is non-nil, assume we're auto-completing and respect
 settings of `auto-completion-min-chars' and
@@ -1426,11 +1460,11 @@ internally)."
 	(setq completion-auto-timer
 	      (run-with-idle-timer auto-completion-delay nil
 				   'complete-in-buffer
-				   nil (point)))
+				   prefix nil (point)))
       
       ;; otherwise...
       (let ((overlay (completion-overlay-at-point))
-	    prefix-fun prefix completions)
+	    prefix-fun completions)
 	;; resolve any provisional completions
 	(completion-resolve-old overlay)
 	
@@ -1439,7 +1473,7 @@ internally)."
 	      (or (and (fboundp 'auto-overlay-local-binding)
 		       (auto-overlay-local-binding 'completion-prefix))
 		  completion-prefix-function))
-	(setq prefix (funcall prefix-fun))
+	(setq prefix (or prefix (funcall prefix-fun)))
 	
 	;; if auto-completing, only complete prefix if it has requisite
 	;; number of characters
@@ -2017,7 +2051,7 @@ methods. Toggling will show all possible completions."
 ;;;                Commands for binding to keys
 
 
-(defun completion-self-insert (&optional char syntax)
+(defun completion-self-insert (&optional char syntax no-syntax-override)
   "Execute a completion function based on syntax of the character
 to be inserted.
 
@@ -2030,9 +2064,12 @@ be overridden for individual characters by
 If CHAR is supplied, it is used instead of the last input event
 to determine the character typed. If SYNTAX is supplied, it
 overrides the character's syntax, and is used instead to lookup
-the behaviour in the alists.
+the behaviour in the alists. If NO-SYNTAX-OVERRIDE is non-nil,
+the behaviour is determined only by syntax, even if it is
+overridden for the character in question
+\(i.e. `auto-completion-override-syntax-alist' is ignored\).
 
-The default functions in `completion-dymamic-syntax-alist' all
+The default actions in `completion-dymamic-syntax-alist' all
 insert the last input event, in addition to taking any completion
 related action \(hence the name,
 `completion-self-insert'\). Therefore, unless you know what you
@@ -2065,7 +2102,9 @@ The Emacs `self-insert-command' is remapped to this when
    
    
    (t  ;; otherwise, lookup behaviour in syntax alists
-    (let* ((behaviour (completion-lookup-behaviour char syntax))
+    (let* ((behaviour (if no-syntax-override
+			  (completion-lookup-behaviour nil syntax)
+			(completion-lookup-behaviour char syntax)))
 	   (complete-behaviour
 	    (completion-get-completion-behaviour behaviour))
 	   (resolve-behaviour
@@ -2152,7 +2191,8 @@ The Emacs `self-insert-command' is remapped to this when
 	(if (eq char last-input-event)
 	    (self-insert-command 1)
 	  (insert char))
-	(when overlay (move-overlay overlay (point) (point))))
+	(when (and overlay (overlay-buffer overlay))
+	  (move-overlay overlay (point) (point))))
       
       
       ;; ----- completion behaviour -----
@@ -2179,9 +2219,13 @@ The Emacs `self-insert-command' is remapped to this when
 	;; prior to completing
 	(when (and completion-overwrite (completion-within-word-p)
 		   (null wordstart))
-	  (let ((pos (point)))
+	  (let ((pos (point))
+		(word-thing
+		 (if (fboundp 'auto-overlay-local-binding)
+		     (auto-overlay-local-binding 'completion-word-thing)
+		   completion-word-thing)))
 	    (save-excursion
-	      (forward-thing completion-word-thing)
+	      (forward-thing word-thing)
 	      (delete-region pos (point)))))
 	
 	(cond
@@ -2189,18 +2233,18 @@ The Emacs `self-insert-command' is remapped to this when
 	 ;; do completion
 	 (prefix
 	  (completion-setup-overlay prefix nil nil overlay)
-	  (complete-in-buffer 'auto))
+	  (complete-in-buffer nil 'auto))
 	 
 	 ;; if doing basic completion, let prefix be found normally
 	 ((eq complete-behaviour 'string)
-	  (complete-in-buffer 'auto))
+	  (complete-in-buffer nil 'auto))
 	 
 	 ;; if completing word at point, delete any overlay at point to
 	 ;; ensure prefix is found anew, and do completion
 	 (t
 	  (when (setq overlay (completion-overlay-at-point))
 	    (completion-delete-overlay overlay))
-	  (complete-in-buffer 'auto))))
+	  (complete-in-buffer nil 'auto))))
        
        ;; error
        (t (error "Invalid entry in `auto-completion-syntax-alist'\
@@ -2484,7 +2528,7 @@ boil away."
   
   ;; if auto-completing, do so
   (if auto-completion-mode
-      (complete-in-buffer 'auto)
+      (complete-in-buffer nil 'auto)
     ;; otherwise, if a pop-up frame is being displayed, update it
     (when (overlay-get overlay 'popup-frame)
       (completion-popup-frame overlay)))
@@ -2561,7 +2605,7 @@ green over night."
 	(overlay-put overlay 'completions nil))
       ;; when auto-completing, do so
       (if auto-completion-mode
-	  (complete-in-buffer 'auto)
+	  (complete-in-buffer nil 'auto)
 	;; otherwise, if a pop-up frame is being displayed, update it
 	(when (overlay-get overlay 'popup-frame)
 	  (completion-popup-frame overlay)))
@@ -2691,7 +2735,7 @@ complete what remains of that word."
 		 auto-completion-backward-delete-delay nil
 		 ;; FIXME: tooltip doesn't seem to be displayed - why?
 		 `(lambda ()
-		   (complete-in-buffer nil ,(point))
+		   (complete-in-buffer nil 'auto ,(point))
 		   (setq completion-backward-delete-timer nil)))))
 	 ))))
 )
