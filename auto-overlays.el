@@ -2,10 +2,10 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
 
-;; Copyright (C) 2005-2007 Toby Cubitt
+;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9
+;; Version: 0.9.1
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.1
+;; * modified `completion-unload-definition/regexp' functions so that they
+;;   return the unloaded definition/regexp in a form suitable for re-loading
+;;   via `completion-load-definition/regexp'
 ;;
 ;; Version 0.9
 ;; * simplified interface functions for loading and unloading auto-overlay
@@ -471,6 +476,18 @@ If START or END is negative, it counts from the end."
   "Load DEFINITION into the set of auto-overlay definitions SET-ID
 in the current buffer. If SET-ID does not exist, it is created.
 
+If POS is nil, DEFINITION is added at the end of the list of
+auto-overlay definitions. If it is t, it is added at the
+beginning. If it is an integer, it is added at that position in
+the list. The position in the list makes no difference to the
+behaviour of the auto-overlays. But it can make a difference to
+the speed and efficiency. In general, higher-priority and
+exclusive DEFINITIONS should appear earlier in the list.
+
+If DEFINITION-ID is supplied, it should be a symbol that can be
+used to uniquely identify DEFINITION (see
+`auto-overlay-unload-definition').
+
 
 DEFINITION should be a list of the form:
 
@@ -499,20 +516,7 @@ The properties :edge and :id are optional. The :edge property
 EDGE should be one of the symbols 'start or 'end. If it is not
 specified, :edge is assumed to be 'start. The :id property is a
 symbol that can be used to uniquely identify REGEXP (see
-`auto-overlay-unload-regexp').
-
-
-If POS is nil, DEFINITION is added at the end of the list of
-auto-overlay definitions. If it is t, it is added at the
-beginning. If it is an integer, it is added at that position in
-the list. The position in the list makes no difference to the
-behaviour of the auto-overlays. But it can make a difference to
-the speed and efficiency. In general, higher-priority and
-exclusive DEFINITIONS should appear earlier in the list.
-
-If DEFINITION-ID is supplied, it should be a symbol that can be used
-to uniquely identify DEFINITION (see
-`auto-overlay-unload-definition')."
+`auto-overlay-unload-regexp')."
 
   (let ((regexps (auto-o-get-regexps set-id))
 	(class (car definition))
@@ -538,7 +542,8 @@ to uniquely identify DEFINITION (see
 	(setq definition (append (auto-o-sublist definition 0 n)
 				 (auto-o-sublist definition (+ n 2))))
 	(when (assq definition-id regexps)
-	  (error "Entry ID \"%s\" is not unique" (symbol-name definition-id)))
+	  (error "Definition ID \"%s\" is not unique"
+		 (symbol-name definition-id)))
 	))
     
     (cond
@@ -562,10 +567,14 @@ to uniquely identify DEFINITION (see
 
 
 
-(defun auto-overlay-load-regexp (set-id definition-id regexp
-					&optional pos regexp-id)
-  "Load REGEXP into the auto-overlay definition identified by DEFINITION-ID
-in the regexp list named SET-ID in the current buffer.
+(defun auto-overlay-load-regexp (set-id definition-id regexp &optional pos)
+  "Load REGEXP into the auto-overlay definition identified by
+DEFINITION-ID in the regexp list named SET-ID in the current
+buffer.
+
+If POS is nil, REGEXP is added at the end of the definition. If
+it is t, it is added at the beginning. If it is an integer, it is
+added at that position.
 
 
 REGEXP should be a list of the form:
@@ -585,33 +594,14 @@ The properties :edge and :id are optional. The :edge property
 EDGE should be one of the symbols 'start or 'end. If it is not
 specified, :edge is assumed to be 'start. The :id property is a
 symbol that can be used to uniquely identify REGEXP (see
-`auto-overlay-unload-regexp').
-
-
-If POS is nil, REGEXP is added at the end of the entry. If it is
-t, it is added at the beginning. If it is an integer, it is added
-at that position.
-
-If REGEXP-ID is supplied, it should be a symbol that can be
-used to uniquely identify ENTRY."
+`auto-overlay-unload-regexp')."
 
   (let ((defs (assq definition-id (auto-o-get-regexps set-id)))
-	rgxp edge props)
+	regexp-id rgxp edge props)
     (when (null defs)
       (error "Definition \"%s\" not found in auto-overlay regexp set %s"
 	     (symbol-name definition-id) (symbol-name set-id)))
     
-    ;; if REGEXP-ID is not specified, create a unique numeric ID
-    (if regexp-id
-	(when (assq regexp-id defs)
-	  (error "Subentry ID \"%s\" is not unique"
-		 (symbol-name regexp-id)))
-      (setq regexp-id
-	    (1+ (apply 'max -1
-		       (mapcar (lambda (elt)
-				 (if (integerp (car elt)) (car elt) -1))
-			       (cddr defs))))))
-
     ;; extract regexp
     (setq rgxp (car regexp))
     (setq regexp (cdr regexp))
@@ -623,10 +613,20 @@ used to uniquely identify ENTRY."
 	(setq regexp (append (auto-o-sublist regexp 0 n)
 			     (auto-o-sublist regexp (+ n 2)))))
       ;; extract regexp-id
-      (when (setq n (auto-o-position :id regexp))
-	(setq regexp-id (nth (1+ n) regexp))
-	(setq regexp (append (auto-o-sublist regexp 0 n)
-			     (auto-o-sublist regexp (+ n 2)))))
+      (if (setq n (auto-o-position :id regexp))
+	  (progn
+	    (setq regexp-id (nth (1+ n) regexp))
+	    (when (assq regexp-id defs)
+	      (error "Regexp ID \"%s\" is not unique"
+		     (symbol-name regexp-id)))
+	    (setq regexp (append (auto-o-sublist regexp 0 n)
+				 (auto-o-sublist regexp (+ n 2)))))
+	;; if no id is specified, create a unique numeric ID
+	(setq regexp-id
+	      (1+ (apply 'max -1
+			 (mapcar (lambda (elt)
+				   (if (integerp (car elt)) (car elt) -1))
+				 (cddr defs))))))
       ;; extract properties
       (setq props regexp))
     
@@ -667,7 +667,7 @@ used to uniquely identify ENTRY."
 
 (defun auto-overlay-unload-definition (set-id definition-id)
   "Unload auto-overlay definition DEFINITION-ID in set SET-ID
-from the current buffer."
+from the current buffer. Returns the deleted definition."
 
   (save-excursion
     ;; call suicide function for corresponding overlays in all buffers in
@@ -679,15 +679,36 @@ from the current buffer."
 	      (auto-overlays-in (point-min) (point-max)
 				`((eq set-id ,set-id)
 				  (eq definition-id ,definition-id))))))
-    ;; delete regexp entry
-    (assq-delete-all definition-id (auto-o-get-regexps set-id)))
+    ;; delete definition
+    (let* ((defs (auto-o-get-regexps set-id))
+	   (olddef (assq definition-id defs))
+	   def-id class regexps regexp edge regexp-id props)
+      (assq-delete-all definition-id defs)
+      
+      ;; massage deleted definition into form suitable for
+      ;; `auto-overlay-load-definition'
+      (setq def-id (nth 0 olddef)
+	    class (nth 1 olddef)
+	    regexps (nthcdr 2 olddef))
+      (setq olddef (list class :id def-id))
+      (dolist (rgxp regexps)
+	(setq regexp-id (nth 0 rgxp)
+	      edge (nth 1 rgxp)
+	      regexp (nth 2 rgxp)
+	      props (nthcdr 3 rgxp))
+	(setq olddef
+	      (append olddef
+		      (list (append (list regexp :edge edge :id regexp-id)
+				    props)))))
+      olddef))  ; return deleted definition
 )
 
 
 
 (defun auto-overlay-unload-regexp (set-id definition-id regexp-id)
-  "Unload the regexp SUBENRTY-ID of auto-overlay definition DEFINITION-ID
-in set SET-ID from the current buffer."
+  "Unload the regexp identified by REGEXP-ID from auto-overlay
+definition DEFINITION-ID in set SET-ID of the current buffer.
+Returns the deleted regexp."
 
   (save-excursion
     ;; call suicide function for corresponding overlays in all buffers in
@@ -702,8 +723,19 @@ in set SET-ID from the current buffer."
 				  (eq definition-id ,definition-id)
 				  (eq regexp-id ,regexp-id))))))
     ;; delete regexp entry
-    (assq-delete-all regexp-id
-		     (cdr (assq definition-id (auto-o-get-regexps set-id)))))
+    (let* ((def (cdr (assq definition-id (auto-o-get-regexps set-id))))
+	   (oldregexp (assq regexp-id def))
+	   id edge regexp props)
+      (assq-delete-all regexp-id def)
+
+      ;; massage deleted definition into form suitable for
+      ;; `auto-overlay-load-definition'
+      (setq id (nth 0 oldregexp)
+	    edge (nth 1 oldregexp)
+	    regexp (nth 2 oldregexp)
+	    props (nthcdr 3 oldregexp))
+      (setq oldregexp (append (list regexp :edge edge :id id) props))
+      oldregexp))  ; return deleted regexp
 )
 
 
@@ -866,10 +898,10 @@ They can be loaded again later using `auto-overlay-load-overlays'."
 				    (list 'eq 'set-id set-id))))
       (setq overlay-list
 	    (sort overlay-list
-		  (lambda (a b) (or (< (overlay-start a) (overlay-start b))
-				    (and (= (overlay-start a) (overlay-start b))
-					 (> (overlay-end a) (overlay-end b)))))
-		  ))
+		  (lambda (a b)
+		    (or (< (overlay-start a) (overlay-start b))
+			(and (= (overlay-start a) (overlay-start b))
+			     (> (overlay-end a) (overlay-end b)))))))
       
       ;; write overlay data to temporary buffer
       (mapc (lambda (o)
