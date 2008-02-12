@@ -221,7 +221,7 @@ Automatic spelling assistance: when you type the first few characters of
 a word, only correct spellings of the whole word are offered. This is
 not only useful for human languages. The predictive completion mode can
 be set up to complete on variable and function names in a program,
-helping avoid bugs due to misspelt names.
+helping avoid bugs due to misspelled names.
 @cindex automatic spelling assistance
 @cindex spelling
 
@@ -1685,10 +1685,11 @@ words shorter than this will be ignored when auto-add is used.
 When this variable is set to a function, and when
 @env{predictive-auto-add-to-dict} is enabled, the function will called
 whenever a word is going to be auto-added to the dictionary, passing the
-word as an argument. The word will only be added if the function returns
-non-nil. If @env{predictive-use-auto-learn-cache} is enabled, the filter
-function will be called when cached entries are flushed, allowing even
-time-consuming filter functions to be used.
+word (a string) and the dictionary as arguments. The word will only be
+added if the function returns non-nil. If
+@env{predictive-use-auto-learn-cache} is enabled, the filter function
+will be called when cached entries are flushed, not when they're added
+to the cache, allowing even time-consuming filter functions to be used.
 @end vtable
 
 Note that if @env{predictive-main-dict} contains a list of dictionary
@@ -1710,10 +1711,12 @@ contain non-letter characters (though it may be better to customize
 @pxref{Syntax}). The following will accomplish this:
 @lisp
 (setq predictive-auto-add-filter
-      (lambda (word) (string-match "^[[:alpha:]]$" word)))
+      (lambda (word dict) (string-match "^[[:alpha:]]$" word)))
 @end lisp
+Note that the function must accept both the word and dictionary
+arguments, even if it doesn't make use of the dictionary.
 
-Another example would be to check that words are spelt correctly before
+Another example would be to check that words are spelled correctly before
 auto-adding them to a dictionary, either using @command{ispell} or using
 the English dictionary that comes with predictive mode. This sounds
 tautological, but it does make sense: the dictionary you use for
@@ -1721,7 +1724,7 @@ predictive completion will only contain words you've used at least once,
 but typos and spelling mistakes won't make it into the dictionary
 (@pxref{Getting the Most out of Dictionaries}).
 @lisp
-(setq predictive-auto-add-filter (lambda (word) (lookup-words word)))
+(setq predictive-auto-add-filter (lambda (word dict) (lookup-words word)))
 @end lisp
 Using the supplied predictive English dictionary will be faster than
 @command{ispell}, since it is optimised for looking up words, though
@@ -1891,7 +1894,7 @@ buffer and scanning through it by hand or with @command{ispell}
 So which approach is better? Each has advantages and disadvantages, and
 it comes down to personal preference. Training a reset copy of the
 supplied English dictionary (or one built from another word list)
-ensures that all the words in the dictionary are spelt correctly
+ensures that all the words in the dictionary are spelled correctly
 (assuming the words in the list were correct in the first place). It
 also means that predictive mode will provide spelling assistance even
 when you type an obscure word that you've never used before. On the
