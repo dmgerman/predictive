@@ -3,10 +3,10 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2004-2007 Toby Cubitt
+;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.5
+;; Version: 0.6
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6
+;; * allow \label to take optional argument
+;; * bug-fixes
 ;;
 ;; Version 0.5
 ;; * updated for new auto-overlay regexp definition interface
@@ -69,6 +73,15 @@
      'predictive-latex-cleveref-label-forward-word)
 
 
+;; variables used to hold old definitions of label regexps
+(defvar predictive-latex-cleveref-restore-label-regexp nil)
+(defvar predictive-latex-cleveref-restore-label-definition nil)
+(make-variable-buffer-local
+ 'predictive-latex-cleveref-restore-label-regexp)
+(make-variable-buffer-local
+ 'predictive-latex-cleveref-restore-label-definition)
+
+
 
 (defun predictive-latex-load-cleveref ()
   ;; load cleveref regexps
@@ -83,21 +96,22 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (completion-dynamic-syntax-alist . ((?w . (add t word))
-					 (?_ . (add t word))
-					 (?  . (accept t none))
-					 (?. . (add t word))
-					 (t  . (reject t none))))
-     (completion-dynamic-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp ":"))
-		t word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp "\\W"))
-		t word))
-	 (?, . (accept t none))
-	 (?} . (accept t none))))
-     (face . (background-color . ,predictive-overlay-debug-color))))
+     (auto-completion-syntax-alist . ((?w . (word add))
+				      (?_ . (word add))
+				      (?  . (none accept))
+				      (?. . (word add))
+				      (t  . (none reject))))
+     (auto-completion-override-syntax-alist
+      . ((?: . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp ":"))))
+	 (?_ . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W"))))
+	 (?, . (none accept))
+	 (?} . (none accept))))
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
   
   ;; \Cref
   (auto-overlay-load-regexp
@@ -109,20 +123,20 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (completion-dynamic-syntax-alist . ((?w . (add t word))
-					 (?_ . (add t word))
-					 (?  . (accept t none))
-					 (?. . (add t word))
-					 (t  . (reject t none))))
-     (completion-dynamic-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp ":"))
-		t word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp "\\W"))
-		t word))
-	 (?, . (accept t none))
-	 (?} . (accept t none))))
+     (auto-completion-syntax-alist . ((?w . (word add))
+				      (?_ . (word add))
+				      (?  . (none accept))
+				      (?. . (word add))
+				      (t  . (none reject))))
+     (auto-completion-override-syntax-alist
+      . ((?: . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp ":"))))
+	 (?_ . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W"))))
+	 (?, . (none accept))
+	 (?} . (none accept))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 
@@ -136,19 +150,20 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (completion-dynamic-syntax-alist . ((?w . (add t word))
-					 (?_ . (add t word))
-					 (?  . (accept t none))
-					 (?. . (add t word))
-					 (t  . (reject t none))))
-     (completion-dynamic-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp ":"))
-		t word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp "\\W"))
-		t word))
-	 (?} . (accept t none))))
+     (auto-completion-syntax-alist . ((?w . (word add))
+				      (?_ . (word add))
+				      (?  . (none accept))
+				      (?. . (word add))
+				      (t  . (none reject))))
+     (auto-completion-override-syntax-alist
+      . ((?: . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp ":"))))
+	 (?_ . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W"))))
+	 (?, . (none accept))
+	 (?} . (none accept))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 
@@ -157,26 +172,49 @@
    'predictive 'brace
    `("\\\\Crefrange{"
      :edge start
-     :id crefrange
+     :id Crefrange
      (dict . predictive-latex-label-dict)
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (completion-dynamic-syntax-alist . ((?w . (add t word))
-					 (?_ . (add t word))
-					 (?  . (accept t none))
-					 (?. . (add t word))
-					 (t  . (reject t none))))
-     (completion-dynamic-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp ":"))
-		t word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp "\\W"))
-		t word))
-	 (?} . (accept t none))))
+     (auto-completion-syntax-alist . ((?w . (word add))
+				      (?_ . (word add))
+				      (?  . (none accept))
+				      (?. . (word add))
+				      (t  . (none reject))))
+     (auto-completion-override-syntax-alist
+      . ((?: . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp ":"))))
+	 (?_ . (word
+		(lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W"))))
+	 (?, . (none accept))
+	 (?} . (none accept))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
+
+
+  ;; \label with optional argument
+  (setq predictive-latex-cleveref-restore-label-regexp
+	(auto-overlay-unload-regexp 'predictive 'brace 'label))
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `("\\\\label\\(\\[.*?\\]\\)?{"
+     :edge start
+     :id label
+     (dict . t)
+     (priority . 30)
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
+  
+  (setq predictive-latex-cleveref-restore-label-definition
+	(auto-overlay-unload-definition 'predictive 'label))
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-label
+     :id label
+     (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
 )
 
 
@@ -187,6 +225,12 @@
   (auto-overlay-unload-regexp 'predictive 'brace 'Cref)
   (auto-overlay-unload-regexp 'predictive 'brace 'crefrange)
   (auto-overlay-unload-regexp 'predictive 'brace 'Crefrange)
+  (auto-overlay-unload-regexp 'predictive 'brace 'label)
+  (auto-overlay-load-regexp
+   'predictive 'brace predictive-latex-cleveref-restore-label-regexp t)
+  (auto-overlay-unload-definition 'predictive 'label)
+  (auto-overlay-load-definition
+   'predictive predictive-latex-cleveref-restore-label-definition)
 )
 
 
