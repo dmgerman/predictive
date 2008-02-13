@@ -108,6 +108,9 @@
 ;; * minor key binding fixes
 ;; * `complete-in-buffer' can now take an optional prefix argument to override
 ;;   automatically determined prefix
+;; * `completion-self-insert' can now take an optional argument that causes
+;;   `auto-completion-syntax-override-alist' to be ignored, as can
+;;   `completion-define-word-constituent-binding'
 ;; * bug fixes to `completion-self-insert'
 ;; * switched ordering of `auto-completion[-override]-syntax-alist' entries
 ;;   back to something closer to old ordering
@@ -383,28 +386,15 @@ do based on a typed character's syntax.
 The predefined choices can be used to set two syntax-dependent
 completion behaviours: how the prefix is chosen when characters
 are typed, and how provisional completions are accepted. These
-are specified by a cons cell, whose car is either \"word\" or
-\"string\", and controls how the prefix is chosen, and whose cdr
-is either \"type normally\" or \"punctuation accepts\", and
-controls how completions are accepted.
+are specified by a cons cell, whose cdr is either \"type
+normally\" or \"punctuation accepts\", and controls how
+completions are accepted, and whose car is either \"word\" or
+\"string\", and controls how the prefix is chosen.
 
-If the car is set to \"word\", typing a word-constituent
-character (as defined by the buffers' syntax table) will cause
-the part of the word before point to be completed. That is, the
-completion prefix will be all those characters in the word at
-point that come before the point (`completion-word-thing'
-determines which characters form the word). If the car is instead
-set to \"string\", typing a word-constituent character will
-complete the current string that has been built up by typing
-characters. That is, the prefix will consist of the characters
-you've typed sequentially in the buffer. The two behaviours
-usually only differ if you insert characters in the middle or at
-the end of an existing word.
-
-If the cdr is set to \"type normally\", the provisional
+If the car is set to \"type normally\", the provisional
 completions that appear as you type are only accepted if you call
 `completion-accept' manually. You are free to ignore them
-entirely and type normally. If the cdr is instead set to
+entirely and type normally. If the car is instead set to
 \"punctuation accepts\", the provisional completions are
 automatically accepted whenever you type any punctuation or
 whitespace character (as defined by the buffers' syntax
@@ -416,6 +406,19 @@ word. However, you can no longer entirely ignore the completions
 and type normally, since you may accidentally accept a completion
 you didn't want.
 
+If the cdr is set to \"word\", typing a word-constituent
+character (as defined by the buffers' syntax table) will cause
+the part of the word before point to be completed. That is, the
+completion prefix will be all those characters in the word at
+point that come before the point (`completion-word-thing'
+determines which characters form the word). If the cdr is instead
+set to \"string\", typing a word-constituent character will
+complete the current string that has been built up by typing
+characters. That is, the prefix will consist of the characters
+you've typed sequentially in the buffer. The two behaviours
+usually only differ if you insert characters in the middle or at
+the end of an existing word.
+
 
 Customizing the behaviour for each syntax individually gives more
 fine-grained control over the syntax-dependent completion
@@ -424,16 +427,16 @@ behaviour. In this case, the value of
 syntax descriptors (characters) with behaviours (two-element
 lists).
 
-The first element of the list must be one of the symbols 'word,
+The first element of the list must be one of symbols 'accept,
+'reject or 'add. The first two again have the same meaning as in
+the predefined behaviours, whereas 'add causes characters with
+that syntax to be added to the current completion prefix.
+
+The second element of the list must be one of the symbols 'word,
 'string or 'none. 'word and 'string have the same meaning as in
 the predefined behaviours, though they now apply only to one
 syntax class, whereas 'none prevents characters with that syntax
 from invoking auto-completion.
-
-The second element of the list must be one of symbols 'accept,
-'reject or 'add. The first two again have the same meaning as in
-the predefined behaviours, whereas 'add causes characters with
-that syntax to be added to the current completion prefix.
 
 
 When `auto-completion-syntax-alist' is set from Lisp code, in
@@ -1210,9 +1213,16 @@ would normally be bounds to \"M--\"."
 ;;;                  Keybinding functions
 
 (defun completion-define-word-constituent-binding
-  (key char &optional syntax)
+  (key char &optional syntax no-syntax-override)
   "Setup key bindings for KEY so that it inserts character CHAR
-as though it's syntax were SYNTAX (defaults to word-constituent, ?w)."
+as though it's syntax were SYNTAX. SYNTAX defaults to
+word-constituent, ?w, hence the name of the function, but it can
+be used to set up any syntax.
+
+If NO-SYNTAX-OVERRIDE is non-nil, this binding will cause
+`auto-completion-override-syntax-alist' to be ignored when this
+key binding is used, so that the behaviour is determined only by
+SYNTAX."
 
   (when (null syntax) (setq syntax ?w))
   (let ((doc (concat "Insert \"" (string char) "\" as though it were a\
@@ -1222,7 +1232,7 @@ as though it's syntax were SYNTAX (defaults to word-constituent, ?w)."
     (define-key completion-dynamic-map key
       `(lambda () ,doc
 	 (interactive)
-	 (completion-self-insert ,char ,syntax)))
+	 (completion-self-insert ,char ,syntax ,no-syntax-override)))
     
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate them via
@@ -1233,7 +1243,7 @@ as though it's syntax were SYNTAX (defaults to word-constituent, ?w)."
 	   (interactive)
 	   (completion-run-if-within-overlay
 	    (lambda () (interactive)
-	      (completion-self-insert ,char ,syntax))
+	      (completion-self-insert ,char ,syntax ,no-syntax-override))
 	    'completion-function)))))
 )
 
