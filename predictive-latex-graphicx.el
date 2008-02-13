@@ -44,7 +44,6 @@
 (provide 'predictive-latex-graphicx)
 
 ;; add load and unload functions to alist
-;;(assoc-delete-all "smartref" predictive-latex-usepackage-functions)
 (push '("graphicx" predictive-latex-load-graphicx
 	predictive-latex-unload-graphicx)
       predictive-latex-usepackage-functions)
@@ -52,7 +51,7 @@
 
 
 (defun predictive-latex-load-graphicx ()
-  ;; Load regexp
+  ;; load regexp
   (auto-overlay-load-regexp
    'predictive 'brace
    `("\\\\includegraphics\\(\\[.*?\\]\\)?{"
@@ -67,7 +66,7 @@
 
 
 (defun predictive-latex-unload-graphicx ()
-  ;; Unload sref regexps
+  ;; unload regexp
   (auto-overlay-unload-regexp 'predictive 'brace 'graphicx)
 )
 

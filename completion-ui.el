@@ -378,7 +378,7 @@ after deleting backwards in auto-completion mode."
   :type 'float)
 
 
-(defcustom auto-completion-syntax-alist '(word . reject)
+(defcustom auto-completion-syntax-alist '(reject . word)
   "*Associates character syntax with completion behaviour.
 Used by the `completion-self-insert' function to decide what to
 do based on a typed character's syntax.
@@ -467,16 +467,16 @@ function, its return value determines the insertion behaviour."
 
 
 (defcustom auto-completion-override-syntax-alist
-  '((?0 . (none reject))
-    (?1 . (none reject))
-    (?2 . (none reject))
-    (?3 . (none reject))
-    (?4 . (none reject))
-    (?5 . (none reject))
-    (?6 . (none reject))
-    (?7 . (none reject))
-    (?8 . (none reject))
-    (?9 . (none reject)))
+  '((?0 . (reject none))
+    (?1 . (reject none))
+    (?2 . (reject none))
+    (?3 . (reject none))
+    (?4 . (reject none))
+    (?5 . (reject none))
+    (?6 . (reject none))
+    (?7 . (reject none))
+    (?8 . (reject none))
+    (?9 . (reject none)))
   "*Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
 in `auto-completion-syntax-alist'. The format is the same as for
@@ -484,7 +484,7 @@ in `auto-completion-syntax-alist'. The format is the same as for
 characters rather than syntax descriptors."
   :group 'completion-ui
   :type '(alist :key-type (choice character (const :tag "default" t))
-		:value-type (cons (choice (const :tag "accept" accept)
+		:value-type (list (choice (const :tag "accept" accept)
 					  (const :tag "reject" reject)
 					  (const :tag "add" add))
 				  (choice (const :tag "string" string)
@@ -1393,6 +1393,59 @@ Comparison is done with 'equal."
 
 ;;; ================================================================
 ;;;                Interface abstraction macros
+
+(defun completion-lookup-behaviour (&optional char syntax)
+  "Return syntax-dependent behaviour
+of character CHAR and/or syntax-class SYNTAX. At least one of
+these must be supplied. If both are supplied, SYNTAX overrides the
+syntax-class of CHAR."
+
+  ;; SYNTAX defaults to syntax-class of CHAR
+  (when (and char (not syntax)) (setq syntax (char-syntax char)))
+  
+  ;; get syntax alists
+  (let ((syntax-alist
+	 (if (fboundp 'auto-overlay-local-binding)
+	     (auto-overlay-local-binding
+	      'auto-completion-syntax-alist)
+	   auto-completion-syntax-alist))
+	(override-alist
+	 (if (fboundp 'auto-overlay-local-binding)
+	     (auto-overlay-local-binding
+	      'auto-completion-override-syntax-alist)
+	   auto-completion-override-syntax-alist))
+	behaviour)
+
+    ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
+    ;; cons cell), convert it to an alist
+    (unless (listp (car syntax-alist))
+      (setq syntax-alist
+	    `(;; word constituents add to current completion and
+	      ;; complete word or string, depending on VALUE
+	      (?w . (add ,(cdr syntax-alist)))
+	      ;; symbol constituents, whitespace and punctuation
+	      ;; characters either accept or reject, depending on
+	      ;; VALUE, and don't complete
+	      (?_ .  (,(car syntax-alist) none))
+	      (?  .  (,(car syntax-alist) none))
+	      (?. .  (,(car syntax-alist) none))
+	      (?\( . (,(car syntax-alist) none))
+	      (?\) . (,(car syntax-alist) none))
+	      ;; anything else rejects and does't complete
+	      (t . (reject none)))
+	    ))
+    
+    ;; extract behaviours from syntax alists
+    (setq behaviour (or (when char (cdr (assq char override-alist)))
+			(cdr (assq syntax syntax-alist))
+			(cdr (assq t syntax-alist))))
+    (when (= (length behaviour) 2)
+      (setq behaviour (append behaviour '(t))))
+    
+    behaviour)  ; return behaviour  
+)
+
+
 
 (defmacro completion-get-resolve-behaviour (behaviour)
   "Extract syntax-dependent resolve behaviour from BEHAVIOUR.
@@ -3232,60 +3285,6 @@ inserting anything)."
        ;; running accept hooks
        (t (completion-delete-overlay overlay)))
       ))
-)
-
-
-
-
-(defun completion-lookup-behaviour (&optional char syntax)
-  "Return syntax-dependent behaviour
-of character CHAR and/or syntax-class SYNTAX. At least one of
-these must be supplied. If both are supplied, SYNTAX overrides the
-syntax-class of CHAR."
-
-  ;; SYNTAX defaults to syntax-class of CHAR
-  (when (and char (not syntax)) (setq syntax (char-syntax char)))
-  
-  ;; get syntax alists
-  (let ((syntax-alist
-	 (if (fboundp 'auto-overlay-local-binding)
-	     (auto-overlay-local-binding
-	      'auto-completion-syntax-alist)
-	   auto-completion-syntax-alist))
-	(override-alist
-	 (if (fboundp 'auto-overlay-local-binding)
-	     (auto-overlay-local-binding
-	      'auto-completion-override-syntax-alist)
-	   auto-completion-override-syntax-alist))
-	behaviour)
-
-    ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
-    ;; cons cell), convert it to an alist
-    (unless (listp (car syntax-alist))
-      (setq syntax-alist
-	    `(;; word constituents add to current completion and
-	      ;; complete word or string, depending on VALUE
-	      (?w . (,(car syntax-alist) add))
-	      ;; symbol constituents, whitespace and punctuation
-	      ;; characters either accept or reject, depending on
-	      ;; VALUE, and don't complete
-	      (?_ . (none ,(cdr syntax-alist)))
-	      (?  . (none ,(cdr syntax-alist)))
-	      (?. . (none ,(cdr syntax-alist)))
-	      (?\( . (none ,(cdr syntax-alist)))
-	      (?\) . (none ,(cdr syntax-alist)))
-	      ;; anything else rejects and does't complete
-	      (t . (none reject)))
-	    ))
-    
-    ;; extract behaviours from syntax alists
-    (setq behaviour (or (when char (cdr (assq char override-alist)))
-			(cdr (assq syntax syntax-alist))
-			(cdr (assq t syntax-alist))))
-    (when (= (length behaviour) 2)
-      (setq behaviour (append behaviour '(t))))
-    
-    behaviour)  ; return behaviour  
 )
 
 
