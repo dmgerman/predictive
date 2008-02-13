@@ -191,7 +191,7 @@ definition.
 Each @var{regexp} defines one of the regexps that make up the
 auto-overlay definition. It should be a list of the form
 @lisp
-(@var{rgxp} &optional :edge @var{edge} :id @var{subentry-id} @rest @var{property1} @var{property2} ...)
+(@var{rgxp} &optional :edge @var{edge} :id @var{subentry-id} @@rest @var{property1} @var{property2} ...)
 @end lisp
 The @code{:edge} property should be one of the symbols @code{'start} or
 @code{'end}, and determines which edge of the auto-overlay this regexp

@@ -1,5 +1,5 @@
 
-all: user-guide programmer-guide auto-overlay-manual
+all: user-guide auto-overlay-manual #programmer-guide
 
 
 DIR=~/programming/predictive/docs
