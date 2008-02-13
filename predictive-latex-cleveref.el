@@ -33,6 +33,8 @@
 ;;
 ;; Version 0.6
 ;; * allow \label to take optional argument
+;; * switched ordering of `auto-completion[-override]-syntax-alist' entries to
+;;   conform to new completion-ui
 ;; * bug-fixes
 ;;
 ;; Version 0.5
@@ -96,20 +98,22 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (word add))
-				      (?_ . (word add))
-				      (?  . (none accept))
-				      (?. . (word add))
-				      (t  . (none reject))))
+     (auto-completion-syntax-alist . ((?w . (add word))
+				      (?_ . (add word))
+				      (?  . (accept none))
+				      (?. . (add word))
+				      (t  . (reject none))))
      (auto-completion-override-syntax-alist
       . ((?: . (word
 		(lambda ()
-		  (predictive-latex-completion-add-till-regexp ":"))))
+		  (predictive-latex-completion-add-till-regexp ":")
+		  nil)))
 	 (?_ . (word
 		(lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W"))))
-	 (?, . (none accept))
-	 (?} . (none accept))))
+		  (predictive-latex-completion-add-till-regexp "\\W")
+		  nil)))
+	 (?, . (accept none))
+	 (?} . (accept none))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
   
@@ -123,20 +127,22 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (word add))
-				      (?_ . (word add))
-				      (?  . (none accept))
-				      (?. . (word add))
-				      (t  . (none reject))))
+     (auto-completion-syntax-alist . ((?w . (add word))
+				      (?_ . (add word))
+				      (?  . (accept none))
+				      (?. . (add word))
+				      (t  . (reject none))))
      (auto-completion-override-syntax-alist
-      . ((?: . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp ":"))))
-	 (?_ . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W"))))
-	 (?, . (none accept))
-	 (?} . (none accept))))
+      . ((?: . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp ":")
+		  nil)
+		word))
+	 (?_ . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W")
+		  nil)
+		word))
+	 (?, . (accept none))
+	 (?} . (accept none))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 
@@ -150,20 +156,22 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (word add))
-				      (?_ . (word add))
-				      (?  . (none accept))
-				      (?. . (word add))
-				      (t  . (none reject))))
+     (auto-completion-syntax-alist . ((?w . (add word))
+				      (?_ . (add word))
+				      (?  . (accept none))
+				      (?. . (add word))
+				      (t  . (reject none))))
      (auto-completion-override-syntax-alist
-      . ((?: . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp ":"))))
-	 (?_ . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W"))))
-	 (?, . (none accept))
-	 (?} . (none accept))))
+      . ((?: . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp ":")
+		  nil)
+		word))
+	 (?_ . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W")
+		  nil)
+		word))
+	 (?, . (accept none))
+	 (?} . (accept none))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 
@@ -177,20 +185,22 @@
      (priority . 2)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (word add))
-				      (?_ . (word add))
-				      (?  . (none accept))
-				      (?. . (word add))
-				      (t  . (none reject))))
+     (auto-completion-syntax-alist . ((?w . (add word))
+				      (?_ . (add word))
+				      (?  . (accept none))
+				      (?. . (add word))
+				      (t  . (reject none))))
      (auto-completion-override-syntax-alist
-      . ((?: . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp ":"))))
-	 (?_ . (word
-		(lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W"))))
-	 (?, . (none accept))
-	 (?} . (none accept))))
+      . ((?: . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp ":")
+		  nil)
+		word))
+	 (?_ . ((lambda ()
+		  (predictive-latex-completion-add-till-regexp "\\W")
+		  nil)
+		word))
+	 (?, . (accept none))
+	 (?} . (accept none))))
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 

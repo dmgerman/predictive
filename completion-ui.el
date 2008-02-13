@@ -109,6 +109,8 @@
 ;; * `complete-in-buffer' can now take an optional prefix argument to override
 ;;   automatically determined prefix
 ;; * bug fixes to `completion-self-insert'
+;; * switched ordering of `auto-completion[-override]-syntax-alist' entries
+;;   back to something closer to old ordering
 ;;
 ;; Version 0.7
 ;; * modified core `complete-in-buffer', `complete-word-at-point',
@@ -434,32 +436,32 @@ the predefined behaviours, whereas 'add causes characters with
 that syntax to be added to the current completion prefix.
 
 
-When `auto-completion-syntax-alist' is set from Lisp packages, in
+When `auto-completion-syntax-alist' is set from Lisp code, in
 addition to the symbol values described above the list entries
 can also be functions which return one of those symbols. The list
 can also have an additional third entry, which determines whether
 the typed character is inserted or not: the character is inserted
-if it is non-nil, not if it is nil. If the entry is a function,
-its return value determines the behaviour."
+if it is non-nil, not if it is nil. Again if the third entry is a
+function, its return value determines the insertion behaviour."
   :group 'completion-ui
   :type '(choice
 	  (cons :tag "Predefined"
-		(choice :tag "Completion behaviour"
-			(const word)
-			(const string))
 		(choice :tag "Acceptance behaviour"
 			(const :tag "type normally" reject)
-			(const :tag "punctuation accepts" accept)))
+			(const :tag "punctuation accepts" accept))
+		(choice :tag "Completion behaviour"
+			(const word)
+			(const string)))
 	  (alist :tag "Custom"
 		 :key-type character
 		 :value-type (list
-			      (choice (const word)
-				      (const string)
-				      (const none))
 			      (choice (const accept)
 				      (const reject)
-				      (const add))))))
-  
+				      (const add))
+			      (choice (const word)
+				      (const string)
+				      (const none))))))
+
 
 (defcustom auto-completion-override-syntax-alist
   '((?0 . (none reject))
@@ -479,12 +481,12 @@ in `auto-completion-syntax-alist'. The format is the same as for
 characters rather than syntax descriptors."
   :group 'completion-ui
   :type '(alist :key-type (choice character (const :tag "default" t))
-		:value-type (cons (choice (const :tag "string" string)
-					  (const :tag "word" word)
-					  (const :tag "none" none))
-				  (choice (const :tag "accept" accept)
+		:value-type (cons (choice (const :tag "accept" accept)
 					  (const :tag "reject" reject)
-					  (const :tag "add" add)))))
+					  (const :tag "add" add))
+				  (choice (const :tag "string" string)
+					  (const :tag "word" word)
+					  (const :tag "none" none)))))
   
 
 
@@ -1382,28 +1384,25 @@ Comparison is done with 'equal."
 ;;; ================================================================
 ;;;                Interface abstraction macros
 
-(defmacro completion-get-completion-behaviour (behaviour)
-  "Extract syntax-dependent completion behaviour from BEHAVIOUR.
-BEHAVIOUR should be the return value of a call to
-`completion-lookup-behaviour'."
-  `(nth 0 ,behaviour)
-)
-
-
 (defmacro completion-get-resolve-behaviour (behaviour)
   "Extract syntax-dependent resolve behaviour from BEHAVIOUR.
 BEHAVIOUR should be the return value of a call to
 `completion-lookup-behaviour'."
-  `(nth 1 ,behaviour)
-)
+  `(nth 0 ,behaviour))
+
+
+(defmacro completion-get-completion-behaviour (behaviour)
+  "Extract syntax-dependent completion behaviour from BEHAVIOUR.
+BEHAVIOUR should be the return value of a call to
+`completion-lookup-behaviour'."
+  `(nth 1 ,behaviour))
 
 
 (defmacro completion-get-insertion-behaviour (behaviour)
   "Extract syntax-dependent insertion behaviour from BEHAVIOUR.
 BEHAVIOUR should be the return value of a call to
 `completion-lookup-behaviour'."
-  `(nth 2 ,behaviour)
-)
+  `(nth 2 ,behaviour))
 
 
 
@@ -2345,7 +2344,7 @@ Intended to be bound to keys in `completion-hotkey-map'."
 	(let ((completion-trap-recursion t))
 	  (unwind-protect
 	      (command-execute
-	       (key-binding (this-command-keys) 'accept-default))
+	       (key-binding (this-command-keys) t))
 	    (setq completion-use-hotkeys t))))
        
        ;; if there are too few completions, display message
@@ -3332,7 +3331,7 @@ sequence in a keymap."
 	  command)
       (set variable nil)
       (setq command
-	    (key-binding (this-command-keys) 'accept-default))
+	    (key-binding (this-command-keys) t))
       (unwind-protect
 	  (when (commandp command) (command-execute command))
 	(set variable restore))))
