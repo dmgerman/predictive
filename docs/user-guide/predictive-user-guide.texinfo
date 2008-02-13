@@ -2088,12 +2088,12 @@ way.
 @cindex characters, syntax
 
 @vtable @env
-@item completion-dynamic-syntax-alist
+@item auto-completion-syntax-alist
 Alist associating character syntax descriptors with completion
 functions. Used by the @command{completion-self-insert} function to
 decide what to do based on a typed character's syntax.
 
-@item completion-dynamic-override-syntax-alist
+@item auto-completion-override-syntax-alist
 Alist associating characters with completion functions. Overrides the
 default function for a typed character's syntax. Used by
 @command{completion-self-insert}.
@@ -2114,6 +2114,12 @@ though its syntax class were @var{syntax}, use:
 @lisp
 (completion-define-word-constituent-binding key char syntax)
 @end lisp
+To ignore @env{auto-completion-override-syntax-alist} for this key
+binding, so that the behaviour is determined only by @var{syntax},
+supply a non-nil third argument:
+@lisp
+(completion-define-word-constituent-binding key char syntax t)
+@end lisp
 @end ftable
 
 When a character is typed, predictive mode decides what to do based on
@@ -2121,7 +2127,7 @@ that character's syntax, as defined by the current syntax table
 (@pxref{Syntax, , , emacs, GNU Emacs Manual}). All printable characters
 are bound by default to the function @command{completion-self-insert},
 which inserts the character, looks up the character's syntax descriptor
-in @env{completion-dynamic-syntax-alist}, and carries out the associated
+in @env{auto-completion-syntax-alist}, and carries out the associated
 actions.
 @findex completion-self-insert
 
@@ -2132,37 +2138,40 @@ any provisional completion and insert the character, and anything else
 rejects any provisional completion and inserts the character.
 
 Occasionally, the syntax-derived behaviour needs to be overridden for
-individual characters. The
-@env{completion-dynamic-override-syntax-alist} associates characters
-with completion behaviour and takes precedence over
-@env{completion-dynamic-syntax-alist}.
+individual characters. The @env{auto-completion-override-syntax-alist}
+associates characters with completion behaviour and takes precedence
+over @env{auto-completion-syntax-alist}.
 
-Each association in @env{completion-dynamic-syntax-alist} and
-@env{completion-dynamic-override-syntax-alist} is a three-element list
-of the form@footnote{Lisp packages can additionally set the second
-element to nil, and can replace any element with a function that returns
-one of these values or nil, but this is beyond the scope of this
+Each association in @env{auto-completion-syntax-alist} and
+@env{auto-completion-override-syntax-alist} is a two-element list of the
+form@footnote{Lisp packages can additionally set a third element that
+controls whether the typed character is inserted, and can replace any
+element in the list with a function that returns one of the values
+described here or nil, but these features are beyond the scope of this
 user-guide.}:
 @lisp
-(<accept|reject|add> t <basic|word|none>)
+(<accept|reject|add> <string|word|none>)
 @end lisp
 
 The first element determines what happens if there is a provisional
 completion at the point: @code{accept} accepts it, @code{reject} rejects
 it, and @code{add} adds the typed character to the completion's
 prefix. The last element determines what kind of completion is done (if
-any) after the typed character is inserted: @code{basic} completes the
-current prefix and @code{none} doesn't do any completion. The
-@code{word} option does more advanced completion. If completion is
-already in progress, it behaves as @code{basic}. If no completion is in
-progress and the point is within a word, it deletes from point to the
-end of the word, and completes the prefix constructed from the part of
-the word before the point (including the newly typed
-character)@footnote{The value of @env{completion-word-thing} determines
-what is considered a word. Logically enough, it defaults to
-@code{word}. Lisp packages can redefine it, or even override the whole
-prefix-finding mechanism with their own function, but this is again
-beyond the scope of this user-guide.}.
+any) after the typed character is inserted: @code{string} and
+@code{word} complete the current prefix, whereas @code{none} doesn't do
+any completion. The @code{string} and @code{word} options differ in how
+they decide what prefix should be completed when no completion is in
+progress. @code{string} takes the prefix to be the prefix built up by
+typing sequential characters. @code{word} takes the prefix to be the
+part of the current word appearing before point@footnote{The value of
+@env{completion-word-thing} determines what is considered a
+word. Logically enough, it defaults to @code{word}. Lisp packages can
+redefine it, or even override the whole prefix-finding mechanism with
+their own function, but this is again beyond the scope of this
+user-guide.}.. The difference is only evident when typing a character in
+the middle or at the end of an existing word, in which case
+@code{string} completes the newly typed character whereas @code{word}
+completes the existing word plus the new character.
 
 Finally, it is occasionally useful to be able to manually override a
 character's syntax, and have it treated one-off as though it had a
@@ -2171,9 +2180,9 @@ the @command{completion-define-word-constituent-binding} function in
 your @file{.emacs} file (after the line loading the predictive package,
 @pxref{Obtaining and Installing}). This is most commonly used to allow
 punctuation characters to be inserted one-off as word-constituents. The
-bindings @kbd{M-.}, @kbd{M--} and @kbd{M-/} are defined by default in
-predictive mode to do precisely this for the punctuation characters
-@samp{.}, @samp{-} and @samp{/}.
+bindings @kbd{M-.}, @kbd{M--}, @kbd{M-/} and @kbd{M-S-<SPC>} are defined
+by default in predictive mode to do precisely this for the punctuation
+characters @samp{.}, @samp{-} and @samp{/}.
 @findex completion-define-word-constituent-binding
 
 
