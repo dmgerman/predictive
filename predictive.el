@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17
+;; Version: 0.17.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.1
+;; * fixed bug in `predictive-flush-auto-learn-caches', which failed to check
+;;   that cached words were longer than `predictive-auto-add-min-chars' and
+;;   passed the filter before adding them to the dictionary
 ;;
 ;; Version 0.17
 ;; * added `predictive-dict-compilation-mode' option which determines whether
@@ -1126,7 +1131,11 @@ for uncapitalized version."
       (unless idle
 	(message "Flushing predictive mode auto-learn caches...(word\
  %d of %d)" i count))
-      (predictive-add-to-dict dict word))
+      (when (and (or (null predictive-auto-add-min-chars)
+		     (>= (length word) predictive-auto-add-min-chars))
+		 (or (null predictive-auto-add-filter)
+		     (funcall predictive-auto-add-filter word dict)))
+	(predictive-add-to-dict dict word)))
     )
   
   (unless idle (message "Flushing predictive mode auto-learn caches...done"))
