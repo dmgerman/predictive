@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.1
+;; Version: 0.7.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.2
+;; * prevent `complete-in-buffer' from auto-displaying the tooltip/menu/pop-up
+;;   frame if there are no completions (otherwise Emacs CVS seems to crash!)
 ;;
 ;; Version 0.7.1
 ;; * minor key binding fixes
@@ -1564,7 +1568,8 @@ internally)."
 	  (if (overlay-get overlay 'popup-frame)
 	      (completion-popup-frame overlay)
 	    ;; otherwise, activate display of tooltip/menu/pop-up frame
-	    (when completion-auto-show (completion-auto-show overlay)))
+	    (when (and completion-auto-show completions)
+	      (completion-auto-show overlay)))
 	  ))))
 )
 
