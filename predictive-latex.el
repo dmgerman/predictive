@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8.1
+;; Version: 0.9
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9
+;; * generalised predictive-latex-label overlay class into
+;;   predictive-latex-auto-dict class, that can be used to auto-add words to
+;;   any dictionary
+;; * added new automatically maintained dictionary of theorem environments
+;;   defined by \newtheorem, using predictive-latex-auto-dict overlay class
 ;;
 ;; Version 0.8.1
 ;; * minor bug fixes to `predictive-latex-load-keybindings'
@@ -221,6 +228,8 @@ When a document class is in the list, "
 (make-variable-buffer-local 'predictive-latex-bibstyle-dict)
 (defvar predictive-latex-label-dict nil)
 (make-variable-buffer-local 'predictive-latex-label-dict)
+(defvar predictive-latex-theorem-dict nil)
+(make-variable-buffer-local 'predictive-latex-theorem-dict)
 
 
 ;; alist holding functions called when loading and unloading latex packages
@@ -234,9 +243,9 @@ When a document class is in the list, "
      'predictive-latex-label-forward-word)
 
 
-;; convenience variable holding alist associating latex dictionary variables
-;; and corresponding dictionary name prefices
-(defvar predictive-latex-dict-classes
+;; convenience const holding alist associating latex dictionary variables and
+;; corresponding dictionary name prefices
+(defconst predictive-latex-dict-classes
   '((predictive-latex-dict . "dict-latex-")
     (predictive-latex-math-dict . "dict-latex-math-")
     (predictive-latex-preamble-dict . "dict-latex-preamble-")
@@ -298,7 +307,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      ;; predictive mode in it, and share buffer-local settings with it
      ((and (boundp 'TeX-master) (stringp TeX-master))
       (let (filename buff used-dicts main-dict latex-dict math-dict
-		     preamble-dict env-dict label-dict)
+		     preamble-dict env-dict label-dict theorem-dict)
 	(setq filename (expand-file-name TeX-master))
 	(unless (string= (substring filename -4) ".tex")
 	  (setq filename (concat filename ".tex")))
@@ -312,7 +321,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (setq math-dict predictive-latex-math-dict)
 	  (setq preamble-dict predictive-latex-preamble-dict)
 	  (setq env-dict predictive-latex-env-dict)
-	  (setq label-dict predictive-latex-label-dict))
+	  (setq label-dict predictive-latex-label-dict)
+	  (setq theorem-dict predictive-latex-theorem-dict))
 	(auto-overlay-share-regexp-set 'predictive buff)
 	(setq predictive-used-dict-list used-dicts)
 	(setq predictive-main-dict main-dict)
@@ -321,6 +331,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(setq predictive-latex-preamble-dict preamble-dict)
 	(setq predictive-latex-env-dict env-dict)
 	(setq predictive-latex-label-dict label-dict)
+	(setq predictive-latex-theorem-dict theorem-dict)
 	;; start the auto-overlays, restoring buffer's modified flag afterwards,
 	;; since automatic synchronization of LaTeX envionments can modify
 	;; buffer without actually changing buffer text
@@ -340,15 +351,25 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (mapc 'predictive-load-dict predictive-latex-preamble-dict)
       (mapc 'predictive-load-dict predictive-latex-env-dict)
       (mapc 'predictive-load-dict predictive-latex-bibstyle-dict)
-      ;; load the label dictionary
-      (predictive-latex-load-label-dict)
+      ;; load/create the label and theorem dictionaries
+      (predictive-latex-load-auto-dict "label")
+      (predictive-latex-load-auto-dict "theorem")
       
-      ;; add main latex dictionary list to main dictionary list
+      ;; add latex dictionary list to main dictionary list
       (make-local-variable 'predictive-main-dict)
       (when (atom predictive-main-dict)
 	(setq predictive-main-dict (list predictive-main-dict)))
       (setq predictive-main-dict
 	    (append predictive-main-dict predictive-latex-dict))
+      ;; add theorem dictionary list to environment dictionary list
+      (when (atom predictive-latex-env-dict)
+	(setq predictive-latex-env-dict (list predictive-latex-env-dict)))
+      (setq predictive-latex-env-dict
+	    (append predictive-latex-env-dict
+		    (if (dictree-p predictive-latex-theorem-dict)
+			(list predictive-latex-theorem-dict)
+		      predictive-latex-theorem-dict)))
+	
       
       ;; delete any existing predictive auto-overlay regexps and load latex
       ;; auto-overlay regexps
@@ -408,14 +429,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-dict)
     (kill-local-variable 'predictive-latex-math-dict)
     (kill-local-variable 'predictive-latex-env-dict)
-    (kill-local-variable 'predictive-latex-label-dict)
     (kill-local-variable 'predictive-map)
+    (kill-local-variable 'predictive-latex-label-dict)
+    (kill-local-variable 'predictive-latex-theorem-dict)
     ;; remove hook function that saves overlays
     (remove-hook 'after-save-hook
 		 (lambda () (auto-overlay-save-overlays 'predictive))
 		 t)
-    ;; re-enable LaTeX-mode to restore key bindings etc.
-    (latex-mode)
     
     t))  ; indicate successful reversion of changes
 )
@@ -669,11 +689,24 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   
   
   ;; \label creates a cross-reference label. Through the use of a special
-  ;; "label" regexp class defined below, this automagically adds the label to
-  ;; the label dictionary.
+  ;; "auto-dict" regexp class defined below, this automagically adds the label
+  ;; to the label dictionary.
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-label :id label (("\\\\label{\\(.*?\\)}" . 1))))
+   '(predictive-latex-auto-dict
+     :id label
+     (("\\\\label{\\(.*?\\)}" . 1)
+      (auto-dict . predictive-latex-label-dict))))
+
+  ;; \newtheorem defines a new theorem-like environment. Through the use of a
+  ;; special "auto-dict" regexp class defined below, this automagically adds
+  ;; the theorem to the theorem dictionary
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-auto-dict
+     :id newtheorem
+     (("\\\\newtheorem{\\(.*?\\)}" . 1)
+      (auto-dict . predictive-latex-theorem-dict))))
 )
 
 
@@ -983,7 +1016,8 @@ refers to."
     ;; when we're not within a referencing command (which we check by checking
     ;; if current dictionary is the label dictionary), display a message,
     ;; otherwise...
-    (if (null (member (eval (predictive-latex-label-dict-name)) current-dict))
+    (if (null (member (eval (predictive-latex-auto-dict-name "label"))
+		      current-dict))
 	(message "Not on LaTeX cross-reference")
       
       ;; get label name and list of label overlays
@@ -1123,6 +1157,299 @@ refers to."
       (setq dict-list predictive-restore-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (setq predictive-main-dict (append dict-list predictive-latex-dict))))
+)
+
+
+
+
+;;;=======================================================================
+;;;  Automatic loading and unloading of LaTeX package dictionaries etc.
+
+(put 'predictive-latex-usepackage 'auto-overlay-parse-function
+     'predictive-latex-parse-usepackage-match)
+(put 'predictive-latex-usepackage 'auto-overlay-suicide-function
+     'predictive-latex-usepackage-suicide)
+
+
+(defun predictive-latex-parse-usepackage-match (o-match)
+  ;; Create a new word overlay for a usepackage command, and load the
+  ;; appropriate dictionaries
+
+  ;; create new word overlay
+  (let ((o-new (auto-o-parse-word-match o-match))
+	package)
+    ;; extract package name
+    (setq package (buffer-substring-no-properties
+		   (overlay-get o-match 'delim-start)
+		   (overlay-get o-match 'delim-end)))
+    
+    ;; save package name in overlay property
+    (overlay-put o-match 'package-name package)
+    ;; load package dictionaries and run the load function
+    (predictive-latex-load-package package)
+    ;; add change function to overlay modification hooks
+    (overlay-put o-new 'modification-hooks
+		 (cons 'predictive-latex-schedule-usepackage-update
+		       (overlay-get o-new 'modification-hooks)))
+    (overlay-put o-new 'insert-in-front-hooks
+		 (cons 'predictive-latex-schedule-usepackage-update
+		       (overlay-get o-new 'insert-in-front-hooks)))
+    (overlay-put o-new 'insert-behind-hooks
+		 (cons 'predictive-latex-schedule-usepackage-update
+		       (overlay-get o-new 'insert-behind-hooks)))
+    ;; return the new overlay
+    o-new)
+)
+
+
+
+(defun predictive-latex-usepackage-suicide (o-match)
+  ;; Delete the word overlay for a usepackage command, and unload the
+  ;; appropriate dictionaries
+  
+  (let ((package (overlay-get o-match 'package-name)))
+    ;; delete the overlay
+    (auto-o-delete-overlay (overlay-get o-match 'parent))
+    ;; unload package dictionaries and run the unload function
+    (predictive-latex-unload-package package))
+)
+
+
+
+(defun predictive-latex-schedule-usepackage-update
+  (o-self modified &rest unused)
+  ;; All usepackage overlay modification hooks are set to this function, which
+  ;; schedules `predictive-latex-usepackage-update' to run after any suicide
+  ;; functions have been called
+  (unless modified
+    (add-to-list 'auto-o-pending-post-suicide
+		 (list 'predictive-latex-usepackage-update o-self)))
+)
+
+
+
+(defun predictive-latex-usepackage-update (o-self)
+  ;; Update the package dictionaries and re-run the load function after a
+  ;; modification, in case package name has changed
+
+  (let (package)
+    ;; if we haven't been deleted by a suicide function...
+    (when (overlay-buffer o-self)
+      ;; unload old package dictionaries and run unload function
+      (predictive-latex-unload-package
+       (overlay-get (overlay-get o-self 'start) 'package-name))
+      ;; extract package name
+      (setq package (buffer-substring-no-properties
+		     (overlay-start o-self)
+		     (overlay-end o-self)))
+      ;; load new package dictionaries and run load function
+      (overlay-put (overlay-get o-self 'start) 'package-name package)
+      (predictive-latex-load-package package)))
+)
+
+
+
+(defun predictive-latex-load-package (package)
+  "Load a LaTeX PACKAGE into the current buffer.
+This loads the package dictionary and runs the load functions for
+the package, if they exist."
+  (interactive "sPackage name: ")
+  
+  (let (dict)
+    ;; try to load package dictionaries and add them to the appropriate lists
+    ;; if they exists
+    (dolist (dic predictive-latex-dict-classes)
+      (setq dict (concat (cdr dic) package))
+      (when (predictive-load-dict dict)
+	(setq dict (intern-soft dict))
+	(if (and (listp (eval (car dic)))
+		 (not (dictree-p (eval (car dic)))))
+	    (nconc (eval (car dic)) (list dict))
+	  (set (car dic) (list (eval (car dic)) dict))))))
+  
+  ;; try to load lisp library for the package
+  (require (intern (concat "predictive-latex-" package)) nil t)
+  ;; run load function for package, if one is defined
+  (let ((func (nth 1 (assoc package predictive-latex-usepackage-functions))))
+    (when func (funcall func)))
+  ;; display message
+  (message (format "LaTeX package \"%s\" loaded" package))
+)
+
+
+
+(defun predictive-latex-unload-package (package)
+  "Unload a LaTeX PACKAGE from the current buffer.
+This unloads the dictionary and runs the unload functions, if
+they exist."
+  (interactive "sPackage name: ")
+  ;; FIXME: ought to complete on loaded package names when called
+  ;;        interactively
+  
+  (let (dict)
+    ;; unload any package dictionaries
+    (dolist (dic predictive-latex-dict-classes)
+      (when (setq dict (intern-soft (concat (cdr dic) package)))
+	(predictive-unload-dict (eval dict))
+	(when (and (listp (eval (car dic)))
+		   (not (dictree-p (eval (car dic)))))
+	  ;; we don't use "(set ... (delq ..." here because other variables
+	  ;; may share structure with the dictionary list variables, and the
+	  ;; element we want to delete can not be the first one, as that is
+	  ;; always the standard dictionary
+	  (delq dict (eval (car dic)))))))
+  
+  ;; try to load lisp library for the package
+  (require (intern (concat "predictive-latex-" package)) nil t)
+  ;; run unload function for package, if one is defined
+  (let ((func (nth 2 (assoc package predictive-latex-usepackage-functions))))
+    (when func (funcall func)))
+  ;; display informative message
+  (message (format "LaTeX package \"%s\" unloaded" package))
+)
+
+
+
+
+;;; =================================================================
+;;;   Automatically generated dictionaries of labels, theorems, etc.
+
+(put 'predictive-latex-auto-dict 'auto-overlay-parse-function
+     'predictive-latex-parse-auto-dict-match)
+(put 'predictive-latex-auto-dict 'auto-overlay-suicide-function
+     'predictive-latex-auto-dict-suicide)
+
+
+(defun predictive-latex-parse-auto-dict-match (o-match)
+  ;; Create a new word overlay, and add its contents to a dictionary
+
+  ;; create new word overlay
+  (let ((o-new (auto-o-parse-word-match o-match))
+	word dict)
+    ;; extract word and get dict
+    (setq word (buffer-substring-no-properties
+		(overlay-get o-match 'delim-start)
+		(overlay-get o-match 'delim-end)))
+    (setq dict (overlay-get o-new 'auto-dict))
+    ;; save word and dict in overlay properties
+    (overlay-put o-match 'word word)
+    (overlay-put o-match 'auto-dict dict)
+    ;; add change function to overlay modification hooks
+    (overlay-put o-new 'modification-hooks
+		 (cons 'predictive-latex-schedule-auto-dict-update
+		       (overlay-get o-new 'modification-hooks)))
+    (overlay-put o-new 'insert-in-front-hooks
+		 (cons 'predictive-latex-schedule-auto-dict-update
+		       (overlay-get o-new 'insert-in-front-hooks)))
+    (overlay-put o-new 'insert-behind-hooks
+		 (cons 'predictive-latex-schedule-auto-dict-update
+		       (overlay-get o-new 'insert-behind-hooks)))
+    ;; add word to dictionary
+    (unless (dictree-p dict) (setq dict (eval dict)))
+    (predictive-add-to-dict dict word 0)
+    ;; return the new overlay
+    o-new)
+)
+
+
+
+(defun predictive-latex-auto-dict-suicide (o-match)
+  ;; Delete the word overlay, and delete the word from the dictionary
+  
+  (let ((word (overlay-get o-match 'word))
+	(dict (overlay-get o-match 'auto-dict)))
+    ;; delete the overlay
+    (auto-o-delete-overlay (overlay-get o-match 'parent))
+    ;; delete the word from the dictionary
+    (unless (dictree-p dict) (setq dict (eval dict)))
+    (dictree-delete dict word))
+)
+
+
+
+(defun predictive-latex-schedule-auto-dict-update
+  (o-self modified &rest unused)
+  ;; All auto-dict overlay modification hooks are set to this function, which
+  ;; schedules `predictive-latex-auto-dict-update' to run after any suicide
+  ;; functions have been called
+  (unless modified
+    (add-to-list 'auto-o-pending-post-suicide
+		 (list 'predictive-latex-auto-dict-update o-self)))
+)
+
+
+
+(defun predictive-latex-auto-dict-update (o-self)
+  ;; Update the auto-dict with new word. Runs after modifications.
+
+  (let ((dict (overlay-get (overlay-get o-self 'start) 'auto-dict))
+	word)
+    (unless (dictree-p dict) (setq dict (eval dict)))
+    ;; delete old word from label dictionary
+    (dictree-delete dict (overlay-get (overlay-get o-self 'start) 'word))
+    
+    ;; if overlay has not been deleted...
+    (when (overlay-buffer o-self)
+      ;; extract word
+      (setq word (buffer-substring-no-properties
+		  (overlay-start o-self) (overlay-end o-self)))
+      ;; save label in overlay property
+      (overlay-put (overlay-get o-self 'start) 'word word)
+      ;; add new label to dictionary
+      (predictive-add-to-dict dict word 0)))
+)
+
+
+
+(defmacro predictive-latex-auto-dict-name (name)
+  ;; Return a dictionary name constructed from NAME and the buffer name
+  '(intern
+    (concat "dict-latex-" name "-"
+	     (file-name-sans-extension
+	      (file-name-nondirectory (buffer-file-name))))))
+
+
+
+(defun predictive-latex-load-auto-dict (name)
+  "Load/create a LaTeX NAME dictionary for the current buffer."
+  (let ((dict (intern (concat "predictive-latex-" name "-dict")))
+	dictname filename)
+    (cond
+     ;; if buffer is associated with a file...
+     ((buffer-file-name)
+      (setq dictname (predictive-latex-auto-dict-name name))
+      (setq filename
+	    (concat (file-name-directory (buffer-file-name))
+		    (symbol-name dictname) ".elc"))
+      ;; if a dictionary isn't loaded, load or create it
+      (unless (featurep dictname)
+	(if (not (file-exists-p filename))
+	    (predictive-create-dict dictname filename)
+	  (load filename)
+	  (predictive-load-dict dictname)
+	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
+	  ;;        function
+	  (dictree--set-filename (eval dictname)filename)))
+      ;; set the LaTeX NAME dictionary to the loaded/new dictionary
+      (set dict (eval dictname)))
+     
+     ;; if buffer is not associated with a file, 
+     (t
+      (set dict (predictive-create-dict))
+      (setq dict (eval dict))
+      ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
+      ;;        need to make `predictive-create-dict' interface more flexible.
+      (dictree--set-name dict (concat "latex-" name))
+      (dictree--set-autosave dict nil))
+     ))
+)
+
+
+
+(defun predictive-latex-unload-auto-dict (name)
+  "Unload and possibly save the current buffer's LaTeX NAME dictionary."
+  (let ((dict (eval (intern (concat "predictive-latex-" name "-dict")))))
+    (dictree-unload (if (dictree-p dict) dict (eval dict))))
 )
 
 
@@ -1350,338 +1677,6 @@ refers to."
 
 
 
-;;;=======================================================================
-;;;  Automatic loading and unloading of LaTeX package dictionaries etc.
-
-(put 'predictive-latex-usepackage 'auto-overlay-parse-function
-     'predictive-latex-parse-usepackage-match)
-(put 'predictive-latex-usepackage 'auto-overlay-suicide-function
-     'predictive-latex-usepackage-suicide)
-
-
-(defun predictive-latex-parse-usepackage-match (o-match)
-  ;; Create a new word overlay for a usepackage command, and load the
-  ;; appropriate dictionaries
-
-  ;; create new word overlay
-  (let ((o-new (auto-o-parse-word-match o-match))
-	package)
-    ;; extract package name
-    (setq package (buffer-substring-no-properties
-		   (overlay-get o-match 'delim-start)
-		   (overlay-get o-match 'delim-end)))
-    
-    ;; save package name in overlay property
-    (overlay-put o-match 'package-name package)
-    ;; load package dictionaries and run the load function
-    (predictive-latex-load-package package)
-    ;; add change function to overlay modification hooks
-    (overlay-put o-new 'modification-hooks
-		 (cons 'predictive-latex-schedule-usepackage-update
-		       (overlay-get o-new 'modification-hooks)))
-    (overlay-put o-new 'insert-in-front-hooks
-		 (cons 'predictive-latex-schedule-usepackage-update
-		       (overlay-get o-new 'insert-in-front-hooks)))
-    (overlay-put o-new 'insert-behind-hooks
-		 (cons 'predictive-latex-schedule-usepackage-update
-		       (overlay-get o-new 'insert-behind-hooks)))
-    ;; return the new overlay
-    o-new)
-)
-
-
-
-(defun predictive-latex-usepackage-suicide (o-match)
-  ;; Delete the word overlay for a usepackage command, and unload the
-  ;; appropriate dictionaries
-  
-  (let ((package (overlay-get o-match 'package-name)))
-    ;; delete the overlay
-    (auto-o-delete-overlay (overlay-get o-match 'parent))
-    ;; unload package dictionaries and run the unload function
-    (predictive-latex-unload-package package))
-)
-
-
-
-(defun predictive-latex-schedule-usepackage-update
-  (o-self modified &rest unused)
-  ;; All usepackage overlay modification hooks are set to this function, which
-  ;; schedules `predictive-latex-usepackage-update' to run after any suicide
-  ;; functions have been called
-  (unless modified
-    (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-latex-usepackage-update o-self)))
-)
-
-
-
-(defun predictive-latex-usepackage-update (o-self)
-  ;; Update the package dictionaries and re-run the load function after a
-  ;; modification, in case package name has changed
-
-  (let (package)
-    ;; if we haven't been deleted by a suicide function...
-    (when (overlay-buffer o-self)
-      ;; unload old package dictionaries and run unload function
-      (predictive-latex-unload-package
-       (overlay-get (overlay-get o-self 'start) 'package-name))
-      ;; extract package name
-      (setq package (buffer-substring-no-properties
-		     (overlay-start o-self)
-		     (overlay-end o-self)))
-      ;; load new package dictionaries and run load function
-      (overlay-put (overlay-get o-self 'start) 'package-name package)
-      (predictive-latex-load-package package)))
-)
-
-
-
-(defun predictive-latex-load-package (package)
-  "Load a LaTeX PACKAGE into the current buffer.
-This loads the package dictionary and runs the load functions for
-the package, if they exist."
-  (interactive "sPackage name: ")
-  
-  (let (dict)
-    ;; try to load package dictionaries and add them to the appropriate lists
-    ;; if they exists
-    (dolist (dic predictive-latex-dict-classes)
-      (setq dict (concat (cdr dic) package))
-      (when (predictive-load-dict dict)
-	(setq dict (intern-soft dict))
-	(if (and (listp (eval (car dic)))
-		 (not (dictree-p (eval (car dic)))))
-	    (nconc (eval (car dic)) (list dict))
-	  (set (car dic) (list (eval (car dic)) dict))))))
-  
-  ;; try to load lisp library for the package
-  (require (intern (concat "predictive-latex-" package)) nil t)
-  ;; run load function for package, if one is defined
-  (let ((func (nth 1 (assoc package predictive-latex-usepackage-functions))))
-    (when func (funcall func)))
-  ;; display message
-  (message (format "LaTeX package \"%s\" loaded" package))
-)
-
-
-
-(defun predictive-latex-unload-package (package)
-  "Unload a LaTeX PACKAGE from the current buffer.
-This unloads the dictionary and runs the unload functions, if
-they exist."
-  (interactive "sPackage name: ")
-  ;; FIXME: ought to complete on loaded package names when called
-  ;;        interactively
-  
-  (let (dict)
-    ;; unload any package dictionaries
-    (dolist (dic predictive-latex-dict-classes)
-      (when (setq dict (intern-soft (concat (cdr dic) package)))
-	(predictive-unload-dict (eval dict))
-	(when (and (listp (eval (car dic)))
-		   (not (dictree-p (eval (car dic)))))
-	  ;; we don't use "(set ... (delq ..." here because other variables
-	  ;; may share structure with the dictionary list variables, and the
-	  ;; element we want to delete can not be the first one, as that is
-	  ;; always the standard dictionary
-	  (delq dict (eval (car dic)))))))
-  
-  ;; try to load lisp library for the package
-  (require (intern (concat "predictive-latex-" package)) nil t)
-  ;; run unload function for package, if one is defined
-  (let ((func (nth 2 (assoc package predictive-latex-usepackage-functions))))
-    (when func (funcall func)))
-  ;; display informative message
-  (message (format "LaTeX package \"%s\" unloaded" package))
-)
-
-
-
-
-;;;============================================================
-;;;        Automatically generated dictionary of labels
-
-(put 'predictive-latex-label 'auto-overlay-parse-function
-     'predictive-latex-parse-label-match)
-(put 'predictive-latex-label 'auto-overlay-suicide-function
-     'predictive-latex-label-suicide)
-
-
-(defun predictive-latex-parse-label-match (o-match)
-  ;; Create a new word overlay for a label command, and add the label to the
-  ;; label dictionary
-
-  ;; create new word overlay
-  (let ((o-new (auto-o-parse-word-match o-match))
-	label)
-    ;; extract label
-    (setq label (buffer-substring-no-properties
-		 (overlay-get o-match 'delim-start)
-		 (overlay-get o-match 'delim-end)))
-    ;; save label in overlay property
-    (overlay-put o-match 'label label)
-    ;; add change function to overlay modification hooks
-    (overlay-put o-new 'modification-hooks
-		 (cons 'predictive-latex-schedule-label-update
-		       (overlay-get o-new 'modification-hooks)))
-    (overlay-put o-new 'insert-in-front-hooks
-		 (cons 'predictive-latex-schedule-label-update
-		       (overlay-get o-new 'insert-in-front-hooks)))
-    (overlay-put o-new 'insert-behind-hooks
-		 (cons 'predictive-latex-schedule-label-update
-		       (overlay-get o-new 'insert-behind-hooks)))
-    ;; add label to dictionary
-    (predictive-add-to-dict (if (dictree-p predictive-latex-label-dict)
-				predictive-latex-label-dict
-			      (eval predictive-latex-label-dict))
-			    label 0)
-    ;; return the new overlay
-    o-new)
-)
-  
-
-
-(defun predictive-latex-label-suicide (o-match)
-  ;; Delete the word overlay for a label command, and delete the label from
-  ;; the label dictionary
-  
-  (let ((label (overlay-get o-match 'label)))
-    ;; delete the overlay
-    (auto-o-delete-overlay (overlay-get o-match 'parent))
-    ;; delete the label from the dictionary
-    (dictree-delete (if (dictree-p predictive-latex-label-dict)
-			predictive-latex-label-dict
-		      (eval predictive-latex-label-dict))
-		    label))
-)
-
-
-
-(defun predictive-latex-schedule-label-update
-  (o-self modified &rest unused)
-  ;; All label overlay modification hooks are set to this function, which
-  ;; schedules `predictive-latex-label-update' to run after any suicide
-  ;; functions have been called
-  (unless modified
-    (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-latex-label-update o-self)))
-)
-
-
-
-(defun predictive-latex-label-update (o-self)
-  ;; Update the label dictionary with new label. Run after modification.
-
-  (let (label)
-    ;; delete old label from label dictionary
-    (dictree-delete (if (dictree-p predictive-latex-label-dict)
-			predictive-latex-label-dict
-		      (eval predictive-latex-label-dict))
-		    (overlay-get (overlay-get o-self 'start) 'label))
-    
-    ;; if overlay has not been deleted...
-    (when (overlay-buffer o-self)
-      ;; extract label
-      (setq label (buffer-substring-no-properties
-		   (overlay-start o-self)
-		   (overlay-end o-self)))
-      ;; save label in overlay property
-      (overlay-put (overlay-get o-self 'start) 'label label)
-      ;; add new label to dictionary
-      (predictive-add-to-dict (if (dictree-p predictive-latex-label-dict)
-				  predictive-latex-label-dict
-				(eval predictive-latex-label-dict))
-			      label 0)))
-)
-
-
-
-(defmacro predictive-latex-label-dict-name ()
-  ;; Return the label dictionary name
-  '(intern
-    (concat "dict-latex-label-"
-	     (file-name-sans-extension
-	      (file-name-nondirectory (buffer-file-name))))))
-
-
-
-(defun predictive-latex-load-label-dict ()
-  "Load/create the label LaTeX dictionary for the current buffer."
-  (let (dictname filename)
-    (cond
-     ;; if buffer is associated with a file...
-     ((buffer-file-name)
-      (setq dictname (predictive-latex-label-dict-name))
-      (setq filename
-	    (concat (file-name-directory (buffer-file-name))
-		    (symbol-name dictname) ".elc"))
-      ;; if a label dictionary isn't loaded, load it if it exists, otherwise
-      ;; create it
-      (unless (featurep dictname)
-	(if (not (file-exists-p filename))
-	    (predictive-create-dict dictname filename)
-	  (load filename)
-	  (predictive-load-dict dictname)
-	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
-	  ;;        function
-	  (dictree--set-filename (eval (predictive-latex-label-dict-name))
-				 filename)))
-      ;; set the label dictionary to the loaded/new dictionary
-      (setq predictive-latex-label-dict dictname))
-     
-     ;; if buffer is not associated with a file, 
-     (t
-      (setq predictive-latex-label-dict (predictive-create-dict))
-      ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
-      ;;        need to make `predictive-create-dict' interface more flexible.
-      (dictree--set-name predictive-latex-label-dict "latex-label")
-      (dictree--set-autosave predictive-latex-label-dict nil))
-     ))
-)
-
-
-
-(defun predictive-latex-unload-label-dict ()
-  "Unload and possibly save the current buffer's LaTeX label dictionary."
-  (dictree-unload (if (dictree-p predictive-latex-label-dict)
-		      predictive-latex-label-dict
-		    (eval predictive-latex-label-dict)))
-)
-
-
-
-(defun predictive-latex-completion-add-till-regexp (regexp)
-  "Add characters up to REGEXP from a completion candidate,
-then cause `completion-self-insert' to add the last typed
-character and re-complete.
-
-Intended to be used as the \"resolve\" entry in
-`completion-dynamic-syntax-alist' or
-`completion-dynamic-override-syntax-alist'."
-  
-  (let (overlay completion)
-    ;; if completion characters contain REGEXP, insert characters up to first
-    ;; regexp match, and add them to the completion overlay prefix
-    (when (and (setq overlay (completion-overlay-at-point))
-	       (setq completion (buffer-substring-no-properties
-				 (overlay-start overlay)
-				 (overlay-end overlay)))
-	       (string-match regexp completion))
-      
-      (insert (setq completion (substring completion 0 (match-beginning 0))))
-      (move-overlay overlay (point) (overlay-end overlay))
-      (overlay-put overlay 'prefix
-		   (concat (overlay-get overlay 'prefix) completion)))
-
-    ;; return 'add, causing `completion-self-insert' to add last typed
-    ;; character to the prefix
-    'add)
-)
-
-
-
-
 ;;;=============================================================
 ;;;                Completion-browser functions
 
@@ -1779,6 +1774,36 @@ Intended to be used as the \"resolve\" entry in
 
 ;;;=============================================================
 ;;;               Miscelaneous utility functions
+
+(defun predictive-latex-completion-add-till-regexp (regexp)
+  "Add characters up to REGEXP from a completion candidate,
+then cause `completion-self-insert' to add the last typed
+character and re-complete.
+
+Intended to be used as the \"resolve\" entry in
+`completion-dynamic-syntax-alist' or
+`completion-dynamic-override-syntax-alist'."
+  
+  (let (overlay completion)
+    ;; if completion characters contain REGEXP, insert characters up to first
+    ;; regexp match, and add them to the completion overlay prefix
+    (when (and (setq overlay (completion-overlay-at-point))
+	       (setq completion (buffer-substring-no-properties
+				 (overlay-start overlay)
+				 (overlay-end overlay)))
+	       (string-match regexp completion))
+      
+      (insert (setq completion (substring completion 0 (match-beginning 0))))
+      (move-overlay overlay (point) (overlay-end overlay))
+      (overlay-put overlay 'prefix
+		   (concat (overlay-get overlay 'prefix) completion)))
+
+    ;; return 'add, causing `completion-self-insert' to add last typed
+    ;; character to the prefix
+    'add)
+)
+
+
 
 (defun predictive-latex-forward-word (&optional n)
   (let (m)

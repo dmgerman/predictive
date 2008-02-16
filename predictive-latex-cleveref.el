@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6
+;; Version: 0.6.1
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.1
+;; * changed predictive-latex-label overlay class in label overlays to the new
+;;   predictive-latex-auto-dict class
 ;;
 ;; Version 0.6
 ;; * allow \label to take optional argument
@@ -104,14 +108,14 @@
 				      (?. . (add word))
 				      (t  . (reject none))))
      (auto-completion-override-syntax-alist
-      . ((?: . (word
-		(lambda ()
+      . ((?: . ((lambda ()
 		  (predictive-latex-completion-add-till-regexp ":")
-		  nil)))
-	 (?_ . (word
-		(lambda ()
+		  nil)
+		word))
+	 (?_ . ((lambda ()
 		  (predictive-latex-completion-add-till-regexp "\\W")
-		  nil)))
+		  nil)
+		word))
 	 (?, . (accept none))
 	 (?} . (accept none))))
      (face . (background-color . ,predictive-overlay-debug-color)))
@@ -222,9 +226,10 @@
 	(auto-overlay-unload-definition 'predictive 'label))
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-label
+   '(predictive-latex-auto-dict
      :id label
-     (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
+     (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2)
+      (auto-dict . predictive-latex-label-dict))))
 )
 
 
