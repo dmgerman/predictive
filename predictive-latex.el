@@ -35,8 +35,8 @@
 ;; * generalised predictive-latex-label overlay class into
 ;;   predictive-latex-auto-dict class, that can be used to auto-add words to
 ;;   any dictionary
-;; * added new automatically maintained dictionary of theorem environments
-;;   defined by \newtheorem, using predictive-latex-auto-dict overlay class
+;; * added new automatically maintained dictionaries of locally declared
+;;   environments and commands, using predictive-latex-auto-dict overlay class
 ;;
 ;; Version 0.8.1
 ;; * minor bug fixes to `predictive-latex-load-keybindings'
@@ -228,8 +228,12 @@ When a document class is in the list, "
 (make-variable-buffer-local 'predictive-latex-bibstyle-dict)
 (defvar predictive-latex-label-dict nil)
 (make-variable-buffer-local 'predictive-latex-label-dict)
-(defvar predictive-latex-theorem-dict nil)
-(make-variable-buffer-local 'predictive-latex-theorem-dict)
+(defvar predictive-latex-local-latex-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-latex-dict)
+(defvar predictive-latex-local-math-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-math-dict)
+(defvar predictive-latex-local-env-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-env-dict)
 
 
 ;; alist holding functions called when loading and unloading latex packages
@@ -307,7 +311,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      ;; predictive mode in it, and share buffer-local settings with it
      ((and (boundp 'TeX-master) (stringp TeX-master))
       (let (filename buff used-dicts main-dict latex-dict math-dict
-		     preamble-dict env-dict label-dict theorem-dict)
+		     preamble-dict env-dict label-dict local-env-dict)
 	(setq filename (expand-file-name TeX-master))
 	(unless (string= (substring filename -4) ".tex")
 	  (setq filename (concat filename ".tex")))
@@ -322,7 +326,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (setq preamble-dict predictive-latex-preamble-dict)
 	  (setq env-dict predictive-latex-env-dict)
 	  (setq label-dict predictive-latex-label-dict)
-	  (setq theorem-dict predictive-latex-theorem-dict))
+	  (setq local-env-dict predictive-latex-local-env-dict))
 	(auto-overlay-share-regexp-set 'predictive buff)
 	(setq predictive-used-dict-list used-dicts)
 	(setq predictive-main-dict main-dict)
@@ -331,7 +335,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(setq predictive-latex-preamble-dict preamble-dict)
 	(setq predictive-latex-env-dict env-dict)
 	(setq predictive-latex-label-dict label-dict)
-	(setq predictive-latex-theorem-dict theorem-dict)
+	(setq predictive-latex-local-env-dict local-env-dict)
 	;; start the auto-overlays, restoring buffer's modified flag afterwards,
 	;; since automatic synchronization of LaTeX envionments can modify
 	;; buffer without actually changing buffer text
@@ -353,23 +357,38 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (mapc 'predictive-load-dict predictive-latex-bibstyle-dict)
       ;; load/create the label and theorem dictionaries
       (predictive-latex-load-auto-dict "label")
-      (predictive-latex-load-auto-dict "theorem")
+      (predictive-latex-load-auto-dict "local-latex")
+      (predictive-latex-load-auto-dict "local-math")
+      (predictive-latex-load-auto-dict "local-env")
       
-      ;; add latex dictionary list to main dictionary list
+      ;; add latex dictionaries to main dictionary list
       (make-local-variable 'predictive-main-dict)
       (when (atom predictive-main-dict)
 	(setq predictive-main-dict (list predictive-main-dict)))
       (setq predictive-main-dict
-	    (append predictive-main-dict predictive-latex-dict))
-      ;; add theorem dictionary list to environment dictionary list
-      (when (atom predictive-latex-env-dict)
-	(setq predictive-latex-env-dict (list predictive-latex-env-dict)))
+	    (append predictive-main-dict predictive-latex-dict
+		    (if (dictree-p predictive-latex-local-latex-dict)
+			(list predictive-latex-local-latex-dict)
+		      predictive-latex-local-latex-dict)))
+      ;; add local environment, maths and text-mode dictionaries to
+      ;; appropriate dictionary lists
+      ;; Note: we add the local text-mode command dictionary to the list too,
+      ;; because there's no way to tell whether \newcommand's are text- or
+      ;; math-mode commands.
+      (setq predictive-latex-math-dict
+	    (append predictive-latex-math-dict
+		    (if (dictree-p predictive-latex-local-math-dict)
+			(list predictive-latex-local-math-dict)
+		      predictive-latex-local-math-dict)
+		    (if (dictree-p predictive-latex-local-latex-dict)
+			(list predictive-latex-local-latex-dict)
+		      predictive-latex-local-latex-dict)))
       (setq predictive-latex-env-dict
 	    (append predictive-latex-env-dict
-		    (if (dictree-p predictive-latex-theorem-dict)
-			(list predictive-latex-theorem-dict)
-		      predictive-latex-theorem-dict)))
-	
+		    (if (dictree-p predictive-latex-local-env-dict)
+			(list predictive-latex-local-env-dict)
+		      predictive-latex-local-env-dict)))
+      
       
       ;; delete any existing predictive auto-overlay regexps and load latex
       ;; auto-overlay regexps
@@ -431,7 +450,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-map)
     (kill-local-variable 'predictive-latex-label-dict)
-    (kill-local-variable 'predictive-latex-theorem-dict)
+    (kill-local-variable 'predictive-latex-local-latex-dict)
+    (kill-local-variable 'predictive-latex-local-math-dict)
+    (kill-local-variable 'predictive-latex-local-env-dict)
     ;; remove hook function that saves overlays
     (remove-hook 'after-save-hook
 		 (lambda () (auto-overlay-save-overlays 'predictive))
@@ -698,15 +719,43 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      (("\\\\label{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-label-dict))))
 
-  ;; \newtheorem defines a new theorem-like environment. Through the use of a
-  ;; special "auto-dict" regexp class defined below, this automagically adds
-  ;; the theorem to the theorem dictionary
+  ;; \newcommand defines a new command. Through the use of a special
+  ;; "auto-dict" regexp class defined below, this automagically adds the
+  ;; command to the LaTeX and math dictionaries (there's no way to tell
+  ;; whether the new command is a text-mode or math-mode command, so we add it
+  ;; to both).
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-auto-dict
+     :id newcommand
+     (("\\\\newcommand\\*?{\\(.*?\\)}" . 1)
+      (auto-dict . predictive-latex-local-latex-dict))))
+
+  ;; \newenvironment and \newtheorem define new environments. Through the use
+  ;; of a special "auto-dict" regexp class defined below, this automagically
+  ;; adds the environment to the local environment dictionary.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-auto-dict
+     :id newenvironment
+     (("\\\\newenvironment{\\(.*?\\)}" . 1)
+      (auto-dict . predictive-latex-local-env-dict))))
   (auto-overlay-load-definition
    'predictive
    '(predictive-latex-auto-dict
      :id newtheorem
      (("\\\\newtheorem{\\(.*?\\)}" . 1)
-      (auto-dict . predictive-latex-theorem-dict))))
+      (auto-dict . predictive-latex-local-env-dict))))
+
+  ;; \DeclareMathOperator defines a new math-mode command. Through the use of
+  ;; a special "auto-dict" regexp class defined below, this automagically adds
+  ;; the environment to the local maths dictionary.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-auto-dict
+     :id DeclareMathOperator
+     (("\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
+      (auto-dict . predictive-latex-local-math-dict))))
 )
 
 
@@ -1140,7 +1189,11 @@ refers to."
 	(let ((old-dict predictive-restore-main-dict))
 	  (when (atom old-dict) (setq old-dict (list old-dict)))
 	  (mapc 'predictive-unload-dict old-dict))
-	(setq predictive-main-dict (append dict-list predictive-latex-dict))
+	(setq predictive-main-dict
+	      (append dict-list predictive-latex-dict
+		      (if (dictree-p predictive-latex-local-latex-dict)
+			  (list predictive-latex-local-latex-dict)
+			predictive-latex-local-latex-dict)))
 	)))
 )
 
@@ -1156,7 +1209,12 @@ refers to."
       (mapc 'predictive-unload-dict dict-list)
       (setq dict-list predictive-restore-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
-      (setq predictive-main-dict (append dict-list predictive-latex-dict))))
+      (setq predictive-main-dict
+	    (append dict-list predictive-latex-dict
+		    (if (dictree-p predictive-latex-local-latex-dict)
+			(list predictive-latex-local-latex-dict)
+		      predictive-latex-local-latex-dict)))
+      ))
 )
 
 
@@ -1403,10 +1461,10 @@ they exist."
 
 (defmacro predictive-latex-auto-dict-name (name)
   ;; Return a dictionary name constructed from NAME and the buffer name
-  '(intern
-    (concat "dict-latex-" name "-"
-	     (file-name-sans-extension
-	      (file-name-nondirectory (buffer-file-name))))))
+  `(intern
+    (concat "dict-latex-" ,name "-"
+	    (file-name-sans-extension
+	     (file-name-nondirectory (buffer-file-name))))))
 
 
 
