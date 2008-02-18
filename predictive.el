@@ -46,6 +46,7 @@
 ;; * fixed bug in `predictive-flush-auto-learn-caches', which failed to check
 ;;   that cached words were longer than `predictive-auto-add-min-chars' and
 ;;   passed the filter before adding them to the dictionary
+;; * fixed bug in `predictive-fast-learn-from-buffer'
 ;;
 ;; Version 0.17
 ;; * added `predictive-dict-compilation-mode' option which determines whether
@@ -1858,7 +1859,7 @@ the buffer's syntax table."
 	  (message "Learning words for dictionary %s...(%s%%)"
 		   (dictree-name dict)
 		   (progn
-		     (string-match ".*\\..."
+		     (string-match ".*\\..?.?"
 				   (prin1-to-string (* 100 percent)))
 		     (match-string 0 (prin1-to-string (* 100 percent))))
 		   ))
