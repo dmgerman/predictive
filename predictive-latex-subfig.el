@@ -59,7 +59,7 @@
      :id subref
      :edge start
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-label-word)
      (completion-dynamic-syntax-alist . ((?w . (add t word))

@@ -57,7 +57,7 @@
      :edge start
      :id thref
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
      (auto-completion-syntax-alist . ((?w . (add word))

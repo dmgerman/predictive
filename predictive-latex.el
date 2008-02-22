@@ -475,44 +475,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-color)))))
   
-  ;; $'s delimit the start and end of maths regions...
-  (auto-overlay-load-definition
-   'predictive
-   `(self :id inline-math
-	  ("\\$" (dict . predictive-latex-math-dict) (priority . 40)
-	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))))
-  
-  ;; ...as do \[ and \], but not \\[ and \\] etc.
-  ;; Note: regexps contain a lot of \'s because it has to check whether number
-  ;; of \'s in front of { is even or odd
-  (auto-overlay-load-definition
-   'predictive
-   `(nested :id display-math
-	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
-	     :edge start
-	     (dict . predictive-latex-math-dict) (priority . 40)
-	     (completion-menu
-	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
-	    (("^\\(\\\\\\[\\)" . 1)
-	     :edge start
-	     (dict . predictive-latex-math-dict) (priority . 40)
-	     (completion-menu
-	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
-	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
-	     :edge end
-	     (dict . predictive-latex-math-dict) (priority . 40)
-	     (completion-menu . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
-	    (("^\\(\\\\\\]\\)" . 1)
-	     :edge end
-	     (dict . predictive-latex-math-dict) (priority . 40)
-	     (completion-menu . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
-	    ))
-  
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
   ;; included to ensure all { and } match, but \{ is excluded
@@ -522,18 +484,18 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    ("\\\\usepackage{"
 	     :edge start
 	     (dict . t)
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\label{"
 	     :edge start
 	     :id label
 	     (dict . t)
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\ref{"
 	     :edge start
 	     (dict . predictive-latex-label-dict)
-	     (priority . 30)
+	     (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (completion-word-thing . predictive-latex-label-word)
@@ -555,7 +517,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\eqref{"
 	     :edge start
-	     (dict . predictive-latex-label-dict) (priority . 30)
+	     (dict . predictive-latex-label-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (completion-word-thing . predictive-latex-label-word)
@@ -573,36 +535,36 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\cite{"
 	     :edge start
-	     (dict . t) (priority . 30)
+	     (dict . t) (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\begin{"
 	     :edge start
-	     (dict . predictive-latex-env-dict) (priority . 30)
+	     (dict . predictive-latex-env-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\end{"
 	     :edge start
-	     (dict . predictive-latex-env-dict) (priority . 30)
+	     (dict . predictive-latex-env-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\text{"
 	     :edge start
-	     (dict . predictive-main-dict) (priority . 30)
+	     (dict . predictive-main-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\documentclass\\(\\[.*\\]\\)?{"
 	     :edge start
-	     (dict . dict-latex-docclass) (priority . 30)
+	     (dict . dict-latex-docclass) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ("\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 	     :edge start
 	     (dict . dict-latex-bibstyle)
-	     (priority . 30)
+	     (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
@@ -613,23 +575,62 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    ;; separately.
 	    (("^\\({\\)" . 1)
 	     :edge start
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    (("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2)
 	     :edge start
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    (("^\\(}\\)" . 1)
 	     :edge end
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    (("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2)
 	     :edge end
-	     (priority . 30)
+	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-color)))
 	    ))
   
   
+  ;; $'s delimit the start and end of maths regions...
+  (auto-overlay-load-definition
+   'predictive
+   `(self :id inline-math
+	  ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
+	   (completion-menu . predictive-latex-construct-browser-menu)
+	   (face . (background-color . ,predictive-overlay-debug-color)))))
+  
+  ;; ...as do \[ and \], but not \\[ and \\] etc.
+  ;; Note: regexps contain a lot of \'s because it has to check whether number
+  ;; of \'s in front of { is even or odd
+  (auto-overlay-load-definition
+   'predictive
+   `(nested :id display-math
+	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 2)
+	     :edge start
+	     (dict . predictive-latex-math-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("^\\(\\\\\\[\\)" . 1)
+	     :edge start
+	     (dict . predictive-latex-math-dict) (priority . 30)
+	     (completion-menu
+	      . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
+	     :edge end
+	     (dict . predictive-latex-math-dict) (priority . 30)
+	     (completion-menu . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    (("^\\(\\\\\\]\\)" . 1)
+	     :edge end
+	     (dict . predictive-latex-math-dict) (priority . 30)
+	     (completion-menu . predictive-latex-construct-browser-menu)
+	     (face . (background-color . ,predictive-overlay-debug-color)))
+	    ))
+  
+
   ;; preamble lives between \documentclass{...} and \begin{document}
   (auto-overlay-load-definition
    'predictive

@@ -58,7 +58,7 @@
      :edge start
      :id graphicx
      (dict . t)
-     (priority . 2)
+     (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 )

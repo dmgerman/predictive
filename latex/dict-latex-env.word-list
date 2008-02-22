@@ -1,3 +1,5 @@
+"Bmatrix"
+"Vmatrix"
 "abstract"
 "align"
 "align*" nil ("align")
@@ -6,6 +8,7 @@
 "aligned" nil ("align")
 "alignedat" nil ("align" "aligned")
 "array"
+"bmatrix"
 "center"
 "description"
 "displaymath"
@@ -24,12 +27,15 @@
 "gathered"
 "itemize"
 "list"
+"matrix"
 "minipage"
 "multline"
 "multline*" nil ("multline")
 "picture"
+"pmatrix"
 "quotation"
 "quote"
+"smallmatrix"
 "split"
 "subequations"
 "tabbing"
@@ -44,3 +50,4 @@
 "verbatim"
 "verbatim*" nil ("verbatim")
 "verse"
+"vmatrix"

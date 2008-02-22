@@ -99,7 +99,7 @@
      :edge start
      :id cref
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
      (auto-completion-syntax-alist . ((?w . (add word))
@@ -128,7 +128,7 @@
      :edge start
      :id Cref
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
      (auto-completion-syntax-alist . ((?w . (add word))
@@ -157,7 +157,7 @@
      :edge start
      :id crefrange
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
      (auto-completion-syntax-alist . ((?w . (add word))
@@ -186,7 +186,7 @@
      :edge start
      :id Crefrange
      (dict . predictive-latex-label-dict)
-     (priority . 2)
+     (priority . 40)
      (completion-menu . predictive-latex-construct-browser-menu)
      (completion-word-thing . predictive-latex-cleveref-label-word)
      (auto-completion-syntax-alist . ((?w . (add word))
@@ -218,7 +218,7 @@
      :edge start
      :id label
      (dict . t)
-     (priority . 30)
+     (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
   

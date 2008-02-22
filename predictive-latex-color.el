@@ -56,7 +56,7 @@
      :edge start
      :id color
      (dict . dict-latex-colours)
-     (priority . 2)
+     (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
   (auto-overlay-load-regexp
@@ -65,7 +65,7 @@
      :edge start
      :id textcolor
      (dict . dict-latex-colours)
-     (priority . 2)
+     (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
   (auto-overlay-load-regexp
@@ -74,7 +74,7 @@
      :edge start
      :id pagecolor
      (dict . dict-latex-colours)
-     (priority . 2)
+     (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
    t)
 )
