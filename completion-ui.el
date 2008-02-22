@@ -107,6 +107,7 @@
 ;; Version 0.7.2
 ;; * prevent `complete-in-buffer' from auto-displaying the tooltip/menu/pop-up
 ;;   frame if there are no completions (otherwise Emacs CVS seems to crash!)
+;; * bug fixes to key bindings and `completion-tab-complete'
 ;;
 ;; Version 0.7.1
 ;; * minor key binding fixes
@@ -819,7 +820,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 	(complete-word-at-point))))
  
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
-  (define-key completion-map '[(meta shift iso-lefttab)]
+  (define-key completion-map [(meta shift iso-lefttab)]
     (lambda ()
       "Cycle backwards through completions if there are any,\
  otherwise complete the word at point."
@@ -938,6 +939,10 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
     ;; <tab> does traditional tab-completion
     (define-key completion-map "\t"
       'completion-tab-complete-if-within-overlay)
+
+    ;; C-<tab> scoots ahead
+    (define-key completion-map [(control tab)]
+      'completion-scoot-ahead-if-within-overlay)
     
     ;; S-<down>, M-<down> and C-<down> display the compltion tooltip,
     ;; menu, and pop-up frame
@@ -1068,11 +1073,15 @@ would normally be bounds to \"M--\"."
     (completion-bind-self-insert completion-dynamic-map))
     
   ;; C-RET accepts, C-DEL rejects
-  (define-key completion-map [?\C-\r] 'completion-accept)
+  (define-key completion-map [(control return)] 'completion-accept)
   (define-key completion-map [(control backspace)] 'completion-reject)
   
   ;; <tab> does traditional tab-completion
   (define-key completion-dynamic-map "\t" 'completion-tab-complete)
+
+  ;; C-<tab> scoots ahead
+  (define-key completion-dynamic-map [(control tab)]
+    'completion-scoot-ahead)
   
   ;; C-<space> abandons
   (define-key completion-dynamic-map [?\C- ] 'completion-reject)
@@ -2669,13 +2678,13 @@ green over night."
 	(move-overlay overlay (point) (point))
 	(overlay-put overlay 'prefix
 		     (concat (overlay-get overlay 'prefix) str))
-	(overlay-put overlay 'completions nil))
-      ;; when auto-completing, do so
-      (if auto-completion-mode
-	  (complete-in-buffer nil 'auto)
-	;; otherwise, if a pop-up frame is being displayed, update it
-	(when (overlay-get overlay 'popup-frame)
-	  (completion-popup-frame overlay)))
+	(overlay-put overlay 'completions nil)
+	;; when auto-completing, do so
+	(if auto-completion-mode
+	    (complete-in-buffer nil 'auto)
+	  ;; otherwise, if a pop-up frame is being displayed, update it
+	  (when (overlay-get overlay 'popup-frame)
+	    (completion-popup-frame overlay))))
       ))
 )
 
