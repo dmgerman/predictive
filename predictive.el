@@ -47,6 +47,7 @@
 ;;   that cached words were longer than `predictive-auto-add-min-chars' and
 ;;   passed the filter before adding them to the dictionary
 ;; * fixed bug in `predictive-fast-learn-from-buffer'
+;; * remove text properties from string returned by `thing-at-point'
 ;;
 ;; Version 0.17
 ;; * added `predictive-dict-compilation-mode' option which determines whether
@@ -1492,9 +1493,10 @@ specified by the prefix argument."
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
-	(if str
-	    (setq word str)
-	  (error "No word supplied"))))
+	(if (null str)
+	    (error "No word supplied")
+	  (setq str (set-text-properties 0 (length str) nil str))
+	  (setq word str))))
     ;; sort out weight argument
     (unless (null weight) (setq weight (prefix-numeric-value weight))))
   
@@ -1545,10 +1547,11 @@ Interactively, WORD and DICT are read from the minibuffer."
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
-	(if str
-	    (setq word str)
-	  (error "No word supplied")))))
-
+	(if (null str)
+	    (error "No word supplied")
+	  (setq str (set-text-properties 0 (length str) nil str))
+	  (setq word str)))))
+  
   ;; delete word
   (dictree-delete dict word)
 )
@@ -2007,7 +2010,11 @@ as the weight of WORD."
   (when (interactive-p)
     ;; default to word at point
     (when (or (null word) (string= word ""))
-      (setq word (thing-at-point 'word)))
+      (let ((str (thing-at-point 'word)))
+	(if (null str)
+	    (error "No word supplied")
+	  (setq str (set-text-properties 0 (length str) nil str))
+	  (setq word str))))
     ;; default to guessed prefix, throwing error if there is no guess
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))
@@ -2062,7 +2069,11 @@ least as large as the weight of WORD."
   ;; when called interactively, sort out arguments
   (when (interactive-p)
     (when (or (null word) (string= word ""))
-      (setq word (thing-at-point 'word)))
+      (let ((str (thing-at-point 'word)))
+	(if (null str)
+	    (error "No word supplied")
+	  (setq str (set-text-properties 0 (length str) nil str))
+	  (setq word str))))
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))))
   
