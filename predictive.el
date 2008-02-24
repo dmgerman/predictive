@@ -1495,7 +1495,7 @@ specified by the prefix argument."
       (let ((str (thing-at-point 'word)))
 	(if (null str)
 	    (error "No word supplied")
-	  (setq str (set-text-properties 0 (length str) nil str))
+	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     ;; sort out weight argument
     (unless (null weight) (setq weight (prefix-numeric-value weight))))
@@ -1549,7 +1549,7 @@ Interactively, WORD and DICT are read from the minibuffer."
       (let ((str (thing-at-point 'word)))
 	(if (null str)
 	    (error "No word supplied")
-	  (setq str (set-text-properties 0 (length str) nil str))
+	  (set-text-properties 0 (length str) nil str)
 	  (setq word str)))))
   
   ;; delete word
@@ -2013,7 +2013,7 @@ as the weight of WORD."
       (let ((str (thing-at-point 'word)))
 	(if (null str)
 	    (error "No word supplied")
-	  (setq str (set-text-properties 0 (length str) nil str))
+	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     ;; default to guessed prefix, throwing error if there is no guess
     (when (or (null prefix) (string= prefix ""))
@@ -2072,7 +2072,7 @@ least as large as the weight of WORD."
       (let ((str (thing-at-point 'word)))
 	(if (null str)
 	    (error "No word supplied")
-	  (setq str (set-text-properties 0 (length str) nil str))
+	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))))
