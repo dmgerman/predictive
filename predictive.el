@@ -48,6 +48,7 @@
 ;;   passed the filter before adding them to the dictionary
 ;; * fixed bug in `predictive-fast-learn-from-buffer'
 ;; * remove text properties from string returned by `thing-at-point'
+;; * fixed bug in auto-prefix-definition in `predictive-add-to-dict'
 ;;
 ;; Version 0.17
 ;; * added `predictive-dict-compilation-mode' option which determines whether
@@ -1509,8 +1510,8 @@ specified by the prefix argument."
     ;; if adding a new word, and we're automatically defining prefixes...
     (when defpref
       ;; define new word to be a prefix of all its completions
-      (dolist (w (cdr (dictree-complete dict word)))
-	(predictive-define-prefix dict w word))
+      (dolist (cmpl (cdr (dictree-complete dict word)))
+	(predictive-define-prefix dict (concat word (car cmpl)) word))
       ;; define all prefixes of new word (note: `predictive-define-prefix'
       ;; does nothing if prefix isn't in dict, so no need to check that here)
       (dotimes (i (1- (length word)))
