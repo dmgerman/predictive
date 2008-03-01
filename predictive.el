@@ -48,7 +48,9 @@
 ;;   passed the filter before adding them to the dictionary
 ;; * fixed bug in `predictive-fast-learn-from-buffer'
 ;; * remove text properties from string returned by `thing-at-point'
-;; * fixed bug in auto-prefix-definition in `predictive-add-to-dict'
+;; * fixed bug in `predictive-add-to-dict'
+;; * modified which-dict-mode so that, if current dictionary is a list, it
+;;   displays name of first one in mode-line, rest in help-echo text
 ;;
 ;; Version 0.17
 ;; * added `predictive-dict-compilation-mode' option which determines whether
@@ -645,9 +647,11 @@ to the dictionary, nil if it should not. Only used when
 (make-variable-buffer-local 'predictive-used-dict-list)
 
 
-;; Stores current dictionary name for display in mode line
+;; Stores current dictionary names for display in mode line
 (defvar predictive-which-dict-name nil)
+(defvar predictive-which-dict-list nil)
 (make-variable-buffer-local 'predictive-which-dict-name)
+(make-variable-buffer-local 'predictive-which-dict-list)
 
 
 ;; Store buffer and point for which last dictionary name update was performed
@@ -720,7 +724,15 @@ Setting this variable directly will have no effect. Use \\[customize] or
 (add-to-list 'minor-mode-alist
 	     '(predictive-mode
 	       (" Predict" (predictive-which-dict-mode
-			    ("[" predictive-which-dict-name "]")))))
+			    ("["
+			     (:eval
+			      (let ((str predictive-which-dict-name))
+				(add-text-properties
+				 0 (length str)
+				 `(help-echo ,predictive-which-dict-list)
+				 str)
+				str))
+			     "]")))))
 
 
 ;; add the minor mode keymap to the list
@@ -2347,8 +2359,8 @@ there's only one."
 (define-minor-mode predictive-which-dict-mode
     "Toggle predictive mode's which dictionary mode.
 With no argument, this command toggles the mode.
-A non-null prefix argument turns the mode on.
-A null prefix argument turns it off.
+A positive prefix argument turns the mode on.
+A negative prefix argument turns it off.
 
 Note that simply setting the minor-mode variable
 `predictive-which-dict-mode' is not sufficient to enable
@@ -2372,7 +2384,8 @@ predictive mode."
 	(cancel-timer predictive-which-dict-timer)
 	(setq predictive-which-dict-timer nil)
 	(setq predictive-which-dict-last-update nil)
-	(setq predictive-which-dict-name nil)))
+	(setq predictive-which-dict-name nil)
+	(setq predictive-which-dict-list nil)))
 )
 
       
@@ -2383,7 +2396,8 @@ predictive mode."
   ;; function.
 
   ;; only run if predictive mode is enabled and point has moved since last run
-  (unless (or (null predictive-which-dict-mode)
+  (unless (or ;;(null predictive-mode)
+	      ;;(null predictive-which-dict-mode)
 	      (and (eq (current-buffer)
 		       (car predictive-which-dict-last-update))
 		   (eq (point) (cdr predictive-which-dict-last-update))))
@@ -2391,40 +2405,51 @@ predictive mode."
     ;; store buffer and point at which update is being performed
     (setq predictive-which-dict-last-update (cons (current-buffer) (point)))
     
-    (let ((dict (predictive-current-dict)) name str)
+    (let ((dict (predictive-current-dict)) name list dic)
       ;; get current dictionary name(s)
-      (cond
-       ;; no active dictionary
-       ((null dict) (setq name ""))
-       ;; single dictionary
-       ((dictree-p dict)
+      (if (null dict) (setq name "" list nil)
+
+	;; get name of first dictionary in list
+	(if (dictree-p dict) (setq dic dict) (setq dic (car dict)))
 	;; if dict is the buffer-local meta-dictioary, display name of main
 	;; dictionary it's based on instead
-	(if (and (>= (length (dictree-name dict)) 10)
-		 (string= (substring (dictree-name dict) 0 10) "dict-meta-")
-		 (dictree--meta-dict-p dict))
-	    (setq name (dictree-name (nth 1 (dictree--dict-list dict))))
-	  (setq name (dictree-name dict))))
-       ;; list of dictionaries
-       (t
-	(setq name (mapconcat
-		    (lambda (dic)
-		      (if (and (>= (length (dictree-name dic)) 10)
-			       (string= (substring (dictree-name dic) 0 10)
-					"dict-meta-")
-			       (dictree--meta-dict-p dic))
-			  (dictree-name (nth 1 (dictree--dict-list dic)))
-			(dictree-name dic)))
-		    dict ","))))
+	(if (and (>= (length (dictree-name dic)) 10)
+		 (string= (substring (dictree-name dic) 0 10) "dict-meta-")
+		 (dictree--meta-dict-p dic))
+	    (setq name (dictree-name (nth 1 (dictree--dict-list dic))))
+	  (setq name (dictree-name dic)))
+;;; 	;; truncate to 15 characters
+;;; 	(when (> (length name) 15) (setq name (substring name 0 15)))
+	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
+	(when (string-match "-*dict-*\\|-*predictive-*" name)
+	  (setq name (replace-match "" nil nil name)))
+	
+	;; if current dictionary is a list, add "..." to end of name, and
+	;; construct list of all dictionary names for help-echo text
+	(if (dictree-p dict) (setq list nil)
+	  (setq name (concat name "..."))
+	  (setq list (mapconcat
+		      (lambda (dic)
+			(if (and (>= (length (dictree-name dic)) 10)
+				 (string= (substring (dictree-name dic) 0 10)
+					  "dict-meta-")
+				 (dictree--meta-dict-p dic))
+			    (dictree-name (nth 1 (dictree--dict-list dic)))
+			  (dictree-name dic)))
+		      dict "\n"))
+	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
+	  (while (string-match "-*dict-*\\|-*predictive-*" list)
+	    (setq list (replace-match "" nil nil list)))))
       
-      ;; filter string to remove "-dict-" and "-predictive-" prefixes
-      (while (string-match "-*dict-*\\|-*predictive-*" name)
-	(setq name (replace-match "" nil nil name)))
       
       ;; if dictionary name has changed, update the mode line
-      (unless (string= name predictive-which-dict-name)
+      (unless (and (string= name predictive-which-dict-name)
+		   (or (and (null list) (null predictive-which-dict-list))
+		       (string= list predictive-which-dict-list)))
 	(setq predictive-which-dict-name name)
-	(force-mode-line-update))))
+	(setq predictive-which-dict-list list)
+	(force-mode-line-update))
+      ))
 )
 
 

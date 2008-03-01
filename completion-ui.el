@@ -1496,7 +1496,7 @@ In auto-completion-mode, Emacs will try to complete words as you
 type, using whatever completion method has been set up (either by the
 major mode, or by another minor mode)."
   nil                  ; init-value
-  " complete"          ; lighter
+  " Complete"          ; lighter
   auto-completion-map  ; keymap
 )
 
