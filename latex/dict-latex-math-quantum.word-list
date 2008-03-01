@@ -4,12 +4,12 @@
 "\\BigBra"
 "\\BigExpect"
 "\\BigKet"
+"\\BigMatnorm"
 "\\BiggBra"
 "\\BiggExpect"
 "\\BiggKet"
 "\\BiggMatnorm"
 "\\Biggabs"
-"\\Bigmatnorm"
 "\\Bra"
 "\\BraKet" nil ("\\Bra")
 "\\Braket" nil ("\\Bra")
