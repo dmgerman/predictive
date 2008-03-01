@@ -37,6 +37,7 @@
 ;;   any dictionary
 ;; * added new automatically maintained dictionaries of locally declared
 ;;   environments and commands, using predictive-latex-auto-dict overlay class
+;; * bug-fix to `predictive-latex-reparse-buffer'
 ;;
 ;; Version 0.8.1
 ;; * minor bug fixes to `predictive-latex-load-keybindings'
@@ -937,11 +938,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; kill local modifications to dict lists (dictionaries are added again when
   ;; usepackage overlays are reparsed)
   (kill-local-variable 'predictive-latex-dict)
+  (make-local-variable 'predictive-latex-dict)
   (kill-local-variable 'predictive-latex-math-dict)
+  (make-local-variable 'predictive-latex-math-dict)
   (kill-local-variable 'predictive-latex-preamble-dict)
+  (make-local-variable 'predictive-latex-preamble-dict)
   (kill-local-variable 'predictive-latex-env-dict)
-  (kill-local-variable 'predictive-latex-env-dict)
+  (make-local-variable 'predictive-latex-env-dict)
   (kill-local-variable 'predictive-latex-bibstyle-dict)
+  (make-local-variable 'predictive-latex-bibstyle-dict)
+  ;; clear and reload the overlay definitions (have to do this, otherwise some
+  ;; auto-overlays try to add duplicate regexp definitions when reparsed)
+  (setq auto-overlay-regexps nil)
+  (predictive-latex-load-regexps)
   ;; restart the predictive auto-overlays
   (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)
 )
