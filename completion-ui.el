@@ -108,6 +108,7 @@
 ;; * prevent `complete-in-buffer' from auto-displaying the tooltip/menu/pop-up
 ;;   frame if there are no completions (otherwise Emacs CVS seems to crash!)
 ;; * bug fixes to key bindings and `completion-tab-complete'
+;; * bug fixes to pop-up frames
 ;;
 ;; Version 0.7.1
 ;; * minor key binding fixes
@@ -1947,7 +1948,7 @@ If no OVERLAY is supplied, tried to find one at point."
        (1+ maxlen)
        (1+ (min (length completions)
 		completion-popup-frame-max-height)))
-      (select-frame frame)
+      (select-frame-set-input-focus frame)
       (switch-to-buffer " *completion-ui*")
       (completion-popup-frame-mode)
       (setq completion-popup-frame-parent-frame parent-frame)
@@ -2025,7 +2026,7 @@ If ARG is supplied, it is passed through to COMMAND."
       (let ((overwrite-mode nil)) (insert str))
       (move-overlay overlay (overlay-start overlay)
 		    (+ (overlay-start overlay) (length str)))
-      (overlay-put overlay 'completion-num num)))
+      (overlay-put overlay 'completion-num (1- num))))
 )
 
 
