@@ -174,10 +174,10 @@
 "\\sqrt"
 "\\stepcounter"
 "\\subparagraph"
-"\\subsection"
-"\\subsection*"
-"\\subsubsection"
-"\\subsubsection*"
+"\\subsection" nil ("\\section")
+"\\subsection*" nil ("\\section*")
+"\\subsubsection" nil ("\\subsection" "\\section")
+"\\subsubsection*" nil ("\\subsection*" "\\section*")
 "\\symbol"
 "\\tableofcontents"
 "\\telephone"
