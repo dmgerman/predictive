@@ -2426,7 +2426,8 @@ predictive mode."
 	
 	;; if current dictionary is a list, add "..." to end of name, and
 	;; construct list of all dictionary names for help-echo text
-	(if (dictree-p dict) (setq list nil)
+	(if (or (dictree-p dict) (= (length dict) 1))
+	    (setq list nil)
 	  (setq name (concat name "..."))
 	  (setq list (mapconcat
 		      (lambda (dic)
