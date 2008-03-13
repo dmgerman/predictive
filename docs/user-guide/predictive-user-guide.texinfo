@@ -1497,10 +1497,38 @@ you want to set the default main dictionary permanently, customize
 Using overlays, it is possible to set up dictionaries that are local to
 specific regions of text. The predictive mode support for a number of
 major modes (notably the @LaTeX{} support) makes use of this feature
-(@pxref{Major Modes}). Region-local dictionaries are, however, beyond
-the scope of this user-guide. @xref{Region-Local Dictionaries, , ,
-predictive-programmer-guide, Predictive Programmer Guide}.
+(@pxref{Major Modes}). Configuring region-local dictionaries is,
+however, beyond the scope of this user-guide. @xref{Region-Local
+Dictionaries, , , predictive-programmer-guide, Predictive Programmer
+Guide}.
 
+@ftable @command
+@item predictive-which-dict-mode
+Auxilliary minor-mode that displays the currently active dictionary in
+the mode-line.
+@end ftable
+
+Predictive mode provides an auxilliary minor-mode,
+@command{predictive-which-dict-mode}, which displays the name of the
+currently active dictionary in the mode-line, i.e. the dictionary that
+is active at the point. If the active dictionary is in fact a list of
+dictionaries, the name of the first dictionary in the list is displayed,
+followed by @samp{...}. Positioning the mouse over the dictionary name
+displays the names of the other dictionaries, either in the echo-area
+(if @command{tooltip-mode} is disabled, or in a terminal) or in a
+tooltip. However, for this to work, you have to customize part of the
+@env{mode-line-modes} variable, as the default setting clobbers this
+functionality. Find the part that refers to the @env{minor-mode-alist}
+variable, and delete the @code{help-echo} property, i.e. change that
+part to:
+@lisp
+(:propertize ("" minor-mode-alist)
+ mouse-face mode-line-highlight local-map
+ (keymap (header-line keymap (down-mouse-3 . mode-line-mode-menu-1))
+         (mode-line keymap (down-mouse-3 . mode-line-mode-menu-1)
+                           (mouse-2 . mode-line-minor-mode-help)
+                           (down-mouse-1 . mouse-minor-mode-menu))))
+@end lisp
 
 
 
