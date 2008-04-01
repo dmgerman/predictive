@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9
+;; Version: 0.9.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.1
+;; * fixed bug in loading of main dictionary and latex dictionary list
 ;;
 ;; Version 0.9
 ;; * generalised predictive-latex-label overlay class into
@@ -362,20 +365,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (predictive-latex-load-auto-dict "local-math")
       (predictive-latex-load-auto-dict "local-env")
       
-      ;; add latex dictionaries to main dictionary list
-      (make-local-variable 'predictive-main-dict)
-      (when (atom predictive-main-dict)
-	(setq predictive-main-dict (list predictive-main-dict)))
-      (setq predictive-main-dict
-	    (append predictive-main-dict predictive-latex-dict
+      ;; add local environment, maths and text-mode dictionaries to
+      ;; appropriate dictionary lists
+      ;; Note: we add the local text-mode command dictionary to the maths
+      ;; dictionary list too, because there's no way to tell whether
+      ;; \newcommand's are text- or math-mode commands.
+      (setq predictive-latex-dict
+	    (append predictive-latex-dict
 		    (if (dictree-p predictive-latex-local-latex-dict)
 			(list predictive-latex-local-latex-dict)
 		      predictive-latex-local-latex-dict)))
-      ;; add local environment, maths and text-mode dictionaries to
-      ;; appropriate dictionary lists
-      ;; Note: we add the local text-mode command dictionary to the list too,
-      ;; because there's no way to tell whether \newcommand's are text- or
-      ;; math-mode commands.
       (setq predictive-latex-math-dict
 	    (append predictive-latex-math-dict
 		    (if (dictree-p predictive-latex-local-math-dict)
@@ -389,6 +388,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		    (if (dictree-p predictive-latex-local-env-dict)
 			(list predictive-latex-local-env-dict)
 		      predictive-latex-local-env-dict)))
+      
+      ;; add latex dictionaries to main dictionary list
+      (make-local-variable 'predictive-main-dict)
+      (when (atom predictive-main-dict)
+	(setq predictive-main-dict (list predictive-main-dict)))
+      (setq predictive-main-dict
+	    (append predictive-main-dict predictive-latex-dict))
       
       
       ;; delete any existing predictive auto-overlay regexps and load latex
@@ -1199,11 +1205,7 @@ refers to."
 	(let ((old-dict predictive-restore-main-dict))
 	  (when (atom old-dict) (setq old-dict (list old-dict)))
 	  (mapc 'predictive-unload-dict old-dict))
-	(setq predictive-main-dict
-	      (append dict-list predictive-latex-dict
-		      (if (dictree-p predictive-latex-local-latex-dict)
-			  (list predictive-latex-local-latex-dict)
-			predictive-latex-local-latex-dict)))
+	(setq predictive-main-dict (append dict-list predictive-latex-dict))
 	)))
 )
 
