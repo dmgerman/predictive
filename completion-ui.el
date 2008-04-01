@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.2
+;; Version: 0.7.3
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.3
+;; * fixed bug in `completion-popup-frame-toggle-show-all'
 ;;
 ;; Version 0.7.2
 ;; * prevent `complete-in-buffer' from auto-displaying the tooltip/menu/pop-up
@@ -2076,38 +2079,37 @@ are shown in a pop-up frame, as with all the other completion
 methods. Toggling will show all possible completions."
   (interactive)
 
-  (let ((prefix
-	 (overlay-get completion-popup-frame-parent-overlay 'prefix))
+  (let ((prefix (overlay-get completion-popup-frame-parent-overlay
+			     'prefix))
 	cmpl-fun completions lines maxlen)
 
-    ;; get completion function
-    (save-excursion
-      (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
-      (setq cmpl-fun completion-function))
-      
-    (cond
-     ;; if we weren't already showing all completions, get all
-     ;; completions and update completion overlay properties
-     ((null completion-popup-frame-show-all)
-      (message
-       "Finding all completions (C-g to cancel if taking too long)...")
-      (setq completions (funcall cmpl-fun prefix nil))
-      (overlay-put completion-popup-frame-parent-overlay
-		   'completions completions))
-
-     ;; if we were already showing all completions, get list of
-     ;; completions and update completion ovleray properties
-     (completion-popup-frame-show-all
-      (setq completions
-	    (funcall cmpl-fun prefix completion-max-candidates))
-      (overlay-put completion-popup-frame-parent-overlay
-		   'completions completions)))
+      (cond
+       ;; if we weren't showing all completions, get all completions and
+       ;; update completion overlay properties
+       ((null completion-popup-frame-show-all)
+	(message
+	 "Finding all completions (C-g to cancel if taking too long)...")
+	(save-excursion
+	  (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
+	  (setq completions (funcall completion-function prefix nil)))
+	(overlay-put completion-popup-frame-parent-overlay
+		     'completions completions))
+       
+       ;; if we were showing all completions, get list of best completions and
+       ;; update completion overlay properties
+       (completion-popup-frame-show-all
+	(save-excursion
+	  (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
+	  (setq completions (funcall completion-function prefix
+				     completion-max-candidates)))
+	(overlay-put completion-popup-frame-parent-overlay
+		     'completions completions)))
 
     ;; reset pop-up frame properties
     (erase-buffer)
     (setq lines
 	  (completion-construct-popup-frame-text prefix completions))
-    (setq maxlen (apply 'max (mapcar 'length lines)))
+    (setq maxlen (if (null lines) 0 (apply 'max (mapcar 'length lines))))
     (set-frame-size (selected-frame) (1+ maxlen) (frame-height))
     ;; insert completions in pop-up frame
     (mapc (lambda (str) (insert str "\n")) lines)
@@ -3497,7 +3499,8 @@ of completion overlay."
 
 (defun completion-construct-popup-frame-text (prefix completions)
   "Construct the list of lines for a pop-up frame."
-  (let ((maxlen (apply 'max (mapcar 'length completions)))
+  (let ((maxlen (if (null completions) 0
+		  (apply 'max (mapcar 'length completions))))
 	(lines nil))
     (dotimes (i (length completions))
       (setq lines
