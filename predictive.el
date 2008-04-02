@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.1
+;; Version: 0.17.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.2
+;; * minor change to `predictive-reset-weight'
 ;;
 ;; Version 0.17.1
 ;; * fixed bug in `predictive-flush-auto-learn-caches', which failed to check
@@ -1967,7 +1970,10 @@ is the numerical prefix argument."
 		     (dictree-name dict))))
     ;; if a word was specified, reset its weight to 0
     (if word
-	(dictree-insert dict word weight (lambda (a b) a))
+	(and (dictree-insert dict word weight (lambda (a b) a))
+	     (interactive-p)
+	     (message "Weight of \"%s\" in %s reset to 0"
+		      word (dictree-name dict)))
       ;; if no word was specified, reset all weights to 0
       (let ((i 0) (count (dictree-size dict)))
 	(message "Resetting word weights in %s...(word 1 of %d)"
