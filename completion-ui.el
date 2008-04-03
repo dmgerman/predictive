@@ -106,6 +106,7 @@
 ;;
 ;; Version 0.7.3
 ;; * fixed bug in `completion-popup-frame-toggle-show-all'
+;; * fixed bug in definition of `completion-tooltip-face'
 ;;
 ;; Version 0.7.2
 ;; * prevent `complete-in-buffer' from auto-displaying the tooltip/menu/pop-up
@@ -568,8 +569,8 @@ correct position on different window systems."
 
 
 (defface completion-tooltip-face
-  `((t (:background ,(or (face-attribute 'menu :background) "white")
-        :foreground ,(or (face-attribute 'menu :foreground) "black"))))
+  `((t . (:background ,(or (face-attribute 'menu :background) "white")
+	  :foreground ,(or (face-attribute 'menu :foreground) "black"))))
   "*Face used in tooltip. Only foreground and background attributes are\
  used."
   :group 'completion-ui)
