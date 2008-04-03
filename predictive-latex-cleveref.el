@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.1
+;; Version: 0.6.2
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.2
+;; * fixed bug in `predictive-latex-cleveref-label-forward-word'
 ;;
 ;; Version 0.6.1
 ;; * changed predictive-latex-label overlay class in label overlays to the new
@@ -271,9 +274,16 @@
       (unless (eobp)
 	(setq m (if n n 1))
 	(dotimes (i m)
-	  (if (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
-	      (when (= (char-before) ?,) (backward-char))
-	    (goto-char (point-max)))))
+	  (forward-word 1)  ; argument not optional in Emacs 21
+	  (while (and (char-after)
+		      (or (= (char-syntax (char-after)) ?w)
+			  (= (char-syntax (char-after)) ?_)
+			  (and (= (char-syntax (char-after)) ?.)
+			       (/= (char-after) ?,))))
+	    (forward-char))))
+;;; 	  (if (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
+;;; 	      (when (= (char-before) ?,) (backward-char))
+;;; 	    (goto-char (point-max)))))
       ))
 )
 
