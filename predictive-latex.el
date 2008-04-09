@@ -33,6 +33,7 @@
 ;;
 ;; Version 0.9.1
 ;; * fixed bug in loading of main dictionary and latex dictionary list
+;; * fixed potential bug in `predictive-latex-forward-word'
 ;;
 ;; Version 0.9
 ;; * generalised predictive-latex-label overlay class into
@@ -1876,45 +1877,42 @@ Intended to be used as the \"resolve\" entry in
 
 
 (defun predictive-latex-forward-word (&optional n)
-  (let (m)
-    ;; going backwards...
-    (if (and n (< n 0))
-	(unless (bobp)
-	  (setq m (- n))
-	  (dotimes (i m)
-	    ;; make sure we're at the end of a word
-	    (re-search-backward "\\\\\\|\\w")
-	    (forward-char)
-	    ;; if point is within or just after a sequence of \'s, go
-	    ;; backwards for the correct number of \'s
-	    (if (= (char-before) ?\\)
-		(let ((pos (point)))
-		  (save-excursion
-		    (while (= (char-before) ?\\) (backward-char))
-		    (setq pos (- pos (point))))
-		  (if (= (mod pos 2) 1) (backward-char) (backward-char 2)))
-	      ;; otherwise, go back one word, plus one \ if there is one
-	      (backward-word 1)  ; argument not optional in Emacs 21
-	      (when (and (not (bobp)) (= ?\\ (char-before)))
-		(backward-char)))))
-      
-      ;; going forwards...
-      (unless (eobp)
-	(setq m (or n 1))
-	;; deal with point within sequence of \'s
-	(when (= (char-after) ?\\)
-	  (let ((pos (point)))
-	    (save-excursion
-	      (while (= (char-before) ?\\) (backward-char))
-	      (setq pos (- pos (point))))
-	    (when (= (mod pos 2) 1) (backward-char))))
-	;; go forward, counting \ as part of word, \\ as entire word
-	(dotimes (i m)
-	  (re-search-forward "\\\\\\|\\w" nil t)
-	  (backward-char)
-	  (re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
-	  (when (= (char-before) ?\n) (backward-char))))
-      ))
+  ;; going backwards...
+  (if (and n (< n 0))
+      (unless (bobp)
+	(dotimes (i (- n))
+	  ;; make sure we're at the end of a word
+	  (when (re-search-backward "\\\\\\|\\w" nil t)
+	    (forward-char))
+	  ;; if point is within or just after a sequence of \'s, go
+	  ;; backwards for the correct number of \'s
+	  (if (= (char-before) ?\\)
+	      (let ((pos (point)))
+		(save-excursion
+		  (while (= (char-before) ?\\) (backward-char))
+		  (setq pos (- pos (point))))
+		(if (= (mod pos 2) 1) (backward-char) (backward-char 2)))
+	    ;; otherwise, go back one word, plus one \ if there is one
+	    (backward-word 1)  ; argument not optional in Emacs 21
+	    (when (and (not (bobp)) (= ?\\ (char-before)))
+	      (backward-char)))))
+    
+    ;; going forwards...
+    (unless (eobp)
+      ;; deal with point within sequence of \'s
+      (when (= (char-after) ?\\)
+	(let ((pos (point)))
+	  (save-excursion
+	    (while (= (char-before) ?\\) (backward-char))
+	    (setq pos (- pos (point))))
+	  (when (= (mod pos 2) 1) (backward-char))))
+      ;; go forward, counting \ as part of word, \\ as entire word
+      (dotimes (i (or n 1))
+	(when (re-search-forward "\\\\\\|\\w" nil t)
+	  (backward-char))
+	(re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
+	(when (= (char-before) ?\n) (backward-char))))
+    )
 )
 
 
