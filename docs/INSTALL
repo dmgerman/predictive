@@ -10,34 +10,35 @@ http://www.dr-qubit.org/emacs.php
 
 
 Backing-Up Dictionaries      
------------------------     *************
-                            * IMPORTANT *
-                            *************
-If you are upgrading from a previous version of the predictive completion
-package, make sure you first backup any dictionaries you use by dumping the
-words and data they contain to files (unless you want to start from
-scratch). Use
+-----------------------     
+
+*************   If you are upgrading from a previous version of the
+* IMPORTANT *   predictive completion package, make sure you first backup
+*************   any dictionaries you use by dumping the words and data
+they contain to files (unless you want to start from scratch). Use
 
   M-x predictive-dump-dict-to-file
 
-to make the backups (see Loading and Saving Dictionaries, Emacs Predictive
-Completion Manual). It is NOT enough to make a copy of the dictionary
-file. Only the plain-text "dumped" format is guaranteed to be portable across
-different versions of predictive mode.
+to make the backups (see Loading and Saving Dictionaries, Emacs
+Predictive Completion Manual). It is NOT enough to make a copy of the
+dictionary file. Only the plain-text "dumped" format is guaranteed to be
+portable across different versions of predictive mode.
 
-Previous versions of the predictive completion package saved dictionaries in a
-compiled form that was not portable across different versions of Emacs. Newer
-versions now automatically save dictionaries in both compiled and uncompiled
-forms. If you are upgrading to a different version of Emacs, but continuing to
-use the same version of the predictive completion package, then it is
-sufficient to recompile the dictionaries from the uncompiled files (with
-extension ".el") using the `byte-compile-file' command from the new version of
-Emacs. Alternatively, you can delete the compiled dictionary files (extension
-".elc", but make sure you do NOT delete the uncompiled files!), and let
-predictive mode recompile them automatically when the dictionaries are saved.
+Previous versions of the predictive completion package saved dictionaries
+in a compiled form that was not portable across different versions of
+Emacs. Newer versions now automatically save dictionaries in both
+compiled and uncompiled forms. If you are upgrading to a different
+version of Emacs, but continuing to use the same version of the
+predictive completion package, then it is sufficient to recompile the
+dictionaries from the uncompiled files (with extension ".el") using the
+`byte-compile-file' command from the new version of Emacs. Alternatively,
+you can delete the compiled dictionary files (extension ".elc", but make
+sure you do NOT delete the uncompiled files!), and let predictive mode
+recompile them automatically when the dictionaries are saved.
 
-However, backing up your dictionaries by dumping them to plain-text files, as
-described above, is still a very good idea (just to be on the safe side!).
+However, backing up your dictionaries by dumping them to plain-text
+files, as described above, is still a very good idea (just to be on the
+safe side!).
 
 
 
@@ -60,12 +61,16 @@ emacs resides with
   make EMACS=/path/to/emacs
 
 Finally, move the Lisp files (files with extensions .el and .elc) to a
-directory in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual). Note
-that some of the Lisp files required to support specific major-modes
-(e.g. LaTeX and html) are in subdirectories of the predictive/ directory
-(e.g. predictive/latex/ and predictive/html/), and these files also need to be
-moved to a directory in your load-path. You can view the current load-path
-using `C-h v load-path' in Emacs.
+directory in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual).
+
+***********   Note that some of the Lisp files required to support
+* CAREFUL *   specific major-modes (e.g. LaTeX and html) are in
+***********   subdirectories of the predictive/ directory (e.g.
+predictive/latex/ and predictive/html/), and these files also need to be
+moved to a directory in your load-path (for example by also adding the
+predictive/latex/ and predictive/html/ subdirectories to your
+load-path). You can view the current load-path using `C-h v load-path' in
+Emacs.
 
 
 If you want the predictive completion minor-mode to be available whenever you
