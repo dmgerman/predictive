@@ -273,6 +273,7 @@
 "\\tan"
 "\\tanh" nil ("\\tan")
 "\\tau"
+"\\text"
 "\\tfrac"
 "\\theta"
 "\\tilde"
