@@ -9,6 +9,7 @@ http://www.dr-qubit.org/emacs.php
 
 
 
+
 Backing-Up Dictionaries      
 -----------------------     
 
@@ -42,6 +43,7 @@ safe side!).
 
 
 
+
 Installing
 ----------
 
@@ -49,28 +51,31 @@ To install the package, extract the files using
 
   tar -xvzf predictive.tar.gz
 
-This will put the files in a new subdirectory called predictive/. You're
-strongly encouraged to byte-compile all the Lisp files and create the
-required dictionaries by running
+This will unpack the files into a new directory called
+predictive/. You're strongly encouraged to byte-compile all the Lisp
+files and create the required dictionaries by running
 
   make
 
-in the predictive/ directory (see also below). You can specify where your
-emacs resides with
+in the predictive/ directory (see also below for more compilation
+options). If necessary, you can specify explicitly where your Emacs
+resides with
 
   make EMACS=/path/to/emacs
 
-Finally, move the Lisp files (files with extensions .el and .elc) to a
-directory in your Emacs load-path (see Lisp Libraries, GNU Emacs Manual).
+Finally, the recommended installation (see below for alternatives) is to
+simply copy the entire predictive/ directory to ~/.emacs.d/predictive/
+using
 
-***********   Note that some of the Lisp files required to support
-* CAREFUL *   specific major-modes (e.g. LaTeX and html) are in
-***********   subdirectories of the predictive/ directory (e.g.
-predictive/latex/ and predictive/html/), and these files also need to be
-moved to a directory in your load-path (for example by also adding the
-predictive/latex/ and predictive/html/ subdirectories to your
-load-path). You can view the current load-path using `C-h v load-path' in
-Emacs.
+  cp -r /path/to/predictive/ ~/.emacs.d/predictive/
+
+and then add the predictive/, predictive/latex/ and predictive/html/
+subdirectories to your load-path by putting the following lines in your
+.emacs file:
+
+  (add-to-list 'load-path "~/.emacs.d/predictive/")
+  (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+  (add-to-list 'load-path "~/.emacs.d/predictive/html/")
 
 
 If you want the predictive completion minor-mode to be available whenever you
@@ -99,9 +104,23 @@ Again, there is an autoload alternative:
 
 
 
-
 Other Installation Options
 --------------------------
+
+--- Installing ---
+
+***********   Of course, you're free to ignore the recommended install
+* CAREFUL *   location, and instead move all the Lisp files (files with
+***********   extensions .el and .elc) from the predictive/ directory to
+some other directory in your Emacs load-path (see Lisp Libraries, GNU
+Emacs Manual). But note that some of the Lisp files required to support
+specific major-modes (e.g. LaTeX and html) are created in subdirectories
+of the predictive/ directory (e.g. predictive/latex/ and
+predictive/html/), and these files also need to be moved to a directory
+in your load-path. You can view the current load-path using `C-h v
+load-path' in Emacs.
+
+
 
 --- Byte-Compiling ---
 
@@ -116,26 +135,28 @@ Alternatively, you can do it manually using `byte-compile-file' or one of the
 other Emacs byte-compilation commands (see The Compilation Functions, GNU
 Emacs Lisp Reference Manual) for all of the Lisp files contained in the
 package. Personally, I like to use `dired' when byte-compiling multiple
-files. (See Operating on Files, GNU Emacs manual.)
+files from within Emacs. (See Operating on Files, GNU Emacs manual.)
 
 
 
 --- Creating the Dictionaries ---
 
-The only pre-prepared dictionary included in the main package is the English
-dictionary (so that predictive completion mode works "out of the box", albeit
-slowly if you don't byte-compile). However, you will get better results if you
-roll your own English dictionary and tailor it to your writing style. (See
-Getting the Most out of Dictionaries, Predictive Completion Manual.) Other
-dictionaries (e.g. for LaTeX and html) are included as plain-text word
-lists.
+The only pre-prepared dictionary included in the main package is the
+English dictionary (so that predictive completion mode works "out of the
+box", albeit very slowly if you don't byte-compile!). However, you will
+get better results if you roll your own English dictionary and train it
+to your own writing style. (See Getting the Most out of Dictionaries,
+Predictive Completion Manual.) Other dictionaries (e.g. for LaTeX and
+html) are included only as plain-text word lists, from which the
+dictionaries can be created. So support for these major modes will not be
+available until the dictionaries have been created.
 
 All the dictionaries are created automatically when you run
 
   make
 
-in the predictive/ directory created by extracting the files, as described
-above.
+in the predictive/ directory that was created by extracting the files, as
+described above.
 
 The English dictionary can be created separately by running
 
@@ -147,11 +168,12 @@ separately by running e.g.
   make dict-latex
   make dict-html
 
-in the predictive/ directory. Note that although the make command must be run
-in the predictive/ directory, these dictionaries are created in subdirectories
-of predictive/ (e.g. predictive/latex/ and predictive/html/). If you want to
-create all the dictionaries at once, without also byte-compiling the Lisp
-files (as "make" on it's own would do), run
+in the predictive/ directory. Note that although the make command must be
+run in the predictive/ directory, these dictionaries are created in
+subdirectories of predictive/ (e.g. predictive/latex/ and
+predictive/html/). If you want to create all the dictionaries at once,
+without also byte-compiling the predictive mode Lisp files (as "make" on
+it's own would do), run
 
   make dicts
 
