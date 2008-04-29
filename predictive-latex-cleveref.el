@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.2
+;; Version: 0.6.3
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.3
+;; * improved `predictive-latex-cleveref-label-forward-word' (again!)
 ;;
 ;; Version 0.6.2
 ;; * fixed bug in `predictive-latex-cleveref-label-forward-word'
@@ -254,37 +257,40 @@
 
 
 (defun predictive-latex-cleveref-label-forward-word (&optional n)
-  (let (m)
-    ;; going backwards...
-    (if (and n (< n 0))
-	(unless (bobp)
-	  (setq m (- n))
-	  (when (= ?\\ (char-before))
-	    (while (= ?\\ (char-before)) (backward-char))
-	    (setq m (1- m)))
-	  (dotimes (i m)
-	    (backward-word 1)  ; argument not optional in Emacs 21
-	    (while (and (char-before)
-			(or (= (char-syntax (char-before)) ?w)
-			    (= (char-syntax (char-before)) ?_)
-			    (and (= (char-syntax (char-before)) ?.)
-				 (/= (char-before) ?,))))
-	      (backward-char))))
-      ;; going forwards...
-      (unless (eobp)
-	(setq m (if n n 1))
-	(dotimes (i m)
-	  (forward-word 1)  ; argument not optional in Emacs 21
-	  (while (and (char-after)
-		      (or (= (char-syntax (char-after)) ?w)
-			  (= (char-syntax (char-after)) ?_)
-			  (and (= (char-syntax (char-after)) ?.)
-			       (/= (char-after) ?,))))
-	    (forward-char))))
-;;; 	  (if (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
-;;; 	      (when (= (char-before) ?,) (backward-char))
-;;; 	    (goto-char (point-max)))))
-      ))
+  ;; going backwards...
+  (if (and n (< n 0))
+      (unless (bobp)
+	(setq n (- n))
+	(when (= ?\\ (char-before))
+	  (while (= ?\\ (char-before)) (backward-char))
+	  (setq n (1- n)))
+	(dotimes (i n)
+	  (when (and (char-before) (= (char-syntax (char-before)) ?w))
+	    (backward-word 1))  ; argument not optional in Emacs 21
+	  (while (and (char-before)
+		      (or (= (char-syntax (char-before)) ?w)
+			  (= (char-syntax (char-before)) ?_)
+			  (and (= (char-syntax (char-before)) ?.)
+			       (/= (char-before) ?,)
+			       (/= (char-before) ?{))))
+	    (backward-char))))
+    ;; going forwards...
+    (unless (eobp)
+      (setq n (if n n 1))
+      (dotimes (i n)
+	(when (and (char-after) (= (char-syntax (char-after)) ?w))
+	  (forward-word 1))  ; argument not optional in Emacs 21
+	(while (and (char-after)
+		    (or (= (char-syntax (char-after)) ?w)
+			(= (char-syntax (char-after)) ?_)
+			(and (= (char-syntax (char-after)) ?.)
+			     (/= (char-after) ?,)
+			     (/= (char-after) ?}))))
+	  (forward-char))))
+;;; 	(if (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
+;;; 	    (when (= (char-before) ?,) (backward-char))
+;;; 	  (goto-char (point-max)))))
+    )
 )
 
 ;;; predictive-latex-cleveref ends here

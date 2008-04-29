@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.1
+;; Version: 0.9.2
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.2
+;; * improved `predictive-latex-label-forward-word'
 ;;
 ;; Version 0.9.1
 ;; * fixed bug in loading of main dictionary and latex dictionary list
@@ -277,8 +280,8 @@ When a document class is in the list, "
 
 
 ;; background color for certain auto-overlays to aid debugging
-(defvar predictive-overlay-debug-color nil)
-
+(defvar predictive-overlay-debug-colour nil)
+(defvaralias 'predictive-overlay-debug-color 'predictive-overlay-debug-colour)
 
 
 
@@ -481,7 +484,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    `(line :id comment
 	  ("%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))))
+	   (face . (background-color . ,predictive-overlay-debug-colour)))))
   
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
@@ -493,13 +496,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     :edge start
 	     (dict . t)
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\label{"
 	     :edge start
 	     :id label
 	     (dict . t)
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\ref{"
 	     :edge start
 	     (dict . predictive-latex-label-dict)
@@ -522,7 +525,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       (predictive-latex-completion-add-till-regexp "\\W"))
 		     word))
 		 (?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\eqref{"
 	     :edge start
 	     (dict . predictive-latex-label-dict) (priority . 40)
@@ -540,42 +543,42 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			  nil)
 			word))
 		 (?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\cite{"
 	     :edge start
 	     (dict . t) (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\begin{"
 	     :edge start
 	     (dict . predictive-latex-env-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\end{"
 	     :edge start
 	     (dict . predictive-latex-env-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\text{"
 	     :edge start
 	     (dict . predictive-main-dict) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\documentclass\\(\\[.*\\]\\)?{"
 	     :edge start
 	     (dict . dict-latex-docclass) (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ("\\\\bibliographystyle\\(\\[.*\\]\\)?{"
 	     :edge start
 	     (dict . dict-latex-bibstyle)
 	     (priority . 40)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ;; Note: regexps contain a lot of \'s because it has to check
 	    ;; whether number of \'s in front of { is even or odd. Also, since
 	    ;; auto-overlay regexps aren't allowed to match across lines, we
@@ -584,19 +587,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (("^\\({\\)" . 1)
 	     :edge start
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("[^\\]\\(\\\\\\\\\\)*\\({\\)" . 2)
 	     :edge start
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("^\\(}\\)" . 1)
 	     :edge end
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("[^\\]\\(\\\\\\\\\\)*\\(}\\)" . 2)
 	     :edge end
 	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ))
   
   
@@ -606,7 +609,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    `(self :id inline-math
 	  ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
-	   (face . (background-color . ,predictive-overlay-debug-color)))))
+	   (face . (background-color . ,predictive-overlay-debug-colour)))))
   
   ;; ...as do \[ and \], but not \\[ and \\] etc.
   ;; Note: regexps contain a lot of \'s because it has to check whether number
@@ -619,23 +622,23 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (dict . predictive-latex-math-dict) (priority . 30)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("^\\(\\\\\\[\\)" . 1)
 	     :edge start
 	     (dict . predictive-latex-math-dict) (priority . 30)
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("[^\\]\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 2)
 	     :edge end
 	     (dict . predictive-latex-math-dict) (priority . 30)
 	     (completion-menu . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    (("^\\(\\\\\\]\\)" . 1)
 	     :edge end
 	     (dict . predictive-latex-math-dict) (priority . 30)
 	     (completion-menu . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-color)))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ))
   
 
@@ -674,7 +677,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      (dict . predictive-latex-math-dict)
      (priority . 10)
      (completion-menu . predictive-latex-construct-browser-menu)
-     (face . (background-color . ,predictive-overlay-debug-color))))
+     (face . (background-color . ,predictive-overlay-debug-colour))))
   (auto-overlay-load-regexp
    'predictive 'environment
    `(("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
@@ -682,7 +685,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      (dict . predictive-latex-math-dict)
      (priority . 10)
      (completion-menu . predictive-latex-construct-browser-menu)
-     (face . (background-color . ,predictive-overlay-debug-color))))
+     (face . (background-color . ,predictive-overlay-debug-colour))))
   (auto-overlay-load-regexp
    'predictive 'environment
    '(("\\\\begin{\\(.*?\\)}" 0 1)
@@ -1918,28 +1921,35 @@ Intended to be used as the \"resolve\" entry in
 
 
 (defun predictive-latex-label-forward-word (&optional n)
-  (let (m)
-    ;; going backwards...
-    (if (and n (< n 0))
-	(unless (bobp)
-	  (setq m (- n))
-	  (when (= ?\\ (char-before))
-	    (while (= ?\\ (char-before)) (backward-char))
-	    (setq m (1- m)))
-	  (dotimes (i m)
-	    (backward-word 1)  ; argument not optional in Emacs 21
-	    (while (and (char-before)
-			(or (= (char-syntax (char-before)) ?w)
-			    (= (char-syntax (char-before)) ?_)
-			    (= (char-syntax (char-before)) ?.)))
-	      (backward-char))))
-      ;; going forwards...
-      (unless (eobp)
-	(setq m (if n n 1))
-	(dotimes (i m)
-	  (unless (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
-	    (goto-char (point-max)))))
-      ))
+  ;; going backwards...
+  (if (and n (< n 0))
+      (unless (bobp)
+	(setq n (- n))
+	(when (= ?\\ (char-before))
+	  (while (= ?\\ (char-before)) (backward-char))
+	  (setq n (1- n)))
+	(dotimes (i n)
+	  (when (and (char-before) (= (char-syntax (char-before)) ?w))
+	    (backward-word 1))  ; argument not optional in Emacs 21
+	  (while (and (char-before)
+		      (or (= (char-syntax (char-before)) ?w)
+			  (= (char-syntax (char-before)) ?_)
+			  (and (= (char-syntax (char-before)) ?.)
+			       (/= (char-before) ?{))))
+	    (backward-char))))
+    ;; going forwards...
+    (unless (eobp)
+      (setq n (if n n 1))
+      (dotimes (i n)
+	(when (and (char-after) (= (char-syntax (char-after)) ?w))
+	  (forward-word 1))  ; argument not optional in Emacs 21
+	(while (and (char-after)
+		    (or (= (char-syntax (char-after)) ?w)
+			(= (char-syntax (char-after)) ?_)
+			(and (= (char-syntax (char-after)) ?.)
+			     (/= (char-after) ?}))))
+	  (forward-char))))
+    )
 )
 
 
