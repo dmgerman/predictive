@@ -17,7 +17,7 @@ This manual documents the Emacs Predictive Completion package, version
 0.20
 @c --version--
 
-Copyright @copyright{} 2005--2007 Toby Cubitt
+Copyright @copyright{} 2005--2008 Toby Cubitt
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -308,7 +308,7 @@ command), by putting the following in your @file{.emacs} file instead:
 @end lisp
 @cindex autoload
 
-If you want to enable predictive mode support for @LaTeX and html
+If you want to enable predictive mode support for @LaTeX{} and html
 major-modes (recommended!), you will have to add additional lines to
 your @file{.emacs} file:
 
