@@ -57,21 +57,22 @@ files and create the required dictionaries by running
 
   make
 
-in the predictive/ directory (see also below for more compilation
-options). If necessary, you can specify explicitly where your Emacs
-resides with
+in the predictive/ directory (see below for more compilation options). If
+necessary, you can specify explicitly where your Emacs resides with
 
   make EMACS=/path/to/emacs
 
-Finally, the recommended installation (see below for alternatives) is to
-simply copy the entire predictive/ directory to ~/.emacs.d/predictive/
-using
+The recommended installation (see below for alternatives) is to simply copy
+the entire predictive/ directory to ~/.emacs.d/predictive/ using
 
   cp -r /path/to/predictive/ ~/.emacs.d/predictive/
 
-and then add the predictive/, predictive/latex/ and predictive/html/
-subdirectories to your load-path by putting the following lines in your
-.emacs file:
+(if it doesn't already exist, you can create the ~/.emacs.d/ directory using
+mkdir ~/.emacs.d).
+
+Then add the ~/.emacs.d/predictive/, ~/.emacs.d/predictive/latex/ and
+~/.emacs.d/predictive/html/ paths to your load-path, by putting the following
+lines in your .emacs file:
 
   (add-to-list 'load-path "~/.emacs.d/predictive/")
   (add-to-list 'load-path "~/.emacs.d/predictive/latex/")

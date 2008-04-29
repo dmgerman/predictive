@@ -265,26 +265,34 @@ necessarily across different versions of the predictive completion
 package.)
 
 To install the package, extract the files using @kbd{tar -xvzf
-predictive.tar.gz}. This will put the files in a new subdirectory called
+predictive.tar.gz}. This will unpack the files in a new directory called
 @file{predictive/}. You're strongly encouraged to byte-compile all the
-Lisp files by running @kbd{make} in the @file{predictive/} subdirectory.
+Lisp files and create the required dictionaries by running @kbd{make} in
+the @file{predictive/} directory.
 
-Finally, move the Lisp files (files with extension @file{.el} and
-@file{.elc}) to a directory in your Emacs load-path (@pxref{Lisp
-Libraries, , , emacs, GNU Emacs Manual}). Note that if you want to use
-the included @LaTeX{} and html support (see below), some of the required
-Lisp files are in the @file{latex} and @file{html} subdirectories, and
-these also have to be moved to somewhere in your @env{load-path}. You
-can view the current @env{load-path} using @kbd{C-h v load-path} within
-Emacs. See the @file{INSTALL} file for more detailed installation
-instructions.
+The recommended installation is to simply copy the entire
+@file{predictive/} directory to @file{~/.emacs.d/predictive/} using
+@kbd{cp -r /path/to/predictive/ ~/.emacs.d/} (if it doesn't already
+exist, you can create the @file{~/.emacs.d/} directory using @kbd{mkdir
+~/.emacs.d}).
+
+Then add the @file{~/.emacs.d/predictive/},
+@file{~/.emacs.d/predictive/latex/} and
+@file{~/.emacs.d/predictive/html/} paths to your load-path, by putting
+the following lines in your @file{.emacs} file:
+@cindex .emacs file
+@cindex startup file
+@cindex configuration file
+
+@lisp
+(add-to-list 'load-path "~/.emacs.d/predictive/")
+(add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+(add-to-list 'load-path "~/.emacs.d/predictive/html/")
+@end lisp
 
 If you want the predictive completion minor-mode to be available
 whenever you start Emacs, put the following line in your @file{.emacs}
 file:
-@cindex .emacs file
-@cindex startup file
-@cindex configuration file
 
 @lisp
 (require 'predictive)
@@ -298,12 +306,11 @@ command), by putting the following in your @file{.emacs} file instead:
 (autoload 'predictive-mode "@var{/path/to/predictive}"
           "Toggle Predictive Completion mode." t)
 @end lisp
+@cindex autoload
 
-If you want to use the included predictive mode @LaTeX{} and/or html in
-the corresponding major-modes (recommended!), you will need to make sure
-the Lisp files in the @file{latex} and @file{html} subdirectories are
-somewhere in your @env{load-path} where Emacs can find them, and
-then add the following lines to your @file{.emacs} file:
+If you want to enable predictive mode support for @LaTeX and html
+major-modes (recommended!), you will have to add additional lines to
+your @file{.emacs} file:
 
 @lisp
 (require 'predictive-latex)
@@ -313,10 +320,12 @@ then add the following lines to your @file{.emacs} file:
 Again, there is an autoload alternative:
 
 @lisp
-(autoload 'predictive-setup-latex "@var{/path/to/predictive-latex}")
-(autoload 'predictive-setup-html "@var{/path/to/predictive-html}")
+(autoload 'predictive-setup-latex "/path/to/predictive-latex")
+(autoload 'predictive-setup-html "/path/to/predictive-html")
 @end lisp
 
+For more details, and for alternative installation options, you should
+consult the @file{INSTALL} file included in the predictive package.
 
 
 
