@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.2
+;; Version: 0.17.3
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -41,6 +41,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.3
+;; * made `predictive-remove-from-dict' display informative message
 ;;
 ;; Version 0.17.2
 ;; * minor change to `predictive-reset-weight'
@@ -1569,7 +1572,13 @@ Interactively, WORD and DICT are read from the minibuffer."
 	  (setq word str)))))
   
   ;; delete word
-  (dictree-delete dict word)
+  (if (dictree-delete dict word)
+      (when (interactive-p)
+	(message "\"%s\" deleted from dictionary %s" word
+		 (dictree--name dict)))
+    (when (interactive-p)
+      (message "\"%s\" not found in dictionary %s" word
+	       (dictree--name dict))))
 )
 
 
