@@ -33,6 +33,7 @@
 ;;
 ;; Version 0.9.2
 ;; * improved `predictive-latex-label-forward-word'
+;; * added "!" to `auto-completion-override-syntax-alist'
 ;;
 ;; Version 0.9.1
 ;; * fixed bug in loading of main dictionary and latex dictionary list
@@ -886,6 +887,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
 			   ',punct-complete 'none))))
+	     (?! . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',punct-resolve))
+		    (lambda ()
+		      (if (and (char-before (1- (point)))
+			       (= (char-before (1- (point))) ?\\))
+			  ',punct-complete 'none))))
 	     (?< . ((lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
 			  'add ',punct-resolve))
