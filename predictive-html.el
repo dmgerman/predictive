@@ -110,7 +110,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (mapc (lambda (dic)
 	      (unless (predictive-load-dict dic)
 		(message "Failed to load dictionary %s" dic)
-		(throw 'load-fail nil))))
+		(throw 'load-fail nil)))
+	    predictive-html-dicts)
       
       ;; add html dictionaries to main dictionary list
       (make-local-variable 'predictive-main-dict)
