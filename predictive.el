@@ -44,6 +44,8 @@
 ;;
 ;; Version 0.17.3
 ;; * made `predictive-remove-from-dict' display informative message
+;; * made `predictive-mode' cope more gracefully with failed major-mode setup
+;;   function
 ;;
 ;; Version 0.17.2
 ;; * minor change to `predictive-reset-weight'
@@ -638,6 +640,10 @@ to the dictionary, nil if it should not. Only used when
 (defvar predictive-flush-auto-learn-timer nil)
 (make-variable-buffer-local 'predictive-flush-auto-learn-timer)
 
+;; flag used to indicate failed major-mode setup function
+(defvar predictive-disable-major-mode-setup nil)
+(make-variable-buffer-local 'predictive-disable-major-mode-setup)
+
 
 
 ;;; ==============================================================
@@ -860,7 +866,12 @@ do: emails, academic research articles, letters...)"
     (let ((modefunc (assq major-mode predictive-major-mode-alist)))
       (when modefunc
 	(if (functionp (cdr modefunc))
-	    (funcall (cdr modefunc) 1)
+	    (unless (funcall (cdr modefunc) 1)
+	      (message "Predictive major-mode setup function failed;\
+ %s support disabled"
+		       major-mode)
+	      (setq predictive-disable-major-mode-setup t)
+	      (sit-for 2))
 	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
 		 (prin1-to-string (cdr modefunc))))))
 
@@ -898,15 +909,18 @@ do: emails, academic research articles, letters...)"
 			     predictive-dict-compilation-mode))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
-    
-    ;; look up major mode in major-mode-alist and call any matching function
-    ;; with a negative argument to indicate disabling
-    (let ((modefunc (assq major-mode predictive-major-mode-alist)))
-      (when modefunc
-	(if (functionp (cdr modefunc))
-	    (funcall (cdr modefunc) -1)
-	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
-		 (prin1-to-string (cdr modefunc))))))
+
+    ;; if major-mode setup function failed to load, just reset the flag
+    (if predictive-disable-major-mode-setup
+	(setq predictive-disable-major-mode-setup nil)
+      ;; otherwise, look up major mode in major-mode-alist and call any
+      ;; matching function with a negative argument to indicate disabling
+      (let ((modefunc (assq major-mode predictive-major-mode-alist)))
+	(when modefunc
+	  (if (functionp (cdr modefunc))
+	      (funcall (cdr modefunc) -1)
+	    (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
+		   (prin1-to-string (cdr modefunc)))))))
     
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)

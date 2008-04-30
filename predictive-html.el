@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.4
+;; Version: 0.4.1
 ;; Keywords: predictive, setup function, html
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -28,6 +28,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.4
+;; * made `predictive-setup-html' fail gracefully when a required dictionary
+;;   can't be found
 ;;
 ;; Version 0.4
 ;; * updated to bring it into line with current auto-overlays
@@ -68,6 +72,22 @@
 (put 'predictive-html-word 'forward-op 'predictive-html-forward-word)
 
 
+;; html dictionaries
+(defconst predictive-html-dicts
+  '(dict-html dict-html-char-entity dict-html-common
+	      dict-html-core dict-html-events
+	      dict-html-international dict-html-a dict-html-area
+	      dict-html-base dict-html-quote dict-html-body
+	      dict-html-button dict-html-col dict-html-del
+	      dict-html-form dict-html-head dict-html-img
+	      dict-html-input dict-html-ins dict-html-label
+	      dict-html-legend dict-html-link dict-html-map
+	      dict-html-meta dict-html-object dict-html-optgroup
+	      dict-html-option dict-html-param dict-html-script
+	      dict-html-select dict-html-style dict-html-table
+	      dict-html-td dict-html-textarea dict-html-tr))
+
+
 ;; background color for certain auto-overlays to aid debugging
 (defvar predictive-overlay-debug-color nil)
 
@@ -81,85 +101,53 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (cond
    ;; ----- enabling html setup -----
    ((> arg 0)
-    
-    ;; save overlays and unload regexp definitions before killing buffer
-    (add-hook 'kill-buffer-hook
-	      (lambda ()
-		(auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		(auto-overlay-unload-set 'predictive))
-	      nil t)
-    
-    ;; use html browser menu if first character of prefix is "<" or "&"
-    (make-local-variable 'completion-menu)
-    (setq completion-menu
-	  (lambda (prefix completions)
-	    (if (or (string= (substring prefix 0 1) "<")
-		    (string= (substring prefix 0 1) "&"))
-		(predictive-html-construct-browser-menu prefix completions)
-	      (completion-construct-menu prefix completions))
-	    ))
-    
-    ;; save predictive-main-dict; restored when predictive mode is disabled
-    (setq predictive-restore-main-dict predictive-main-dict)
-    
-    ;; load the dictionaries
-    (predictive-load-dict 'dict-html)
-    (predictive-load-dict 'dict-html-char-entity)
-    ;; general attributes
-    (predictive-load-dict 'dict-html-common)
-    (predictive-load-dict 'dict-html-core)
-    (predictive-load-dict 'dict-html-events)
-    (predictive-load-dict 'dict-html-international)
-    ;; tag-specific attributes
-    (predictive-load-dict 'dict-html-a)
-    (predictive-load-dict 'dict-html-area)
-    (predictive-load-dict 'dict-html-base)
-    (predictive-load-dict 'dict-html-quote)
-    (predictive-load-dict 'dict-html-body)
-    (predictive-load-dict 'dict-html-button)
-    (predictive-load-dict 'dict-html-col)
-    (predictive-load-dict 'dict-html-del)
-    (predictive-load-dict 'dict-html-form)
-    (predictive-load-dict 'dict-html-head)
-    (predictive-load-dict 'dict-html-img)
-    (predictive-load-dict 'dict-html-input)
-    (predictive-load-dict 'dict-html-ins)
-    (predictive-load-dict 'dict-html-label)
-    (predictive-load-dict 'dict-html-legend)
-    (predictive-load-dict 'dict-html-link)
-    (predictive-load-dict 'dict-html-map)
-    (predictive-load-dict 'dict-html-meta)
-    (predictive-load-dict 'dict-html-object)
-    (predictive-load-dict 'dict-html-optgroup)
-    (predictive-load-dict 'dict-html-option)
-    (predictive-load-dict 'dict-html-param)
-    (predictive-load-dict 'dict-html-script)
-    (predictive-load-dict 'dict-html-select)
-    (predictive-load-dict 'dict-html-style)
-    (predictive-load-dict 'dict-html-table)
-    (predictive-load-dict 'dict-html-td)
-    (predictive-load-dict 'dict-html-textarea)
-    (predictive-load-dict 'dict-html-tr)
-    
-    ;; add html dictionaries to main dictionary list
-    (make-local-variable 'predictive-main-dict)
-    (when (atom predictive-main-dict)
-      (setq predictive-main-dict (list predictive-main-dict)))
-    (setq predictive-main-dict
-	  (append predictive-main-dict '(dict-html dict-html-char-entity)))
-    
-    ;; delete any existing predictive auto-overlay regexps and load html
-    ;; auto-overlay regexps
-    (auto-overlay-unload-set 'predictive)
-    (predictive-html-load-regexps)
-    (auto-overlay-start 'predictive)
-    
-    ;; load the keybindings and related settings
-    (predictive-html-load-keybindings)
-    ;; consider \ as start of a word
-    (setq completion-word-thing 'predictive-html-word)
-    
-    t)  ; indicate successful setup
+    (catch 'load-fail
+      
+      ;; save predictive-main-dict; restored when predictive mode is disabled
+      (setq predictive-restore-main-dict predictive-main-dict)
+      
+      ;; load the dictionaries
+      (mapc (lambda (dic)
+	      (unless (predictive-load-dict dic)
+		(message "Failed to load dictionary %s" dic)
+		(throw 'load-fail nil))))
+      
+      ;; add html dictionaries to main dictionary list
+      (make-local-variable 'predictive-main-dict)
+      (when (atom predictive-main-dict)
+	(setq predictive-main-dict (list predictive-main-dict)))
+      (setq predictive-main-dict
+	    (append predictive-main-dict '(dict-html dict-html-char-entity)))
+      
+      ;; save overlays and unload regexp definitions before killing buffer
+      (add-hook 'kill-buffer-hook
+		(lambda ()
+		  (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
+		  (auto-overlay-unload-set 'predictive))
+		nil t)
+      
+      ;; use html browser menu if first character of prefix is "<" or "&"
+      (make-local-variable 'completion-menu)
+      (setq completion-menu
+	    (lambda (prefix completions)
+	      (if (or (string= (substring prefix 0 1) "<")
+		      (string= (substring prefix 0 1) "&"))
+		  (predictive-html-construct-browser-menu prefix completions)
+		(completion-construct-menu prefix completions))
+	      ))
+      
+      ;; delete any existing predictive auto-overlay regexps and load html
+      ;; auto-overlay regexps
+      (auto-overlay-unload-set 'predictive)
+      (predictive-html-load-regexps)
+      (auto-overlay-start 'predictive)
+      
+      ;; load the keybindings and related settings
+      (predictive-html-load-keybindings)
+      ;; consider \ as start of a word
+      (setq completion-word-thing 'predictive-html-word)
+      
+      t))  ; indicate successful setup
 
 
    ;; ----- disabling html setup -----

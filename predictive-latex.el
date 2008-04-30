@@ -34,6 +34,8 @@
 ;; Version 0.9.2
 ;; * improved `predictive-latex-label-forward-word'
 ;; * added "!" to `auto-completion-override-syntax-alist'
+;; * made `predictive-setup-latex' fail gracefully when a required dictionary
+;;   can't be found
 ;;
 ;; Version 0.9.1
 ;; * fixed bug in loading of main dictionary and latex dictionary list
@@ -297,134 +299,157 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (cond
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
-    
-    ;; save overlays and unload regexp definitions along with buffer
-    (add-hook 'after-save-hook
-	      (lambda () (auto-overlay-save-overlays 'predictive))
-	      nil t)
-    
-    ;; use latex browser menu if first character of prefix is "\"
-    (make-local-variable 'completion-menu)
-    (setq completion-menu
-	  (lambda (prefix completions)
-	    (if (string= (substring prefix 0 1) "\\")
-		(predictive-latex-construct-browser-menu prefix completions)
-	      (completion-construct-menu prefix completions))
-	    ))
-    ;; save predictive-main-dict; restored when predictive mode is disabled
-    (setq predictive-restore-main-dict predictive-main-dict)
-
-    
-    (cond
-     ;; if we're not the TeX master, visit the TeX master buffer, enable
-     ;; predictive mode in it, and share buffer-local settings with it
-     ((and (boundp 'TeX-master) (stringp TeX-master))
-      (let (filename buff used-dicts main-dict latex-dict math-dict
-		     preamble-dict env-dict label-dict local-env-dict)
-	(setq filename (expand-file-name TeX-master))
-	(unless (string= (substring filename -4) ".tex")
-	  (setq filename (concat filename ".tex")))
-	(save-window-excursion
-	  (find-file filename)
-	  (turn-on-predictive-mode)
-	  (setq buff (current-buffer))
-	  (setq used-dicts predictive-used-dict-list)
-	  (setq main-dict predictive-main-dict)
-	  (setq latex-dict predictive-latex-dict)
-	  (setq math-dict predictive-latex-math-dict)
-	  (setq preamble-dict predictive-latex-preamble-dict)
-	  (setq env-dict predictive-latex-env-dict)
-	  (setq label-dict predictive-latex-label-dict)
-	  (setq local-env-dict predictive-latex-local-env-dict))
-	(auto-overlay-share-regexp-set 'predictive buff)
-	(setq predictive-used-dict-list used-dicts)
-	(setq predictive-main-dict main-dict)
-	(setq predictive-latex-dict latex-dict)
-	(setq predictive-latex-math-dict math-dict)
-	(setq predictive-latex-preamble-dict preamble-dict)
-	(setq predictive-latex-env-dict env-dict)
-	(setq predictive-latex-label-dict label-dict)
-	(setq predictive-latex-local-env-dict local-env-dict)
-	;; start the auto-overlays, restoring buffer's modified flag afterwards,
-	;; since automatic synchronization of LaTeX envionments can modify
-	;; buffer without actually changing buffer text
+    (catch 'load-fail
+      
+      ;; save overlays and unload regexp definitions along with buffer
+      (add-hook 'after-save-hook
+		(lambda () (auto-overlay-save-overlays 'predictive))
+		nil t)
+      
+      ;; use latex browser menu if first character of prefix is "\"
+      (make-local-variable 'completion-menu)
+      (setq completion-menu
+	    (lambda (prefix completions)
+	      (if (string= (substring prefix 0 1) "\\")
+		  (predictive-latex-construct-browser-menu prefix completions)
+		(completion-construct-menu prefix completions))
+	      ))
+      ;; save predictive-main-dict; restored when predictive mode is disabled
+      (setq predictive-restore-main-dict predictive-main-dict)
+      
+      
+      (cond
+       ;; if we're not the TeX master, visit the TeX master buffer, enable
+       ;; predictive mode in it, and share buffer-local settings with it
+       ((and (boundp 'TeX-master) (stringp TeX-master))
+	(let (filename buff used-dicts main-dict latex-dict math-dict
+		       preamble-dict env-dict label-dict local-env-dict)
+	  (setq filename (expand-file-name TeX-master))
+	  (unless (string= (substring filename -4) ".tex")
+	    (setq filename (concat filename ".tex")))
+	  (save-window-excursion
+	    (find-file filename)
+	    (turn-on-predictive-mode)
+	    (setq buff (current-buffer))
+	    (setq used-dicts predictive-used-dict-list)
+	    (setq main-dict predictive-main-dict)
+	    (setq latex-dict predictive-latex-dict)
+	    (setq math-dict predictive-latex-math-dict)
+	    (setq preamble-dict predictive-latex-preamble-dict)
+	    (setq env-dict predictive-latex-env-dict)
+	    (setq label-dict predictive-latex-label-dict)
+	    (setq local-env-dict predictive-latex-local-env-dict))
+	  (auto-overlay-share-regexp-set 'predictive buff)
+	  (setq predictive-used-dict-list used-dicts)
+	  (setq predictive-main-dict main-dict)
+	  (setq predictive-latex-dict latex-dict)
+	  (setq predictive-latex-math-dict math-dict)
+	  (setq predictive-latex-preamble-dict preamble-dict)
+	  (setq predictive-latex-env-dict env-dict)
+	  (setq predictive-latex-label-dict label-dict)
+	  (setq predictive-latex-local-env-dict local-env-dict)
+	  ;; start the auto-overlays, restoring buffer's modified flag
+	  ;; afterwards, since automatic synchronization of LaTeX envionments
+	  ;; can modify buffer without actually changing buffer text
+	  (let ((restore-modified (buffer-modified-p)))
+	    (auto-overlay-start 'predictive)
+	    (set-buffer-modified-p restore-modified))
+	  ))
+       
+       
+       ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
+       ;; FIXME: probably need to handle null TeX-master case differently
+       (t
+	;; load the latex dictionaries
+	(unless (predictive-load-dict 'dict-latex-docclass)
+	  (message "Failed to load dict-latex-docclass")
+	  (throw 'load-fail nil))
+	(mapc (lambda (dic)
+		(unless (predictive-load-dict dic)
+		  (message "Failed to load %s" dic)
+		  (throw 'load-fail nil)))
+	      predictive-latex-dict)
+	(mapc (lambda (dic)
+		(unless (predictive-load-dict dic)
+		  (message "Failed to load %s" dic)
+		  (throw 'load-fail nil)))
+	      predictive-latex-math-dict)
+	(mapc (lambda (dic)
+		(unless (predictive-load-dict dic)
+		  (message "Failed to load %s" dic)
+		  (throw 'load-fail nil)))
+	      predictive-latex-preamble-dict)
+	(mapc (lambda (dic)
+		(unless (predictive-load-dict dic)
+		  (message "Failed to load %s" dic)
+		  (throw 'load-fail nil)))
+	      predictive-latex-env-dict)
+	(mapc (lambda (dic)
+		(unless (predictive-load-dict dic)
+		  (message "Failed to load %s" dic)
+		  (throw 'load-fail nil)))
+	      predictive-latex-bibstyle-dict)
+	;; load/create the label and theorem dictionaries
+	(predictive-latex-load-auto-dict "label")
+	(predictive-latex-load-auto-dict "local-latex")
+	(predictive-latex-load-auto-dict "local-math")
+	(predictive-latex-load-auto-dict "local-env")
+	
+	;; add local environment, maths and text-mode dictionaries to
+	;; appropriate dictionary lists
+	;; Note: we add the local text-mode command dictionary to the maths
+	;; dictionary list too, because there's no way to tell whether
+	;; \newcommand's are text- or math-mode commands.
+	(setq predictive-latex-dict
+	      (append predictive-latex-dict
+		      (if (dictree-p predictive-latex-local-latex-dict)
+			  (list predictive-latex-local-latex-dict)
+			predictive-latex-local-latex-dict)))
+	(setq predictive-latex-math-dict
+	      (append predictive-latex-math-dict
+		      (if (dictree-p predictive-latex-local-math-dict)
+			  (list predictive-latex-local-math-dict)
+			predictive-latex-local-math-dict)
+		      (if (dictree-p predictive-latex-local-latex-dict)
+			  (list predictive-latex-local-latex-dict)
+			predictive-latex-local-latex-dict)))
+	(setq predictive-latex-env-dict
+	      (append predictive-latex-env-dict
+		      (if (dictree-p predictive-latex-local-env-dict)
+			  (list predictive-latex-local-env-dict)
+			predictive-latex-local-env-dict)))
+	
+	;; add latex dictionaries to main dictionary list
+	(make-local-variable 'predictive-main-dict)
+	(when (atom predictive-main-dict)
+	  (setq predictive-main-dict (list predictive-main-dict)))
+	(setq predictive-main-dict
+	      (append predictive-main-dict predictive-latex-dict))
+	
+	
+	;; delete any existing predictive auto-overlay regexps and load latex
+	;; auto-overlay regexps
+	(auto-overlay-unload-set 'predictive)
+	(predictive-latex-load-regexps)
+	
+	;; start the auto-overlays, skipping the check that regexp definitions
+	;; haven't changed if there's a file of saved overlay data to use, and
+	;; restoring buffer's modified flag afterwards since automatic
+	;; synchronization of LaTeX envionments can modify buffer without
+	;; actually changing buffer text
 	(let ((restore-modified (buffer-modified-p)))
-	  (auto-overlay-start 'predictive)
+	  (auto-overlay-start 'predictive nil nil 'no-regexp-check)
 	  (set-buffer-modified-p restore-modified))
 	))
-
-     
-     ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
-     ;; FIXME: probably need to handle null TeX-master case differently
-     (t
-      ;; load the latex dictionaries
-      (predictive-load-dict 'dict-latex-docclass)
-      (mapc 'predictive-load-dict predictive-latex-dict)
-      (mapc 'predictive-load-dict predictive-latex-math-dict)
-      (mapc 'predictive-load-dict predictive-latex-preamble-dict)
-      (mapc 'predictive-load-dict predictive-latex-env-dict)
-      (mapc 'predictive-load-dict predictive-latex-bibstyle-dict)
-      ;; load/create the label and theorem dictionaries
-      (predictive-latex-load-auto-dict "label")
-      (predictive-latex-load-auto-dict "local-latex")
-      (predictive-latex-load-auto-dict "local-math")
-      (predictive-latex-load-auto-dict "local-env")
-      
-      ;; add local environment, maths and text-mode dictionaries to
-      ;; appropriate dictionary lists
-      ;; Note: we add the local text-mode command dictionary to the maths
-      ;; dictionary list too, because there's no way to tell whether
-      ;; \newcommand's are text- or math-mode commands.
-      (setq predictive-latex-dict
-	    (append predictive-latex-dict
-		    (if (dictree-p predictive-latex-local-latex-dict)
-			(list predictive-latex-local-latex-dict)
-		      predictive-latex-local-latex-dict)))
-      (setq predictive-latex-math-dict
-	    (append predictive-latex-math-dict
-		    (if (dictree-p predictive-latex-local-math-dict)
-			(list predictive-latex-local-math-dict)
-		      predictive-latex-local-math-dict)
-		    (if (dictree-p predictive-latex-local-latex-dict)
-			(list predictive-latex-local-latex-dict)
-		      predictive-latex-local-latex-dict)))
-      (setq predictive-latex-env-dict
-	    (append predictive-latex-env-dict
-		    (if (dictree-p predictive-latex-local-env-dict)
-			(list predictive-latex-local-env-dict)
-		      predictive-latex-local-env-dict)))
-      
-      ;; add latex dictionaries to main dictionary list
-      (make-local-variable 'predictive-main-dict)
-      (when (atom predictive-main-dict)
-	(setq predictive-main-dict (list predictive-main-dict)))
-      (setq predictive-main-dict
-	    (append predictive-main-dict predictive-latex-dict))
       
       
-      ;; delete any existing predictive auto-overlay regexps and load latex
-      ;; auto-overlay regexps
-      (auto-overlay-unload-set 'predictive)
-      (predictive-latex-load-regexps)
+      ;; load the keybindings and related settings
+      (predictive-latex-load-keybindings)
+      ;; consider \ as start of a word
+      (setq completion-word-thing 'predictive-latex-word)
+      (set (make-local-variable 'words-include-escapes) nil)
       
-      ;; start the auto-overlays, skipping the check that regexp definitions
-      ;; haven't changed if there's a file of saved overlay data to use, and
-      ;; restoring buffer's modified flag afterwards since automatic
-      ;; synchronization of LaTeX envionments can modify buffer without
-      ;; actually changing buffer text
-      (let ((restore-modified (buffer-modified-p)))
-	(auto-overlay-start 'predictive nil nil 'no-regexp-check)
-	(set-buffer-modified-p restore-modified))
-      ))
-
-    
-    ;; load the keybindings and related settings
-    (predictive-latex-load-keybindings)
-    ;; consider \ as start of a word
-    (setq completion-word-thing 'predictive-latex-word)
-    (set (make-local-variable 'words-include-escapes) nil)
-
-    t)  ; indicate successful setup
+      t))  ; indicate successful setup
    
    
    
