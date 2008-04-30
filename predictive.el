@@ -46,6 +46,8 @@
 ;; * made `predictive-remove-from-dict' display informative message
 ;; * made `predictive-mode' cope more gracefully with failed major-mode setup
 ;;   function
+;; * renamed `predictive-dict-compilation-mode' to
+;;   `predictive-dict-compilation' to avoid confusion with compilation-mode
 ;;
 ;; Version 0.17.2
 ;; * minor change to `predictive-reset-weight'
@@ -348,7 +350,7 @@ autosave flag set (see `predictive-dict-autosave')."
   :type 'boolean)
 
 
-(defcustom predictive-dict-compilation-mode nil
+(defcustom predictive-dict-compilation nil
   "*Whether to save dictionaries in compiled or uncompiled form.
 
 The default is to save both compiled and uncompiled forms. If set
@@ -841,7 +843,7 @@ do: emails, academic research articles, letters...)"
       (add-hook 'kill-buffer-hook
 		(lambda ()
 		  (dictree-save-modified predictive-used-dict-list
-					 predictive-dict-compilation-mode))
+					 predictive-dict-compilation))
 		nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
@@ -906,7 +908,7 @@ do: emails, academic research articles, letters...)"
     ;; save the dictionaries
     (when predictive-dict-autosave-on-mode-disable
       (dictree-save-modified predictive-used-dict-list
-			     predictive-dict-compilation-mode))
+			     predictive-dict-compilation))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
 
@@ -927,7 +929,7 @@ do: emails, academic research articles, letters...)"
     (remove-hook 'kill-buffer-hook
 		 (lambda ()
 		   (dictree-save-modified predictive-used-dict-list
-					  predictive-dict-compilation-mode))
+					  predictive-dict-compilation))
 		 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
@@ -1271,9 +1273,9 @@ disabled (see `predictive-dict-autosave-on-kill-buffer' and
   "Save dictionary DICT to its associated file.
 Use `predictive-write-dict' to save to a different file.
 
-See also `predictive-dict-compilation-mode'."
+See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to save: ")))
-  (dictree-save dict predictive-dict-compilation-mode)
+  (dictree-save dict predictive-dict-compilation)
 )
 
 
@@ -1284,13 +1286,13 @@ See also `predictive-dict-compilation-mode'."
 If optional argument OVERWRITE is non-nil, no confirmation will
 be asked for before overwriting an existing file.
 
-See also `predictive-dict-compilation-mode'."
+See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to write: ")
 		     (read-file-name "File to write to: ")
 		     current-prefix-arg))
   
   (dictree-write dict filename overwrite
-		 predictive-dict-compilation-mode)
+		 predictive-dict-compilation)
 )
 
 
