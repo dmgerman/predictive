@@ -9,7 +9,7 @@
 
 @dircategory Emacs
 @direntry
-* Predictive: (predictive). Predictive text completion package for Emacs.
+* Predictive: (predictive-user-guide). Predictive text completion package for Emacs.
 @end direntry
 
 @copying
