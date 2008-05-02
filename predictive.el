@@ -48,6 +48,7 @@
 ;;   function
 ;; * renamed `predictive-dict-compilation-mode' to
 ;;   `predictive-dict-compilation' to avoid confusion with compilation-mode
+;; * added `predictive-which-dict-delay' customization option
 ;;
 ;; Version 0.17.2
 ;; * minor change to `predictive-reset-weight'
@@ -509,6 +510,14 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   "*If non-nil, display the predictive mode dictionary in the mode line."
   :group 'predictive
   :type 'boolean)
+
+
+(defcustom predictive-which-dict-delay 1
+  "*Number of seconds of idle time before which-dict display is updated.
+
+See also `predictive-which-dict-mode' and `predictive-which-dict'."
+  :group 'predictive
+  :type 'integer)
 
 
 (defcustom predictive-guess-prefix-suffixes
@@ -2407,7 +2416,8 @@ predictive mode."
 	  (when (timerp predictive-which-dict-timer)
 	    (cancel-timer predictive-which-dict-timer))
 	  (setq predictive-which-dict-timer
-		(run-with-idle-timer 0.5 t 'predictive-update-which-dict)))
+		(run-with-idle-timer predictive-which-dict-delay
+				     t 'predictive-update-which-dict)))
       
       ;; if which-dict mode has been turned off, cancel the timer and reset
       ;; variables
