@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.3
+;; Version: 0.7.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,19 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.4
+;; * split `completion-self-insert' into two: one function, the new
+;;   `completion-self-insert', deals with completion-related stuff if
+;;   auto-completion-mode is disabled, the other,
+;;   `auto-completion-self-insert', does auto-completion as
+;;   before. This allows individual printable characters to invoke
+;;   auto-completion without auto-completion-mode being enabled.
+;; * `auto-completion-self-insert' is now only directly bound to
+;;   printable characters in auto-completion-map
+;; * overlay keymap now binds printable characters to the new
+;;   `completion-self-insert' (which hands off to
+;;   `auto-completion-self-insert' if auto-completion is enabled)
 ;;
 ;; Version 0.7.3
 ;; * fixed bug in `completion-popup-frame-toggle-show-all'
@@ -390,8 +403,8 @@ after deleting backwards in auto-completion mode."
 
 (defcustom auto-completion-syntax-alist '(reject . word)
   "*Associates character syntax with completion behaviour.
-Used by the `completion-self-insert' function to decide what to
-do based on a typed character's syntax.
+Used by the `auto-completion-self-insert' function to decide what
+to do based on a typed character's syntax.
 
 The predefined choices can be used to set two syntax-dependent
 completion behaviours: how the prefix is chosen when characters
@@ -780,7 +793,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 ;;; =================================================================
 ;;;            Set properties for delete-selection-mode
 
-(put 'completion-self-insert 'delete-selection t)
+(put 'auto-completion-self-insert 'delete-selection t)
 (put 'completion-accept-and-newline 'delete-selection t)
 (put 'completion-backward-delete-char 'delete-selection 'supersede)
 (put 'completion-backward-delete-char-untabify
@@ -933,7 +946,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 	  'completion-self-insert)
       ;; otherwise, rebind all printable characters to
       ;; `completion-self-insert' manually
-      (completion-bind-self-insert completion-map))
+      (completion-bind-printable completion-map 'completion-self-insert))
 
     ;; C-RET accepts, C-DEL rejects
     (define-key completion-map [(control return)]
@@ -981,12 +994,13 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
       (progn
 	(setq auto-completion-map (make-sparse-keymap))
 	(define-key auto-completion-map [remap self-insert-command]
-	  'completion-self-insert))
+	  'auto-completion-self-insert))
     ;; otherwise, create a great big keymap where all printable
-    ;; characters run completion-self-insert, which decides what to do
-    ;; based on the character's syntax
+    ;; characters run auto-completion-self-insert, which decides what to
+    ;; do based on the character's syntax
     (setq auto-completion-map (make-keymap))
-    (completion-bind-self-insert auto-completion-map))
+    (completion-bind-printable auto-completion-map
+			       'auto-completion-self-insert))
   
   ;; C-<space> abandons
   (define-key auto-completion-map [?\C- ]
@@ -1015,7 +1029,7 @@ there's a provisional completion at point, otherwise run whatever
 would normally be bound to \"M-S\\ \"."
       (interactive)
       (completion-run-if-within-overlay
-       (lambda () (interactive) (completion-self-insert ?\  ?w t))
+       (lambda () (interactive) (auto-completion-self-insert ?\  ?w t))
        'auto-completion-mode)))
   
   
@@ -1027,7 +1041,7 @@ there's a provisional completion at point, otherwise run whatever
 would normally be bound to \"M-.\"."
       (interactive)
       (completion-run-if-within-overlay
-       (lambda () (interactive) (completion-self-insert ?. ?w t))
+       (lambda () (interactive) (auto-completion-self-insert ?. ?w t))
        'auto-completion-mode)))
   
   ;; M-- inserts "-" as a word-constituent
@@ -1038,7 +1052,7 @@ there's a provisional completion at point, otherwise run whatever
 would normally be bounds to \"M--\"."
       (interactive)
       (completion-run-if-within-overlay
-       (lambda () (interactive) (completion-self-insert ?- ?w t))
+       (lambda () (interactive) (auto-completion-self-insert ?- ?w t))
        'auto-completion-mode)))
   
 ;;;   ;; M-/ inserts "/" as a word-constituent
@@ -1049,7 +1063,8 @@ would normally be bounds to \"M--\"."
 ;;; would normally be bounds to \"M-/\"."
 ;;;       (interactive)
 ;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive) (completion-self-insert ?/ ?w t))
+;;;        (lambda () (interactive)
+;;;           (auto-completion-self-insert ?/ ?w t))
 ;;;        'auto-completion-mode)))
 )
 
@@ -1075,7 +1090,8 @@ would normally be bounds to \"M--\"."
     ;; otherwise, create a great big keymap and rebind all printable
     ;; characters to `completion-self-insert' manually
     (setq completion-dynamic-map (make-keymap))
-    (completion-bind-self-insert completion-dynamic-map))
+    (completion-bind-printable completion-dynamic-map
+			       'completion-self-insert))
     
   ;; C-RET accepts, C-DEL rejects
   (define-key completion-map [(control return)] 'completion-accept)
@@ -1250,7 +1266,8 @@ SYNTAX."
     (define-key completion-dynamic-map key
       `(lambda () ,doc
 	 (interactive)
-	 (completion-self-insert ,char ,syntax ,no-syntax-override)))
+	 (auto-completion-self-insert ,char ,syntax
+				      ,no-syntax-override)))
     
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate them via
@@ -1261,111 +1278,112 @@ SYNTAX."
 	   (interactive)
 	   (completion-run-if-within-overlay
 	    (lambda () (interactive)
-	      (completion-self-insert ,char ,syntax ,no-syntax-override))
+	      (auto-completion-self-insert ,char ,syntax
+					   ,no-syntax-override))
 	    'completion-function)))))
 )
 
 
 
-(defun completion-bind-self-insert (map)
-  "Manually bind printable characters to `completion-self-insert'.
+(defun completion-bind-printable (map command)
+  "Manually bind printable characters to COMMAND.
 Command remapping is a far better way to do this, so it should only be
 used if the current Emacs version lacks command remapping support."
-  (define-key map "A" 'completion-self-insert)
-  (define-key map "a" 'completion-self-insert)
-  (define-key map "B" 'completion-self-insert)
-  (define-key map "b" 'completion-self-insert)
-  (define-key map "C" 'completion-self-insert)
-  (define-key map "c" 'completion-self-insert)
-  (define-key map "D" 'completion-self-insert)
-  (define-key map "d" 'completion-self-insert)
-  (define-key map "E" 'completion-self-insert)
-  (define-key map "e" 'completion-self-insert)
-  (define-key map "F" 'completion-self-insert)
-  (define-key map "f" 'completion-self-insert)
-  (define-key map "G" 'completion-self-insert)
-  (define-key map "g" 'completion-self-insert)
-  (define-key map "H" 'completion-self-insert)
-  (define-key map "h" 'completion-self-insert)
-  (define-key map "I" 'completion-self-insert)
-  (define-key map "i" 'completion-self-insert)
-  (define-key map "J" 'completion-self-insert)
-  (define-key map "j" 'completion-self-insert)
-  (define-key map "K" 'completion-self-insert)
-  (define-key map "k" 'completion-self-insert)
-  (define-key map "L" 'completion-self-insert)
-  (define-key map "l" 'completion-self-insert)
-  (define-key map "M" 'completion-self-insert)
-  (define-key map "m" 'completion-self-insert)
-  (define-key map "N" 'completion-self-insert)
-  (define-key map "n" 'completion-self-insert)
-  (define-key map "O" 'completion-self-insert)
-  (define-key map "o" 'completion-self-insert)
-  (define-key map "P" 'completion-self-insert)
-  (define-key map "p" 'completion-self-insert)
-  (define-key map "Q" 'completion-self-insert)
-  (define-key map "q" 'completion-self-insert)
-  (define-key map "R" 'completion-self-insert)
-  (define-key map "r" 'completion-self-insert)
-  (define-key map "S" 'completion-self-insert)
-  (define-key map "s" 'completion-self-insert)
-  (define-key map "T" 'completion-self-insert)
-  (define-key map "t" 'completion-self-insert)
-  (define-key map "U" 'completion-self-insert)
-  (define-key map "u" 'completion-self-insert)
-  (define-key map "V" 'completion-self-insert)
-  (define-key map "v" 'completion-self-insert)
-  (define-key map "W" 'completion-self-insert)
-  (define-key map "w" 'completion-self-insert)
-  (define-key map "X" 'completion-self-insert)
-  (define-key map "x" 'completion-self-insert)
-  (define-key map "Y" 'completion-self-insert)
-  (define-key map "y" 'completion-self-insert)
-  (define-key map "Z" 'completion-self-insert)
-  (define-key map "z" 'completion-self-insert)
-  (define-key map "'" 'completion-self-insert)
-  (define-key map "-" 'completion-self-insert)
-  (define-key map "<" 'completion-self-insert)
-  (define-key map ">" 'completion-self-insert)
-  (define-key map " " 'completion-self-insert)
-  (define-key map "." 'completion-self-insert)
-  (define-key map "," 'completion-self-insert)
-  (define-key map ":" 'completion-self-insert)
-  (define-key map ";" 'completion-self-insert)
-  (define-key map "?" 'completion-self-insert)
-  (define-key map "!" 'completion-self-insert)
-  (define-key map "\"" 'completion-self-insert)
-  (define-key map "0" 'completion-self-insert)
-  (define-key map "1" 'completion-self-insert)
-  (define-key map "2" 'completion-self-insert)
-  (define-key map "3" 'completion-self-insert)
-  (define-key map "4" 'completion-self-insert)
-  (define-key map "5" 'completion-self-insert)
-  (define-key map "6" 'completion-self-insert)
-  (define-key map "7" 'completion-self-insert)
-  (define-key map "8" 'completion-self-insert)
-  (define-key map "9" 'completion-self-insert)
-  (define-key map "~" 'completion-self-insert)
-  (define-key map "`" 'completion-self-insert)
-  (define-key map "@" 'completion-self-insert)
-  (define-key map "#" 'completion-self-insert)
-  (define-key map "$" 'completion-self-insert)
-  (define-key map "%" 'completion-self-insert)
-  (define-key map "^" 'completion-self-insert)
-  (define-key map "&" 'completion-self-insert)
-  (define-key map "*" 'completion-self-insert)
-  (define-key map "_" 'completion-self-insert)
-  (define-key map "+" 'completion-self-insert)
-  (define-key map "=" 'completion-self-insert)
-  (define-key map "(" 'completion-self-insert)
-  (define-key map ")" 'completion-self-insert)
-  (define-key map "{" 'completion-self-insert)
-  (define-key map "}" 'completion-self-insert)
-  (define-key map "[" 'completion-self-insert)
-  (define-key map "]" 'completion-self-insert)
-  (define-key map "|" 'completion-self-insert)
-  (define-key map "\\" 'completion-self-insert)
-  (define-key map "/" 'completion-self-insert)
+  (define-key map "A" command)
+  (define-key map "a" command)
+  (define-key map "B" command)
+  (define-key map "b" command)
+  (define-key map "C" command)
+  (define-key map "c" command)
+  (define-key map "D" command)
+  (define-key map "d" command)
+  (define-key map "E" command)
+  (define-key map "e" command)
+  (define-key map "F" command)
+  (define-key map "f" command)
+  (define-key map "G" command)
+  (define-key map "g" command)
+  (define-key map "H" command)
+  (define-key map "h" command)
+  (define-key map "I" command)
+  (define-key map "i" command)
+  (define-key map "J" command)
+  (define-key map "j" command)
+  (define-key map "K" command)
+  (define-key map "k" command)
+  (define-key map "L" command)
+  (define-key map "l" command)
+  (define-key map "M" command)
+  (define-key map "m" command)
+  (define-key map "N" command)
+  (define-key map "n" command)
+  (define-key map "O" command)
+  (define-key map "o" command)
+  (define-key map "P" command)
+  (define-key map "p" command)
+  (define-key map "Q" command)
+  (define-key map "q" command)
+  (define-key map "R" command)
+  (define-key map "r" command)
+  (define-key map "S" command)
+  (define-key map "s" command)
+  (define-key map "T" command)
+  (define-key map "t" command)
+  (define-key map "U" command)
+  (define-key map "u" command)
+  (define-key map "V" command)
+  (define-key map "v" command)
+  (define-key map "W" command)
+  (define-key map "w" command)
+  (define-key map "X" command)
+  (define-key map "x" command)
+  (define-key map "Y" command)
+  (define-key map "y" command)
+  (define-key map "Z" command)
+  (define-key map "z" command)
+  (define-key map "'" command)
+  (define-key map "-" command)
+  (define-key map "<" command)
+  (define-key map ">" command)
+  (define-key map " " command)
+  (define-key map "." command)
+  (define-key map "," command)
+  (define-key map ":" command)
+  (define-key map ";" command)
+  (define-key map "?" command)
+  (define-key map "!" command)
+  (define-key map "\"" command)
+  (define-key map "0" command)
+  (define-key map "1" command)
+  (define-key map "2" command)
+  (define-key map "3" command)
+  (define-key map "4" command)
+  (define-key map "5" command)
+  (define-key map "6" command)
+  (define-key map "7" command)
+  (define-key map "8" command)
+  (define-key map "9" command)
+  (define-key map "~" command)
+  (define-key map "`" command)
+  (define-key map "@" command)
+  (define-key map "#" command)
+  (define-key map "$" command)
+  (define-key map "%" command)
+  (define-key map "^" command)
+  (define-key map "&" command)
+  (define-key map "*" command)
+  (define-key map "_" command)
+  (define-key map "+" command)
+  (define-key map "=" command)
+  (define-key map "(" command)
+  (define-key map ")" command)
+  (define-key map "{" command)
+  (define-key map "}" command)
+  (define-key map "[" command)
+  (define-key map "]" command)
+  (define-key map "|" command)
+  (define-key map "\\" command)
+  (define-key map "/" command)
 )
 
 
@@ -2130,8 +2148,24 @@ methods. Toggling will show all possible completions."
 ;;; ===============================================================
 ;;;                Commands for binding to keys
 
+(defun completion-self-insert ()
+  "Deal with completion-related stuff, then insert last input event."
+  (interactive)
+  ;; FIXME: whether to keep or delete provisional completion should
+  ;;        depend on point's location relative to it
+    
+  ;; if we're auto-completing, hand over to `auto-completion-self-insert'
+  (if auto-completion-mode
+      (auto-completion-self-insert)
+    ;; otherwise, resolve current completion and insert last input event
+    (completion-resolve-current)
+    (self-insert-command 1))
+)
 
-(defun completion-self-insert (&optional char syntax no-syntax-override)
+
+
+(defun auto-completion-self-insert (&optional char syntax
+					      no-syntax-override)
   "Execute a completion function based on syntax of the character
 to be inserted.
 
@@ -2152,9 +2186,9 @@ overridden for the character in question
 The default actions in `completion-dymamic-syntax-alist' all
 insert the last input event, in addition to taking any completion
 related action \(hence the name,
-`completion-self-insert'\). Therefore, unless you know what you
-are doing, only bind `completion-self-insert' to printable
-characters.
+`auto-completion-self-insert'\). Therefore, unless you know what
+you are doing, only bind `auto-completion-self-insert' to
+printable characters.
 
 The Emacs `self-insert-command' is remapped to this when
 `completion-function' is set."
@@ -2170,17 +2204,6 @@ The Emacs `self-insert-command' is remapped to this when
 
   
   (cond
-   ;; if we're not auto-completing...
-   ((not auto-completion-mode)
-    ;; resolve current completion
-    (completion-resolve-current)    
-    ;; if possible, use `self-insert-command' to insert last input event,
-    ;; since `auto-fill-mode' relies on it
-    (if (eq char last-input-event)
-	(self-insert-command 1)
-      (insert char)))
-   
-   
    (t  ;; otherwise, lookup behaviour in syntax alists
     (let* ((behaviour (if no-syntax-override
 			  (completion-lookup-behaviour nil syntax)
