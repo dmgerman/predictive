@@ -49,6 +49,7 @@
 ;; * renamed `predictive-dict-compilation-mode' to
 ;;   `predictive-dict-compilation' to avoid confusion with compilation-mode
 ;; * added `predictive-which-dict-delay' customization option
+;; * made `predictive-undefine-prefix' display informative message
 ;;
 ;; Version 0.17.2
 ;; * minor change to `predictive-reset-weight'
@@ -2129,9 +2130,14 @@ least as large as the weight of WORD."
 	  (setq word str))))
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))))
-  
+
+  ;; delete prefix, displaying message if called interactively
   (let ((prefixes (dictree-lookup-meta-data dict word)))
-    (dictree-set-meta-data dict word (delete prefix prefixes)))
+    (if (and (interactive-p) (not (member prefix prefixes)))
+	(message "\"%s\" is not defined as a prefix of \"%s\"" prefix word)
+      (dictree-set-meta-data dict word (delete prefix prefixes))
+      (when (interactive-p)
+	(message "Prefix \"%s\" of \"%s\" removed" prefix word))))
 )
 
 
