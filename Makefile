@@ -23,13 +23,46 @@
 # MA 02110-1301, USA.
 
 
+EMACS = emacs
+DESTDIR = ~/.emacs.d/predictive
+DICTDIR = ~/.emacs.d/predictive
+INFODIR = /usr/share/info
 
-all: core dict-english dicts
+
+all: core dict-english dicts info
+
+
+docs: info pdf dvi txt ps html
+
 
 clean:
-	rm dict-english.el *.elc latex/*.elc # html/*.elc f90/*.elc
+	find . -name '*.elc' -delete
+	[ ! -e dict-english.el ] || rm dict-english.el
+	[ ! -e predictive-user-guide.info.gz ] || rm predictive-user-guide.info.gz
+	[ ! -e predictive-user-guide.pdf ] || rm predictive-user-guide.pdf
+	[ ! -e predictive-user-guide.dvi ] || rm predictive-user-guide.dvi
+	[ ! -e predictive-user-guide.ps.gz ] || rm predictive-user-guide.ps.gz
+	[ ! -e predictive-user-guide.txt.gz ] || rm predictive-user-guide.txt.gz
+	[ ! -d predictive-user-guide-html ] || rm -r predictive-user-guide-html/
 
-EMACS = emacs
+
+.PHONY : install
+
+install: all
+	mkdir -p $(DESTDIR)
+	find . \( -name '*.el' -o -name '*.elc' \) -a \( -name dict-tree.el -o -name dict-tree.elc -o \! -name 'dict-*' \) -execdir cp {} $(DESTDIR) \;
+	mkdir -p $(DICTDIR)
+	cp dict-english.el dict-english.elc $(DICTDIR)
+	for d in `find . -mindepth 1 -type d -exec mkdir -p $(DICTDIR)/{} \; -print`; do cp $$d/dict-*.el $$d/dict-*.elc $(DICTDIR)/$$d; done
+
+	@echo
+	@echo "To complete the installation, add the following lines to your .emacs file:"
+	@echo
+	@echo "  (add-to-list 'load-path \"$(DESTDIR)\")"
+	@[ "$(DICTDIR)" = "$(DESTDIR)" ] || echo "  (add-to-list 'load-path \"$(DICTDIR)\")"
+	@for d in `find . -mindepth 1 -type d`; do echo "  (add-to-list 'load-path \"$(DICTDIR)/$${d#./}\")"; done
+	@echo "  (require 'predictive)"
+	@echo
 
 
 
@@ -86,6 +119,27 @@ html_dicts: $(html_dicts)
 
 
 
+# documentation targets
+info: predictive-user-guide.info.gz
+
+pdf: predictive-user-guide.pdf
+
+dvi: predictive-user-guide.dvi
+
+ps: predictive-user-guide.ps.gz
+
+txt: predictive-user-guide.txt.gz
+
+html: predictive-user-guide-html
+
+
+# info file installation target
+install-info: predictive-user-guide.info.gz
+	install-info predictive-user-guide.info.gz $(INFODIR)/dir
+
+
+
+
 # implicit rule for creating dictionaries
 dict-%.elc: dict-%.word-list dict-tree.el
 	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
@@ -96,6 +150,30 @@ dict-%.elc: dict-%.word-list dict-tree.el
 	$(EMACS) --batch -L ./ -f batch-byte-compile $<
 
 
+# implicit rules for making docs in various formats
+%.info: %.texinfo
+	makeinfo $< -o $@
 
-test:
-	echo $(core_files) $(dicts)
+%.info.gz: %.info
+	gzip -f $< -c > $@
+
+%.txt: %.texinfo
+	makeinfo --plaintext $< > $@
+
+%.txt.gz: %.texinfo
+	makeinfo --plaintext $< | gzip -c > $@
+
+%.dvi: %.texinfo
+	texi2dvi -c -o $@ $<
+
+%.pdf: %.texinfo
+	texi2dvi --pdf -c -o $@ $<
+
+%.ps.gz: %.dvi
+	dvips -f $< | gzip -c > $@
+
+%-html: %.texinfo
+	makeinfo --html $< -o $(dir $@)/html
+
+%-html.tar.gz: %-html
+	cd $(dir $@); pwd; tar -cvzf $(notdir $@) predictive-user-guide-html
