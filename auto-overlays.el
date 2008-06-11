@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.1
+;; Version: 0.9.2
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9,2
+;; * allow SAVE-FILE argument of `auto-overlay-start/stop' to specify a
+;;   location to save to
+;; * made corresponding modifications to `auto-overlay-save/load-overlays'
 ;;
 ;; Version 0.9.1
 ;; * modified `completion-unload-definition/regexp' functions so that they
@@ -763,16 +768,22 @@ other. TO-BUFFER defaults to the current buffer."
 
 
 
-(defun auto-overlay-start (set-id &optional buffer ignore-save-file
-				  no-regexp-check)
+(defun auto-overlay-start (set-id &optional buffer save-file no-regexp-check)
   "Activate the set of auto-overlay regexps identified by SET-ID
 in BUFFER, or the current buffer if none is specified.
 
-If optional argument IGNORE-SAVE-FILE is non-nil, it will ignore
-any file of saved overlays. If it is null, but optional argument
-NO-REGEXP-CHECK is non-nil, the file of saved overlays will be
-used, but no check will be made to ensure regexp refinitions are
-the same as when the overlays were saved."
+If optional argument SAVE-FILE is nil, it will try to load the
+overlays from the default save file if it exists. If SAVE-FILE is
+a string, it specifies the location of the file (if only a
+directory is given, it will look for the default filename in that
+directory). Anything else will cause the save file to be ignored,
+and the buffer will be reparsed from scratch, as it will be if
+the save file does not exist.
+
+If the overlays are being loaded from a save file, but optional
+argument NO-REGEXP-CHECK is non-nil, the file of saved overlays
+will be used, but no check will be made to ensure regexp
+refinitions are the same as when the overlays were saved."
 
   (save-excursion
     (when buffer (set-buffer buffer))
@@ -788,13 +799,11 @@ the same as when the overlays were saved."
     ;; set enabled flag for regexp set, and make sure buffer is in buffer list
     ;; for the regexp set
     (auto-o-enable-set set-id (current-buffer))
-    
+
     ;; try to load overlays from file
-    (unless (and (null ignore-save-file)
-		 (file-exists-p (auto-o-overlay-filename set-id))
-		 (auto-overlay-load-overlays set-id nil nil
+    (unless (and (or (null save-file) (stringp save-file))
+		 (auto-overlay-load-overlays set-id nil save-file
 					     no-regexp-check))
-      
       ;; if loading was unsuccessful, search for new auto overlays
       (let ((lines (count-lines (point-min) (point-max))))
 	(goto-char (point-min))
@@ -813,14 +822,19 @@ the same as when the overlays were saved."
 
 
 
-(defun auto-overlay-stop (set-id &optional buffer save leave-overlays)
+(defun auto-overlay-stop (set-id &optional buffer save-file leave-overlays)
   "Clear all auto-overlays in the set identified by SET-ID
 from BUFFER, or the current buffer if none is specified.
 
-If SAVE is non-nil and the buffer is associated with a file, save
-the overlays to a file in the same directory to speed up loading
-if the same set of regexp definitions is enabled again. If
-LEAVE-OVERLAYS is non-nil, don't bother deleting the overlays
+If SAVE-FILE is non-nil and the buffer is associated with a file,
+save the overlays to a file to speed up loading if the same set
+of regexp definitions is enabled again. If SAVE-FILE is a string,
+it specifies the location of the file to save to (if it only
+specifies a directory, the default filename is used). Anything
+else will cause the overlays to be saved to the default file name
+in the current directory.
+
+If LEAVE-OVERLAYS is non-nil, don't bother deleting the overlays
 from the buffer \(this is generally a bad idea, unless the buffer
 is about to be killed in which case it speeds things up a bit\)."
 
@@ -829,9 +843,11 @@ is about to be killed in which case it speeds things up a bit\)."
     ;; disable overlay set
     (auto-o-disable-set set-id (current-buffer))
 
-    ;; if SAVE is non-nil and buffer is associated with a file, save overlays
-    ;; to the default filename
-    (when (and save (buffer-file-name)) (auto-overlay-save-overlays set-id))
+    ;; if SAVE-FILE is non-nil and buffer is associated with a file, save
+    ;; overlays to file
+    (when save-file
+      (unless (stringp save-file) (setq save-file nil))
+      (auto-overlay-save-overlays set-id nil save-file))
     
     ;; delete overlays unless told not to bother
     (unless leave-overlays
@@ -865,22 +881,33 @@ is about to be killed in which case it speeds things up a bit\)."
 
 (defun auto-overlay-save-overlays (set-id &optional buffer file)
   "Save overlays in set SET-ID in BUFFER to FILE.
-Defaults to the current buffer. If FILE is nil and the buffer is
-associated with a file, the filename is constructed from the
-buffer's file name and SET-ID. If the buffer is not associated
-with a file and FILE isn't explicitly specified, an error occurs.
+Defaults to the current buffer.
 
-They can be loaded again later using `auto-overlay-load-overlays'."
+If FILE is nil or a directory, and if the buffer is associated
+with a file, the filename is constructed from the buffer's file
+name and SET-ID. The directory is created if necessary. If the
+buffer is not associated with a file and FILE doesn't specify a
+filename, an error occurs.
+
+The overlays can be loaded again later using
+`auto-overlay-load-overlays'."
 
   (save-excursion
     (when buffer (set-buffer buffer))
-    
-    ;; construct filename if none specified
-    (unless file
-      (if (buffer-file-name)
-	  (setq file (auto-o-overlay-filename set-id))
-	(error "Can't save overlays to default file when buffer isn't\
+
+    ;; construct filename
+    (let ((path (or (file-name-directory file) ""))
+	  (filename (file-name-nondirectory file)))
+      ;; use default filename if none supplied
+      (when (string= filename "")
+	(if (buffer-file-name)
+	    (setq filename (auto-o-overlay-filename set-id))
+	  (error "Can't save overlays to default filename when buffer isn't\
  visiting a file")))
+      ;; create directory if it doesn't exist
+      (make-directory path t)
+      ;; construct full path to file, since that's all we need from now on
+      (setq file (concat path filename)))
     
     ;; create temporary buffer
     (let ((buff (generate-new-buffer " *auto-overlay-save*"))
@@ -925,32 +952,47 @@ They can be loaded again later using `auto-overlay-load-overlays'."
 
 
 
-(defun auto-overlay-load-overlays (set-id &optional buffer file
-					  no-regexp-check)
+(defun auto-overlay-load-overlays (set-id &optional buffer
+					  file no-regexp-check)
   "Load overlays for BUFFER from FILE.
-Defaults to the current buffer. If FILE is not specified,
-construct it from buffer name and SET-ID. Returns t if successful, nil
-otherwise.
+Returns t if successful, nil otherwise.
+Defaults to the current buffer.
+
+If FILE is null, or is a string that only specifies a directory,
+the filename is constructed from the buffer's file name and
+SET-ID. If the buffer is not associated with a file and FILE
+doesn't specify a full filename, an error occurs.
 
 The FILE should be generated by `auto-overlay-save-overlays'. By
-default, the buffer contents and regexp definitions cfor SET-ID
+default, the buffer contents and regexp definitions for SET-ID
 will be checked to make sure neither have changed since the
 overlays were saved. If they don't match, the saved overlay data
 will not be loaded, and the function will return nil.
 
 If NO-REGEXP-CHECK is non-nil, the check for matching regexp
 definitions will be skipped; the saved overlays will be loaded
-even if different regexp definitions were active when the data
-was saved."
+even if different regexp definitions were active when the
+overlays were saved."
 
   (save-excursion
     (when buffer (set-buffer buffer))
     
-    ;; construct filename if none specified
-    (unless file (setq file (auto-o-overlay-filename set-id)))
-    ;; check FILE exists
+    ;; construct filename
+    (let ((path (or (file-name-directory file) ""))
+	  (filename (file-name-nondirectory file)))
+      ;; use default filename if none supplied
+      ;; FIXME: should we throw error if buffer not associated with file?
+      (when (string= filename "")
+	(setq filename (auto-o-overlay-filename set-id)))
+      ;; construct full path to file, since that's all we need from now on
+      (setq file (concat path filename)))
+    
+    
+    ;; return nil if file does not exist
     (if (not (file-exists-p file))
-	(error "File %s does not exist" file)
+	nil
+
+      ;; otherwise...
       (let ((buff (find-file-noselect file t))
 	    md5-buff md5-regexp data o-match o-new lines
 	    (i 0))

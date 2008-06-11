@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.3
+;; Version: 0.17.4
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -38,9 +38,19 @@
 ;; Alternatively, you can use autoload instead to save memory:
 ;;
 ;;     (autoload 'predictive-mode "/path/to/predictive.elc" t)
+;;
+;; Full instructions are given in the INSTALL file that should come with the
+;; Predictive Completion package.
+
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.4
+;; * added `predictive-auxiliary-file-location' customization option
+;; * created corresponding `predictive-create-auxiliary-file-location' macro,
+;;   which should be called whenever a predictive-mode auxiliary file needs to
+;;   be saved, so that the directory is only created when first used
 ;;
 ;; Version 0.17.3
 ;; * made `predictive-remove-from-dict' display informative message
@@ -297,12 +307,6 @@ is set to t, words will be added to the first dictionary in the list \(see
   :type 'symbol)
 
 
-;; (defcustom predictive-max-completions 10
-;;   "*Maximum number of completions to return in predictive mode."
-;;   :group 'predictive
-;;   :type 'integer)
-
-
 (defcustom predictive-completion-speed 0.1
   "*Default completion speed for new predictive mode dictionaries
 created using `predictive-create-dict'.
@@ -447,6 +451,31 @@ of those words, so that it takes precedence over them when
 completing."
   :group 'predictive
   :type 'boolean)
+
+
+(defcustom predictive-auxiliary-file-location ".predictive/"
+  "*Directory to which predictive mode auxiliary files are saved.
+
+If this is a relative path, it is relative to the current
+directory of a buffer using predictive mode. This means that
+files located in different directories will use separate
+auxiliary file subdirectories.
+
+Setting an absolute path is possible, but discouraged. All
+auxiliary files will be created in the same directory, and there
+are no safe-guards to prevent two different auxiliary files that
+happen to have the same name from clobbering one another. That
+said, auxiliary filenames incorporate the buffer filename, so
+only identically named files in different directories pose a
+risk."
+  :group 'predictive
+  :type 'directory
+  ;; ensure trailing directory separator
+  :set (lambda (var val)
+	 (unless (string= (file-name-directory val) val)
+	   (setq val (concat val "/")))
+	 (set-default var val))
+)
 
 
 (defcustom predictive-use-buffer-local-dict nil
@@ -701,6 +730,13 @@ to the dictionary, nil if it should not. Only used when
        (or (= 1 (length string))
 	   (string= (substring string 1) (downcase (substring string 1)))))
 )
+
+
+
+(defmacro predictive-create-auxiliary-file-location ()
+  ;; Create directory specified by `predictive-auxiliary-file-locaion' for
+  ;; current buffer, if necessary.
+  (make-directory predictive-auxiliary-file-location t))
 
 
 
@@ -2300,8 +2336,11 @@ there's only one."
     (when (buffer-file-name)
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
+		    predictive-auxiliary-file-location
 		    (symbol-name (predictive-buffer-local-dict-name))
-		    ".elc")))
+		    ".elc"))
+      ;; create directory if necessary
+      (predictive-create-auxiliary-file-location))
     ;; if the buffer-local dictionary exists, load it, otherwise create it
     (if (and filename (file-exists-p filename))
 	(progn

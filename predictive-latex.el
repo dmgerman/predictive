@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.2
+;; Version: 0.9.3
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,11 +31,16 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.9.3
+;; * save overlay and local dictionary files to a directory specified by new
+;;   `predictive-auxiliary-file-location' customization option
+;;
 ;; Version 0.9.2
 ;; * improved `predictive-latex-label-forward-word'
 ;; * added "!" to `auto-completion-override-syntax-alist'
 ;; * made `predictive-setup-latex' fail gracefully when a required dictionary
 ;;   can't be found
+;; * auto-complete immediately after "\documentclass{", just like "\begin{"
 ;;
 ;; Version 0.9.1
 ;; * fixed bug in loading of main dictionary and latex dictionary list
@@ -303,7 +308,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       
       ;; save overlays and unload regexp definitions along with buffer
       (add-hook 'after-save-hook
-		(lambda () (auto-overlay-save-overlays 'predictive))
+		(lambda () (auto-overlay-save-overlays
+			    'predictive nil
+			    predictive-auxiliary-file-location))
 		nil t)
       
       ;; use latex browser menu if first character of prefix is "\"
@@ -352,7 +359,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  ;; afterwards, since automatic synchronization of LaTeX envionments
 	  ;; can modify buffer without actually changing buffer text
 	  (let ((restore-modified (buffer-modified-p)))
-	    (auto-overlay-start 'predictive)
+	    (auto-overlay-start 'predictive nil
+				predictive-auxiliary-file-location)
 	    (set-buffer-modified-p restore-modified))
 	  ))
        
@@ -368,27 +376,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		(unless (predictive-load-dict dic)
 		  (message "Failed to load %s" dic)
 		  (throw 'load-fail nil)))
-	      predictive-latex-dict)
-	(mapc (lambda (dic)
-		(unless (predictive-load-dict dic)
-		  (message "Failed to load %s" dic)
-		  (throw 'load-fail nil)))
-	      predictive-latex-math-dict)
-	(mapc (lambda (dic)
-		(unless (predictive-load-dict dic)
-		  (message "Failed to load %s" dic)
-		  (throw 'load-fail nil)))
-	      predictive-latex-preamble-dict)
-	(mapc (lambda (dic)
-		(unless (predictive-load-dict dic)
-		  (message "Failed to load %s" dic)
-		  (throw 'load-fail nil)))
-	      predictive-latex-env-dict)
-	(mapc (lambda (dic)
-		(unless (predictive-load-dict dic)
-		  (message "Failed to load %s" dic)
-		  (throw 'load-fail nil)))
-	      predictive-latex-bibstyle-dict)
+	      (append predictive-latex-dict
+		      predictive-latex-math-dict
+		      predictive-latex-preamble-dict
+		      predictive-latex-env-dict
+		      predictive-latex-bibstyle-dict))
 	;; load/create the label and theorem dictionaries
 	(predictive-latex-load-auto-dict "label")
 	(predictive-latex-load-auto-dict "local-latex")
@@ -434,11 +426,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	
 	;; start the auto-overlays, skipping the check that regexp definitions
 	;; haven't changed if there's a file of saved overlay data to use, and
-	;; restoring buffer's modified flag afterwards since automatic
+	;; restoring buffer's modified flag afterwards (if used, automatic
 	;; synchronization of LaTeX envionments can modify buffer without
-	;; actually changing buffer text
+	;; actually changing buffer text)
 	(let ((restore-modified (buffer-modified-p)))
-	  (auto-overlay-start 'predictive nil nil 'no-regexp-check)
+	  (auto-overlay-start 'predictive nil
+			      predictive-auxiliary-file-location
+			      'no-regexp-check)
 	  (set-buffer-modified-p restore-modified))
 	))
       
@@ -468,7 +462,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (predictive-mode -1)))))
     
     ;; stop predictive auto overlays
-    (auto-overlay-stop 'predictive nil 'save)
+    (auto-overlay-stop 'predictive nil predictive-auxiliary-file-location)
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict to saved setting
     (kill-local-variable 'predictive-main-dict)
@@ -492,7 +486,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-local-env-dict)
     ;; remove hook function that saves overlays
     (remove-hook 'after-save-hook
-		 (lambda () (auto-overlay-save-overlays 'predictive))
+		 (lambda () (auto-overlay-save-overlays
+			     'predictive nil
+			     predictive-auxiliary-file-location))
 		 t)
     
     t))  ; indicate successful reversion of changes
@@ -839,7 +835,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		    (lambda ()
 		      (cond
 		       ((auto-overlays-at-point
-			 nil '(eq dict predictive-latex-env-dict))
+			 nil '((lambda (dic)
+				 (or (eq dic predictive-latex-env-dict)
+				     (eq dic 'dict-latex-docclass)))
+			       dict))
 			(complete-in-buffer "" 'auto) 'none)
 		       ((and (char-before) (= (char-before) ?\\))
 			',word-complete)
@@ -976,7 +975,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   "Clear all auto-overlays, then reparse buffer from scratch."
   (interactive)
   
-  ;; stop the predictive auto-overlays
+  ;; stop the predictive auto-overlays without saving to file
   (auto-overlay-stop 'predictive)
   ;; kill local modifications to dict lists (dictionaries are added again when
   ;; usepackage overlays are reparsed)
@@ -1527,7 +1526,10 @@ they exist."
       (setq dictname (predictive-latex-auto-dict-name name))
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
+		    predictive-auxiliary-file-location
 		    (symbol-name dictname) ".elc"))
+      ;; create directory for dictionary file if necessary
+      (predictive-create-auxiliary-file-location)
       ;; if a dictionary isn't loaded, load or create it
       (unless (featurep dictname)
 	(if (not (file-exists-p filename))
@@ -1536,7 +1538,7 @@ they exist."
 	  (predictive-load-dict dictname)
 	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
 	  ;;        function
-	  (dictree--set-filename (eval dictname)filename)))
+	  (dictree--set-filename (eval dictname) filename)))
       ;; set the LaTeX NAME dictionary to the loaded/new dictionary
       (set dict (eval dictname)))
      
