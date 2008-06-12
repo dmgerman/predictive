@@ -34,6 +34,8 @@
 ;; * allow SAVE-FILE argument of `auto-overlay-start/stop' to specify a
 ;;   location to save to
 ;; * made corresponding modifications to `auto-overlay-save/load-overlays'
+;; * work around `goto-line' bug to prevent mark being set and message being
+;;   displayed by `auto-overlay-update'
 ;;
 ;; Version 0.9.1
 ;; * modified `completion-unload-definition/regexp' functions so that they
@@ -1184,7 +1186,17 @@ overlays were saved."
       (unless start (setq start (line-number-at-pos)))
       (save-excursion
 	(save-match-data
-	  (goto-line start)
+	  ;; (goto-line start) without messing around with mark and messages
+	  ;; Note: this is a bug in simple.el; there clearly can be a need for
+	  ;;       non-interactive calls to goto-line from Lisp code, and
+	  ;;       there's no warning about doing this. Yet goto-line *always*
+	  ;;       calls push-mark, which usually *shouldn't* be invoked by
+	  ;;       Lisp programs, as its docstring warns.
+	  (goto-char 1)
+	  (if (eq selective-display t)
+	      (re-search-forward "[\n\C-m]" nil 'end (1- start))
+	    (forward-line (1- start)))
+
 	  (dotimes (i (if end (1+ (- end start)) 1))
 	  
 	    ;; check each enabled set of overlays, or just the specified set
