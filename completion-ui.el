@@ -1457,7 +1457,8 @@ used if the current Emacs version lacks command remapping support."
 
 
 
-(defun completion-simulate-overlay-bindings (source dest variable)
+(defun completion-simulate-overlay-bindings (source dest variable
+						    &optional no-parent)
   ;; Simulate SOURCE overlay keybindings in DEST using the
   ;; `completion-run-if-within-overlay' hack. DEST should be a symbol whose
   ;; value is a keymap, SOURCE should be a keymap.
@@ -1466,11 +1467,22 @@ used if the current Emacs version lacks command remapping support."
   ;; (temporarily) set to nil. Usually, DEST will be a minor-mode keymap and
   ;; VARIABLE will be the minor-mode variable with which it is associated in
   ;; `minor-mode-map-alist'.
+  ;;
+  ;; NO-PARENT will prevent this recursing into the parent keymap of SOURCE,
+  ;; if it has one.
 
+  ;; if NO-PARENT is specified, remove parent keymap if there is one
+  (when (and no-parent (memq 'keymap (cdr source)))
+    (setq source
+	  (completion--sublist source 0
+			       (1+ (completion--position
+				    'keymap
+				    (cdr auto-completion-dynamic-map))))))
+  
   ;; map over all bindings in SOURCE
   (map-keymap
    (lambda (key binding)
-     ;; don't simulate remappings
+     ;; don't simulate remappings, and don't simulate parent keymap's bindings
      (unless (eq key 'remap)
        ;; usually need to wrap key in an array for define-key
        (unless (stringp key) (setq key (vector key)))
@@ -1540,12 +1552,13 @@ used if the current Emacs version lacks command remapping support."
       (setq docstring
 	    (concat "Do different things depending on whether point is "
 		    "within a provisional completion.\n\n"
-		    "If point is within a provisional completion, "
+		    "If point is within a provisional completion,\n"
 		    (downcase (substring docstring 0 1))
 		    (substring docstring 1)
 		    "\n\n"
-		    "If point is not within a provisional completion, run "
-		    "whatever would normally be bound to this key sequence."))
+		    "If point is not within a provisional completion,\n"
+		    "run whatever would normally be bound to "
+		    "this key sequence."))
       
       ;; construct list of argument variable names, removing &optional and
       ;; &rest
@@ -1557,12 +1570,12 @@ used if the current Emacs version lacks command remapping support."
 
       ;; construct and return command to simulate overlay keymap binding
       `(lambda ,(copy-sequence arglist)
-	 ,docstring
+	 "" ;,docstring
 	 ,(copy-sequence interactive)
 	 (completion-run-if-within-overlay
 	  (lambda ,(copy-sequence arglist) ,(copy-sequence interactive)
 	    (apply ',binding ,args))
-	  ,variable))
+	  ',variable))
       ))
 
    ;; anything else is an error
@@ -4302,7 +4315,7 @@ in WINDOW'S frame."
 					'completion-function)
   (completion-simulate-overlay-bindings auto-completion-dynamic-map
 					auto-completion-map
-					'auto-completion-mode);)
+					'auto-completion-mode t);)
 
 
 ;;; completion-ui.el ends here
