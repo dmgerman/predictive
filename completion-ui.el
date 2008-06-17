@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.4
+;; Version: 0.7.5
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7.5
+;; * added `completion-simulate-overlay-bindings' function that can
+;;   automatically create key bindings to simulate overlay keymap bindings
+;;   using the `completion-run-if-within-overlay' hack
 ;;
 ;; Version 0.7.4
 ;; * split `completion-self-insert' into two: one function, the new
@@ -736,11 +741,6 @@ prefix argument supplied to an interactive rejection command.")
 (defvar completion-map nil
   "Keymap active when a completion-function is defined.")
 
-
-(defvar auto-completion-map nil
-  "Keymap active when auto-completion-mode is enabled.")
-
-
 (defvar completion-hotkey-map nil
   "Keymap used for hotkey completion (single-key selection of
   completions).
@@ -753,6 +753,15 @@ prefix argument supplied to an interactive rejection command.")
 
 (defvar completion-dynamic-map nil
   "Keymap active in a dynamic completion overlay.")
+
+
+(defvar auto-completion-map nil
+  "Keymap active when auto-completion-mode is enabled.")
+
+
+(defvar auto-completion-dynamic-map nil
+  "Keymap active in a dynamic completion overlay when
+  auto-completion-mode is enabled.")
 
 
 (defvar completion-tooltip-map nil
@@ -932,12 +941,14 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 
   
   ;; ----- Simulated overlay keybindings -----
-  ;; (these should also appear in `completion-dynamic-map')
+  
+  ;; Note: could remove this and leave it up to the call to the
+  ;;       `completion-simulate-overlay-keybindings' function at the very end
+  ;;       of this file, if only that function could deal with remappings
   
   ;; If the current Emacs version doesn't support overlay keybindings
   ;; half decently, have to simulate them using the
-  ;; `completion-run-if-within-overlay' hack in the main
-  ;; `completion-map'.
+  ;; `completion-run-if-within-overlay' hack.
   (when (<= emacs-major-version 22)
     ;; if we can remap commands, remap `self-insert-command' to
     ;; `completion-self-insert'
@@ -946,30 +957,36 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 	  'completion-self-insert)
       ;; otherwise, rebind all printable characters to
       ;; `completion-self-insert' manually
-      (completion-bind-printable completion-map 'completion-self-insert))
+      (completion-bind-printable-chars completion-map
+				       'completion-self-insert))
 
-    ;; C-RET accepts, C-DEL rejects
-    (define-key completion-map [(control return)]
-      'completion-accept-if-within-overlay)
-    (define-key completion-map [(control backspace)]
-      'completion-reject-if-within-overlay)
+;;;     ;; C-RET accepts, C-DEL rejects
+;;;     (define-key completion-map [(control return)]
+;;;       'completion-accept-if-within-overlay)
+;;;     (define-key completion-map [(control backspace)]
+;;;       'completion-reject-if-within-overlay)
     
-    ;; <tab> does traditional tab-completion
-    (define-key completion-map "\t"
-      'completion-tab-complete-if-within-overlay)
+;;;     ;; <tab> does traditional tab-completion
+;;;     (define-key completion-map "\t"
+;;;       'completion-tab-complete-if-within-overlay)
 
-    ;; C-<tab> scoots ahead
-    (define-key completion-map [(control tab)]
-      'completion-scoot-ahead-if-within-overlay)
+;;;     ;; C-<tab> scoots ahead
+;;;     (define-key completion-map [(control tab)]
+;;;       'completion-scoot-ahead-if-within-overlay)
+
+;;;     ;; C-<space> abandons
+;;;     (define-key completion-map [?\C- ]
+;;;       'completion-reject-if-within-overlay)
     
-    ;; S-<down>, M-<down> and C-<down> display the compltion tooltip,
-    ;; menu, and pop-up frame
-    (define-key completion-map [S-down]
-      'completion-show-tooltip-if-within-overlay)
-    (define-key completion-map [M-down]
-      'completion-show-menu-if-within-overlay)
-    (define-key completion-map [C-down]
-      'completion-popup-frame-if-within-overlay))
+;;;     ;; S-<down>, M-<down> and C-<down> display the compltion tooltip,
+;;;     ;; menu, and pop-up frame
+;;;     (define-key completion-map [S-down]
+;;;       'completion-show-tooltip-if-within-overlay)
+;;;     (define-key completion-map [M-down]
+;;;       'completion-show-menu-if-within-overlay)
+;;;     (define-key completion-map [C-down]
+;;;       'completion-popup-frame-if-within-overlay)
+    )
 )
 
 
@@ -982,91 +999,6 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
     (push (cons 'completion-function completion-map)
 	  minor-mode-map-alist)))
 
-
-
-
-;; Set the default auto-completion-mode keymap if it hasn't been defined
-;; already (most likely in an init file). This keymap is active when
-;; `auto-completion-mode' is enabled.
-(unless auto-completion-map
-  ;; if we can remap commands, remap `self-insert-command'
-  (if (fboundp 'command-remapping)
-      (progn
-	(setq auto-completion-map (make-sparse-keymap))
-	(define-key auto-completion-map [remap self-insert-command]
-	  'auto-completion-self-insert))
-    ;; otherwise, create a great big keymap where all printable
-    ;; characters run auto-completion-self-insert, which decides what to
-    ;; do based on the character's syntax
-    (setq auto-completion-map (make-keymap))
-    (completion-bind-printable auto-completion-map
-			       'auto-completion-self-insert))
-  
-  ;; C-<space> abandons
-  (define-key auto-completion-map [?\C- ]
-    (lambda ()
-      "Reject current provisional completion if any, otherwise
-run whatever would normally be bound to \"C-<SPC>\"."
-      (interactive)
-      (completion-run-if-within-overlay
-       'completion-reject 'auto-completion-mode)))
-  
-  ;; M-<space> abandons and inserts a space
-  (define-key auto-completion-map "\M- "
-    (lambda (&optional arg)
-      "Reject any current provisional completion if any and insert a space,
-otherwise run whatever would normally be bound to \"M-<SPC>\"."
-      (interactive "P")
-      (completion-run-if-within-overlay
-       (lambda () (interactive) (completion-reject arg) (insert " "))
-       'auto-completion-mode)))
-
-  ;; M-S-<space> inserts a space as a word-constituent
-  (define-key auto-completion-map [?\M-\S- ]
-    (lambda ()
-      "Insert a space as though it were a word-constituent if
-there's a provisional completion at point, otherwise run whatever
-would normally be bound to \"M-S\\ \"."
-      (interactive)
-      (completion-run-if-within-overlay
-       (lambda () (interactive) (auto-completion-self-insert ?\  ?w t))
-       'auto-completion-mode)))
-  
-  
-  ;; M-. inserts "." as a word-constituent
-  (define-key auto-completion-map "\M-."
-    (lambda ()
-      "Insert \".\" as though it were a word-constituent if
-there's a provisional completion at point, otherwise run whatever
-would normally be bound to \"M-.\"."
-      (interactive)
-      (completion-run-if-within-overlay
-       (lambda () (interactive) (auto-completion-self-insert ?. ?w t))
-       'auto-completion-mode)))
-  
-  ;; M-- inserts "-" as a word-constituent
-  (define-key auto-completion-map "\M--"
-    (lambda ()
-      "Insert \"-\" as though it were a word-constituent if
-there's a provisional completion at point, otherwise run whatever
-would normally be bounds to \"M--\"."
-      (interactive)
-      (completion-run-if-within-overlay
-       (lambda () (interactive) (auto-completion-self-insert ?- ?w t))
-       'auto-completion-mode)))
-  
-;;;   ;; M-/ inserts "/" as a word-constituent
-;;;   (define-key auto-completion-map "\M-/"
-;;;     (lambda ()
-;;;       "Insert \"/\" as though it were a word-constituent if
-;;; there's a provisional completion at point, otherwise run whatever
-;;; would normally be bounds to \"M-/\"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive)
-;;;           (auto-completion-self-insert ?/ ?w t))
-;;;        'auto-completion-mode)))
-)
 
 
 
@@ -1090,12 +1022,12 @@ would normally be bounds to \"M--\"."
     ;; otherwise, create a great big keymap and rebind all printable
     ;; characters to `completion-self-insert' manually
     (setq completion-dynamic-map (make-keymap))
-    (completion-bind-printable completion-dynamic-map
-			       'completion-self-insert))
+    (completion-bind-printable-chars completion-dynamic-map
+				     'completion-self-insert))
     
   ;; C-RET accepts, C-DEL rejects
-  (define-key completion-map [(control return)] 'completion-accept)
-  (define-key completion-map [(control backspace)] 'completion-reject)
+  (define-key completion-dynamic-map [(control return)] 'completion-accept)
+  (define-key completion-dynamic-map [(control backspace)] 'completion-reject)
   
   ;; <tab> does traditional tab-completion
   (define-key completion-dynamic-map "\t" 'completion-tab-complete)
@@ -1116,6 +1048,143 @@ would normally be bounds to \"M--\"."
   ;; clicking on a completion displays the completion menu
   (define-key completion-dynamic-map [mouse-2] 'completion-show-menu)
 )
+
+
+
+;; Set the default auto-completion-mode keymap if it hasn't been defined
+;; already (most likely in an init file). This keymap is active when
+;; `auto-completion-mode' is enabled.
+(unless auto-completion-map
+  ;; if we can remap commands, remap `self-insert-command'
+  (if (fboundp 'command-remapping)
+      (progn
+	(setq auto-completion-map (make-sparse-keymap))
+	(define-key auto-completion-map [remap self-insert-command]
+	  'auto-completion-self-insert))
+    ;; otherwise, create a great big keymap where all printable characters run
+    ;; `auto-completion-self-insert', which decides what to do based on the
+    ;; character's syntax
+    (setq auto-completion-map (make-keymap))
+    (completion-bind-printable-chars auto-completion-map
+				     'auto-completion-self-insert))
+  
+
+;;;   ;; ----- Simulated overlay keybindings -----
+  
+;;;   ;; C-<space> abandons
+;;;   (define-key auto-completion-map [?\C- ]
+;;;     (lambda ()
+;;;       "Reject current provisional completion if any, otherwise
+;;; run whatever would normally be bound to \"C-<SPC>\"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        'completion-reject 'auto-completion-mode)))
+  
+;;;   ;; M-<space> abandons and inserts a space
+;;;   (define-key auto-completion-map "\M- "
+;;;     (lambda (&optional arg)
+;;;       "Reject any current provisional completion if any and insert a space,
+;;; otherwise run whatever would normally be bound to \"M-<SPC>\"."
+;;;       (interactive "P")
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive) (completion-reject arg) (insert " "))
+;;;        'auto-completion-mode)))
+
+;;;   ;; M-S-<space> inserts a space as a word-constituent
+;;;   (define-key auto-completion-map [?\M-\S- ]
+;;;     (lambda ()
+;;;       "Insert a space as though it were a word-constituent if
+;;; there's a provisional completion at point, otherwise run whatever
+;;; would normally be bound to \"M-S\\ \"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive) (auto-completion-self-insert ?\  ?w t))
+;;;        'auto-completion-mode)))
+  
+  
+;;;   ;; M-. inserts "." as a word-constituent
+;;;   (define-key auto-completion-map "\M-."
+;;;     (lambda ()
+;;;       "Insert \".\" as though it were a word-constituent if
+;;; there's a provisional completion at point, otherwise run whatever
+;;; would normally be bound to \"M-.\"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive) (auto-completion-self-insert ?. ?w t))
+;;;        'auto-completion-mode)))
+  
+;;;   ;; M-- inserts "-" as a word-constituent
+;;;   (define-key auto-completion-map "\M--"
+;;;     (lambda ()
+;;;       "Insert \"-\" as though it were a word-constituent if
+;;; there's a provisional completion at point, otherwise run whatever
+;;; would normally be bounds to \"M--\"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive) (auto-completion-self-insert ?- ?w t))
+;;;        'auto-completion-mode)))
+  
+;;;   ;; M-/ inserts "/" as a word-constituent
+;;;   (define-key auto-completion-map "\M-/"
+;;;     (lambda ()
+;;;       "Insert \"/\" as though it were a word-constituent if
+;;; there's a provisional completion at point, otherwise run whatever
+;;; would normally be bound to \"M-/\"."
+;;;       (interactive)
+;;;       (completion-run-if-within-overlay
+;;;        (lambda () (interactive)
+;;;           (auto-completion-self-insert ?/ ?w t))
+;;;        'auto-completion-mode)))
+)
+
+
+
+;; Set the default bindings for the keymap assigned to the completion overlays
+;; created when dynamic completion and auto-completion are enabled, if it
+;; hasn't been defined already (most likely in an init file).
+(unless auto-completion-dynamic-map
+  ;; inherit all keybindings from completion-dynamic-map, then add
+  ;; auto-completion specific ones below
+  (setq auto-completion-dynamic-map (make-sparse-keymap))
+  (set-keymap-parent auto-completion-dynamic-map completion-dynamic-map)
+
+  ;; M-<space> abandons and inserts a space
+  (define-key auto-completion-dynamic-map "\M- "
+    (lambda (&optional arg)
+      "Reject any current provisional completion and insert a space."
+      (interactive "P")
+      (completion-reject arg)
+      (insert " ")))
+
+  ;; M-S-<space> inserts a space as a word-constituent
+  (define-key auto-completion-dynamic-map [?\M-\S- ]
+    (lambda ()
+      "Insert a space as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?\  ?w t)))
+    
+  ;; M-. inserts "." as a word-constituent
+  (define-key auto-completion-dynamic-map "\M-."
+    (lambda ()
+      "Insert \".\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?. ?w t)))
+  
+  ;; M-- inserts "-" as a word-constituent
+  (define-key auto-completion-dynamic-map "\M--"
+    (lambda ()
+      "Insert \"-\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?- ?w t)))
+  
+;;;   ;; M-/ inserts "/" as a word-constituent
+;;;   (define-key auto-completion-dynamic-map "\M-/"
+;;;     (lambda ()
+;;;       "Insert \"/\" as though it were a word-constituent."
+;;;       (interactive)
+;;;       (auto-completion-self-insert ?/ ?w t)))
+)
+
 
 
 
@@ -1248,8 +1317,8 @@ would normally be bounds to \"M--\"."
 
 (defun completion-define-word-constituent-binding
   (key char &optional syntax no-syntax-override)
-  "Setup key bindings for KEY so that it inserts character CHAR
-as though it's syntax were SYNTAX. SYNTAX defaults to
+  "Setup key binding for KEY so that it inserts character CHAR as
+though it's syntax were SYNTAX. SYNTAX defaults to
 word-constituent, ?w, hence the name of the function, but it can
 be used to set up any syntax.
 
@@ -1270,7 +1339,7 @@ SYNTAX."
 				      ,no-syntax-override)))
     
     ;; if emacs version doesn't support overlay keymaps properly, create
-    ;; binding in `completion-map' to simulate them via
+    ;; binding in `completion-map' to simulate it via
     ;; `completion-run-if-within-overlay' hack
     (when (<= emacs-major-version 22)
       (define-key completion-map key
@@ -1285,7 +1354,7 @@ SYNTAX."
 
 
 
-(defun completion-bind-printable (map command)
+(defun completion-bind-printable-chars (map command)
   "Manually bind printable characters to COMMAND.
 Command remapping is a far better way to do this, so it should only be
 used if the current Emacs version lacks command remapping support."
@@ -1384,6 +1453,123 @@ used if the current Emacs version lacks command remapping support."
   (define-key map "|" command)
   (define-key map "\\" command)
   (define-key map "/" command)
+)
+
+
+
+(defun completion-simulate-overlay-bindings (source dest variable)
+  ;; Simulate SOURCE overlay keybindings in DEST using the
+  ;; `completion-run-if-within-overlay' hack. DEST should be a symbol whose
+  ;; value is a keymap, SOURCE should be a keymap.
+  ;;
+  ;; VARIABLE should be a symbol that deactivates DEST when its value is
+  ;; (temporarily) set to nil. Usually, DEST will be a minor-mode keymap and
+  ;; VARIABLE will be the minor-mode variable with which it is associated in
+  ;; `minor-mode-map-alist'.
+
+  ;; map over all bindings in SOURCE
+  (map-keymap
+   (lambda (key binding)
+     ;; don't simulate remappings
+     (unless (eq key 'remap)
+       ;; usually need to wrap key in an array for define-key
+       (unless (stringp key) (setq key (vector key)))
+       ;; bind key in DEST to simulated overlay keymap binding
+       (define-key dest key
+	 (completion-construct-simulated-overlay-binding binding variable))))
+   source)
+)
+
+
+
+(defun completion-construct-simulated-overlay-binding (binding variable)
+  ;; Return a binding that simulates assigning BINDING to KEY in an overlay
+  ;; keymap, using the `completion-run-if-within-overlay' hack.
+  ;;
+  ;; VARIABLE should be a symbol that deactivates BINDING when its value is
+  ;; (temporarily) set to nil. Typically, BINDING will be bound in a
+  ;; minor-mode keymap and VARIABLE will be the minor-mode variable with which
+  ;; it is associated in `minor-mode-map-alist'.
+  ;;
+  ;; The return value is a command if BINDING was a command, or a keymap if
+  ;; BINDING was a keymap. Any other type of BINDING (e.g. a remapping)
+  ;; returns nil, since there is no easy way to simulate this.
+
+  (cond
+   ;; don't simulate command remappings or keyboard macros
+   ((or (eq binding 'remap) (stringp binding))
+    nil)
+
+   
+   ;; if BINDING is a keymap, call ourselves recursively to construct a keymap
+   ;; filled with bindings that simulate an overlay keymap
+   ((keymapp binding)
+    (let ((map (make-sparse-keymap)))
+      (map-keymap
+       (lambda (key bind)
+	 ;; usually need to wrap key in an array for define-key
+	 (unless (stringp key) (setq key (vector key)))
+	 (define-key map key
+	   (completion-construct-simulated-overlay-binding bind variable)))
+       binding)
+      map))
+   
+   
+   ;; if BINDING is a command, construct an anonymous command that simulates
+   ;; binding that command in an overlay keymap
+   ((or (commandp binding) (and (symbolp binding) (symbol-function binding)))
+    (let (funcdef arglist docstring interactive args)
+      
+      ;; get function definition of command
+      (cond
+       ((symbolp binding) (setq funcdef (symbol-function binding)))
+       ((functionp binding) (setq funcdef binding)))
+      
+      ;; extract argument list
+      (cond
+       ;; compiled function
+       ((byte-code-function-p funcdef) (setq arglist (aref funcdef 0)))
+       ;; uncompiled function
+       ((listp funcdef) (setq arglist (nth 1 funcdef))))
+
+      ;; extract docstring and interactive definition
+      (setq docstring (documentation binding))
+      (setq interactive (interactive-form binding))
+      
+      ;; construct docstring for new binding
+      (setq docstring
+	    (concat "Do different things depending on whether point is "
+		    "within a provisional completion.\n\n"
+		    "If point is within a provisional completion, "
+		    (downcase (substring docstring 0 1))
+		    (substring docstring 1)
+		    "\n\n"
+		    "If point is not within a provisional completion, run "
+		    "whatever would normally be bound to this key sequence."))
+      
+      ;; construct list of argument variable names, removing &optional and
+      ;; &rest
+      (setq args '(list))
+      (mapc (lambda (a)
+	      (unless (or (eq a '&optional) (eq a '&rest))
+		(setq args (append args (list a)))))
+	    arglist)
+
+      ;; construct and return command to simulate overlay keymap binding
+      `(lambda ,(copy-sequence arglist)
+	 ,docstring
+	 ,(copy-sequence interactive)
+	 (completion-run-if-within-overlay
+	  (lambda ,(copy-sequence arglist) ,(copy-sequence interactive)
+	    (apply ',binding ,args))
+	  ,variable))
+      ))
+
+   ;; anything else is an error
+   (t (error (concat "Unexpected binding in "
+		     "`completion-construct-simulated-overlay-binding': %s")
+	     binding))
+   )
 )
 
 
@@ -1789,14 +1975,14 @@ point is at POINT."
 )
 
 
-(defun completion-show-tooltip-if-within-overlay ()
-  "Display completion tooltip for the current completion, if any,
-otherwise run whatever command would normally be bound to the key
-sequence used to invoke this command."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-show-tooltip
-				    'completion-function)
-)
+;; (defun completion-show-tooltip-if-within-overlay ()
+;;   "Display completion tooltip for the current completion, if any,
+;; otherwise run whatever command would normally be bound to the key
+;; sequence used to invoke this command."
+;;   (interactive)
+;;   (completion-run-if-within-overlay 'completion-show-tooltip
+;; 				    'completion-function)
+;; )
 
 
 
@@ -1887,14 +2073,14 @@ there is none."
 )
 
 
-(defun completion-show-menu-if-within-overlay ()
-  "Display completion menu for current completion
-if there is one, otherwise run whatever command would normally be
-bound to the key sequence used to invoke this command."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-show-menu
-				    'completion-function)
-)
+;; (defun completion-show-menu-if-within-overlay ()
+;;   "Display completion menu for current completion
+;; if there is one, otherwise run whatever command would normally be
+;; bound to the key sequence used to invoke this command."
+;;   (interactive)
+;;   (completion-run-if-within-overlay 'completion-show-menu
+;; 				    'completion-function)
+;; )
 
 
 
@@ -1996,14 +2182,14 @@ If no OVERLAY is supplied, tried to find one at point."
 )
 
 
-(defun completion-popup-frame-if-within-overlay ()
-  "Display completion pop-up frame for current completion
-if there is one, otherwise run whatever command would normally be
-bound to the key sequence used to invoke this command."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-show-menu
-				    'completion-function)
-)
+;; (defun completion-popup-frame-if-within-overlay ()
+;;   "Display completion pop-up frame for current completion
+;; if there is one, otherwise run whatever command would normally be
+;; bound to the key sequence used to invoke this command."
+;;   (interactive)
+;;   (completion-run-if-within-overlay 'completion-show-menu
+;; 				    'completion-function)
+;; )
 
 
 
@@ -2475,7 +2661,7 @@ Intended to be bound to keys in `completion-hotkey-map'."
 (defun completion-select-if-within-overlay ()
   "Select a completion to insert if there is one, otherwise run
 whatever command would normally be bound to the key sequence used
-to invoke this function."
+to invoke this command."
   (interactive)
   (completion-run-if-within-overlay 'completion-select
 				    'completion-use-hotkeys)
@@ -2529,19 +2715,19 @@ the prefix and the completion string\). Otherwise returns nil."
 )
 
 
-(defun completion-accept-if-within-overlay (&optional arg)
-  "Accept current completion if there is one,
-then run whatever command would normally be bound to the key
-sequence used to invoke this function.
+;; (defun completion-accept-if-within-overlay (&optional arg)
+;;   "Accept current completion if there is one,
+;; then run whatever command would normally be bound to the key
+;; sequence used to invoke this command.
 
-ARG is the prefix argument, which is passed as the third argument
-to any functions called from the `completion-accept-functions'
-hook."
-  (interactive "P")
-  (completion-run-if-within-overlay
-   (lambda () (interactive) (completion-accept arg))
-   'completion-function 'before)
-)
+;; ARG is the prefix argument, which is passed as the third argument
+;; to any functions called from the `completion-accept-functions'
+;; hook."
+;;   (interactive "P")
+;;   (completion-run-if-within-overlay
+;;    (lambda () (interactive) (completion-accept arg))
+;;    'completion-function 'before)
+;; )
 
 
 
@@ -2591,19 +2777,19 @@ the prefix and the completion string\). Otherwise returns nil."
 )
 
 
-(defun completion-reject-if-within-overlay (&optional arg)
-  "Reject the current completion if there is one, otherwise run
-whatever would normally be bound to the key sequence used to
-invoke this function.
+;; (defun completion-reject-if-within-overlay (&optional arg)
+;;   "Reject the current completion if there is one, otherwise run
+;; whatever would normally be bound to the key sequence used to
+;; invoke this command.
 
-ARG is the prefix argument, which is passed as the third argument
-to any function called from the `completion-reject-functions'
-hook."
-  (interactive "P")
-  (completion-run-if-within-overlay
-   (lambda () (interactive) (completion-reject arg))
-   'completion-function)
-)
+;; ARG is the prefix argument, which is passed as the third argument
+;; to any function called from the `completion-reject-functions'
+;; hook."
+;;   (interactive "P")
+;;   (completion-run-if-within-overlay
+;;    (lambda () (interactive) (completion-reject arg))
+;;    'completion-function)
+;; )
 
 
 
@@ -2636,6 +2822,18 @@ boil away."
     (when (overlay-get overlay 'popup-frame)
       (completion-popup-frame overlay)))
 )
+
+
+;; (defun completion-scoot-ahead-if-within-overlay ()
+;;   "Accept the characters from the current completion, if there is
+;; one, and recomplete the resulting string. Otherwise, run whatever
+;; would normally be bound to the key sequence used to invoke this
+;; command."
+;;   (interactive "P")
+;;   (completion-run-if-within-overlay
+;;    (lambda () (interactive) (completion-scoot-ahead))
+;;    'completion-function)
+;; )
 
 
 
@@ -2716,14 +2914,14 @@ green over night."
 )
 
 
-(defun completion-tab-complete-if-within-overlay ()
-  "Tab-complete current completion if there is one, otherwise run
-whatever command would normally be bound to the key sequence used
-to invoke this function."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-tab-complete
-				    'completion-function)
-)
+;; (defun completion-tab-complete-if-within-overlay ()
+;;   "Tab-complete current completion if there is one, otherwise run
+;; whatever command would normally be bound to the key sequence used
+;; to invoke this command."
+;;   (interactive)
+;;   (completion-run-if-within-overlay 'completion-tab-complete
+;; 				    'completion-function)
+;; )
 
 
 
@@ -3350,7 +3548,7 @@ inserting anything)."
   "Run COMMAND if CONDITION is non-nil.
 
 If WHEN is null or 'instead, run whatever would normally be bound
-to the key sequence used to invoke this function if not within a
+to the key sequence used to invoke this command if not within a
 completion overlay. If WHEN is 'before or 'after, run the normal
 binding before or after COMMAND.
 
@@ -3383,7 +3581,9 @@ sequence in a keymap."
       (setq command
 	    (key-binding (this-command-keys) t))
       (unwind-protect
-	  (when (commandp command) (command-execute command))
+	  (when (commandp command)
+	    (command-execute command)
+	    (setq last-command command))  ; doesn't work - clobbered later :(
 	(set variable restore))))
   
   ;; run command if running after
@@ -3397,7 +3597,7 @@ sequence in a keymap."
   "Run COMMAND if within a completion overlay.
 
 If WHEN is null or 'instead, run whatever would normally be bound
-to the key sequence used to invoke this function if not within a
+to the key sequence used to invoke this command if not within a
 completion overlay. If WHEN is 'before or 'after, run the normal
 binding before or after COMMAND.
 
@@ -4086,5 +4286,23 @@ in WINDOW'S frame."
 ;; after any command
 (add-hook 'pre-command-hook
 	  (lambda () (setq completion-tooltip-active nil)))
+
+
+
+;;; =================================================================
+;;;                      Compatibility hacks
+
+;; If the current Emacs version doesn't support overlay keybindings half
+;; decently, have to simulate them using the
+;; `completion-run-if-within-overlay' hack. So far, no Emacs version supports
+;; things properly for zero-length overlays, so we always have to do this!
+
+;;(when (<= emacs-major-version 23)
+  (completion-simulate-overlay-bindings completion-dynamic-map completion-map
+					'completion-function)
+  (completion-simulate-overlay-bindings auto-completion-dynamic-map
+					auto-completion-map
+					'auto-completion-mode);)
+
 
 ;;; completion-ui.el ends here
