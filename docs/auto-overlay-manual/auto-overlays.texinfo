@@ -348,31 +348,52 @@ auto-overlays can also be saved and restored manually.
 
 
 @table @code
-@item (auto-overlay-start @var{set-id} @@optional @var{buffer} @var{ignore-save-file})
+@item (auto-overlay-start @var{set-id} @@optional @var{buffer} @var{save-file} @var{no-regexp-check})
 @findex auto-overlay-start
 Activate the auto-overlay regexp set identified by the symbol
 @var{set-id} in @var{buffer}, or the current buffer if the latter is
 @code{nil}. If there is an file called
-@file{auto-overlay-}@var{buffer-name}@file{-}@var{set-id} in the current
-directory containing up-to-date overlay data, it will be used to restore
-the auto-overlays (@var{buffer-name} is the name of the file visited by
-the buffer, or the buffer name itself if there is none). Otherwise, the
-entire buffer will be scanned for regexp matches. A non-nil
-@var{ignore-save-file} will override this, causing the buffer to be
-scanned even if the file exists.
+@file{auto-overlay-}@var{buffer-name}@file{-}@var{set-id} in the
+containing up-to-date overlay data, it will be used to restore the
+auto-overlays (@var{buffer-name} is the name of the file visited by the
+buffer, or the buffer name itself if there is none). Otherwise, the
+entire buffer will be scanned for regexp matches.
+
+The string @var{save-file} specifies the where to look for the file of
+saved overlay data. If it is nil, it defaults to the current
+directory. If it is a string specifying a relative path, then it is
+relative to the current directory, whereas an absolute path specifies
+exactly where to look. If it is a string specifying a file name (with or
+without a full path, relative or absolute), then it overrides the
+default file name and/or location. Any other value of @var{save-file}
+will cause the file of overlay data to be ignored, even if it exists.
+
+If the overlays are being loaded from a file, but optional argument
+no-regexp-check is non-nil, the file of saved overlays will be used, but
+no check will be made to ensure regexp refinitions are the same as when
+the overlays were saved.
+ 
 
 
-@item (auto-overlay-stop @var{set-id} @@optional @var{buffer} @var{save})
+@item (auto-overlay-stop @var{set-id} @@optional @var{buffer} @var{save-file} @var{leave-overlays})
 @findex auto-overlay-stop
 Deactivate the auto-overlay regexp set identified by the symbol
 @var{set-id} in @var{buffer}, or the current buffer if the latter is
-@code{nil}. All corresponding overlays will be deleted, but the regexp
-definitions are preserved and can be reactivated later. If @var{save} is
-non-nil, overlay data will be saved in an auxilliary file called
-@file{auto-overlay-}@var{buffer-name}@file{-}@var{set-id} to speed up
-subsequent reactivation of the regexp set in the same buffer
-(@var{buffer-name} is the name of the file visited by the buffer, or the
-buffer name itself if there is none).
+@code{nil}. All corresponding overlays will be deleted (unless the
+@var{leave-overlays} option is non-nil, which should only be used if the
+buffer is about to be killed), but the regexp definitions are preserved
+and can be reactivated later.
+
+If @var{save-file} is non-nil, overlay data will be saved in an
+auxilliary file called
+@file{auto-overlay-}@var{buffer-name}@file{-}@var{set-id} in the current
+directory, to speed up subsequent reactivation of the regexp set in the
+same buffer (@var{buffer-name} is the name of the file visited by the
+buffer, or the buffer name itself if there is none). If @var{save-file}
+is a string, it overrides the default save location, overriding either
+the directory if it only specifies a path (relative paths are relative
+to the current directory), or the file name if it only specifies a file
+name, or both.
 
 
 @item (auto-overlay-save-overlays @var{set-id} @@optional @var{buffer} @var{file})
@@ -387,7 +408,7 @@ buffer, or the buffer name itself if there is none). Note that this is
 the only name that will be recognized by @command{auto-overlay-start}.
 
 
-@item (auto-overlay-load-overlays @var{set-id} @@optional @var{buffer} @var{file})
+@item (auto-overlay-load-overlays @var{set-id} @@optional @var{buffer} @var{file} @var{no-regexp-check})
 @findex auto-overlay-load-overlays
 Load auto-overlay data for the regexp set identified by the symbol
 @var{set-id} into @var{buffer}, or the current buffer if @code{nil},
@@ -395,8 +416,11 @@ from an auxilliary file called @var{file}. If @var{file} is nil, it
 attempts to load the overlay data from a file called
 @file{auto-overlay-}@var{buffer-name}@file{-}@var{set-id} in the current
 directory (@var{buffer-name} is the name of the file visited by the
-buffer, or the buffer name itself if there is none). Returns @code{t} is
-the overlays were successfully loaded, @code{nil} otherwise.
+buffer, or the buffer name itself if there is none). If
+@var{no-regexp-check} is no-nil, the saved overlays will be loaded even
+if different regexp definitions were active when the overlays were
+saved. Returns @code{t} if the overlays were successfully loaded,
+@code{nil} otherwise.
 @end table
 
 
@@ -1188,7 +1212,7 @@ modified, the match overlay checks whether the text it covers still
 matches the regexp. If it no longer matches, the match overlay is passed
 as an argument to the appropriate ``suicide'' function for its class,
 which deals with updating or deleting its parent auto-overlay (and
-possible other auto-overlays too).
+possibly other auto-overlays too).
 
 To summarise, the core of the auto-overlays package deals with searching
 for regexp matches, and creating or deleting the corresponding match
@@ -1271,7 +1295,7 @@ to refer to the new class, denoted here by @var{class}:
 @lisp
 (put '@var{class} 'auto-overlay-parse-function
      'auto-o-parse-@var{class}-match)
-(put @var{class} 'auto-overlay-suicide-function
+(put '@var{class} 'auto-overlay-suicide-function
      'auto-o-@var{class}-suicide)
 @end lisp
 If the optional match function is defined, it should similarly be added
@@ -1586,12 +1610,6 @@ existing @code{self} class but updated immediately, rather than waiting
 for buffer modifications. This will be significantly less efficient, but
 is necessary for applications that require overlays to be up to date all
 the time, not just when the buffer is being modified.
-
-@item
-When loading overlay data from file, auto-overlays doesn't check whether
-the regexp definitions used in the buffer are consistent with those that
-were active when the data was saved. If implemented, it should be
-possible to override it.
 
 @item
 Currently, it's difficult to deal with @code{nested} class regexps for

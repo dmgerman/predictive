@@ -890,7 +890,7 @@ you will be able to select a completion by typing a single character
 You will probably also want to display a list of the possible
 completions, so that you know which completion will be selected by each
 of these ``hotkeys'' (@pxref{Displaying Completions in the Echo Area},
-and @xref{Completion Tooltip}).
+and @ref{Completion Tooltip}).
 
 @noindent
 The following variables affect the behaviour of the completion hotkeys:
