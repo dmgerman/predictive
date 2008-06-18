@@ -74,7 +74,7 @@ using
 
   make install DESTDIR=/path/to/install/
 
-and the package files will be copied to /path/to/install/
+and the package files will be copied to the /path/to/install/ directory.
 
 ***********  The dictionaries are intended to be user-specific, and MUST
 * CAREFUL *  be writable by your user. If you're performing a site-wide
@@ -88,7 +88,7 @@ you want to change the dictionary install location, use
 
   make install DICTDIR=/path/to/dictionaries/
 
-This can of course be combined with DESTDIR:
+This can of course be combined with the DESTDIR option:
 
   make install DESTDIR=/path/to/install/ DICTDIR=/path/to/dictionaries/
 
