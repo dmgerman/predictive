@@ -823,7 +823,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
   ;; half decently and doesn't support command remapping, we're going to
   ;; have to bind all printable characters in this keymap, so we might as
   ;; well create a full keymap
-  (if (and (<= emacs-major-version 22)
+  (if (and (<= emacs-major-version 23)
 	   (not (fboundp 'command-remapping)))
       (setq completion-map (make-keymap))
     (setq completion-map (make-sparse-keymap)))
@@ -949,7 +949,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
   ;; If the current Emacs version doesn't support overlay keybindings
   ;; half decently, have to simulate them using the
   ;; `completion-run-if-within-overlay' hack.
-  (when (<= emacs-major-version 22)
+  (when (<= emacs-major-version 23)
     ;; if we can remap commands, remap `self-insert-command' to
     ;; `completion-self-insert'
     (if (fboundp 'command-remapping)
@@ -1341,7 +1341,7 @@ SYNTAX."
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate it via
     ;; `completion-run-if-within-overlay' hack
-    (when (<= emacs-major-version 22)
+    (when (<= emacs-major-version 23)
       (define-key completion-map key
 	`(lambda () ,doc
 	   (interactive)
