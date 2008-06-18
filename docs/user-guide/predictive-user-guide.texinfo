@@ -136,6 +136,7 @@ Character Syntax and Key Bindings
 Major Modes
 
 * LaTeX Support::               
+* HTML Support::                
 
 @LaTeX{} Support
 
@@ -252,77 +253,89 @@ The current version of the predictive completion package can be obtained
 from @uref{http://www.dr-qubit.org/emacs.php}.
 
 If you are upgrading from a previous version of the predictive
-completion package, or switching to a different version of Emacs, it's a
-good idea to first backup any dictionaries you use by dumping the words
-and data they contain to files. @xref{Loading and Saving Dictionaries},
-@command{predictive-dump-dict-to-buffer} and
-@command{predictive-dump-dict-to-file}. Otherwise, your old dictionaries
-may be rendered useless and unrecoverable! Only the plain-text
-``dumped'' format is guaranteed to be portable across different versions
-of predictive mode. (Uncompiled dictionary files, with extension
-@file{.el}, are portable across different versions of Emacs, but not
-necessarily across different versions of the predictive completion
-package.)
+completion package, make sure you first backup dictionaries you use by
+dumping the words and data they contain to files (unless you want to
+start from scratch). To make the backups, use
+@command{predictive-dump-dict-to-file}. @xref{Loading and Saving
+Dictionaries}. It is @emph{not} enough to make a copy of the dictionary
+file. Only the plain-text "dumped" format is guaranteed to be portable
+across different versions of predictive mode.
+
+Older versions of the predictive completion package saved dictionaries
+in a compiled form that was not portable across different versions of
+Emacs. Newer versions now automatically save dictionaries in both
+compiled and uncompiled forms. If you are upgrading to a different
+version of Emacs, but continuing to use the same recent version of the
+predictive completion package, then it is sufficient to delete the
+compiled dictionary files (extension @file{.elc}, but make sure you do
+@emph{not} delete the uncompiled files with extension @file{.el}!), and
+let predictive mode recompile them automatically when the dictionaries
+are saved.
+
+However, backing up your dictionaries by dumping them to plain-text
+files, as described above, is still a very good idea (just to be on the
+safe side!).
 
 To install the package, extract the files using @kbd{tar -xvzf
 predictive.tar.gz}. This will unpack the files in a new directory called
-@file{predictive/}. You're strongly encouraged to byte-compile all the
-Lisp files and create the required dictionaries by running @kbd{make} in
-the @file{predictive/} directory.
+@file{predictive/}. Now byte-compile all the Lisp files and create the
+required dictionaries by running @kbd{make} in the @file{predictive/}
+directory. If necessary, you can specify explicitly where your Emacs
+resides with @kbd{make EMACS=/path/to/emacs}.
 
-The recommended installation is to simply copy the entire
-@file{predictive/} directory to @file{~/.emacs.d/predictive/} using
-@kbd{cp -r /path/to/predictive/ ~/.emacs.d/} (if it doesn't already
-exist, you can create the @file{~/.emacs.d/} directory using @kbd{mkdir
-~/.emacs.d}).
+Then run @kbd{make install} to copy the package files to
+@file{~/.emacs.d/predictive/} (the @file{~/.emacs.d/} directory will be
+created if it doesn't already exist). If you want to install the files
+elsewhere, you can change the default install location using @kbd{make
+install DESTDIR=@var{/path/to/install/}} and the package files will be
+copied to the @file{/path/to/install/} directory.
 
-Then add the @file{~/.emacs.d/predictive/},
-@file{~/.emacs.d/predictive/latex/} and
-@file{~/.emacs.d/predictive/html/} paths to your load-path, by putting
-the following lines in your @file{.emacs} file:
-@cindex .emacs file
-@cindex startup file
-@cindex configuration file
+The dictionaries are intended to be user-specific, and @emph{must} be
+writable by your user. If you're performing a site-wide installation of
+the predictive package, the dictionary files (all files starting with
+the prefix @file{dict-} and ending in @file{.elc} or @file{.el}) need to
+be copied to a separate writable directory for each user. For this
+reason, the dictionaries will still be installed under
+@file{~/.emacs.d/predictive/} even if @kbd{DESTDIR} is specified (you
+will have to copy them manually for any other users who want to use
+predictive). If you want to change the dictionary install location, use
+@kbd{make install DICTDIR=/path/to/dictionaries/}. This can of course be
+combined with the @kbd{DESTDIR} option: @kbd{make install
+DESTDIR=/path/to/install/ DICTDIR=/path/to/dictionaries/}.
 
-@lisp
+Finally, put the following lines in your .emacs file (replace the paths
+as appropriate if you're not using the default install locations):
+
+@lisp  
+;; predictive install location
 (add-to-list 'load-path "~/.emacs.d/predictive/")
+;; dictionary locations
 (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
 (add-to-list 'load-path "~/.emacs.d/predictive/html/")
-@end lisp
-
-If you want the predictive completion minor-mode to be available
-whenever you start Emacs, put the following line in your @file{.emacs}
-file:
-
-@lisp
+;; load predictive package
 (require 'predictive)
 @end lisp
 
 Alternatively, you can save memory and only load the lisp libraries when
 they're needed (i.e. when you first run the @command{predictive-mode}
-command), by putting the following in your @file{.emacs} file instead:
+command), by replacing the final line as follows:
 
 @lisp
-(autoload 'predictive-mode "@var{/path/to/predictive}"
-          "Toggle Predictive Completion mode." t)
-@end lisp
-@cindex autoload
-
-If you want to enable predictive mode support for @LaTeX{} and html
-major-modes (recommended!), you will have to add additional lines to
-your @file{.emacs} file:
-
-@lisp
-(require 'predictive-latex)
-(require 'predictive-html)
+;; predictive install location
+(add-to-list 'load-path "~/.emacs.d/predictive/")
+;; dictionary locations
+(add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+(add-to-list 'load-path "~/.emacs.d/predictive/html/")
+;; load predictive package
+(autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
+          "Turn on Predictive Completion Mode." t)
 @end lisp
 
-Again, there is an autoload alternative:
-
-@lisp
-(autoload 'predictive-setup-latex "/path/to/predictive-latex")
-(autoload 'predictive-setup-html "/path/to/predictive-html")
-@end lisp
+If you want to install the info documentation into your local info
+system, you should run the following command @emph{as root}: @kbd{make
+info-install}. If your info @file{dir} file is not located in
+@file{/usr/share/info/}, then you can specify its location using
+@kbd{make info-install INFODIR=/path/to/info/}.
 
 For more details, and for alternative installation options, you should
 consult the @file{INSTALL} file included in the predictive package.
@@ -554,8 +567,8 @@ Of course, you won't know which completion candidate you want unless you
 can see which candidates are available! The candidates can be displayed
 in the echo area, and/or in a tooltip below the point (@pxref{Displaying
 Completions in the Echo Area}, and @pxref{Completion Tooltip}). When
-completion hot-keys are enabled, these also indicate which completion
-candidate corresponds to which hot-key.
+completion hot-keys are enabled, both of these also indicate which
+completion candidate corresponds to which hot-key.
 
 The completion tooltip is more than just a visual reminder of which
 completions are available. When it is displayed, you can select a
@@ -876,7 +889,8 @@ you will be able to select a completion by typing a single character
 
 You will probably also want to display a list of the possible
 completions, so that you know which completion will be selected by each
-of these ``hotkeys'' (@pxref{Displaying Completions in the Echo Area}).
+of these ``hotkeys'' (@pxref{Displaying Completions in the Echo Area},
+and @xref{Completion Tooltip}).
 
 @noindent
 The following variables affect the behaviour of the completion hotkeys:
@@ -1188,6 +1202,26 @@ Only the @emph{first} capital letter of a string is ignored. Thus typing
 @samp{Alaska} and @samp{ANSI}, but typing @kbd{AN} would only find
 @samp{ANSI}, whilst typing @kbd{a} would only find @samp{and}.
 
+@vtable @env
+@item predictive-auxiliary-file-location
+Controls where any auxiliary files generated by predictive mode should
+be saved. It can either be a relative path, or an absolute path, but the
+former is @emph{strongly} recommended. If it is a relative path, it is
+taken to be relative to the file that a predictive-mode buffer is
+visiting.
+
+If an absolute path is used, all auxiliary files for all predictive-mode
+buffers will be saved to the same location. In this case, there are
+@emph{no} safe-guards to prevent two different auxiliary files that
+happen to have the same name from clobbering one another. That said,
+only identically named files in different directories pose a risk.
+@end vtable
+
+Depending on the settings you have chosen, predictive mode may not
+create any auxiliary files at all. The only one created in standard
+predictive mode buffers is the buffer-local dictionary (@pxref{Automatic
+Learning}). However, the predictive mode support for a number of
+major-modes makes extensive use of auxiliary files. @xref{Major Modes}.
 
 
 
@@ -2044,6 +2078,9 @@ Main keymap, enabled whenever predictive mode is.
 Keymap enabled whenever a completion minor mode (including predictive
 mode) is enabled.
 
+@item auto-completion-map
+Keymap enabled whenever @command{auto-completion-mode} is.
+
 @item completion-hotkey-map
 Keymap used when hotkey completion is enabled. Constructed from
 @env{completion-hotkey-list}. Warning: setting this directly will cause
@@ -2058,45 +2095,42 @@ manually in your @file{.emacs} file before the @code{(require
 'predictive)} line (@pxref{Obtaining and Installing}. @xref{Completion
 Hotkeys}.
 
-@item completion-dynamic-map
-Keymap assigned to the overlay used to highlight the provisional
-completions that are usually inserted when dynamic completion is
-enabled. Not currently used@footnote{Minor mode keymaps override overlay
-keymaps in the stable version (21.x) of Emacs, limiting their use. They
-don't even work well in the unstable version (22.x) when overlays have
-zero length, as they can do in predictive mode}. Use
-@env{completion-map} and the @command{completion-run-if-within-overlays}
-command instead. @xref{Dynamic Completion}.
-
-@item completion-menu-map
-Keymap enabled when the completion menu is enabled. @xref{Completion
-Menu and Browser}.
+@item completion-dynamic-map auto-completion-dynamic-map
+Keymaps assigned to the overlay used to highlight the provisional
+completions inserted when dynamic completion is enabled. Not currently
+used@footnote{Minor mode keymaps override overlay keymaps in the older
+versions (21.x) of Emacs, limiting their use. They don't even work well
+in the current version (22.x) when overlays have zero length, which
+often occurs in predictive mode}. Use @env{completion-map} and the
+@command{completion-run-if-within-overlays} command
+instead. @xref{Dynamic Completion}.
 @end vtable
 
-@findex predictive-self-insert.
+@findex predictive-self-insert
 @vindex predictive-dynamic-syntax-alist
 @vindex predictive-override-dynamic-syntax-alist
 
 The various keymaps define key bindings for different situations that
-arise in predictive mode. The main @env{completion-map} keymap is
-enabled whenever predictive mode is enabled. By default, this keymap
-binds all printable characters to the @command{completion-self-insert}
-function.
-
-Note: if you find yourself thinking of re-binding printable characters
-in @env{completion-map} to something other than
-@command{completion-self-insert}, don't! (at least not until you've read
-on a bit). What you probably want to change are the
-@env{completion-dynamic-syntax-alist} and
+arise in predictive mode. The main @env{predictive-map} keymap is
+enabled whenever predictive mode is enabled, as is
+@env{completion-map}. The difference between them is that
+@env{completion-map} is used by all in-buffer completion modes that use
+the @code{completion-UI} library, whereas @env{predictive-map} is
+specific to predictive mode. The @env{auto-completion-map} keymap is
+enabled whenever @command{auto-completion-mode} is enabled. Note: if you
+find yourself thinking of re-binding printable characters in any of
+these keymaps to something other than @command{completion-self-insert},
+don't! (at least not until you've read on a bit). What you probably want
+to change are the @env{completion-dynamic-syntax-alist} and
 @env{completion-dynamic-override-syntax-alist} variables. @xref{Syntax}.
 
-The @env{completion-dynamic-map} is provided for future versions of
-Emacs, and does not work properly at the moment. Someday, it will
-replace the use of @command{completion-run-if-within-overlay} in
-@env{completion-map}.
-
-The other keymaps are enabled by the corresponding completion
-options.
+@env{completion-dynamic-map} and @env{auto-completion-dynamic-map} are
+provided for future versions of Emacs, and do not work properly at the
+moment. The former is used when @command{auto-completion-mode} is
+disabled, the latter when it is enabled. The key bindings they contain
+are active whenever there is a provisional completion at the
+point. Someday, they will completely replace the use of
+@command{completion-run-if-within-overlay}.
 
 The @env{completion-hotkey-map} is is constructed automatically from the
 characters listed in @env{completion-hotkey-list}, and binds all those
@@ -2110,9 +2144,10 @@ If the keymaps are not defined when predictive mode is first loaded
 loads them into Emacs. Therefore, to completely re-define predictive
 mode key bindings, it is simpler to re-define the keymap variables
 @emph{before} loading predictive mode (e.g. before the @code{(require
-'predictive)} line). But if you simply want to modify a few key
-bindings, as will usually be the case, you can do it in the usual Emacs
-way.
+'predictive)} line in your @file{.emacs} file, @pxref{Obtaining and
+Installing}). But if you simply want to modify a few key bindings, as
+will usually be the case, you can do it in the usual Emacs way,
+@emph{after} loading predictive mode in your @file{.emacs} file.
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
@@ -2232,7 +2267,7 @@ characters @samp{.}, @samp{-} and @samp{/}.
 
 The many features of predictive mode allow you to set things up
 appropriately for whatever language you are typing, whether it be plain
-text, markup languages such as HTML or @LaTeX{}, programming languages
+text, markup languages such as @LaTeX{} or HTML, programming languages
 such as C or Lisp, etc. Predictive mode will work happily alongside the
 appropriate major-mode. However, since each language makes different
 demands of predictive completion, you may find yourself changing a large
@@ -2274,22 +2309,25 @@ particular major-mode, the easiest way to do this is to add the
 (add-hook '@var{major-mode}-hook 'turn-on-predictive-mode)
 @end lisp
 
-The predictive package itself includes support for @LaTeX{}
-(@command{predictive-setup-latex}).
-@c HTML (@command{predictive-setup-html}), and Fortran 90/95
-@c (@command{predictive-setup-f90}) @footnote{An eclectic mix, which
-@c reflects the things I use emacs for most often, and perhaps also the
-@c fact that predictive completion mode is somewhat better suited to
-@c markup languages than programming languages at the moment. More
-@c contributions are always welcome!}.
-You must ensure that the required dictionaries (which are also included
-in the package, @pxref{Obtaining and Installing}) can be found in your
-@env{load-path}. The @LaTeX{} support goes far beyond simply changing a
-few configuration variables. @xref{LaTeX Support}.
+The predictive package itself includes comprehensive support for
+@LaTeX{} (@command{predictive-setup-latex}) and HTML
+(@command{predictive-setup-html}). More contributions are always
+welcome!.
+@c and Fortran 90/95 (@command{predictive-setup-f90}) @footnote{An
+@c eclectic mix, which reflects the things I use emacs for most often,
+@c and perhaps also the fact that predictive completion mode is somewhat
+@c better suited to markup languages than programming languages at the
+@c moment. 
+You must ensure that the dictionaries required in order to support these
+major-modes (which are also included in the package, @pxref{Obtaining
+and Installing}) can be found in your @env{load-path}. The @LaTeX{} and
+HTML support goes far beyond simply changing a few configuration
+variables. @xref{LaTeX Support}.
 @c Support for the other major-modes is more rudimentary.
 
 @menu
 * LaTeX Support::               
+* HTML Support::                
 @end menu
 
 
@@ -2298,6 +2336,7 @@ few configuration variables. @xref{LaTeX Support}.
 @subsection @LaTeX{} Support
 @cindex @LaTeX{} support
 @cindex major modes, @LaTeX{}
+@cindex @LaTeX{}, major-mode support
 
 Predictive mode comes with comprehensive support for the @LaTeX{}
 type-setting language. With the default settings, @LaTeX{} support is
@@ -2332,8 +2371,10 @@ respectively, @code{dict-latex}, @code{dict-latex-math},
 @code{dict-latex-preamble} and @code{dict-latex-env}. In addition, there
 are dictionaries for @LaTeX{} document classes
 (@code{dict-latex-docclass}), bibliography styles
-(@code{dict-latex-bibstyle}), and an automatically generated dictionary
-of cross-reference labels (@pxref{Automatically Created Files}).
+(@code{dict-latex-bibstyle}). Finally, a dictionary of cross-reference
+labels, and dictionaries of locally defined @LaTeX{} commands and
+environments, are generated automatically (@pxref{Automatically Created
+Files}).
 
 Predictive mode will automatically complete words from the correct
 dictionary in different regions of your @LaTeX{} document@footnote{The
@@ -2361,7 +2402,8 @@ command that it originally matched is deleted, causing it to match a
 different @code{\begin} somewhere else in the document. Also, when the
 environment name within either a @code{\begin} @emph{or} an @code{\end}
 command is modified, the environment name within its matching partner is
-also modified accordingly.
+also modified accordingly. WARNING: this feature is known to have bugs,
+and should probably now be used at the moment (@pxref{Known Bugs}).
 
 The behaviour of different character syntax classes, and the behaviour
 of certain individual characters, is set up appropriately for @LaTeX{}
@@ -2441,21 +2483,53 @@ important@footnote{Dictionaries and Elisp code welcome!}.
 @cindex automatically created files
 @cindex @LaTeX{}, automatically created files
 
-The dictionary of cross-reference labels is saved to the same directory
-as the @LaTeX{} file, under the name
-@file{dict-latex-label-@var{filename}.elc}, where @var{filename} is the
-name of the @LaTeX{} file. Note that the label dictionary is shared
-across all buffers with the same @env{TeX-master}, and the file it is
-saved to will be based on the @env{TeX-master} file's name and
-directory.
+The predictive completion @LaTeX{} support automatically creates and
+updates dictionaries of cross-reference labels, dictionaries of
+locally-defined text-mode and math-mode @LaTeX{} commands (defined using
+@samp{\newcommand}), and a dictionary of locally-defined environments
+(defined using @samp{\newenvironment} and @samp{\newtheorem}) for each
+@LaTeX{} buffer.
+
+All these dictionaries are saved to the directory specified by
+@env{predictive-auxiliary-file-location} (@pxref{Miscellaneous
+Options}), so by default they will be saved to a @file{.predictive/}
+subdirectory of the directory containing the @LaTeX{} file. They are
+given a filename of the form
+@file{dict-latex-@var{type}-@var{filename}.elc}, where @var{type} is the
+type of dictionary (@file{label}, @file{local-latex}, @file{local-math}
+or @file{local-env}), and @var{filename} is the name of the @LaTeX{}
+file. Note that these dictionaries are shared across all buffers with
+the same @env{TeX-master}, and the location they are saved to will be
+based on the @env{TeX-master} file's name and directory.
 
 To speed up loading of predictive mode's @LaTeX{} support, a file
 containing information about the location of different regions within
-the document is saved to @file{auto-overlays-@var{filename}} within
-the same directory as the @LaTeX{} file. (Separate files are created
-even for buffers that share the same @env{TeX-master}.)
+the document is saved to @file{auto-overlays-@var{filename}} also
+located in @env{predictive-auxiliary-file-location}. (Separate files are
+created even for buffers that share the same @env{TeX-master}.)
 
 
+
+@node HTML Support
+@subsection HTML Support
+@cindex HTML support
+@cindex major modes, HTML
+@cindex HTML, major-mode support
+
+HTML is a simpler markup language than @LaTeX{}, and the predictive mode
+support for it is correspondingly simpler. It includes a dictionary of
+HTML tags, @code{dict-html}, and dictionaries of valid attributes for
+different tags, @code{dict-html-@var{tag}}. Completion is
+context-sensitive: typing a @samp{<} character will start completing an
+HTML tag, whereas within a tag predictive mode will complete from the
+appropriate tag attribute dictionaries.
+
+To speed up loading of predictive mode's HTML support, a file containing
+information about the location of different regions within the document
+is saved to @file{auto-overlays-@var{filename}} located in
+@env{predictive-auxiliary-file-location} (@pxref{Miscellaneous
+Options}), which by default is a @file{.predictive/} subdirectory of the
+directory containing the HTML file.
 
 
 
@@ -2500,6 +2574,12 @@ Predictive mode does not work under XEmacs. Making it work will take
 some compatibility work, but should be possible.
 
 @item
+The @env{predictive-latex-electric-environments} feature is very flaky,
+and should probably not be used at the moment. It has occasionally been
+known to completely mess up @LaTeX{} files by randomly deleting parts of
+them!
+
+@item
 There are probably still bugs remaining in the @code{auto-overlay} code,
 used in some major modes to set up region-local dictionaries. If you
 find one, please report it, along with precise instructions on how to
@@ -2534,9 +2614,9 @@ More predictive mode configuration variables could be allowed to have
 completion-menu function, and @env{completion-word-thing}.
 
 @item
-Predictive mode should be integrated with the @dfn{semantic} package, to
-make it more useful for programming languages. At the moment, it works
-best with plain text and markup languages.
+Predictive mode should be integrated with the @dfn{semantic} or similar
+package, to make it more useful for programming languages. At the
+moment, it works best with plain text and markup languages.
 @end enumerate
 
 
