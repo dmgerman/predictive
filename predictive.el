@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.4
+;; Version: 0.17.5
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.5
+;; * added `predictive-undefine-all-prefixes' function
+;; * modified `predictive-define-all-prefixes' and `predictive-reset-weight'
+;;   to avoid doing redundant computations when not called interactively
 ;;
 ;; Version 0.17.4
 ;; * added `predictive-auxiliary-file-location' customization option
@@ -1196,8 +1201,9 @@ for uncapitalized version."
       (setq word (car entry))
       (setq dict (cdr entry))
       (unless idle
-	(message "Flushing predictive mode auto-learn caches...(word\
- %d of %d)" i count))
+	(message
+	 "Flushing predictive mode auto-learn caches...(word %d of %d)"
+	 i count))
       ;; add word to whichever dictionary it is found in
       (when (dictree-p dict) (setq dict (list dict)))
       (catch 'learned
@@ -1212,8 +1218,9 @@ for uncapitalized version."
       (setq word (car entry))
       (setq dict (cdr entry))
       (unless idle
-	(message "Flushing predictive mode auto-learn caches...(word\
- %d of %d)" i count))
+	(message
+	 "Flushing predictive mode auto-learn caches...(word %d of %d)"
+	 i count))
       (when (and (or (null predictive-auto-add-min-chars)
 		     (>= (length word) predictive-auto-add-min-chars))
 		 (or (null predictive-auto-add-filter)
@@ -2019,9 +2026,14 @@ entirely of word- or symbol-constituent characters."
 
 (defun predictive-reset-weight (dict word &optional weight)
   "Reset the weight of WORD in dictionary DICT to 0.
-If WORD is null, reset weights of all words in the dictionary.
-If WEIGHT is supplied, reset to that value instead of 0. Interactively, WEIGHT
-is the numerical prefix argument."
+
+If WORD is null, reset weights of all words in the
+dictionary (prompting for confirmation first if this is called
+interactively).
+
+If WEIGHT is supplied, reset to that value instead of
+0. Interactively, WEIGHT is the numerical prefix argument."
+
   (interactive (list (read-dict "Dictionary: " nil)
 		     (read-string
 		      "Word to reset (leave blank to reset all words): ")
@@ -2046,18 +2058,19 @@ is the numerical prefix argument."
 	     (message "Weight of \"%s\" in %s reset to 0"
 		      word (dictree-name dict)))
       ;; if no word was specified, reset all weights to 0
-      (let ((i 0) (count (dictree-size dict)))
-	(message "Resetting word weights in %s...(word 1 of %d)"
-		 (dictree-name dict) count)
+      (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
+	(when (interactive-p)
+	  (message "Resetting word weights in %s...(word 1 of %d)"
+		   (dictree-name dict) count))
 	(dictree-map
 	 (lambda (word ignored)
-	   (setq i (1+ i))
-	   (when (= (mod i 10) 0)
+	   (when (and (interactive-p) (setq i (1+ i)) (= (mod i 10) 0))
 	     (message "Resetting word weights in %s...(word %d of %d)"
 		      (dictree-name dict) i count))
 	   (dictree-insert dict word weight (lambda (a b) a)))
 	 dict)
-	(message "Resetting word weights in %s...done" (dictree-name dict))
+	(when (interactive-p)
+	  (message "Resetting word weights in %s...done" (dictree-name dict)))
 	)))
 )
 
@@ -2181,10 +2194,10 @@ least as large as the weight of WORD."
 (defun predictive-define-all-prefixes (dict &optional length)
   "Define prefix relationships for all words in dictionary DICT.
 Any word in the dictionary that is also a prefix for other words
-will be added to the latter's prefix lists. Predictive mode will
+will be added to those words' prefix lists. Predictive mode will
 then automatically ensure that the weight of the prefix word is
-always at least as great as the weight of any word it is a
-prefix for.
+always at least as great as the weight of any word it is a prefix
+for.
 
 Optional argument LENGTH specifies a minimum length for a prefix
 word\; prefix words shorter than this minimum will be
@@ -2228,22 +2241,93 @@ integer prefix argument."
     ;; define all prefixes longer than min length
     (when (interactive-p)
       (message "Defining prefixes in %s..." (dictree-name dict)))
-    (let ((i 0) (count (dictree-size dict)))
+    (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
       (when (interactive-p)
 	(message "Defining prefixes in %s...(word 1 of %d)"
 		 (dictree-name dict) count))
       (dictree-map
        (lambda (word weight)
-	 (setq i (1+ i))
-	 (when (= 0 (mod i 50))
-	   (when (interactive-p)
-	     (message "Defining prefixes in %s...(word %d of %d)"
-		      (dictree-name dict) i count)))
+	 (when (and (interactive-p) (setq i (1+ i)) (= 0 (mod i 50)))
+	   (message "Defining prefixes in %s...(word %d of %d)"
+		    (dictree-name dict) i count))
 	 ;; ignore word if it's too short
 	 (unless (< (length word) length) (funcall prefix-fun word)))
        dict 'string)
       (when (interactive-p)
 	(message "Defining prefixes in %s...done" (dictree-name dict)))))
+)
+
+
+
+(defun predictive-undefine-all-prefixes (dict &optional prefix)
+  "Remove PREFIX from all prefix relationships in DICT.
+Predictive mode will no longer ensure that the weight of PREFIX
+is greater than that of other words.
+
+If PREFIX is null, remove all prefix relationships (prompting for
+confirmation first if called interactively)."
+  (interactive (list (read-dict "Dictionary: ")
+		     (setq prefix (read-string "Prefix: "))))
+  
+  ;; sort out arguments
+  (and (stringp prefix) (string= prefix "") (setq prefix nil))
+  ;; prompt for confirmation if called interactively to remove all prefixes
+  (when (or (not (interactive-p))
+	    prefix
+	    (y-or-n-p
+	     (format
+	      "Really remove all prefix relationships from dictionary %s? "
+	      (dictree-name dict))))
+
+    ;; display informative message so people have something to look at whilst
+    ;; calculating dictionary size
+    (if prefix
+	(message "Undefining prefix \"%s\" in %s..."
+		 prefix (dictree-name dict))
+      (message "Undefining prefixes in %s..." (dictree-name dict)))
+    
+    (let ((count (when (interactive-p) (dictree-size dict)))
+	  (interactive (interactive-p))
+	  (i 0) prefix-fun prefix-list)
+      
+      ;; define function to be mapped over dictionary words, for removing
+      ;; single prefix or all prefixes, as appropriate
+      (if prefix
+	  (setq prefix-fun
+		(lambda (word dummy)
+		  (when (and interactive (setq i (1+ i)) (= 0 (mod i 50)))
+		    (message
+		     "Undefining prefix \"%s\" in %s...(word %d of %d)"
+		     prefix (dictree-name dict) i count))
+		  ;; remove PREFIX if it appears in word's prefix list
+		  (when (member prefix
+				(setq prefix-list
+				      (dictree-lookup-meta-data dict word)))
+		    (dictree-set-meta-data dict word
+					   (delete prefix prefix-list)))))
+	(setq prefix-fun
+	      (lambda (word dummy)
+		(when (and interactive (setq i (1+ i)) (= 0 (mod i 50)))
+		  (message "Undefining prefixes in %s...(word %d of %d)"
+			   (dictree-name dict) i count))
+		;; clear word's prefix list
+		(dictree-set-meta-data dict word nil))))
+
+      
+      ;; do actual work...
+      (when (interactive-p)
+	(if prefix
+	    (message "Undefining prefix \"%s\" in %s...(word 1 of %d)"
+		     prefix (dictree-name dict) count)
+	  (message "Undefining prefixes in %s...(word 1 of %d)"
+		   (dictree-name dict) count)))
+      (dictree-map prefix-fun dict 'string)
+      (when (interactive-p)
+	(if prefix
+	    (message "Undefining prefix \"%s\" in %s...(done)"
+		     prefix (dictree-name dict))
+	  (message "Undefining prefixes in %s...(done)" (dictree-name dict))))
+      ))
 )
 
 
