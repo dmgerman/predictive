@@ -12,7 +12,8 @@
 
 (defun semantic-completion-wrapper (prefix maxnum)
   "Return list of Semantic completions for PREFIX at point.
-Argument MAXNUM is the maximum number of ."
+Optional argument MAXNUM is the maximum number of completions to
+return."
   (when (semantic-idle-summary-useful-context-p)
     (let* (
 	   ;; don't go loading in oodles of header libraries for minor
