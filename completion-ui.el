@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7.5
+;; Version: 0.8
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8
+;; * give completion overlay a non-nil end-advance property, because...
+;; * ...keymap property works for zero-length overlays with non-nil
+;;   end-advance since Emacs 22! So disable work-around from that versions on.
 ;;
 ;; Version 0.7.5
 ;; * added `completion-simulate-overlay-bindings' function that can
@@ -823,7 +828,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
   ;; half decently and doesn't support command remapping, we're going to
   ;; have to bind all printable characters in this keymap, so we might as
   ;; well create a full keymap
-  (if (and (<= emacs-major-version 23)
+  (if (and (<= emacs-major-version 21)
 	   (not (fboundp 'command-remapping)))
       (setq completion-map (make-keymap))
     (setq completion-map (make-sparse-keymap)))
@@ -949,7 +954,7 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
   ;; If the current Emacs version doesn't support overlay keybindings
   ;; half decently, have to simulate them using the
   ;; `completion-run-if-within-overlay' hack.
-  (when (<= emacs-major-version 23)
+  (when (<= emacs-major-version 21)
     ;; if we can remap commands, remap `self-insert-command' to
     ;; `completion-self-insert'
     (if (fboundp 'command-remapping)
@@ -1341,7 +1346,7 @@ SYNTAX."
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate it via
     ;; `completion-run-if-within-overlay' hack
-    (when (<= emacs-major-version 23)
+    (when (<= emacs-major-version 21)
       (define-key completion-map key
 	`(lambda () ,doc
 	   (interactive)
@@ -3307,7 +3312,7 @@ property is left unchanged."
   (unless overlay (setq overlay (completion-overlay-at-point)))
   ;; if overlay does not already exists, create one
   (unless overlay
-    (setq overlay (make-overlay (point) (point)))
+    (setq overlay (make-overlay (point) (point) nil nil t))
     ;; set permanent overlay properties
     (overlay-put overlay 'completion-overlay t)
     (overlay-put overlay 'face 'completion-dynamic-face)
@@ -4310,12 +4315,12 @@ in WINDOW'S frame."
 ;; `completion-run-if-within-overlay' hack. So far, no Emacs version supports
 ;; things properly for zero-length overlays, so we always have to do this!
 
-;;(when (<= emacs-major-version 23)
+(when (<= emacs-major-version 21)
   (completion-simulate-overlay-bindings completion-dynamic-map completion-map
 					'completion-function)
   (completion-simulate-overlay-bindings auto-completion-dynamic-map
 					auto-completion-map
-					'auto-completion-mode t);)
+					'auto-completion-mode t))
 
 
 ;;; completion-ui.el ends here
