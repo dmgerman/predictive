@@ -50,6 +50,9 @@
 ;; * added `predictive-undefine-all-prefixes' function
 ;; * modified `predictive-define-all-prefixes' and `predictive-reset-weight'
 ;;   to avoid doing redundant computations when not called interactively
+;; * modified `predictive-define-all-prefixes' to define all prefix
+;;   relationships for a single prefix if one is supplied, reverting to
+;;   defining all possible prefixes as before if argument is empty
 ;;
 ;; Version 0.17.4
 ;; * added `predictive-auxiliary-file-location' customization option
@@ -2191,27 +2194,27 @@ least as large as the weight of WORD."
 
 
 
-(defun predictive-define-all-prefixes (dict &optional length)
-  "Define prefix relationships for all words in dictionary DICT.
-Any word in the dictionary that is also a prefix for other words
-will be added to those words' prefix lists. Predictive mode will
-then automatically ensure that the weight of the prefix word is
-always at least as great as the weight of any word it is a prefix
-for.
+(defun predictive-define-all-prefixes (dict &optional prefix length)
+  "Define prefix relationships for PREFIX in dictionary DICT.
+PREFIX will be added to the prefix list of any word for which it
+is a prefix. Predictive mode will then automatically ensure that
+the weight of PREFIX is always at least as great as the weight of
+those words.
 
-Optional argument LENGTH specifies a minimum length for a prefix
-word\; prefix words shorter than this minimum will be
-ignored. If it is zero or negative, all prefix words will be
-included.
+If PREFIX is null, it defines prefix relationships for *all*
+words in DICT that are prefixes of other words. In this case,
+optional argument LENGTH specifies a minimum length for a prefix
+word\; prefix words shorter than this minimum will be ignored. If
+it is zero or negative, all prefix words will be included.
 
-Interactively, DICT is read from the minibuffer, and LENGTH is the
-integer prefix argument."
+Interactively, DICT and PREFIX are read from the minibuffer, and
+LENGTH is the integer prefix argument."
   (interactive (list (read-dict "Dictionary: ")
+		     (read-string "Prefix (leave blank for all): ")
 		     (prefix-numeric-value current-prefix-arg)))
   
-  ;; when being called interactively, throw error if no dict supplied
-  (when (interactive-p)
-    (unless dict (beep) (error "No dictionary supplied")))
+  ;; sort out arguments
+  (and (stringp prefix) (string= prefix "") (setq prefix nil))
   
   
   (let (prefix-fun)  
@@ -2238,23 +2241,36 @@ integer prefix argument."
 	      )))
     
     
-    ;; define all prefixes longer than min length
+    ;; display informative messages if called interactively
     (when (interactive-p)
-      (message "Defining prefixes in %s..." (dictree-name dict)))
+      (if prefix
+	  (message "Defining prefix \"%s\" in %s..."
+		   prefix (dictree-name dict))
+      (message "Defining prefixes in %s..." (dictree-name dict))))
     (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
-      (when (interactive-p)
+      (when (and (interactive-p) prefix)
 	(message "Defining prefixes in %s...(word 1 of %d)"
 		 (dictree-name dict) count))
-      (dictree-map
-       (lambda (word weight)
-	 (when (and (interactive-p) (setq i (1+ i)) (= 0 (mod i 50)))
-	   (message "Defining prefixes in %s...(word %d of %d)"
-		    (dictree-name dict) i count))
-	 ;; ignore word if it's too short
-	 (unless (< (length word) length) (funcall prefix-fun word)))
-       dict 'string)
+
+      ;; define one prefix
+      (if prefix (funcall prefix-fun prefix)
+
+	;; define all prefixes
+	(dictree-map
+	 (lambda (word weight)
+	   (when (and (interactive-p) (setq i (1+ i)) (= 0 (mod i 50)))
+	     (message "Defining prefixes in %s...(word %d of %d)"
+		      (dictree-name dict) i count))
+	   ;; ignore word if it's too short
+	   (unless (< (length word) length) (funcall prefix-fun word)))
+	 dict 'string))
+      
       (when (interactive-p)
-	(message "Defining prefixes in %s...done" (dictree-name dict)))))
+	(if prefix
+	    (message "Defining prefix \"%s\" in %s...done"
+		     prefix (dictree-name dict))
+	  (message "Defining prefixes in %s...done" (dictree-name dict))))
+      ))
 )
 
 
