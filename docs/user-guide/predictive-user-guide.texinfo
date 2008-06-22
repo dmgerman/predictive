@@ -1855,16 +1855,29 @@ Remove a ``prefix'' definition. (As for
 be a prefix of the other.)
 
 @item predictive-define-all-prefixes
-Define all possible prefix relationships. If called with a numerical
-prefix argument, prefix relationships are only defined for words that
-are at least this long (the @emph{prefixes} defined for those words can
+Add the given prefix to the prefix definitions of all words that for
+which it is a prefix, or define all possible prefix relationships in the
+dictionary if no explicit prefix is supplied. In the latter case, a
+numerical prefix argument sets a minimum word length for which to define
+a prefix relationship; relationships are only defined for words that are
+at least this long (the @emph{prefixes} defined for those words can
 still be any length).
+
+@item predictive-undefine-all-prefixes
+The analogue of @command{predictive-define-all-prefixes}. Remove the
+given prefix from the prefix definitions of all words, or remove all
+prefix definitions in the dictionary if no explicit prefix is
+supplied. In the latter case, a numerical prefix argument sets a minimum
+word length for which to @emph{undefine} prefix relationships (the
+length of the @emph{prefixes} that are undefined is still not restricted
+in any way).
 @end ftable
 
 
 The following variable is used to help guess a likely prefix as a
-default for @command{predictive-define-prefix}. It's default value is
-only appropriate for English.
+default for @command{predictive-define-prefix} and
+@command{predictive-undefine-prefix}. It's default value is only
+appropriate for English.
 
 @vtable @env
 @item predictive-guess-prefix-suffixes
@@ -1879,8 +1892,8 @@ Ensuring that prefixes take precedence when completing words is almost
 always a good idea. It makes predictive completion much more convenient
 (especially dynamic completion, @pxref{Dynamic Completion}). Therefore,
 predictive mode includes a feature that, when enabled (the default),
-automatically defines all the necessary prefix relationships whenever a
-word is added to a dictionary.
+automatically defines all the prefix relationships whenever a word is
+added to a dictionary.
 
 @vtable @env
 @item predictive-auto-define-prefixes
@@ -2099,11 +2112,11 @@ Hotkeys}.
 Keymaps assigned to the overlay used to highlight the provisional
 completions inserted when dynamic completion is enabled. Not currently
 used@footnote{Minor mode keymaps override overlay keymaps in the older
-versions (21.x) of Emacs, limiting their use. They don't even work well
-in the current version (22.x) when overlays have zero length, which
-often occurs in predictive mode}. Use @env{completion-map} and the
-@command{completion-run-if-within-overlays} command
-instead. @xref{Dynamic Completion}.
+versions (21.x) of Emacs, limiting their use. For these versions, these
+overlay keymaps are simulated by bindings in @env{completion-map} and
+@env{completion-dynamic-map} using the
+@command{completion-run-if-within-overlay} function as a work-around
+(a.k.a. hack!).}. @xref{Dynamic Completion}.
 @end vtable
 
 @findex predictive-self-insert
@@ -2125,12 +2138,11 @@ to change are the @env{completion-dynamic-syntax-alist} and
 @env{completion-dynamic-override-syntax-alist} variables. @xref{Syntax}.
 
 @env{completion-dynamic-map} and @env{auto-completion-dynamic-map} are
-provided for future versions of Emacs, and do not work properly at the
-moment. The former is used when @command{auto-completion-mode} is
-disabled, the latter when it is enabled. The key bindings they contain
-are active whenever there is a provisional completion at the
-point. Someday, they will completely replace the use of
-@command{completion-run-if-within-overlay}.
+active within the provisional completions displayed by dynamic
+completion (@pxref{Dynamic Completion}). The former is used when
+@command{auto-completion-mode} is disabled, the latter when it is
+enabled. They are used to provide key bindings for most of the
+completion features.
 
 The @env{completion-hotkey-map} is is constructed automatically from the
 characters listed in @env{completion-hotkey-list}, and binds all those
