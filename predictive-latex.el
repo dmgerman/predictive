@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.3
+;; Version: 0.10
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.10
+;; * separated off predictive-latex-auto-dict overlays into stand-alone
+;;   auto overlay class
 ;;
 ;; Version 0.9.3
 ;; * save overlay and local dictionary files to a directory specified by new
@@ -195,6 +199,7 @@
 (require 'auto-overlay-line)
 (require 'auto-overlay-self)
 (require 'auto-overlay-nested)
+(require 'predictive-auto-overlay-auto-dict)
 
 (provide 'predictive-latex)
 (add-to-list 'predictive-major-mode-alist
@@ -381,7 +386,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      predictive-latex-preamble-dict
 		      predictive-latex-env-dict
 		      predictive-latex-bibstyle-dict))
-	;; load/create the label and theorem dictionaries
+	;; load/create the label and local latex dictionaries
 	(predictive-latex-load-auto-dict "label")
 	(predictive-latex-load-auto-dict "local-latex")
 	(predictive-latex-load-auto-dict "local-math")
@@ -601,11 +606,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (completion-menu
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ;; Note: regexps contain a lot of \'s because it has to check
-	    ;; whether number of \'s in front of { is even or odd. Also, since
-	    ;; auto-overlay regexps aren't allowed to match across lines, we
-	    ;; have to deal with the case of { or } at the start of a line
-	    ;; separately.
+	    ;; Note: the following regexps contain a lot of \'s because they
+	    ;; have to check whether number of \'s in front of { is even or
+	    ;; odd. Also, since auto-overlay regexps aren't allowed to match
+	    ;; across lines, we have to deal with the case of { or } at the
+	    ;; start of a line separately.
 	    (("^\\({\\)" . 1)
 	     :edge start
 	     (priority . 40)
@@ -748,7 +753,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; to the label dictionary.
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id label
      (("\\\\label{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-label-dict))))
@@ -760,7 +765,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; to both).
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id newcommand
      (("\\\\newcommand\\*?{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-local-latex-dict))))
@@ -770,13 +775,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; adds the environment to the local environment dictionary.
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id newenvironment
      (("\\\\newenvironment{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-local-env-dict))))
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id newtheorem
      (("\\\\newtheorem{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-local-env-dict))))
@@ -786,7 +791,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; the environment to the local maths dictionary.
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id DeclareMathOperator
      (("\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
       (auto-dict . predictive-latex-local-math-dict))))
@@ -1416,96 +1421,8 @@ they exist."
 
 
 
-
 ;;; =================================================================
-;;;   Automatically generated dictionaries of labels, theorems, etc.
-
-(put 'predictive-latex-auto-dict 'auto-overlay-parse-function
-     'predictive-latex-parse-auto-dict-match)
-(put 'predictive-latex-auto-dict 'auto-overlay-suicide-function
-     'predictive-latex-auto-dict-suicide)
-
-
-(defun predictive-latex-parse-auto-dict-match (o-match)
-  ;; Create a new word overlay, and add its contents to a dictionary
-
-  ;; create new word overlay
-  (let ((o-new (auto-o-parse-word-match o-match))
-	word dict)
-    ;; extract word and get dict
-    (setq word (buffer-substring-no-properties
-		(overlay-get o-match 'delim-start)
-		(overlay-get o-match 'delim-end)))
-    (setq dict (overlay-get o-new 'auto-dict))
-    ;; save word and dict in overlay properties
-    (overlay-put o-match 'word word)
-    (overlay-put o-match 'auto-dict dict)
-    ;; add change function to overlay modification hooks
-    (overlay-put o-new 'modification-hooks
-		 (cons 'predictive-latex-schedule-auto-dict-update
-		       (overlay-get o-new 'modification-hooks)))
-    (overlay-put o-new 'insert-in-front-hooks
-		 (cons 'predictive-latex-schedule-auto-dict-update
-		       (overlay-get o-new 'insert-in-front-hooks)))
-    (overlay-put o-new 'insert-behind-hooks
-		 (cons 'predictive-latex-schedule-auto-dict-update
-		       (overlay-get o-new 'insert-behind-hooks)))
-    ;; add word to dictionary
-    (unless (dictree-p dict) (setq dict (eval dict)))
-    (predictive-add-to-dict dict word 0)
-    ;; return the new overlay
-    o-new)
-)
-
-
-
-(defun predictive-latex-auto-dict-suicide (o-match)
-  ;; Delete the word overlay, and delete the word from the dictionary
-  
-  (let ((word (overlay-get o-match 'word))
-	(dict (overlay-get o-match 'auto-dict)))
-    ;; delete the overlay
-    (auto-o-delete-overlay (overlay-get o-match 'parent))
-    ;; delete the word from the dictionary
-    (unless (dictree-p dict) (setq dict (eval dict)))
-    (dictree-delete dict word))
-)
-
-
-
-(defun predictive-latex-schedule-auto-dict-update
-  (o-self modified &rest unused)
-  ;; All auto-dict overlay modification hooks are set to this function, which
-  ;; schedules `predictive-latex-auto-dict-update' to run after any suicide
-  ;; functions have been called
-  (unless modified
-    (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-latex-auto-dict-update o-self)))
-)
-
-
-
-(defun predictive-latex-auto-dict-update (o-self)
-  ;; Update the auto-dict with new word. Runs after modifications.
-
-  (let ((dict (overlay-get (overlay-get o-self 'start) 'auto-dict))
-	word)
-    (unless (dictree-p dict) (setq dict (eval dict)))
-    ;; delete old word from label dictionary
-    (dictree-delete dict (overlay-get (overlay-get o-self 'start) 'word))
-    
-    ;; if overlay has not been deleted...
-    (when (overlay-buffer o-self)
-      ;; extract word
-      (setq word (buffer-substring-no-properties
-		  (overlay-start o-self) (overlay-end o-self)))
-      ;; save label in overlay property
-      (overlay-put (overlay-get o-self 'start) 'word word)
-      ;; add new label to dictionary
-      (predictive-add-to-dict dict word 0)))
-)
-
-
+;;;    Utility functions for automatically generated dictionaries
 
 (defmacro predictive-latex-auto-dict-name (name)
   ;; Return a dictionary name constructed from NAME and the buffer name

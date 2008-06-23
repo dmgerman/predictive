@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.3
+;; Version: 0.6.4
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.4
+;; * updated to reflect renaming of predictive-auto-dict overlay class
 ;;
 ;; Version 0.6.3
 ;; * improved `predictive-latex-cleveref-label-forward-word' (again!)
@@ -232,7 +235,7 @@
 	(auto-overlay-unload-definition 'predictive 'label))
   (auto-overlay-load-definition
    'predictive
-   '(predictive-latex-auto-dict
+   '(predictive-auto-dict
      :id label
      (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2)
       (auto-dict . predictive-latex-label-dict))))
