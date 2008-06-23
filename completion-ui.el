@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8
+;; Version: 0.8.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8,1
+;; * fix `completion-define-word-syntax-binding' so it creates key binding in
+;;   `auto-completion-dynamic-map' as it should
+;; * fix `completion-setup-overlay' to assign correct keymap to 'keymap
+;;   property, depending on whether `auto-completion-mode' is enabled or not
 ;;
 ;; Version 0.8
 ;; * give completion overlay a non-nil end-advance property, because...
@@ -1336,8 +1342,8 @@ SYNTAX."
   (let ((doc (concat "Insert \"" (string char) "\" as though it were a\
  word-constituent.")))
     
-    ;; create `completion-dynamic-map' binding
-    (define-key completion-dynamic-map key
+    ;; create `auto-completion-dynamic-map' binding
+    (define-key auto-completion-dynamic-map key
       `(lambda () ,doc
 	 (interactive)
 	 (auto-completion-self-insert ,char ,syntax
@@ -1479,10 +1485,8 @@ used if the current Emacs version lacks command remapping support."
   ;; if NO-PARENT is specified, remove parent keymap if there is one
   (when (and no-parent (memq 'keymap (cdr source)))
     (setq source
-	  (completion--sublist source 0
-			       (1+ (completion--position
-				    'keymap
-				    (cdr auto-completion-dynamic-map))))))
+	  (completion--sublist
+	   source 0 (1+ (completion--position 'keymap (cdr source))))))
   
   ;; map over all bindings in SOURCE
   (map-keymap
@@ -3316,7 +3320,9 @@ property is left unchanged."
     ;; set permanent overlay properties
     (overlay-put overlay 'completion-overlay t)
     (overlay-put overlay 'face 'completion-dynamic-face)
-    (overlay-put overlay 'keymap completion-dynamic-map)
+    (if auto-completion-mode
+	(overlay-put overlay 'keymap auto-completion-dynamic-map)
+      (overlay-put overlay 'keymap completion-dynamic-map))
     (overlay-put overlay 'help-echo
 		 'completion-construct-help-echo-text)
     (overlay-put overlay 'priority 100)
