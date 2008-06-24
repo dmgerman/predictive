@@ -2340,9 +2340,9 @@ confirmation first if called interactively)."
       (dictree-map prefix-fun dict 'string)
       (when (interactive-p)
 	(if prefix
-	    (message "Undefining prefix \"%s\" in %s...(done)"
+	    (message "Undefining prefix \"%s\" in %s...done"
 		     prefix (dictree-name dict))
-	  (message "Undefining prefixes in %s...(done)" (dictree-name dict))))
+	  (message "Undefining prefixes in %s...done" (dictree-name dict))))
       ))
 )
 
