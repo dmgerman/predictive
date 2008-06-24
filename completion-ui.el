@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8.1
+;; Version: 0.8.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.2
+;; * prevented `completion-show-tooltip' from moving mouse unless absolutely
+;;   necessary
+;; * modified `completion-show-tooltip' to ensure tooltip is cancelled before
+;;   (re)displaying it, otherwise `x-show-tip' "magically" moves it to the top
+;;   of the frame! (Thanks to Martin Pohlack for reporting both of these)
 ;;
 ;; Version 0.8,1
 ;; * fix `completion-define-word-syntax-binding' so it creates key binding in
@@ -1242,14 +1249,16 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
       (lambda ()
 	"Cycle forwards through completions and redisplay tooltip."
 	(interactive)
-	(completion-cycle)
-	(completion-show-tooltip)))
+	(completion-cycle nil nil t)
+	(completion-show-tooltip)
+	))
     (define-key map [up]
       (lambda ()
 	"Cycle backwards through completions and redisplay tooltip."
 	(interactive)
-	(completion-cycle -1)
-	(completion-show-tooltip)))
+	(completion-cycle -1 nil t)
+	(completion-show-tooltip)
+	))
     
     (setq completion-tooltip-map map))
 )
@@ -1857,7 +1866,7 @@ cauliflower will start growing out of your ears."
 
 
 
-(defun completion-auto-show (&optional &optional overlay point)
+(defun completion-auto-show (&optional overlay point)
   "Display list of completions for OVERLAY in tooltip/menu/pop-up frame.
 The point had better be within OVERLAY or your hair will fall
 out.
@@ -1954,8 +1963,9 @@ point is at POINT."
       ;; certain window systems (e.g. windows); in this case, we move
       ;; mouse into frame (there's no way to restore its position
       ;; afterwards, since we can't find out its position)
-      (set-mouse-position (selected-frame) 1 0)
-      (setq mouse-pos (mouse-pixel-position))
+      (unless mouse-pos
+	(set-mouse-position (selected-frame) 1 0)
+	(setq mouse-pos (mouse-pixel-position)))
       
       ;; set face and frame parameters
       (when (stringp fg)
@@ -1977,7 +1987,10 @@ point is at POINT."
 ;; 	      (tooltip-set-param
 ;; 	       params 'top
 ;; 	       (+ (cdr pos) completion-tooltip-y-offset)))
-	
+
+      ;; make sure tooltip is cancelled before displaying it, otherwise
+      ;; x-show-tip "magically" moves it to the top of the frame!
+      (completion-cancel-tooltip)
       ;; show tooltip
       ;; note: there's no reliable way to display a tooltip at the
       ;; *screen* position (which is what x-show-tip requires) of
@@ -2859,7 +2872,7 @@ boil away."
 
 
 
-(defun completion-cycle (&optional n overlay)
+(defun completion-cycle (&optional n overlay no-auto)
   "Cycle through available completions.
 
 Optional argument N specifies the number of completions to cycle
@@ -2868,7 +2881,10 @@ N is the prefix argument.
 
 If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be stuck by
-lightening."
+lightening.
+
+If NO-AUTO is non-nil, the tooltip/menu/pop-up frame will *not*
+be auto-displayed."
   (interactive "P")
   (when (null n) (setq n 1))
   
@@ -2896,8 +2912,10 @@ lightening."
       ;; if pop-up frame is displayed, update it
       (if (overlay-get overlay 'popup-frame)
 	  (completion-popup-frame overlay)
-	;; otherwise, display tooltip/menu/pop-up frame if using them
-	(when completion-auto-show (completion-auto-show overlay)))
+	;; otherwise, display tooltip/menu/pop-up frame if using them and
+	;; tooltip isn't already active
+	(when (and completion-auto-show (null no-auto))
+	  (completion-auto-show overlay)))
       ))
 )
 
@@ -4308,8 +4326,7 @@ in WINDOW'S frame."
 
 ;; we reset tooltip flag after any command because Emacs hides tooltips
 ;; after any command
-(add-hook 'pre-command-hook
-	  (lambda () (setq completion-tooltip-active nil)))
+(add-hook 'pre-command-hook (lambda () (setq completion-tooltip-active nil)))
 
 
 
