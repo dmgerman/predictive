@@ -744,7 +744,7 @@ to the dictionary, nil if it should not. Only used when
 (defmacro predictive-create-auxiliary-file-location ()
   ;; Create directory specified by `predictive-auxiliary-file-locaion' for
   ;; current buffer, if necessary.
-  (make-directory predictive-auxiliary-file-location t))
+  '(make-directory predictive-auxiliary-file-location t))
 
 
 
