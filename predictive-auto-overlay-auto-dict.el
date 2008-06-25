@@ -6,7 +6,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: predictive, automatic, overlays, dictionary, auto-dict
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2
+;; * add required `require's
+;;
 ;; Version 0.1
 ;; * initial release
 
@@ -41,6 +44,10 @@
 
 
 (require 'auto-overlays)
+(require 'auto-overlay-word)
+(require 'dict-tree)
+(require 'predictive)
+
 (provide 'predictive-auto-overlay-auto-dict)
 
 ;; set auto-dict overlay parsing and suicide functions, and indicate class

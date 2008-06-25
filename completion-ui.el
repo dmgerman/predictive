@@ -1245,21 +1245,9 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
   (let ((map (make-sparse-keymap)))
     ;; <up> and <down> cycle completions, which appears to move selection
     ;; up and down tooltip entries
-    (define-key map [down]
-      (lambda ()
-	"Cycle forwards through completions and redisplay tooltip."
-	(interactive)
-	(completion-cycle nil nil t)
-	(completion-show-tooltip)
-	))
+    (define-key map [down] 'completion-tooltip-cycle)
     (define-key map [up]
-      (lambda ()
-	"Cycle backwards through completions and redisplay tooltip."
-	(interactive)
-	(completion-cycle -1 nil t)
-	(completion-show-tooltip)
-	))
-    
+      (lambda () (interactive) (completion-tooltip-cycle -1)))
     (setq completion-tooltip-map map))
 )
 
@@ -2006,6 +1994,7 @@ point is at POINT."
       ;; set flag to indicate tooltip is active at point (this enables
       ;; tooltip-related key bindings)
       (setq completion-tooltip-active (point))
+      (message "%d" completion-tooltip-active)
       ))
 )
 
@@ -2917,6 +2906,20 @@ be auto-displayed."
 	(when (and completion-auto-show (null no-auto))
 	  (completion-auto-show overlay)))
       ))
+)
+
+
+
+(defun completion-tooltip-cycle (&optional n overlay)
+  "Cycle forwards through N completions and redisplay the tooltip.
+A negative argument cycles backwards.
+
+If OVERLAY is supplied, use that instead of finding one. The
+point had better be within OVERLAY or you'll be attacked by a mad
+cow."
+  (interactive)
+  (completion-cycle n nil t)
+  (completion-show-tooltip)
 )
 
 
