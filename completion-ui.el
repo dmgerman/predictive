@@ -1951,7 +1951,8 @@ point is at POINT."
       ;; certain window systems (e.g. windows); in this case, we move
       ;; mouse into frame (there's no way to restore its position
       ;; afterwards, since we can't find out its position)
-      (unless mouse-pos
+      (unless (and (numberp (cadr mouse-pos))
+		   (numberp (cddr mouse-pos)))
 	(set-mouse-position (selected-frame) 1 0)
 	(setq mouse-pos (mouse-pixel-position)))
       
