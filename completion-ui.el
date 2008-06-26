@@ -1994,7 +1994,6 @@ point is at POINT."
       ;; set flag to indicate tooltip is active at point (this enables
       ;; tooltip-related key bindings)
       (setq completion-tooltip-active (point))
-      (message "%d" completion-tooltip-active)
       ))
 )
 
@@ -2410,8 +2409,6 @@ The Emacs `self-insert-command' is remapped to this when
   ;; bindings being used for this command)
   (when (null char) (setq char last-input-event))
   (when (null syntax) (setq syntax (char-syntax last-input-event)))
-;;  (message "Syntax of %c (%d): %c (%d)" char char syntax syntax)
-
   
   (cond
    (t  ;; otherwise, lookup behaviour in syntax alists
@@ -2918,7 +2915,7 @@ If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be attacked by a mad
 cow."
   (interactive)
-  (completion-cycle n nil t)
+  (completion-cycle n overlay t)
   (completion-show-tooltip)
 )
 
@@ -2987,7 +2984,7 @@ complete what remains of that word."
 	 (word-pos (save-excursion
 		     (forward-thing word-thing -1) (point))))
     
-    (combine-after-change-calls
+    ;(combine-after-change-calls
       
       ;; ----- not auto-completing -----
       (if (not auto-completion-mode)
@@ -3074,14 +3071,17 @@ complete what remains of that word."
 	  ;; remainder of word after some idle time
 	  (when (timerp completion-backward-delete-timer)
 	    (cancel-timer completion-backward-delete-timer))
-	  (setq completion-backward-delete-timer
-		(run-with-idle-timer
-		 auto-completion-backward-delete-delay nil
-		 ;; FIXME: tooltip doesn't seem to be displayed - why?
-		 `(lambda ()
-		   (complete-in-buffer nil 'auto ,(point))
-		   (setq completion-backward-delete-timer nil)))))
-	 ))))
+	  (if auto-completion-backward-delete-delay
+	      (setq completion-backward-delete-timer
+		    (run-with-idle-timer
+		     auto-completion-backward-delete-delay nil
+		     ;; FIXME: tooltip key-bindings don't work - why?
+		     `(lambda ()
+			(setq completion-backward-delete-timer nil)
+			(complete-in-buffer nil 'auto ,(point)))))
+	    ;; if completing with no delay, do so
+	    (complete-in-buffer nil 'auto (point)))
+	  ))));)
 )
 
 
@@ -4329,7 +4329,7 @@ in WINDOW'S frame."
 
 ;; we reset tooltip flag after any command because Emacs hides tooltips
 ;; after any command
-(add-hook 'pre-command-hook (lambda () (setq completion-tooltip-active nil)))
+(add-hook 'pre-command-hook 'completion-cancel-tooltip)
 
 
 
