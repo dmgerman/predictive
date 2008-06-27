@@ -870,9 +870,16 @@ Completions}, and @ref{Auto-Completion Mode}.
 When non-nil, enable dynamic completion, which provisionally inserts the
 most likely conpletion in the buffer.
 
+@item completion-dynamic-highlight-common-prefix
+When non-nil, the longest common prefix is highlighted ina different
+colour in the dynamic completion.
+
 @item completion-dynamic-face
-The face used to highlight the provisional dynamic completion
-(@pxref{Dynamic Completion}).
+The face used to highlight the provisional dynamic completion.
+
+@item completion-dynamic-common-prefix-face
+The face used to highlight the longest common prefix in a dynamic
+completion.
 @end vtable
 
 

@@ -110,6 +110,7 @@
 ;; * modified `completion-show-tooltip' to ensure tooltip is cancelled before
 ;;   (re)displaying it, otherwise `x-show-tip' "magically" moves it to the top
 ;;   of the frame! (Thanks to Martin Pohlack for reporting both of these)
+;; * added option to highlight longest common prefix in a dynamic completion
 ;;
 ;; Version 0.8,1
 ;; * fix `completion-define-word-syntax-binding' so it creates key binding in
@@ -547,14 +548,29 @@ characters rather than syntax descriptors."
   :type 'boolean)
 
 
+(defcustom completion-dynamic-highlight-common-prefix t
+  "*Highlight longest common prefix in dynamic completion."
+  :group 'completion-ui
+  :type 'boolean)
+
+
 (defface completion-dynamic-face
   '((((class color) (background dark))
      (:background "blue" :foreground "white"))
     (((class color) (background light))
-     (:background "orange1" :foreground "black")))
+     (:background "orange" :foreground "black")))
   "*Face used for provisional completions during dynamic completion.
 Also used to highlight selected completions in tooltips and
 pop-up frames."
+  :group 'completion-ui)
+
+
+(defface completion-dynamic-common-prefix-face
+  '((((class color) (background dark))
+     (:background "dodger blue" :foreground "white"))
+    (((class color) (background light))
+     (:background "gold" :foreground "black")))
+  "*Face used to highlight common prefix in dynamic completion."
   :group 'completion-ui)
 
 
@@ -1817,17 +1833,18 @@ internally)."
 accordingly. The point had better be within OVERLAY or
 cauliflower will start growing out of your ears."
 
-  ;; for some reason, the delete-region or insert (below) can sometimes
-  ;; delete or move the completion overlay, so we store its start
-  ;; position before doing anything else, so we can move the completion
-  ;; overlay into the correct new position later
+  ;; For some reason, the delete-region or insert (below) can sometimes delete
+  ;; or move the completion overlay, so we store its start position before
+  ;; doing anything else, in order to move the completion overlay into the
+  ;; correct new position later.
   (let ((pos (make-marker)))
     (move-marker pos (overlay-start overlay))
     
     ;; delete old completion
     (delete-region (overlay-start overlay) (overlay-end overlay))
-    ;; for some reason, the delete-region sometimes deletes the overlay,
-    ;; and even moving it back fails, so we have to re-create it
+    ;; FIXME: for some reason, the delete-region sometimes deletes the
+    ;; overlay, and even moving it back fails, so we work around this by
+    ;; re-creating it
     (unless (overlay-buffer overlay)
       (setq completion-overlay-list
 	    (delq overlay completion-overlay-list))
@@ -1841,12 +1858,16 @@ cauliflower will start growing out of your ears."
       (when completions
 	(let ((overwrite-mode nil)) (insert (car completions)))
 	(move-overlay overlay pos (+ pos (length (car completions))))
-	(overlay-put overlay 'completion-num 0))
+	(overlay-put overlay 'completion-num 0)
+	;; highlight common prefix, if enabled
+	(when completion-dynamic-highlight-common-prefix
+	  (let ((str (try-completion "" (overlay-get overlay 'completions))))
+	    (move-overlay (overlay-get overlay 'common-prefix)
+			  pos (+ pos (length str))))))
       ;; move point to appropriate position (start of overlay, unless
       ;; we're not auto-completing but are accepting or leaving old
       ;; completions)
-      (if (or auto-completion-mode
-	      (eq completion-resolve-behaviour 'reject))
+      (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
 	  (goto-char (overlay-start overlay))
 	(goto-char (overlay-end overlay))))
     )
@@ -2880,20 +2901,28 @@ be auto-displayed."
   
   ;; if within a completion overlay, cycle to next completion
   (when overlay
-    (let (i string)
+    (let ((pos (overlay-start overlay))
+	  i str)
       (when (null (setq i (overlay-get overlay 'completion-num)))
 	(setq i -1))
-      (setq i (mod (+ i n)
-		   (length (overlay-get overlay 'completions))))
-      (setq string (nth i (overlay-get overlay 'completions)))
+      (setq i (mod (+ i n) (length (overlay-get overlay 'completions))))
+      (setq str (nth i (overlay-get overlay 'completions)))
       ;; delete old completion and insert new one
-      (delete-region (overlay-start overlay) (overlay-end overlay))
-      (let ((overwrite-mode nil)) (insert string))
-      (move-overlay overlay (overlay-start overlay)
-		    (+ (overlay-start overlay) (length string)))
+      (delete-region pos (overlay-end overlay))
+      (let ((overwrite-mode nil)) (insert str))
+      (move-overlay overlay pos (+ pos (length str)))
       (overlay-put overlay 'completion-num i)
-      (when completion-use-dynamic
-	(goto-char (overlay-start overlay)))
+      ;; highlight longest common prefix, if enabled
+      (when completion-dynamic-highlight-common-prefix
+	(setq str (try-completion "" (overlay-get overlay 'completions)))
+	(move-overlay (overlay-get overlay 'common-prefix)
+		      pos (+ pos (length str))))
+      ;; move point to appropriate position (start of overlay, unless
+      ;; we're not auto-completing but are accepting or leaving old
+      ;; completions)
+      (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
+	  (goto-char pos)
+	(goto-char (overlay-end overlay)))
       ;; display echo text if using it
       (when completion-use-echo	(complete-echo overlay))
       ;; if pop-up frame is displayed, update it
@@ -3348,6 +3377,11 @@ property is left unchanged."
     (overlay-put overlay 'help-echo
 		 'completion-construct-help-echo-text)
     (overlay-put overlay 'priority 100)
+    (when completion-dynamic-highlight-common-prefix
+      (let ((o (make-overlay (point) (point))))
+      (overlay-put overlay 'common-prefix o)
+      (overlay-put o 'face 'completion-dynamic-common-prefix-face)
+      (overlay-put o 'priority 101)))
     ;; add overlay to list
     (push overlay completion-overlay-list))
   
@@ -3366,9 +3400,11 @@ property is left unchanged."
   "Delete completion overlay, and clean up after it.
 If KEEP-POPUP is non-nil, prevent deletion of any pop-up frame
 associated with OVERLAY."
+  (when (overlayp (overlay-get overlay 'common-prefix))
+    (delete-overlay (overlay-get overlay 'common-prefix)))
   (delete-overlay overlay)
   (setq completion-overlay-list	(delq overlay completion-overlay-list))
-  (when (and (not keep-popup) (overlay-get overlay 'popup-frame))t
+  (when (and (not keep-popup) (overlay-get overlay 'popup-frame))
     (delete-frame (overlay-get overlay 'popup-frame)))
 )
 
