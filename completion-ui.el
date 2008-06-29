@@ -2406,7 +2406,7 @@ methods. Toggling will show all possible completions."
        (completion-popup-frame-show-all
 	(save-excursion
 	  (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
-	  (setq completions (completion-call-completion-funct
+	  (setq completions (completion-call-completion-function
 			     completion-function prefix
 			     completion-max-candidates)))
 	(overlay-put completion-popup-frame-parent-overlay
