@@ -111,6 +111,15 @@
 ;;   (re)displaying it, otherwise `x-show-tip' "magically" moves it to the top
 ;;   of the frame! (Thanks to Martin Pohlack for reporting both of these)
 ;; * added option to highlight longest common prefix in a dynamic completion
+;;   (thanks to Vagn Johansen for the suggestion)
+;; * actually make use of `completion-popup-frame-function' variable!
+;; * added `completion-includes-prefix' variable to indicate that completions
+;;   returned by `completion-function' include the prefix
+;; * added `completion-replaces-prefix' variable to indicate that completions
+;;   should replace the prefix when they're accepted
+;; * fixed bug in some calls to `completion-reject-functions' that only passed
+;;   two arguments instead of three (thanks to Vagn Johansen for reporting
+;;   this)
 ;;
 ;; Version 0.8,1
 ;; * fix `completion-define-word-syntax-binding' so it creates key binding in
@@ -692,6 +701,7 @@ and returns a list of at most MAXNUM completion candidates for
 the PREFIX string. If MAXNUM is nil, it should return all
 completion candidates for PREFIX.")
 (make-variable-buffer-local 'completion-function)
+(set-default 'completion-function nil)  ; ensure "global" value is nil
 
 
 (defvar completion-prefix-function 'completion-prefix
@@ -700,13 +710,31 @@ It should return the prefix as a string.")
 (make-variable-buffer-local 'completion-prefix-function)
 
 
+(defvar completion-includes-prefix nil
+  "If nil, the strings returned by calls to `completion-function'
+do *not* include the prefix. If t, then they do.")
+(make-variable-buffer-local 'completion-prefix-function)
+
+
+(defvar completion-replaces-prefix nil
+  "If non-nil, completions replace the \"prefix\" that was
+completed, so those characters will be deleted from the buffer when a
+completion is accepted.")
+(make-variable-buffer-local 'completion-prefix-function)
+
+
 (defvar completion-word-thing 'word
   "Symbol used to determine what is considered a word.
 
 Used by `complete-word-at-point' and `completion-backward-delete'
-in calls to `thing-at-point'.  See `thing-at-point' for more
-details. It is ignored if `completion-prefix' is set, since that
-is used instead.")
+in calls to `thing-at-point'. See `thing-at-point' for more
+details.
+
+More precisely, it is used by the default
+`completion-prefix-function', `completion-prefix', which is
+called by the above functions to determine the prefix at
+point. So it may be ignored if `completion-prefix-function' is
+set to some other non-default function.")
 (make-variable-buffer-local 'completion-word-thing)
 
 
@@ -723,26 +751,32 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 
 (defvar completion-menu 'completion-construct-menu
-  "Function to call to get a menu keymap.
-The function is called with two arguments, prefix and
-completions, and should return a menu keymap.")
+  "The completion menu keymap, or a function to call
+to get a completion menu keymap.
 
-
-(defvar completion-browser-menu-function
-  'completion-construct-browser-menu
-  "Function to call to get a browser menu keymap.
-
-Note: this can be overridden by an \"overlay local\" binding (see
+If a function, that function is called with two arguments, prefix
+and completions, and should return a menu keymap. Note: this can
+be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
-(defvar completion-popup-frame-function
-  'completion-construct-popup-frame-text
+(defvar completion-browser-menu-function 'completion-construct-browser-menu
+  "Function to call to get a browser menu keymap.
+
+The function is called with two arguments, prefix and
+completions, and should return a menu keymap. Note: this can be
+overridden by an \"overlay local\" binding (see
+`auto-overlay-local-binding').")
+
+
+(defvar completion-popup-frame-function 'completion-construct-popup-frame-text
   "Function to call to construct pop-up frame text.
 
 The function is called with two arguments, the prefix and
 completions. It should return a list of strings, which are used
-\(in order\) as the lines of text in the pop-up frame.")
+\(in order\) as the lines of text in the pop-up frame. Note: this
+can be overridden by an \"overlay local\" binding (see
+`auto-overlay-local-binding').")
 
 
 (defvar completion-accept-functions nil
@@ -1726,6 +1760,18 @@ BEHAVIOUR should be the return value of a call to
 
 
 
+;;; ======================================================
+;;;                    Other macros
+
+(defmacro completion-call-completion-function (f p &optional n)
+  ;; call function F to get N (all if N is null) completions of prefix P,
+  ;; stripping P from the returned strings if `completion-includes-prefix' is
+  ;; non-nil
+  `(if completion-includes-prefix
+       (mapcar (lambda (c) (substring c (length ,p))) (funcall ,f ,p ,n))
+     (funcall ,f ,p ,n)))
+
+
 
 ;;; =======================================================
 ;;;         Auto-completion minor-mode definition
@@ -1800,8 +1846,8 @@ internally)."
 		     (< (length prefix) auto-completion-min-chars))
 	  ;; get completions
 	  (setq completions
-		(funcall completion-function
-			 prefix completion-max-candidates))
+		(completion-call-completion-function
+		 completion-function prefix completion-max-candidates))
 	  ;; setup completion overlay
 	  (setq overlay
 		(completion-setup-overlay
@@ -1862,6 +1908,8 @@ cauliflower will start growing out of your ears."
 	;; highlight common prefix, if enabled
 	(when completion-dynamic-highlight-common-prefix
 	  (let ((str (try-completion "" (overlay-get overlay 'completions))))
+	    ;; try-completion returns t if there's only one completion
+	    (when (eq str t) (setq str (car completions)))
 	    (move-overlay (overlay-get overlay 'common-prefix)
 			  pos (+ pos (length str))))))
       ;; move point to appropriate position (start of overlay, unless
@@ -2104,8 +2152,12 @@ there is none."
 		     (buffer-substring-no-properties
 		      (overlay-start overlay)
 		      (overlay-end overlay))))
-	    ;; delete old provisional completion
-	    (delete-region (overlay-start overlay)
+	    ;; delete old provisional completion, including prefix if
+	    ;; `completion-replaces-prefix' is non-nil
+	    (delete-region (- (overlay-start overlay)
+			      (if completion-replaces-prefix
+				  (length (overlay-get overlay 'prefix))
+				0))
 			   (overlay-end overlay))
 	    (completion-delete-overlay overlay)
 	    ;; insert selected completion
@@ -2170,8 +2222,11 @@ If no OVERLAY is supplied, tried to find one at point."
 	   (prefix (overlay-get overlay 'prefix))
 	   (completions (overlay-get overlay 'completions))
 	   (num (overlay-get overlay 'completion-num))
-	   (lines (completion-construct-popup-frame-text
-		   prefix completions))
+	   (popup-fun (if (fboundp 'auto-overlay-local-binding)
+			  (auto-overlay-local-binding
+			   'completion-popup-frame-function)
+			completion-popup-frame-function))
+	   (lines (funcall popup-fun prefix completions))
 	   (maxlen (if (null lines)
 		       0 (apply 'max (mapcar 'length lines))))
 	   (pos (completion-frame-posn-at-point))
@@ -2299,8 +2354,8 @@ If ARG is supplied, it is passed through to COMMAND."
 	(set-buffer
 	 (overlay-buffer completion-popup-frame-parent-overlay))
 	(setq cmpl-fun completion-function))
-      (setq completions
-	    (funcall cmpl-fun prefix completion-max-candidates))
+      (setq completions (completion-call-completion-function
+			 cmpl-fun prefix completion-max-candidates))
       (overlay-put completion-popup-frame-parent-overlay
 		   'completions completions)))
   ;; delete pop-up frame
@@ -2341,7 +2396,8 @@ methods. Toggling will show all possible completions."
 	 "Finding all completions (C-g to cancel if taking too long)...")
 	(save-excursion
 	  (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
-	  (setq completions (funcall completion-function prefix nil)))
+	  (setq completions (completion-call-completion-function
+			     completion-function prefix)))
 	(overlay-put completion-popup-frame-parent-overlay
 		     'completions completions))
        
@@ -2350,8 +2406,9 @@ methods. Toggling will show all possible completions."
        (completion-popup-frame-show-all
 	(save-excursion
 	  (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
-	  (setq completions (funcall completion-function prefix
-				     completion-max-candidates)))
+	  (setq completions (completion-call-completion-funct
+			     completion-function prefix
+			     completion-max-candidates)))
 	(overlay-put completion-popup-frame-parent-overlay
 		     'completions completions)))
 
@@ -2688,7 +2745,13 @@ Intended to be bound to keys in `completion-hotkey-map'."
        
        ;; otherwise, replace dynamic completion with selected one
        (t
-	(delete-region (overlay-start overlay) (overlay-end overlay))
+	;; delete old provisional completion, including prefix if
+	;; `completion-replaces-prefix' is non-nil
+	(delete-region (- (overlay-start overlay)
+			  (if completion-replaces-prefix
+			      (length (overlay-get overlay 'prefix))
+			    0))
+			  (overlay-end overlay))
 	(let ((overwrite-mode nil)) (insert (nth n completions)))
 	;; run accept hooks
 	(run-hook-with-args 'completion-accept-functions
@@ -2740,10 +2803,15 @@ the prefix and the completion string\). Otherwise returns nil."
     (when overlay
       (setq prefix (overlay-get overlay 'prefix))
       (setq completion
-	    (concat prefix
+	    (concat (if completion-replaces-prefix "" prefix)
 		    (buffer-substring-no-properties
 		     (overlay-start overlay)
 		     (overlay-end overlay))))
+      ;; delete prefix if `completion-replaces-prefix' is non-nil
+      (when completion-replaces-prefix
+	(delete-region (- (overlay-start overlay)
+			  (length (overlay-get overlay 'prefix)))
+		       (overlay-start overlay)))			  
       ;; accept current completion
       (goto-char (overlay-end overlay))
       ;; run accept hooks
@@ -2802,9 +2870,10 @@ the prefix and the completion string\). Otherwise returns nil."
     (when overlay
       (setq prefix (overlay-get overlay 'prefix))
       (setq completion
-	    (concat prefix (buffer-substring-no-properties
-			    (overlay-start overlay)
-			    (overlay-end overlay))))
+	    (concat (if completion-replaces-prefix "" prefix)
+		    (buffer-substring-no-properties
+		     (overlay-start overlay)
+		     (overlay-end overlay))))
       ;; reject current completion
       (delete-region (overlay-start overlay) (overlay-end overlay))
       ;; run reject hooks
@@ -3475,7 +3544,10 @@ OVERLAY will be left alone."
 	    (when (overlay-get o 'popup-frame)
 	      (delete-frame (overlay-get o 'popup-frame))
 	      (overlay-put overlay 'popup-frame nil))
-	    (unless (overlay-buffer o)
+	    ;; if overlay hasn't evaporated, reset evaporate property,
+	    ;; otherwise delete it from overlay list
+	    (if (overlay-buffer o)
+		(overlay-put o 'evaporate nil)
 	      (setq completion-overlay-list
 		    (delq o completion-overlay-list))
 	      	    (run-hook-with-args 'completion-accept-functions
@@ -3492,6 +3564,13 @@ OVERLAY will be left alone."
 					(buffer-substring-no-properties
 					 (overlay-start o)
 					 (overlay-end o))))
+	    ;; if `completion-replaces-prefix' is non-nil, delete prefix
+	    ;; before accepting; no one in their right mind would want this
+	    ;; behaviour, but we shouldn't discriminate against the insane
+	    (when completion-replaces-prefix
+	      (delete-region (- (overlay-start o)
+				(length (overlay-get o 'prefix)))
+			     (overlay-start o)))			     
 	    (completion-delete-overlay o))
 	  completion-overlay-list)
     (setq completion-overlay-list nil))
@@ -3504,7 +3583,8 @@ OVERLAY will be left alone."
 				(concat (overlay-get o 'prefix)
 					(buffer-substring-no-properties
 					 (overlay-start o)
-					 (overlay-end o))))
+					 (overlay-end o)))
+				nil)
 	    (delete-region (overlay-start o) (overlay-end o))
 	    (completion-delete-overlay o))
 	  completion-overlay-list)
@@ -3519,6 +3599,10 @@ OVERLAY will be left alone."
 	      (overlay-put o 'face '(background-color . "red"))
 	      (if (y-or-n-p "Accept completion? ")
 		  ;; accept
+		  (when completion-replaces-prefix
+		    (delete-region (- (overlay-start o)
+				      (length (overlay-get o 'prefix)))
+				   (overlay-start o)))
 		  (run-hook-with-args
 		   'completion-accept-functions
 		   (overlay-get o 'prefix)
@@ -3534,7 +3618,8 @@ OVERLAY will be left alone."
 			 (buffer-substring-no-properties
 			  (overlay-start o)
 			  (overlay-end o)))
-		 (delete-region (overlay-start o) (overlay-end o))))
+		 nil)
+		 (delete-region (overlay-start o) (overlay-end o)))
 	      ;; delete overlay and any pop-up frame associated with it
 	      (completion-delete-overlay o))
 	    completion-overlay-list)
@@ -3707,9 +3792,10 @@ inserted dynamic completion."
     
     (dotimes (i (length completions))
       ;; pad all strings to same length
-      (setq str (concat prefix (nth i completions)
-			(make-string
-			 (- maxlen (length (nth i completions))) ? )))
+      (setq str (concat (if completion-replaces-prefix "" prefix)
+			(nth i completions)
+			(make-string (- maxlen (length (nth i completions)))
+				     ? )))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
       (when (and completion-use-hotkeys
@@ -3747,7 +3833,8 @@ inserted dynamic completion."
 	 (text "") str)
     
     (dotimes (i (length completions))
-      (setq str (concat prefix (nth i completions)))
+      (setq str (concat (if completion-replaces-prefix "" prefix)
+			(nth i completions)))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
       (cond
@@ -3843,7 +3930,8 @@ of completion overlay."
 	(vector (intern (concat "completion-insert-"
 				(number-to-string n))))
 	(list 'menu-item
-	      (concat prefix (nth n completions))
+	      (concat (if completion-replaces-prefix "" prefix)
+		      (nth n completions))
 	      `(lambda () (insert ,(nth n completions)))
 	      ;; if a hotkeys is associated with completion, show it
 	      ;; in menu
@@ -3893,7 +3981,8 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     (setq sub-menu-func 'completion-browser-sub-menu))
   
   ;; find all completions of prefix
-  (setq completions (funcall completion-function prefix))
+  (setq completions (completion-call-completion-function
+		     completion-function prefix))
   
   ;; main browser menu is just a browser submenu...
   (let ((menu (funcall sub-menu-func
@@ -3941,7 +4030,8 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	  (define-key-after menu
 	    (vector (intern (concat "completion-insert-"
 				    (number-to-string i))))
-	    (list 'menu-item (concat prefix (nth i completions))
+	    (list 'menu-item (concat (if completion-replaces-prefix "" prefix)
+				     (nth i completions))
 		  ;; call function to generate menu item
 		  (funcall menu-item-func
 			   prefix (nth i completions)
@@ -3977,7 +4067,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	      (define-key-after menu
 		(vector (intern (concat "completion-insert-"
 					(number-to-string b))))
-		(list 'menu-item (concat prefix (nth b completions))
+		(list 'menu-item (concat (if completion-replaces-prefix
+					     "" prefix)
+					 (nth b completions))
 		      ;; call function to generate menu item
 		      (funcall menu-item-func
 			       prefix (nth b completions)
@@ -4019,7 +4111,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     ;; corresponds to the same entry again (which would lead to
     ;; infinite recursion)
     (setq completions
-	  (funcall completion-function (concat prefix cmpl)))
+	  (completion-call-completion-function
+	   completion-function
+	   (concat (if completion-replaces-prefix "" prefix) cmpl)))
     (setq completions
 	  (mapcar (lambda (c) (concat cmpl c)) completions))
     (setq completions (cdr completions))
@@ -4033,7 +4127,8 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	;; otherwise, create a sub-menu containing them
 	(define-key menu [separator-item-sub-menu] '(menu-item "--"))
 	(define-key menu [completion-insert-root]
-	  (list 'menu-item (concat prefix cmpl)
+	  (list 'menu-item
+		(concat (if completion-replaces-prefix "" prefix) cmpl)
 		`(lambda () (insert ,cmpl))))
 	;; return the menu keymap
 	menu)))
