@@ -718,14 +718,19 @@ It should return the prefix as a string.")
 
 (defvar completion-includes-prefix t
   "If nil, the strings returned by calls to `completion-function'
-do *not* include the prefix. If t, then they do.")
+do *not* include the prefix. If t, then they do. Ignored if
+`completion-replaces-prefix' is non-nil.")
 (make-variable-buffer-local 'completion-includes-prefix)
 
 
 (defvar completion-replaces-prefix nil
-  "If non-nil, completions replace the \"prefix\" that was
-completed, so those characters will be deleted from the buffer when a
-completion is accepted.")
+  "If non-nil, completions replace the \"prefix\"
+that was completed. The characters that were being completed (as
+returned by `completion-prefix-function') will be deleted from
+the buffer when a completion is accepted.
+
+Setting this to non-nil allows completion-UI to support things
+other than simple prefix-completion.")
 (make-variable-buffer-local 'completion-replaces-prefix)
 
 
