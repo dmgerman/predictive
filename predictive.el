@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.5
+;; Version: 0.17.6
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.6
+;; * set new `completion-includes-prefix' variable to nil in predictive-mode
 ;;
 ;; Version 0.17.5
 ;; * added `predictive-undefine-all-prefixes' function
@@ -886,6 +889,7 @@ do: emails, academic research articles, letters...)"
    ((not predictive-mode)
     ;; set the completion function
     (setq completion-function 'predictive-complete)
+    (setq completion-includes-prefix nil)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)

@@ -28,9 +28,7 @@ return."
 	   (acomp (semantic-analyze-possible-completions ctxt)))
       (when (> (length acomp) maxnum)
 	(setq acomp (subseq acomp 0 (1- maxnum))))
-      (mapcar (lambda (a)
-		(substring (semantic-tag-name a) (length prefix)))
-	      acomp)))
+      (mapcar 'semantic-tag-name acomp)))
 )
 
 
