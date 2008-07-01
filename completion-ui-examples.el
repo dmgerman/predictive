@@ -20,6 +20,8 @@ to use as a `completion-function'."
 ;;;=========================================================
 ;;;                        etags
 
+(require 'etags)
+
 (defun etags--wrapper (prefix maxnum)
   "Wrapper around a call to `all-completions'
 using `tags-complete-tag', to use as a `completion-function'."
