@@ -2754,7 +2754,7 @@ Intended to be bound to keys in `completion-hotkey-map'."
   ;; find completion index corresponding to last input event
   (unless n
     (let ((key (this-command-keys-vector)))
-      ;; work around apparent bug where keys are doubled in vector
+      ;; FIXME: work around apparent bug where keys are doubled in vector
       (when (> (length key) 1) (setq key (vector (aref key 0))))
       (setq n (completion--position key completion-hotkey-list))))
 
@@ -2785,7 +2785,9 @@ Intended to be bound to keys in `completion-hotkey-map'."
 	;; delete old provisional completion, including prefix if
 	;; `completion-replaces-prefix' is non-nil
 	(delete-region (- (overlay-start overlay)
-			  (if completion-replaces-prefix
+			  (if (and completion-replaces-prefix
+				   (not (overlay-get overlay
+						     'prefix-replaced)))
 			      (length (overlay-get overlay 'prefix))
 			    0))
 			  (overlay-end overlay))
