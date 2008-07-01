@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8.2
+;; Version: 0.9
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -104,19 +104,25 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.8.2
-;; * prevented `completion-show-tooltip' from moving mouse unless absolutely
-;;   necessary
-;; * modified `completion-show-tooltip' to ensure tooltip is cancelled before
-;;   (re)displaying it, otherwise `x-show-tip' "magically" moves it to the top
-;;   of the frame! (Thanks to Martin Pohlack for reporting both of these)
-;; * added option to highlight longest common prefix in a dynamic completion
-;;   (thanks to Vagn Johansen for the suggestion)
-;; * actually make use of `completion-popup-frame-function' variable!
+;; Version 0.9
 ;; * added `completion-includes-prefix' variable to indicate that completions
 ;;   returned by `completion-function' include the prefix
 ;; * added `completion-replaces-prefix' variable to indicate that completions
-;;   should replace the prefix when they're accepted
+;;   should replace the prefix when they're accepted, and made changes to
+;;   almost all of the user-interface functions to cope with this non-prefix
+;;   completion (thanks to Vagn Johansen for helpful discussions about this)
+;; * move point to appropriate position in parent frame when cycling through
+;;   completions in pop-up frame
+;;
+;; Version 0.8.2
+;; * prevented `completion-show-tooltip' from moving mouse unless absolutely
+;;   necessary (thanks to Martin Pohlack for reporting this)
+;; * modified `completion-show-tooltip' to ensure tooltip is cancelled before
+;;   (re)displaying it, otherwise `x-show-tip' "magically" moves it to the top
+;;   of the frame! (thanks to Martin Pohlack for reporting this)
+;; * added option to highlight longest common prefix in a dynamic completion
+;;   (thanks to Vagn Johansen for the suggestion)
+;; * actually make use of `completion-popup-frame-function' variable!
 ;; * fixed bug in some calls to `completion-reject-functions' that only passed
 ;;   two arguments instead of three (thanks to Vagn Johansen for reporting
 ;;   this)
@@ -546,7 +552,7 @@ characters rather than syntax descriptors."
 				  (choice (const :tag "string" string)
 					  (const :tag "word" word)
 					  (const :tag "none" none)))))
-  
+
 
 
 ;;; ===== Dynamic completion customizations =====
@@ -1848,18 +1854,18 @@ internally)."
 	  (setq completions
 		(completion-call-completion-function
 		 completion-function prefix completion-max-candidates))
+
 	  ;; setup completion overlay
-	  (setq overlay
-		(completion-setup-overlay
-		 prefix completions nil overlay))
-	  (move-overlay overlay (point) (point))	  
+	  (setq overlay (completion-setup-overlay prefix completions
+						  nil overlay))
+	  (move-overlay overlay (point) (point))
 	  
 	  ;; activate dynamic completion
 	  (when completion-use-dynamic (complete-dynamic overlay))
 	  
 	  ;; display completion echo text
 	  (when completion-use-echo (complete-echo overlay))
-
+	  
 	  ;; no need to do anything for hotkeys, it's all done when the
 	  ;; `completion-select' command is called
 	  
@@ -1879,10 +1885,10 @@ internally)."
 accordingly. The point had better be within OVERLAY or
 cauliflower will start growing out of your ears."
 
-  ;; For some reason, the delete-region or insert (below) can sometimes delete
-  ;; or move the completion overlay, so we store its start position before
-  ;; doing anything else, in order to move the completion overlay into the
-  ;; correct new position later.
+  ;; For some unknown reason, the delete-region or insert (below) can
+  ;; sometimes delete or move the completion overlay, so we mark its
+  ;; start position before doing anything else, in order to move the
+  ;; completion overlay into the correct new position later.
   (let ((pos (make-marker)))
     (move-marker pos (overlay-start overlay))
     
@@ -1890,7 +1896,7 @@ cauliflower will start growing out of your ears."
     (delete-region (overlay-start overlay) (overlay-end overlay))
     ;; FIXME: for some reason, the delete-region sometimes deletes the
     ;; overlay, and even moving it back fails, so we work around this by
-    ;; re-creating it
+    ;; re-creating it.
     (unless (overlay-buffer overlay)
       (setq completion-overlay-list
 	    (delq overlay completion-overlay-list))
@@ -1898,17 +1904,24 @@ cauliflower will start growing out of your ears."
 	    (completion-setup-overlay
 	     (overlay-get overlay 'prefix)
 	     (overlay-get overlay 'completions))))
-    
+
     ;; insert new completion, if any
     (let ((completions (overlay-get overlay 'completions)))
       (when completions
+	;; delete prefix if `completion-replaces-prefix' is non-nil and
+	;; `auto-completion-mode' is disabled
+	(when (and completion-replaces-prefix (not auto-completion-mode)
+		   (not (overlay-get overlay 'prefix-replaced)))
+	  (delete-region (- pos (length (overlay-get overlay 'prefix))) pos)
+	  (overlay-put overlay 'prefix-replaced t))
+	;; insert new completion
 	(let ((overwrite-mode nil)) (insert (car completions)))
 	(move-overlay overlay pos (+ pos (length (car completions))))
 	(overlay-put overlay 'completion-num 0)
 	;; highlight common prefix, if enabled
 	(when completion-dynamic-highlight-common-prefix
 	  (let ((str (try-completion "" (overlay-get overlay 'completions))))
-	    ;; try-completion returns t if there's only one completion
+	    ;; (try-completion returns t if there's only one completion)
 	    (when (eq str t) (setq str (car completions)))
 	    (move-overlay (overlay-get overlay 'common-prefix)
 			  pos (+ pos (length str))))))
@@ -1918,7 +1931,9 @@ cauliflower will start growing out of your ears."
       (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
 	  (goto-char (overlay-start overlay))
 	(goto-char (overlay-end overlay))))
-    )
+
+    ;; delete temporary marker
+    (set-marker pos nil))
 )
 
 
@@ -1997,7 +2012,9 @@ point is at POINT."
 	     (or (null point) (= (point) point)))
     
     (let ((mouse-pos (mouse-pixel-position))
-	  (pos (completion-frame-posn-at-point))
+	  (pos (save-excursion
+		 (goto-char (overlay-start overlay))
+		 (completion-frame-posn-at-point)))
 	  (fg (face-attribute 'completion-tooltip-face :foreground))
 	  (bg (face-attribute 'completion-tooltip-face :background))
 	  params text text-func)
@@ -2119,20 +2136,20 @@ there is none."
        
        ;; otherwise, throw an error
        (t (error "Wrong type in `completion-menu': functionp or\
- keymapp, %s"
-		 (prin1-to-string menu))))
+ keymapp, %s" (prin1-to-string menu))))
       
       
       ;; if we've constructed a menu, display it
       (when keymap
 	(setq result
-	      (x-popup-menu (completion-posn-at-point-as-event
-			     nil nil
-			     (car completion-menu-offset)
-			     (+ (frame-char-height) 3
-				(cdr completion-menu-offset)))
+	      (x-popup-menu (save-excursion
+			      (goto-char (overlay-start overlay))
+			      (completion-posn-at-point-as-event
+			       nil nil
+			       (car completion-menu-offset)
+			       (+ (frame-char-height) 3
+				  (cdr completion-menu-offset))))
 			    keymap))
-	
 	
 	;; if they ain't selected nuffin', don't do nuffin'!
 	(when result
@@ -2142,20 +2159,22 @@ there is none."
 	  (cond
 	   ;; if they selected a completion from the menu...
 	   ((string-match "^completion-insert"
-			  (symbol-name (aref result
-					     (1- (length result)))))
+			  (symbol-name (aref result (1- (length result)))))
 	    ;; run accept hooks
 	    (run-hook-with-args
 	     'completion-accept-functions
 	     (overlay-get overlay 'prefix)
-	     (concat (overlay-get overlay 'prefix)
+	     (concat (if completion-replaces-prefix
+			 "" (overlay-get overlay 'prefix))
 		     (buffer-substring-no-properties
 		      (overlay-start overlay)
 		      (overlay-end overlay))))
 	    ;; delete old provisional completion, including prefix if
 	    ;; `completion-replaces-prefix' is non-nil
 	    (delete-region (- (overlay-start overlay)
-			      (if completion-replaces-prefix
+			      (if (and completion-replaces-prefix
+				       (not (overlay-get overlay
+							 'prefix-replaced)))
 				  (length (overlay-get overlay 'prefix))
 				0))
 			   (overlay-end overlay))
@@ -2229,7 +2248,9 @@ If no OVERLAY is supplied, tried to find one at point."
 	   (lines (funcall popup-fun prefix completions))
 	   (maxlen (if (null lines)
 		       0 (apply 'max (mapcar 'length lines))))
-	   (pos (completion-frame-posn-at-point))
+	   (pos (save-excursion
+		  (goto-char (overlay-start overlay))
+		  (completion-frame-posn-at-point)))
 	   ;; get or create pop-up frame
 	   (frame
 	    (or (overlay-get overlay 'popup-frame)
@@ -2325,16 +2346,27 @@ If ARG is supplied, it is passed through to COMMAND."
   
   ;; insert selected completion in parent buffer
   (let ((num (line-number-at-pos))
-	str overlay)
+	(overlay completion-popup-frame-parent-overlay)
+	(frame (selected-frame))
+	str)
     (save-excursion
-      (setq overlay completion-popup-frame-parent-overlay)
       (set-buffer (overlay-buffer overlay))
       (setq str (nth (1- num) (overlay-get overlay 'completions)))
       (delete-region (overlay-start overlay) (overlay-end overlay))
       (let ((overwrite-mode nil)) (insert str))
       (move-overlay overlay (overlay-start overlay)
 		    (+ (overlay-start overlay) (length str)))
-      (overlay-put overlay 'completion-num (1- num))))
+      (overlay-put overlay 'completion-num (1- num)))
+    
+    ;; move point to appropriate position in parent frame (start of overlay,
+    ;; unless we're not auto-completing but are accepting or leaving old
+    ;; completions)
+    (select-frame completion-popup-frame-parent-frame)
+    (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
+	(goto-char (overlay-start overlay))
+      (goto-char (overlay-end overlay)))
+    (select-frame-set-input-focus frame)
+    )
 )
 
 
@@ -2756,7 +2788,8 @@ Intended to be bound to keys in `completion-hotkey-map'."
 	;; run accept hooks
 	(run-hook-with-args 'completion-accept-functions
 			    (overlay-get overlay 'prefix)
-			    (concat (overlay-get overlay 'prefix)
+			    (concat (if completion-replaces-prefix
+					"" (overlay-get overlay 'prefix))
 				    (nth n completions)))
 	;; delete overlay
 	(completion-delete-overlay overlay))
@@ -2807,8 +2840,11 @@ the prefix and the completion string\). Otherwise returns nil."
 		    (buffer-substring-no-properties
 		     (overlay-start overlay)
 		     (overlay-end overlay))))
-      ;; delete prefix if `completion-replaces-prefix' is non-nil
-      (when completion-replaces-prefix
+      ;; delete prefix if `completion-replaces-prefix' is non-nil, there is a
+      ;; completion to accept, and prefix hasn't already been deleted
+      (when (and completion-replaces-prefix
+		 (overlay-get overlay 'completions)
+		 (not (overlay-get overlay 'prefix-replaced)))
 	(delete-region (- (overlay-start overlay)
 			  (length (overlay-get overlay 'prefix)))
 		       (overlay-start overlay)))			  
@@ -2876,6 +2912,9 @@ the prefix and the completion string\). Otherwise returns nil."
 		     (overlay-end overlay))))
       ;; reject current completion
       (delete-region (overlay-start overlay) (overlay-end overlay))
+      ;; restore prefix if it was deleted
+      (when (overlay-get overlay 'prefix-replaced)
+	(insert (overlay-get overlay 'prefix)))
       ;; run reject hooks
       (run-hook-with-args 'completion-reject-functions
 			  prefix completion arg)
@@ -2968,22 +3007,32 @@ be auto-displayed."
   ;; if we haven't been passed one, get completion overlay at point
   (unless overlay (setq overlay (completion-overlay-at-point)))
   
-  ;; if within a completion overlay, cycle to next completion
-  (when overlay
-    (let ((pos (overlay-start overlay))
-	  i str)
+  ;; if within a completion overlay which has completions, cycle through them
+  (when (and overlay (overlay-get overlay 'completions))
+    (let (pos i str)
       (when (null (setq i (overlay-get overlay 'completion-num)))
 	(setq i -1))
       (setq i (mod (+ i n) (length (overlay-get overlay 'completions))))
       (setq str (nth i (overlay-get overlay 'completions)))
-      ;; delete old completion and insert new one
-      (delete-region pos (overlay-end overlay))
+      ;; delete old completion
+      (delete-region (overlay-start overlay) (overlay-end overlay))
+      ;; delete prefix if `completion-replaces-prefix' is non-nil
+      (when (and completion-replaces-prefix
+		 (not (overlay-get overlay 'prefix-replaced)))
+	(delete-region (- (overlay-start overlay)
+			  (length (overlay-get overlay 'prefix)))
+		       (overlay-start overlay))
+	(overlay-put overlay 'prefix-replaced t))
+      ;; insert new completion
+      (setq pos (overlay-start overlay))
       (let ((overwrite-mode nil)) (insert str))
       (move-overlay overlay pos (+ pos (length str)))
       (overlay-put overlay 'completion-num i)
       ;; highlight longest common prefix, if enabled
       (when completion-dynamic-highlight-common-prefix
 	(setq str (try-completion "" (overlay-get overlay 'completions)))
+	;; (try-completion returns t if there's only one completion)
+	(when (eq str t) (setq str (car (overlay-get overlay 'completions))))
 	(move-overlay (overlay-get overlay 'common-prefix)
 		      pos (+ pos (length str))))
       ;; move point to appropriate position (start of overlay, unless
@@ -3035,6 +3084,9 @@ green over night."
   ;; if within a completion overlay
   (when overlay
     (let ((str (try-completion "" (overlay-get overlay 'completions))))
+      ;; (try-completion returns t if there's only one completion)
+      (when (eq str t) (setq str (car (overlay-get overlay 'completions))))
+      
       (unless (or (null str) (string= str ""))
 	;; do tab-completion
 	(delete-region (overlay-start overlay) (overlay-end overlay))
@@ -3560,7 +3612,8 @@ OVERLAY will be left alone."
     (mapc (lambda (o)
 	    (run-hook-with-args 'completion-accept-functions
 				(overlay-get o 'prefix)
-				(concat (overlay-get o 'prefix)
+				(concat (if completion-replaces-prefix
+					    "" (overlay-get o 'prefix))
 					(buffer-substring-no-properties
 					 (overlay-start o)
 					 (overlay-end o))))
@@ -3580,7 +3633,8 @@ OVERLAY will be left alone."
     (mapc (lambda (o)
 	    (run-hook-with-args 'completion-reject-functions
 				(overlay-get o 'prefix)
-				(concat (overlay-get o 'prefix)
+				(concat (if completion-replaces-prefix
+					    "" (overlay-get o 'prefix))
 					(buffer-substring-no-properties
 					 (overlay-start o)
 					 (overlay-end o)))
@@ -3606,7 +3660,8 @@ OVERLAY will be left alone."
 		  (run-hook-with-args
 		   'completion-accept-functions
 		   (overlay-get o 'prefix)
-		   (concat (overlay-get o 'prefix)
+		   (concat (if completion-replaces-prefix
+			       "" (overlay-get o 'prefix))
 			   (buffer-substring-no-properties
 			    (overlay-start o)
 			    (overlay-end o))))
@@ -3614,7 +3669,8 @@ OVERLAY will be left alone."
 		(run-hook-with-args
 		 'completion-reject-functions
 		 (overlay-get o 'prefix)
-		 (concat (overlay-get o 'prefix)
+		 (concat (if completion-replaces-prefix
+			     "" (overlay-get o 'prefix))
 			 (buffer-substring-no-properties
 			  (overlay-start o)
 			  (overlay-end o)))
@@ -3877,7 +3933,9 @@ of completion overlay."
 			     (nth i completion-hotkey-list))))
 	    (setq str "    "))
 	  ;; add completion to text
-	  (setq str (concat str " " prefix (nth i completions)))
+	  (setq str (concat str " "
+			    (if completion-replaces-prefix "" prefix)
+			    (nth i completions)))
 	  (setq text (concat text str "\n")))
 
       ;; otherwise, construct text for echo area
@@ -3900,7 +3958,8 @@ of completion overlay."
 	    (append lines
 		    (list
 		     (concat
-		      prefix (nth i completions)
+		      (if completion-replaces-prefix "" prefix)
+		      (nth i completions)
 		      ;; pad to same length
 		      (make-string
 		       (- maxlen (length (nth i completions))) ? )
@@ -4002,7 +4061,7 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 
 ;; Note:
 ;;
-;; We should probably use some `imenu' function to create the menu,
+;; I should probably use some `imenu' function to create the menu,
 ;; since `imenu' already deals with "bucketising" menus (an ugly
 ;; necessity which should anyway be replaced with menu scrollbars,
 ;; preferably with just-in-time calculation of menu entries --
@@ -4030,8 +4089,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	  (define-key-after menu
 	    (vector (intern (concat "completion-insert-"
 				    (number-to-string i))))
-	    (list 'menu-item (concat (if completion-replaces-prefix "" prefix)
-				     (nth i completions))
+	    (list 'menu-item
+		  (concat (if completion-replaces-prefix "" prefix)
+			  (nth i completions))
 		  ;; call function to generate menu item
 		  (funcall menu-item-func
 			   prefix (nth i completions)
@@ -4067,9 +4127,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	      (define-key-after menu
 		(vector (intern (concat "completion-insert-"
 					(number-to-string b))))
-		(list 'menu-item (concat (if completion-replaces-prefix
-					     "" prefix)
-					 (nth b completions))
+		(list 'menu-item
+		      (concat (if completion-replaces-prefix "" prefix)
+			      (nth b completions))
 		      ;; call function to generate menu item
 		      (funcall menu-item-func
 			       prefix (nth b completions)
@@ -4086,10 +4146,13 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	    ;; add bucket menu to keymap
 	    (define-key-after menu
 	      (vector (intern (concat "bucket-" (number-to-string b))))
-	      (list 'menu-item (concat "From \""
-				       prefix (nth i completions)
-				       "\" to \""
-				       prefix (nth j completions) "\"")
+	      (list 'menu-item
+		    (concat "From \""
+			    (if completion-replaces-prefix "" prefix)
+			    (nth i completions)
+			    "\" to \""
+			    (if completion-replaces-prefix "" prefix)
+			    (nth j completions) "\"")
 		    ;; call function to generate sub-menu
 		    (funcall sub-menu-func
 			     prefix (completion--sublist completions i j)
@@ -4102,21 +4165,23 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 
 
 
-(defun completion-browser-menu-item
-  (prefix cmpl menu-item-func sub-menu-func)
+(defun completion-browser-menu-item (prefix cmpl menu-item-func sub-menu-func)
   "Construct predictive completion browser menu item."
   
   (let (completions)
-    ;; get completions for entry, dropping the empty string which
-    ;; corresponds to the same entry again (which would lead to
-    ;; infinite recursion)
-    (setq completions
-	  (completion-call-completion-function
-	   completion-function
-	   (concat (if completion-replaces-prefix "" prefix) cmpl)))
-    (setq completions
-	  (mapcar (lambda (c) (concat cmpl c)) completions))
-    (setq completions (cdr completions))
+    ;; If `completion-replaces-prefix' is null, get completions for entry,
+    ;; dropping the empty string which corresponds to the same entry again
+    ;; (which would lead to infinite recursion). It makes no sense to get
+    ;; completions of completions (of completions of completions...) when
+    ;; doing something other than prefix-completion, so the entry is just the
+    ;; original completion itself if `completion-replaces-prefix' is non-nil.
+    (unless completion-replaces-prefix
+      (setq completions
+	    (completion-call-completion-function
+	     completion-function (concat prefix cmpl)))
+      (setq completions
+	    (mapcar (lambda (c) (concat cmpl c)) completions))
+      (setq completions (cdr completions)))
     
     ;; if there are no completions (other than the entry itself),
     ;; create a selectable completion item
