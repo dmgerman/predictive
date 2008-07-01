@@ -1773,7 +1773,7 @@ BEHAVIOUR should be the return value of a call to
   ;; call function F to get N (all if N is null) completions of prefix P,
   ;; stripping P from the returned strings if `completion-includes-prefix' is
   ;; non-nil
-  `(if completion-includes-prefix
+  `(if (and completion-includes-prefix (not completion-replaces-prefix))
        (mapcar (lambda (c) (substring c (length ,p))) (funcall ,f ,p ,n))
      (funcall ,f ,p ,n)))
 
