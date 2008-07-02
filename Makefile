@@ -2,7 +2,7 @@
 # Copyright (C) 2004-2008 Toby Cubitt
 
 # Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-# Version: 0.4
+# Version: 0.5
 # URL: http://www.dr-qubit.org/emacs.php
 
 # This file is part of the Emacs Predictive Completion package.
@@ -76,6 +76,7 @@ core_files := $(shell ls *.el | grep -v 'dict-english.el' | sed 's:\.el:\.elc:g'
 # lists of dictionaries
 latex_dicts := $(shell ls latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 html_dicts := $(shell ls html/dict-*.word-list | sed 's:\.word-list:\.elc:g')
+texinfo_dicts := $(shell ls texinfo/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 #f90_dicts := $(shell ls f90/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 
 
@@ -101,18 +102,20 @@ dict-english.elc: dict-english.el
 	$(EMACS) --batch -L ./ -f batch-byte-compile $<
 
 # in case dict-english.el doesn't exist (should be included in package)
-dict-english.el: dict-english.word-list dict-tree.el
+dict-english.el: dict-english.word-list dict-tree.elc
 	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
 
 
 
 
 # dictionary targets
-dicts: dict-english latex_dicts html_dicts # f90_dicts
+dicts: dict-english latex_dicts html_dicts texinfo_dicts # f90_dicts
 
 latex_dicts: $(latex_dicts)
 
 html_dicts: $(html_dicts)
+
+texinfo_dicts: $(texinfo_dicts)
 
 #f90_dicts: $(f90_dicts)
 
@@ -141,7 +144,7 @@ install-info: predictive-user-guide.info.gz
 
 
 # implicit rule for creating dictionaries
-dict-%.elc: dict-%.word-list dict-tree.el
+dict-%.elc: dict-%.word-list dict-tree.elc
 	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
 
 
