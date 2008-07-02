@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.10
+;; Version: 0.10.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,9 +31,12 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.11
+;; * moved auto-dict utility functions to predictive-auto-overlay-auto-dict.el
+;;
 ;; Version 0.10
 ;; * separated off predictive-latex-auto-dict overlays into stand-alone
-;;   auto overlay class
+;;   auto overlay class, in predictive-auto-overlay-auto-dict.el
 ;;
 ;; Version 0.9.3
 ;; * save overlay and local dictionary files to a directory specified by new
@@ -70,7 +73,7 @@
 ;; * updated to conform to completion-ui.el version 0.7
 ;; * renamed `predictive-latex-completion-add-to-regexp' to
 ;;   `predictive-latex-completion-add-till-regexp'
-;; 
+;;
 ;; Version 0.7.4
 ;; * modified `predictive-latex-reparse-buffer' to kill local values of
 ;;   dictionary lists, to avoid duplicate dictionaries being added to them
@@ -97,7 +100,7 @@
 ;; Version 0.7.1
 ;; * fixed regexps for {, }, \[ and \] so that they correctly deal with having
 ;;   an even number of \'s in front of them
-;; 
+;;
 ;; Version 0.7
 ;; * added automatic synchronization of environment names
 ;; * added interactive commands for navigating by LaTeX environments
@@ -234,7 +237,7 @@ When a document class is in the list, "
 
 
 ;;;============================================================
-;;;                       Variables 
+;;;                       Variables
 
 ;; variables holding dictionaries for different LaTeX contexts
 (defvar predictive-latex-dict '(dict-latex))
@@ -305,19 +308,19 @@ When a document class is in the list, "
   "With a positive ARG, set up predictive mode for use with LaTeX major modes.
 With a negative ARG, undo these changes. Called when predictive
 mode is enabled via entry in `predictive-major-mode-alist'."
-  
+
   (cond
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
     (catch 'load-fail
-      
+
       ;; save overlays and unload regexp definitions along with buffer
       (add-hook 'after-save-hook
 		(lambda () (auto-overlay-save-overlays
 			    'predictive nil
 			    predictive-auxiliary-file-location))
 		nil t)
-      
+
       ;; use latex browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
       (setq completion-menu
@@ -328,8 +331,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      ))
       ;; save predictive-main-dict; restored when predictive mode is disabled
       (setq predictive-restore-main-dict predictive-main-dict)
-      
-      
+
+
       (cond
        ;; if we're not the TeX master, visit the TeX master buffer, enable
        ;; predictive mode in it, and share buffer-local settings with it
@@ -368,8 +371,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 				predictive-auxiliary-file-location)
 	    (set-buffer-modified-p restore-modified))
 	  ))
-       
-       
+
+
        ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
        ;; FIXME: probably need to handle null TeX-master case differently
        (t
@@ -387,11 +390,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      predictive-latex-env-dict
 		      predictive-latex-bibstyle-dict))
 	;; load/create the label and local latex dictionaries
-	(predictive-latex-load-auto-dict "label")
-	(predictive-latex-load-auto-dict "local-latex")
-	(predictive-latex-load-auto-dict "local-math")
-	(predictive-latex-load-auto-dict "local-env")
-	
+	(predictive-load-auto-dict "latex-label")
+	(predictive-load-auto-dict "latex-local-latex")
+	(predictive-load-auto-dict "latex-local-math")
+	(predictive-load-auto-dict "latex-local-env")
+
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
 	;; Note: we add the local text-mode command dictionary to the maths
@@ -415,20 +418,20 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      (if (dictree-p predictive-latex-local-env-dict)
 			  (list predictive-latex-local-env-dict)
 			predictive-latex-local-env-dict)))
-	
+
 	;; add latex dictionaries to main dictionary list
 	(make-local-variable 'predictive-main-dict)
 	(when (atom predictive-main-dict)
 	  (setq predictive-main-dict (list predictive-main-dict)))
 	(setq predictive-main-dict
 	      (append predictive-main-dict predictive-latex-dict))
-	
-	
+
+
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
 	(predictive-latex-load-regexps)
-	
+
 	;; start the auto-overlays, skipping the check that regexp definitions
 	;; haven't changed if there's a file of saved overlay data to use, and
 	;; restoring buffer's modified flag afterwards (if used, automatic
@@ -440,18 +443,18 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			      'no-regexp-check)
 	  (set-buffer-modified-p restore-modified))
 	))
-      
-      
+
+
       ;; load the keybindings and related settings
       (predictive-latex-load-keybindings)
       ;; consider \ as start of a word
       (setq completion-word-thing 'predictive-latex-word)
       (set (make-local-variable 'words-include-escapes) nil)
-      
+
       t))  ; indicate successful setup
-   
-   
-   
+
+
+
    ;; ----- Disabling LaTeX setup -----
    ((< arg 0)
     ;; if we're the TeX-master, first disable predictive mode in all related
@@ -465,7 +468,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (save-excursion
 	    (set-buffer buff)
 	    (predictive-mode -1)))))
-    
+
     ;; stop predictive auto overlays
     (auto-overlay-stop 'predictive nil predictive-auxiliary-file-location)
     (auto-overlay-unload-set 'predictive)
@@ -495,7 +498,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			     'predictive nil
 			     predictive-auxiliary-file-location))
 		 t)
-    
+
     t))  ; indicate successful reversion of changes
 )
 
@@ -512,7 +515,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  ("%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-colour)))))
-  
+
   ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
   ;; do various other things. All are ended by } but not by \}. The { is
   ;; included to ensure all { and } match, but \{ is excluded
@@ -628,8 +631,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (priority . 40)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ))
-  
-  
+
+
   ;; $'s delimit the start and end of maths regions...
   (auto-overlay-load-definition
    'predictive
@@ -637,7 +640,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
 	   (completion-menu . predictive-latex-construct-browser-menu)
 	   (face . (background-color . ,predictive-overlay-debug-colour)))))
-  
+
   ;; ...as do \[ and \], but not \\[ and \\] etc.
   ;; Note: regexps contain a lot of \'s because it has to check whether number
   ;; of \'s in front of { is even or odd
@@ -667,7 +670,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (completion-menu . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))
 	    ))
-  
+
 
   ;; preamble lives between \documentclass{...} and \begin{document}
   (auto-overlay-load-definition
@@ -684,8 +687,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (priority . 20)
 	     (completion-menu . predictive-latex-construct-browser-menu))
 	    ))
-  
-  
+
+
   ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
   ;; "electric" by using a special env overlay class (defined below) if the
   ;; corresponding customization option is enabled
@@ -727,8 +730,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      (priority . 10)
      (dict . nil)
      (face . nil)))
-  
-  
+
+
   ;; \documentclass defines the document type. Through the use of a special
   ;; "docclass" regexp class defined below, this automagically changes the
   ;; main dictionary if one is defined for the docclass in
@@ -737,8 +740,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    'predictive
    '(predictive-latex-docclass
      (("\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
-  
-  
+
+
   ;; \usepackage loads a latex package. Through the use of a special
   ;; "usepackage" regexp class defined below, this automagically loads new
   ;; dictionaries and auto-overlay regexps.
@@ -746,8 +749,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    'predictive
    '(predictive-latex-usepackage
      (("\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
-  
-  
+
+
   ;; \label creates a cross-reference label. Through the use of a special
   ;; "auto-dict" regexp class defined below, this automagically adds the label
   ;; to the label dictionary.
@@ -810,7 +813,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (define-key predictive-map [?^]  'completion-self-insert)
   (define-key predictive-map [?\\] 'completion-self-insert)
   (define-key predictive-map [?-]  'completion-self-insert)
-  
+
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)
@@ -979,7 +982,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-latex-reparse-buffer ()
   "Clear all auto-overlays, then reparse buffer from scratch."
   (interactive)
-  
+
   ;; stop the predictive auto-overlays without saving to file
   (auto-overlay-stop 'predictive)
   ;; kill local modifications to dict lists (dictionaries are added again when
@@ -1009,7 +1012,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 \(\\begin{...}, \\end{...}, \\[, \\] or $\), move to its matching
 delimeter."
   (interactive)
-  
+
   ;; get innermost LaTeX environment match overlay
   (let ((o-match
 	 (car (sort (auto-overlays-at-point
@@ -1051,7 +1054,7 @@ delimeter."
   "If the point is currently within a LaTeX environment or
 math-mode, move to the start of it."
   (interactive)
-  
+
   ;; get innermost LaTeX environment overlay
   (let ((overlay
 	 (car (sort (auto-overlays-at-point
@@ -1067,7 +1070,7 @@ math-mode, move to the start of it."
 			       (- (overlay-end b) (overlay-start b)))))
 		    )))
 	o-match)
-    
+
     ;; if we've found an overlay, and it's start-matched, move to its start
     ;; match
     (if (and overlay (setq o-match (overlay-get overlay 'start)))
@@ -1081,7 +1084,7 @@ math-mode, move to the start of it."
   "If the point is currently within a LaTeX environment or
 math-mode, move to the end of it."
   (interactive)
-  
+
   ;; get innermost LaTeX environment overlay
   (let ((overlay
 	 (car (sort (auto-overlays-at-point
@@ -1097,7 +1100,7 @@ math-mode, move to the end of it."
 			       (- (overlay-end b) (overlay-start b)))))
 		    )))
 	o-match)
-    
+
     ;; if we've found an overlay, and it's start-matched, move to its start
     ;; match, otherwise display message
     (if (and overlay (setq o-match (overlay-get overlay 'end)))
@@ -1118,14 +1121,14 @@ refers to."
   (let ((current-dict (predictive-current-dict))
 	label overlay-list filtered-list)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
-    
+
     ;; when we're not within a referencing command (which we check by checking
     ;; if current dictionary is the label dictionary), display a message,
     ;; otherwise...
-    (if (null (member (eval (predictive-latex-auto-dict-name "label"))
+    (if (null (member (eval (predictive-latex-auto-dict-name "latex-label"))
 		      current-dict))
 	(message "Not on LaTeX cross-reference")
-      
+
       ;; get label name and list of label overlays
       (setq label (thing-at-point 'predictive-latex-label-word))
       (setq overlay-list (auto-overlays-in (point-min) (point-max)
@@ -1184,7 +1187,7 @@ refers to."
 (defun predictive-latex-docclass-suicide (o-match)
   ;; Delete the word overlay for a docclass command, and unload the
   ;; appropriate dictionaries
-  
+
   (let ((docclass (overlay-get o-match 'docclass-name)))
     ;; delete the overlay
     (auto-o-delete-overlay (overlay-get o-match 'parent))
@@ -1209,7 +1212,7 @@ refers to."
 (defun predictive-latex-docclass-update (o-self)
   ;; Update the main dictionary dictionary after a modification, in case
   ;; docclass has changed
-  
+
   (let* ((o-match (overlay-get o-self 'start))
 	 (docclass (buffer-substring-no-properties
 		    (overlay-get o-match 'delim-start)
@@ -1293,7 +1296,7 @@ refers to."
     (setq package (buffer-substring-no-properties
 		   (overlay-get o-match 'delim-start)
 		   (overlay-get o-match 'delim-end)))
-    
+
     ;; save package name in overlay property
     (overlay-put o-match 'package-name package)
     ;; load package dictionaries and run the load function
@@ -1317,7 +1320,7 @@ refers to."
 (defun predictive-latex-usepackage-suicide (o-match)
   ;; Delete the word overlay for a usepackage command, and unload the
   ;; appropriate dictionaries
-  
+
   (let ((package (overlay-get o-match 'package-name)))
     ;; delete the overlay
     (auto-o-delete-overlay (overlay-get o-match 'parent))
@@ -1365,7 +1368,7 @@ refers to."
 This loads the package dictionary and runs the load functions for
 the package, if they exist."
   (interactive "sPackage name: ")
-  
+
   (let (dict)
     ;; try to load package dictionaries and add them to the appropriate lists
     ;; if they exists
@@ -1377,7 +1380,7 @@ the package, if they exist."
 		 (not (dictree-p (eval (car dic)))))
 	    (nconc (eval (car dic)) (list dict))
 	  (set (car dic) (list (eval (car dic)) dict))))))
-  
+
   ;; try to load lisp library for the package
   (require (intern (concat "predictive-latex-" package)) nil t)
   ;; run load function for package, if one is defined
@@ -1396,7 +1399,7 @@ they exist."
   (interactive "sPackage name: ")
   ;; FIXME: ought to complete on loaded package names when called
   ;;        interactively
-  
+
   (let (dict)
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
@@ -1409,7 +1412,7 @@ they exist."
 	  ;; element we want to delete can not be the first one, as that is
 	  ;; always the standard dictionary
 	  (delq dict (eval (car dic)))))))
-  
+
   ;; try to load lisp library for the package
   (require (intern (concat "predictive-latex-" package)) nil t)
   ;; run unload function for package, if one is defined
@@ -1417,65 +1420,6 @@ they exist."
     (when func (funcall func)))
   ;; display informative message
   (message (format "LaTeX package \"%s\" unloaded" package))
-)
-
-
-
-;;; =================================================================
-;;;    Utility functions for automatically generated dictionaries
-
-(defmacro predictive-latex-auto-dict-name (name)
-  ;; Return a dictionary name constructed from NAME and the buffer name
-  `(intern
-    (concat "dict-latex-" ,name "-"
-	    (file-name-sans-extension
-	     (file-name-nondirectory (buffer-file-name))))))
-
-
-
-(defun predictive-latex-load-auto-dict (name)
-  "Load/create a LaTeX NAME dictionary for the current buffer."
-  (let ((dict (intern (concat "predictive-latex-" name "-dict")))
-	dictname filename)
-    (cond
-     ;; if buffer is associated with a file...
-     ((buffer-file-name)
-      (setq dictname (predictive-latex-auto-dict-name name))
-      (setq filename
-	    (concat (file-name-directory (buffer-file-name))
-		    predictive-auxiliary-file-location
-		    (symbol-name dictname) ".elc"))
-      ;; create directory for dictionary file if necessary
-      (predictive-create-auxiliary-file-location)
-      ;; if a dictionary isn't loaded, load or create it
-      (unless (featurep dictname)
-	(if (not (file-exists-p filename))
-	    (predictive-create-dict dictname filename)
-	  (load filename)
-	  (predictive-load-dict dictname)
-	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
-	  ;;        function
-	  (dictree--set-filename (eval dictname) filename)))
-      ;; set the LaTeX NAME dictionary to the loaded/new dictionary
-      (set dict (eval dictname)))
-     
-     ;; if buffer is not associated with a file, 
-     (t
-      (set dict (predictive-create-dict))
-      (setq dict (eval dict))
-      ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
-      ;;        need to make `predictive-create-dict' interface more flexible.
-      (dictree--set-name dict (concat "latex-" name))
-      (dictree--set-autosave dict nil))
-     ))
-)
-
-
-
-(defun predictive-latex-unload-auto-dict (name)
-  "Unload and possibly save the current buffer's LaTeX NAME dictionary."
-  (let ((dict (eval (intern (concat "predictive-latex-" name "-dict")))))
-    (dictree-unload (if (dictree-p dict) dict (eval dict))))
 )
 
 
@@ -1503,8 +1447,8 @@ they exist."
   (overlay-put o-match 'modification-hooks
 	       (append (overlay-get o-match 'modification-hooks)
 		       '(predictive-latex-schedule-env-synchronize)))
-  
-  
+
+
   ;; update auto overlays as necessary
   (let* ((overlay-stack (auto-o-nested-stack o-match))
 	 (o (car overlay-stack)))
@@ -1512,7 +1456,7 @@ they exist."
      ;; if the stack is empty, just create and return a new unmatched overlay
      ((null overlay-stack)
       (auto-o-make-nested o-match 'unmatched))
-     
+
      ;; if appropriate edge of innermost overlay is unmatched, just match it
      ((or (and (eq (auto-o-edge o-match) 'start)
 	       (not (auto-o-start-matched-p o)))
@@ -1521,7 +1465,7 @@ they exist."
       (predictive-latex-match-env-overlay o o-match)
       ;; return nil since haven't created any new overlays
       nil)
-     
+
      ;; otherwise...
      (t
       ;; create new innermost overlay and add it to the overlay stack
@@ -1538,10 +1482,10 @@ they exist."
 (defun predictive-latex-env-suicide (o-self)
   ;; Called when match no longer matches. Unmatch the match overlay O-SELF, if
   ;; necessary deleting its parent overlay or cascading the stack.
-  
+
   (let* ((overlay-stack (auto-o-nested-stack o-self))
 	(o-parent (car overlay-stack)))
-    
+
     (cond
      ;; if other end of parent is unmatched, just delete parent
      ((not (auto-o-edge-matched-p
@@ -1556,7 +1500,7 @@ they exist."
 	  (predictive-latex-match-env-overlay o-parent 'unmatched nil)
 	    ;; if we're an end match, make parent end-unmatched
 	(predictive-latex-match-env-overlay o-parent nil 'unmatched)))
-     
+
       ;; otherwise, unmatch ourselves from parent and cascade the stack
      (t
       (overlay-put o-parent (auto-o-edge o-self) nil)
@@ -1591,7 +1535,7 @@ they exist."
 				(if (eq (auto-o-edge o-self) 'start)
 				    'end 'start)))
 	  env)
-      
+
       ;; if other end of parent overlay is matched...
       (when o-other
 	(save-excursion
@@ -1627,10 +1571,10 @@ they exist."
   ;; Cascade the ends of the overlays in OVERLAY-STACK up or down the stack,
   ;; so as to re-establish a valid stack. It assumes that only the innermost
   ;; is incorrect.
-  
+
   (let ((o (car overlay-stack)) o1)
     (cond
-     
+
      ;; if innermost overlay is start-matched (and presumably
      ;; end-unmatched)...
      ((auto-o-start-matched-p o)
@@ -1650,8 +1594,8 @@ they exist."
 	  (predictive-latex-match-env-overlay
 	   o1 nil 'unmatch nil nil 'protect-match)
 	(auto-o-delete-overlay o1 nil 'protect-match)))
-     
-     
+
+
      ;; if innermost overlay is end-matched (and presumably
      ;; start-unmatched)...
      ((auto-o-end-matched-p o)
@@ -1677,7 +1621,7 @@ they exist."
 
 (defun predictive-latex-match-env-overlay
   (overlay start &optional end no-props no-parse protect-match)
-  
+
   ;; match the overlay
   (auto-o-match-overlay overlay start end no-props no-parse protect-match)
 
@@ -1721,7 +1665,7 @@ they exist."
 
 (defun predictive-latex-browser-menu-item (prefix completion &rest ignore)
   "Construct predictive LaTeX completion browser menu item."
-  
+
   (cond
    ;; if entry is \begin or \end, create sub-menu containing environment
    ;; completions
@@ -1746,8 +1690,8 @@ they exist."
 	      `(lambda () (insert ,completion))))
       ;; return the menu keymap
       menu))
-   
-   
+
+
    ;; if entry is \documentclass, create sub-menu containing environment
    ;; completions
    ((string= (concat prefix completion) "\\documentclass")
@@ -1768,8 +1712,8 @@ they exist."
 	      `(lambda () (insert ,completion))))
       ;; return the menu keymap
       menu))
-   
-   
+
+
    ;; if entry is \bibliographystyle, create sub-menu containing bib styles
    ((string= (concat prefix completion) "\\bibliographystyle")
     ;; find all bib styles
@@ -1789,8 +1733,8 @@ they exist."
 	      `(lambda () (insert ,completion))))
       ;; return the menu keymap
       menu))
-   
-   
+
+
    ;; otherwise, create a selectable completion item
    (t `(lambda () (insert ,completion))))
 )
@@ -1809,7 +1753,7 @@ character and re-complete.
 Intended to be used as the \"resolve\" entry in
 `completion-dynamic-syntax-alist' or
 `completion-dynamic-override-syntax-alist'."
-  
+
   (let (overlay completion)
     ;; if completion characters contain REGEXP, insert characters up to first
     ;; regexp match, and add them to the completion overlay prefix
@@ -1818,7 +1762,7 @@ Intended to be used as the \"resolve\" entry in
 				 (overlay-start overlay)
 				 (overlay-end overlay)))
 	       (string-match regexp completion))
-      
+
       (insert (setq completion (substring completion 0 (match-beginning 0))))
       (move-overlay overlay (point) (overlay-end overlay))
       (overlay-put overlay 'prefix
@@ -1851,7 +1795,7 @@ Intended to be used as the \"resolve\" entry in
 	    (backward-word 1)  ; argument not optional in Emacs 21
 	    (when (and (not (bobp)) (= ?\\ (char-before)))
 	      (backward-char)))))
-    
+
     ;; going forwards...
     (unless (eobp)
       ;; deal with point within sequence of \'s

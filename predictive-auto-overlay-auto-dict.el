@@ -32,6 +32,9 @@
 ;;; Change Log:
 ;;
 ;; Version 0.2
+;; * moved utility functions from predictive-latex.el
+;;
+;; Version 0.1.1
 ;; * add required `require's
 ;;
 ;; Version 0.1
@@ -93,7 +96,7 @@
 
 (defun predictive-auto-dict-suicide (o-match)
   ;; Delete the word overlay, and delete the word from the dictionary
-  
+
   (let ((word (overlay-get o-match 'word))
 	(dict (overlay-get o-match 'auto-dict)))
     ;; delete the overlay
@@ -125,7 +128,7 @@
     (unless (dictree-p dict) (setq dict (eval dict)))
     ;; delete old word from label dictionary
     (dictree-delete dict (overlay-get (overlay-get o-self 'start) 'word))
-    
+
     ;; if overlay has not been deleted...
     (when (overlay-buffer o-self)
       ;; extract word
@@ -139,3 +142,62 @@
 
 
 
+;;; =================================================================
+;;;    Utility functions for automatically generated dictionaries
+
+(defmacro predictive-auto-dict-name (name)
+  ;; Return a dictionary name constructed from NAME and the buffer name
+  `(intern
+    (concat "dict-" ,name "-"
+	    (file-name-sans-extension
+	     (file-name-nondirectory (buffer-file-name))))))
+
+
+
+(defun predictive-load-auto-dict (name)
+  "Load/create a NAME dictionary for the current buffer."
+  (let ((dict (intern (concat "predictive-" name "-dict")))
+	dictname filename)
+    (cond
+     ;; if buffer is associated with a file...
+     ((buffer-file-name)
+      (setq dictname (predictive-auto-dict-name name))
+      (setq filename
+	    (concat (file-name-directory (buffer-file-name))
+		    predictive-auxiliary-file-location
+		    (symbol-name dictname) ".elc"))
+      ;; create directory for dictionary file if necessary
+      (predictive-create-auxiliary-file-location)
+      ;; if a dictionary isn't loaded, load or create it
+      (unless (featurep dictname)
+	(if (not (file-exists-p filename))
+	    (predictive-create-dict dictname filename)
+	  (load filename)
+	  (predictive-load-dict dictname)
+	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
+	  ;;        function
+	  (dictree--set-filename (eval dictname) filename)))
+      ;; set the NAME dictionary to the loaded/new dictionary
+      (set dict (eval dictname)))
+
+     ;; if buffer is not associated with a file,
+     (t
+      (set dict (predictive-create-dict))
+      (setq dict (eval dict))
+      ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
+      ;;        need to make `predictive-create-dict' interface more flexible.
+      (dictree--set-name dict name)
+      (dictree--set-autosave dict nil))
+     ))
+)
+
+
+
+(defun predictive-unload-auto-dict (name)
+  "Unload and possibly save the current buffer's NAME dictionary."
+  (let ((dict (eval (intern (concat "predictive-" name "-dict")))))
+    (dictree-unload (if (dictree-p dict) dict (eval dict))))
+)
+
+
+;;; predictive-auto-overlay-auto-dict.el ends here
