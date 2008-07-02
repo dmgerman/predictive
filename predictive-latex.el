@@ -31,8 +31,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.11
+;; Version 0.10.1
 ;; * moved auto-dict utility functions to predictive-auto-overlay-auto-dict.el
+;; * fixed bug in `predictive-latex-forward-word'
+;; * fixed bug in `completion-override-syntax-alist' "\" definition
 ;;
 ;; Version 0.10
 ;; * separated off predictive-latex-auto-dict overlays into stand-alone
@@ -844,7 +846,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      (cond
 		       ((auto-overlays-at-point
 			 nil '((lambda (dic)
-				 (or (eq dic predictive-latex-env-dict)
+				 (or (eq dic 'predictive-latex-env-dict)
 				     (eq dic 'dict-latex-docclass)))
 			       dict))
 			(complete-in-buffer "" 'auto) 'none)
@@ -1791,10 +1793,16 @@ Intended to be used as the \"resolve\" entry in
 		  (while (= (char-before) ?\\) (backward-char))
 		  (setq pos (- pos (point))))
 		(if (= (mod pos 2) 1) (backward-char) (backward-char 2)))
-	    ;; otherwise, go back one word, plus one \ if there is one
+	    ;; otherwise, go back one word, plus one \ if there's an odd
+	    ;; number of them before it
 	    (backward-word 1)  ; argument not optional in Emacs 21
 	    (when (and (not (bobp)) (= ?\\ (char-before)))
-	      (backward-char)))))
+	      (let ((pos (point)))
+		(save-excursion
+		  (while (= (char-before) ?\\) (backward-char))
+		  (setq pos (- pos (point))))
+		(when (= (mod pos 2) 1) (backward-char))))
+	    )))
 
     ;; going forwards...
     (unless (eobp)
