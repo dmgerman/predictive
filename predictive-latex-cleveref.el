@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.4
+;; Version: 0.6.5
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.6.5
+;; * honour user's choices in `auto-completion-syntax-alist' and
+;;   `auto-completion-override-syntax-alist'
 ;;
 ;; Version 0.6.4
 ;; * updated to reflect renaming of predictive-auto-dict overlay class
@@ -62,7 +66,7 @@
 ;; Version 0.2.1
 ;; * updated `completion-override-syntax-alist' settings to reflect changes in
 ;;   predictive-latex.el
-;; 
+;;
 ;; Version 0.2
 ;; * added overlay-local `completion-override-syntax-alist' bindings
 ;;
@@ -100,145 +104,158 @@
 
 (defun predictive-latex-load-cleveref ()
   ;; load cleveref regexps
-  
-  ;; \cref
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\cref{"
-     :edge start
-     :id cref
-     (dict . predictive-latex-label-dict)
-     (priority . 40)
-     (completion-menu . predictive-latex-construct-browser-menu)
-     (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (add word))
-				      (?_ . (add word))
-				      (?  . (accept none))
-				      (?. . (add word))
-				      (t  . (reject none))))
-     (auto-completion-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp ":")
-		  nil)
-		word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W")
-		  nil)
-		word))
-	 (?, . (accept none))
-	 (?} . (accept none))))
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  
-  ;; \Cref
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\Cref{"
-     :edge start
-     :id Cref
-     (dict . predictive-latex-label-dict)
-     (priority . 40)
-     (completion-menu . predictive-latex-construct-browser-menu)
-     (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (add word))
-				      (?_ . (add word))
-				      (?  . (accept none))
-				      (?. . (add word))
-				      (t  . (reject none))))
-     (auto-completion-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp ":")
-		  nil)
-		word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W")
-		  nil)
-		word))
-	 (?, . (accept none))
-	 (?} . (accept none))))
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
 
-  ;; \crefrange
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\crefrange{"
-     :edge start
-     :id crefrange
-     (dict . predictive-latex-label-dict)
-     (priority . 40)
-     (completion-menu . predictive-latex-construct-browser-menu)
-     (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (add word))
-				      (?_ . (add word))
-				      (?  . (accept none))
-				      (?. . (add word))
-				      (t  . (reject none))))
-     (auto-completion-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp ":")
-		  nil)
-		word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W")
-		  nil)
-		word))
-	 (?, . (accept none))
-	 (?} . (accept none))))
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
+  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+	 (word-complete (completion-get-completion-behaviour word-behaviour))
+	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+	 (whitesp-complete (completion-get-completion-behaviour
+			    whitesp-behaviour))
+	 (whitesp-resolve (completion-get-resolve-behaviour
+			   whitesp-behaviour)))
 
-  ;; \Crefrange
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\Crefrange{"
-     :edge start
-     :id Crefrange
-     (dict . predictive-latex-label-dict)
-     (priority . 40)
-     (completion-menu . predictive-latex-construct-browser-menu)
-     (completion-word-thing . predictive-latex-cleveref-label-word)
-     (auto-completion-syntax-alist . ((?w . (add word))
-				      (?_ . (add word))
-				      (?  . (accept none))
-				      (?. . (add word))
-				      (t  . (reject none))))
-     (auto-completion-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp ":")
-		  nil)
-		word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-till-regexp "\\W")
-		  nil)
-		word))
-	 (?, . (accept none))
-	 (?} . (accept none))))
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
+    ;; \cref
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\cref{"
+       :edge start
+       :id cref
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-cleveref-label-word)
+       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+					(?_ . (add ,word-complete))
+					(?  . (,whitesp-resolve none))
+					(?. . (add ,word-complete))
+					(t  . (reject none))))
+       (auto-completion-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?, . (,punct-resolve none))
+	   (?} . (,punct-resolve none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+
+    ;; \Cref
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\Cref{"
+       :edge start
+       :id Cref
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-cleveref-label-word)
+       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+					(?_ . (add ,word-complete))
+					(?  . (,whitesp-resolve none))
+					(?. . (add ,word-complete))
+					(t  . (reject none))))
+       (auto-completion-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?, . (,punct-resolve none))
+	   (?} . (,punct-resolve none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+
+    ;; \crefrange
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\crefrange{"
+       :edge start
+       :id crefrange
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-cleveref-label-word)
+       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+					(?_ . (add ,word-complete))
+					(?  . (,whitesp-resolve none))
+					(?. . (add ,word-complete))
+					(t  . (reject none))))
+       (auto-completion-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?, . (,punct-resolve none))
+	   (?} . (,punct-resolve none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+
+    ;; \Crefrange
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\Crefrange{"
+       :edge start
+       :id Crefrange
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-cleveref-label-word)
+       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+					(?_ . (add ,word-complete))
+					(?  . (,whitesp-resolve none))
+					(?. . (add ,word-complete))
+					(t  . (reject none))))
+       (auto-completion-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?, . (,punct-resolve none))
+	   (?} . (,punct-resolve none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
 
 
-  ;; \label with optional argument
-  (setq predictive-latex-cleveref-restore-label-regexp
-	(auto-overlay-unload-regexp 'predictive 'brace 'label))
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\label\\(\\[.*?\\]\\)?{"
-     :edge start
-     :id label
-     (dict . t)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  
-  (setq predictive-latex-cleveref-restore-label-definition
-	(auto-overlay-unload-definition 'predictive 'label))
-  (auto-overlay-load-definition
-   'predictive
-   '(predictive-auto-dict
-     :id label
-     (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2)
-      (auto-dict . predictive-latex-label-dict))))
+    ;; \label with optional argument
+    (setq predictive-latex-cleveref-restore-label-regexp
+	  (auto-overlay-unload-regexp 'predictive 'brace 'label))
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\label\\(\\[.*?\\]\\)?{"
+       :edge start
+       :id label
+       (dict . t)
+       (priority . 40)
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+
+    (setq predictive-latex-cleveref-restore-label-definition
+	  (auto-overlay-unload-definition 'predictive 'label))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id label
+       (("\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-label-dict))))
+    )
 )
 
 

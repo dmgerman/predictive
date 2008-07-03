@@ -3,10 +3,10 @@
 ;;;                                package support
 
 
-;; Copyright (C) 2006 Toby Cubitt
+;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: predictive, latex, package, subref, subfloat, subfig
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2.1
+;; * honour user's choices in `auto-completion-syntax-alist' and
+;;   `auto-completion-override-syntax-alist'
+;;
 ;; Version 0.2
 ;; * updated for new auto-overlay regexp definition interface
 ;;
@@ -52,31 +56,45 @@
 
 
 (defun predictive-latex-load-subfig ()
-  ;; Load subfig regexps
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `("\\\\subref{"
-     :id subref
-     :edge start
-     (dict . predictive-latex-label-dict)
-     (priority . 40)
-     (completion-menu . predictive-latex-construct-browser-menu)
-     (completion-word-thing . predictive-latex-label-word)
-     (completion-dynamic-syntax-alist . ((?w . (add t word))
-					 (?_ . (add t word))
-					 (?  . (accept t none))
-					 (?. . (add t word))
-					 (t  . (reject t none))))
-     (completion-dynamic-override-syntax-alist
-      . ((?: . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp ":"))
-		t word))
-	 (?_ . ((lambda ()
-		  (predictive-latex-completion-add-to-regexp "\\W"))
-		t word))
-	 (?} . (accept t none))))
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
+  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+	 (word-complete (completion-get-completion-behaviour word-behaviour))
+	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+	 (whitesp-complete (completion-get-completion-behaviour
+			    whitesp-behaviour))
+	 (whitesp-resolve (completion-get-resolve-behaviour
+			   whitesp-behaviour)))
+    ;; Load subfig regexps
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `("\\\\subref{"
+       :id subref
+       :edge start
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-label-word)
+       (completion-dynamic-syntax-alist . ((?w . (add ,word-complete))
+					   (?_ . (add ,word-complete))
+					   (?  . (,whitesp-resolve none))
+					   (?. . (add ,word-complete))
+					   (t  . (reject none))))
+       (completion-dynamic-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-to-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-to-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?} . (,punct-resolve t none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+    )
 )
 
 
