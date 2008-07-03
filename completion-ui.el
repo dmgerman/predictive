@@ -110,7 +110,7 @@
 ;; * added `completion-replaces-prefix' variable to indicate that completions
 ;;   should replace the prefix when they're accepted, and made changes to
 ;;   almost all of the user-interface functions to cope with this non-prefix
-;;   completion (thanks to Vagn Johansen for helpful discussions about this)
+;;   completion (thanks to Henry Weller for helpful discussions about this)
 ;; * move point to appropriate position in parent frame when cycling through
 ;;   completions in pop-up frame
 ;; * added `completion-show-browser-menu' command
