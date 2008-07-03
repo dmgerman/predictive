@@ -47,7 +47,7 @@
 ;;   definitions (functions are now called `auto-overlay-load-definition',
 ;;   `auto-overlay-load-regexp', `auto-overlay-unload-set',
 ;;   `auto-overlay-unload-definition', `auto-overlay-unload-regexp')
-;; 
+;;
 ;; Version 0.8.2
 ;; * fixed bug that arose when buffer was narrowed by widening before
 ;;   scheduling updates and before parsing lines in `auto-overlay-update'
@@ -464,7 +464,7 @@ If START or END is negative, it counts from the end."
       (setq end (or len (setq len (length list)))))
     (when (< start 0)
       (setq start (+ start (or len (length list)))))
-    
+
     ;; construct sub-list
     (let (res)
       (while (< start end)
@@ -552,7 +552,7 @@ symbol that can be used to uniquely identify REGEXP (see
 	  (error "Definition ID \"%s\" is not unique"
 		 (symbol-name definition-id)))
 	))
-    
+
     (cond
      ;; adding first entry or at start
      ((or (eq pos t) (= (length regexps) 0)
@@ -568,7 +568,7 @@ symbol that can be used to uniquely identify REGEXP (see
     ;; load regexp definitions
     (dolist (regexp (cdr definition))
       (auto-overlay-load-regexp set-id definition-id regexp))
-    
+
     definition-id)  ; return new entry ID
 )
 
@@ -608,7 +608,7 @@ symbol that can be used to uniquely identify REGEXP (see
     (when (null defs)
       (error "Definition \"%s\" not found in auto-overlay regexp set %s"
 	     (symbol-name definition-id) (symbol-name set-id)))
-    
+
     ;; extract regexp
     (setq rgxp (car regexp))
     (setq regexp (cdr regexp))
@@ -636,10 +636,10 @@ symbol that can be used to uniquely identify REGEXP (see
 				 (cddr defs))))))
       ;; extract properties
       (setq props regexp))
-    
+
     ;; create regexp definition
     (setq regexp (append (list regexp-id edge rgxp) props))
-    
+
     (cond
      ;; adding at end
      ((or (null pos) (and (integerp pos) (>= pos (length (cddr defs)))))
@@ -661,7 +661,7 @@ symbol that can be used to uniquely identify REGEXP (see
 
 (defun auto-overlay-unload-set (set-id)
   "Unload the entire regexp set SET-ID from the current buffer."
-  
+
   ;; disable regexp set to delete overlays, then delete regexp set from
   ;; current buffer
   (when (auto-o-enabled-p set-id)
@@ -691,7 +691,7 @@ from the current buffer. Returns the deleted definition."
 	   (olddef (assq definition-id defs))
 	   def-id class regexps regexp edge regexp-id props)
       (assq-delete-all definition-id defs)
-      
+
       ;; massage deleted definition into form suitable for
       ;; `auto-overlay-load-definition'
       (setq def-id (nth 0 olddef)
@@ -850,7 +850,7 @@ is about to be killed in which case it speeds things up a bit\)."
     (when save-file
       (unless (stringp save-file) (setq save-file nil))
       (auto-overlay-save-overlays set-id nil save-file))
-    
+
     ;; delete overlays unless told not to bother
     (unless leave-overlays
       (mapc 'delete-overlay
@@ -861,7 +861,7 @@ is about to be killed in which case it speeds things up a bit\)."
 		    '(auto-overlay auto-overlay-match))
 	      (list 'eq 'set-id set-id))
 	     nil 'inactive)))
-    
+
     ;; if there are no more active auto-overlay definitions...
     (unless (catch 'enabled
 	      (dolist (set auto-overlay-regexps)
@@ -910,7 +910,7 @@ The overlays can be loaded again later using
       (make-directory path t)
       ;; construct full path to file, since that's all we need from now on
       (setq file (concat path filename)))
-    
+
     ;; create temporary buffer
     (let ((buff (generate-new-buffer " *auto-overlay-save*"))
 	  overlay-list)
@@ -919,7 +919,7 @@ The overlays can be loaded again later using
       (terpri buff)
       (prin1 (md5 (prin1-to-string (auto-o-get-regexps set-id))) buff)
       (terpri buff)
-				    
+
       ;; get sorted list of all match overlays in set SET-ID
       (setq overlay-list
 	    (auto-overlays-in (point-min) (point-max)
@@ -931,7 +931,7 @@ The overlays can be loaded again later using
 		    (or (< (overlay-start a) (overlay-start b))
 			(and (= (overlay-start a) (overlay-start b))
 			     (> (overlay-end a) (overlay-end b)))))))
-      
+
       ;; write overlay data to temporary buffer
       (mapc (lambda (o)
 	      (prin1 (list (overlay-get o 'definition-id)
@@ -943,7 +943,7 @@ The overlays can be loaded again later using
 		     buff)
 	      (terpri buff))
 	    overlay-list)
-      
+
       ;; save the buffer and kill it
       (save-excursion
 	(set-buffer buff)
@@ -978,7 +978,7 @@ overlays were saved."
 
   (save-excursion
     (when buffer (set-buffer buffer))
-    
+
     ;; construct filename
     (let ((path (or (file-name-directory file) ""))
 	  (filename (file-name-nondirectory file)))
@@ -988,8 +988,8 @@ overlays were saved."
 	(setq filename (auto-o-overlay-filename set-id)))
       ;; construct full path to file, since that's all we need from now on
       (setq file (concat path filename)))
-    
-    
+
+
     ;; return nil if file does not exist
     (if (not (file-exists-p file))
 	nil
@@ -998,15 +998,15 @@ overlays were saved."
       (let ((buff (find-file-noselect file t))
 	    md5-buff md5-regexp data o-match o-new lines
 	    (i 0))
-	
+
 	;; read md5 digests from first two lines of FILE
 	(save-excursion
 	  (set-buffer buff)
 	  (goto-char (point-min)))
 	(setq md5-buff (read buff))
 	(setq md5-regexp (read buff))
-	
-	
+
+
 	;; if saved buffer md5 sum doesn't match buffer contents, or if saved
 	;; regexp md5 sum doesn't match regexp definitions and checking is not
 	;; overridden, return nil
@@ -1021,7 +1021,7 @@ overlays were saved."
 	  (save-excursion
 	    (set-buffer buff)
 	    (setq lines (count-lines (point) (point-max))))
-	  
+
 	  ;; read overlay data from FILE until we reach the end
 	  (message "Loading auto-overlays...(1 of %d)" lines)
 	  (while (condition-case nil (setq data (read buff)) ('end-of-file))
@@ -1056,7 +1056,7 @@ overlays were saved."
 	    (setq i (1+ i))
 	    (when (= 0 (mod i 10))
 	      (message "Loading auto-overlays...(%d of %d)" i lines)))
-	  
+
 	  (kill-buffer buff)
 	  t))))  ; return t to indicate successful loading)
 )
@@ -1125,13 +1125,13 @@ overlays were saved."
        ;; if pending list is empty, just add new entry to the list
        ((null pending)
 	(setq auto-o-pending-updates (list (cons start end))))
-       
+
        ;; if start of the new entry is before start of the first entry in
        ;; pending list, add new entry to front of the list
        ((<= start (caar pending))
 	(setq auto-o-pending-updates (nconc (list (cons start end)) pending))
 	(setq pending auto-o-pending-updates))
-       
+
        ;; otherwise...
        (t
 	;; search for entry in pending list that new one should come after
@@ -1151,7 +1151,7 @@ overlays were saved."
 	  (setcdr pending (nconc (list (cons start end)) (cdr pending)))
 	  (setq pending (cdr pending)))
 	))
-      
+
       ;; merge new entry with successive entries until end of merged entry is
       ;; before start of next entry
       ;; (See above note about O(n) vs. O(log n))
@@ -1198,21 +1198,21 @@ overlays were saved."
 	    (forward-line (1- start)))
 
 	  (dotimes (i (if end (1+ (- end start)) 1))
-	  
+
 	    ;; check each enabled set of overlays, or just the specified set
 	    (dotimes (s (if set-id 1 (length auto-overlay-regexps)))
 	      (setq set-id (or set-id (car (nth s auto-overlay-regexps))))
 	      (when (auto-o-enabled-p set-id)
-		
+
 		;; check each auto-overlay definition in regexp set
 		(dolist (regexp-entry (auto-o-get-regexps set-id))
 		  (setq definition-id (pop regexp-entry))
 		  (setq class (pop regexp-entry))
-	      
+
 		  ;; check all regexps for current definition
 		  (dotimes (rank (length regexp-entry))
 		    (setq regexp-id (car (nth rank regexp-entry)))
-		    
+
 		    ;; extract regexp properties from current entry
 		    (setq regexp (auto-o-entry-regexp set-id definition-id
 						      regexp-id))
@@ -1222,8 +1222,8 @@ overlays were saved."
 			  (cdr (assq 'priority
 				     (auto-o-entry-props
 				      set-id definition-id regexp-id))))
-		  
-		  
+
+
 		    ;; look for matches in current line, ensuring case *is*
 		    ;; significant
 		    (forward-line 0)
@@ -1233,8 +1233,8 @@ overlays were saved."
 		       ;; ignore match if it already has a match overlay
 		       ((auto-o-matched-p (match-beginning 0) (match-end 0)
 					  set-id definition-id regexp-id))
-		     
-		     
+
+
 		       ;; if existing match overlay corresponding to same entry
 		       ;; and edge but different subentry overlaps new match...
 		       ((setq o-overlap
@@ -1259,7 +1259,7 @@ overlays were saved."
 			  ;; run match function if there is one
 			  (let ((match-func (auto-o-match-function o-match)))
 			    (when match-func (funcall match-func o-match)))))
-		     
+
 		       ;; if match is within a higher priority exclusive
 		       ;; overlay, create match overlay but don't parse it
 		       ((auto-o-within-exclusive-p (match-beginning group)
@@ -1269,8 +1269,8 @@ overlays were saved."
 					   (match-beginning 0) (match-end 0)
 					   (match-beginning group)
 					   (match-end group)))
-		     
-		     
+
+
 		       ;; if we're going to parse the new match...
 		       (t
 			;; create a match overlay for it
@@ -1293,8 +1293,8 @@ overlays were saved."
 			;; run match function if there is one
 			(let ((match-func (auto-o-match-function o-match)))
 			  (when match-func (funcall match-func o-match)))))
-		    
-		    
+
+
 		      ;; go to character one beyond the start of the match, to
 		      ;; make sure we don't miss the next match (if we find the
 		      ;; same one again, it will just be ignored)
@@ -1326,7 +1326,7 @@ overlays were saved."
 		     (goto-char (overlay-start o-self))
 		     (looking-at (auto-o-regexp o-self)))
 		   (= (match-end 0) (overlay-end o-self)))
-	
+
 	;; if we have a parent overlay...
 	(let ((o-parent (overlay-get o-self 'parent))
 	      o-other)
@@ -1344,7 +1344,7 @@ overlays were saved."
 		  (overlay-put o-parent (car p) nil))))
 	    ;; call appropriate suicide function
 	    (funcall (auto-o-suicide-function o-self) o-self)))
-	
+
 	;; schedule an update (necessary since if match regexp contains
 	;; "context", we may be comitting suicide only for the match overlay
 	;; to be recreated in a slightly different place)
@@ -1387,7 +1387,7 @@ overlays were saved."
       ;; suicide functions or deleting the overlays, and leaves them intact in
       ;; case the exclusivity of the region is later reduced - see below)
       (dolist (o overlay-list) (overlay-put o 'inactive t))
-      
+
       ;; find match overlays between BEG and END that have priority lower then
       ;; NEW-PRIORITY but still have an active parent overlay
       (setq overlay-list
@@ -1411,8 +1411,8 @@ overlays were saved."
 			 (list new-priority)))))
       ;; call appropriate suicide function for each match overlay in list
       (dolist (o overlay-list) (funcall (auto-o-suicide-function o) o)))
-     
-     
+
+
      ;; if priority has decreased...
      ((and old-priority
 	   (or (null new-priority) (< new-priority old-priority)))
@@ -1429,7 +1429,7 @@ overlays were saved."
 	     'within 'inactive))
       ;; mark overlays in list as active again
       (dolist (o overlay-list) (overlay-put o 'inactive nil))
-      
+
       ;; find match overlays between BEG and END that have priority higher or
       ;; equal to NEW-PRIORITY but no parent overlay
       (setq overlay-list
@@ -1502,28 +1502,28 @@ unmatched.  If START or END are non-nil but neither of the above,
 make that edge unmatched.  If START or END are null, don't change
 that edge. However, if END is null, and START is an 'end overlay,
 match end of OVERLAY rather than start.
-  
+
 If NO-PARSE is non-nil, block re-parsing due to exclusive overlay
 changes. If NO-PROPS is non-nil, block updating of overlay's
 properties. If PROTECT-MATCH is non-nil, don't modify any match
 overlays associated with OVERLAY (i.e. don't modify their 'parent
 properties)."
-  
+
   (let ((old-start (overlay-start overlay))
 	(old-end (overlay-end overlay))
 	(old-o-start (overlay-get overlay 'start))
 	(old-o-end (overlay-get overlay 'end))
 	(old-exclusive (overlay-get overlay 'exclusive))
 	(old-priority (overlay-get overlay 'priority)))
-    
+
     ;; if END is null, we're not unmatching, and START is an end overlay,
     ;; match end of overlay instead of start (Note: assumes we're matching an
     ;; overlay class with 'start and 'end regexps)
     (when (and (null end) (overlayp start) (eq (auto-o-edge start) 'end))
       (setq end start)
       (setq start nil))
-    
-    
+
+
     ;; move overlay to new location
     (move-overlay overlay
 		  (cond
@@ -1536,7 +1536,7 @@ properties)."
 		   ((number-or-marker-p end) end)
 		   (end (point-max))
 		   (t (overlay-end overlay))))
-    
+
     ;; if changing start match...
     (when start
       ;; sort out parent property of old start match
@@ -1548,7 +1548,7 @@ properties)."
 	;; if matching start, set start property to new start match
 	(overlay-put overlay 'start start)
 	(overlay-put start 'parent overlay)))
-    
+
     ;; if changing end match...
     (when end
       ;; sort out parent property of old end match
@@ -1560,8 +1560,8 @@ properties)."
 	;; if matching end, set end property to new end match
 	(overlay-put overlay 'end end)
 	(overlay-put end 'parent overlay)))
-    
-    
+
+
     ;; unless it's blocked, update properties if new match takes precedence
     ;; (Note: this sometimes sets the overlay's properties to the ones it
     ;; already had, but it hardly seems worth checking for that)
@@ -1597,8 +1597,8 @@ properties)."
 	;; bundle properties inside a list if not already, then update them
 	(when (symbolp (car props)) (setq props (list props)))
 	(dolist (p props) (overlay-put overlay (car p) (cdr p)))))
-    
-    
+
+
     ;; unless it's blocked or overlay is inactive, check if anything needs
     ;; reparsing due to exclusive overlay changes
     (unless (or no-parse (overlay-get overlay 'inactive))
@@ -1608,20 +1608,20 @@ properties)."
 	    (exclusive (overlay-get overlay 'exclusive))
 	    (priority (overlay-get overlay 'priority)))
 	(cond
-	 
+
 	;; if overlay wasn't and still isn't exclusive, do nothing
 	 ((and (null exclusive) (null old-exclusive)))
-	 
+
 	 ;; if overlay has become exclusive, delete lower priority overlays
 	 ;; within it
 	 ((and (null old-exclusive) exclusive)
 	  (auto-o-update-exclusive set-id start end nil priority))
-	 
+
 	 ;; if overlay was exclusive but no longer is, re-parse region it
 	 ;; used to cover
 	 ((and old-exclusive (null exclusive))
 	  (auto-o-update-exclusive set-id old-start old-end old-priority nil))
-	 
+
 	 ;; if overlay was and is exclusive, and has been moved to a
 	 ;; completely different location re-parse old location and delete
 	 ;; lower priority overlays within new location
@@ -1666,7 +1666,7 @@ If PROTECT-MATCH is non-nil, don't modify any match overlays
 associated with OVERLAY (i.e. leave their 'parent properties
 alone). If NO-PARSE is non-nil, block re-parsing due to exclusive
 overlay changes."
-  
+
   (let ((start (overlay-start overlay))
 	(end (overlay-end overlay))
 	o-match)
@@ -1675,19 +1675,19 @@ overlay changes."
     (unless (setq o-match (overlay-get overlay 'start))
       (setq o-match (overlay-get overlay 'end)))
 ;;    (auto-o-delete-from-overlay-list overlay)
-    
+
     ;; unless blocked, if overlay's exclusive flag was set, re-parse region it
     ;; covered
     (when (and (null no-parse) (overlay-get overlay 'exclusive))
       (auto-o-update-exclusive (overlay-get overlay 'set-id) start end
 			       (overlay-get overlay 'priority) nil))
-    
+
     ;; Note: it's vital that the match overlays' parent properties are only
     ;; set to nil *after* `auto-update-exclusive' is run: if the overlay
     ;; overlapped one of its match overlays, the newly parentless match
     ;; overlay would be re-parsed by `auto-update-exclusive', which would
     ;; re-create the parent overlay that's just been deleted!
-    
+
     ;; unmatch match overlays
     (unless protect-match
       (when (setq o-match (overlay-get overlay 'start))
@@ -1732,7 +1732,7 @@ overlay changes."
     (setq end (overlay-get match 'delim-end))
     (setq priority (overlay-get match 'priority))
     (setq match (overlay-get match 'delim-start)))
-  
+
   ;; look for higher priority exclusive overlays
   (auto-overlays-in
    match end
@@ -1741,7 +1741,7 @@ overlay changes."
 	 (list (lambda (p q) (and p (or (null q) (> p q))))
 	       'priority priority)))
 )
-  
+
 
 
 
