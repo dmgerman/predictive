@@ -113,6 +113,7 @@
 ;;   completion (thanks to Vagn Johansen for helpful discussions about this)
 ;; * move point to appropriate position in parent frame when cycling through
 ;;   completions in pop-up frame
+;; * added `completion-show-browser-menu' command
 ;;
 ;; Version 0.8.2
 ;; * prevented `completion-show-tooltip' from moving mouse unless absolutely
@@ -2121,7 +2122,8 @@ there is none."
   (setq menu (or menu
 		 (and (fboundp 'auto-overlay-local-binding)
 		      (auto-overlay-local-binding
-		       'completion-menu))))
+		       'completion-menu))
+		 completion-menu))
 
   (when overlay
     (let (keymap result)
@@ -2202,6 +2204,32 @@ there is none."
 ;;   (completion-run-if-within-overlay 'completion-show-menu
 ;; 				    'completion-function)
 ;; )
+
+
+
+(defun completion-show-browser-menu (&optional overlay menu)
+  "Show completion browser menu for completion OVERLAY.
+The point had better be within OVERLAY or you'll get hives.
+
+If no OVERLAY is supplied, one is found at point (this only
+happens when this function is called interactively).
+
+If MENU is supplied, use that to construct the menu, unless an
+overlay overrides it. Defaults to the \"overlay local\" binding
+of 'completion-browser-menu-function, or
+`completion-browser-menu-function' if there is none."
+  (interactive)
+
+  ;; this function is really just a call to `completion-show-menu' with
+  ;; a different default for the menu argument
+  (setq menu (or menu
+		 (and (fboundp 'auto-overlay-local-binding)
+		      (auto-overlay-local-binding
+		       'completion-browser-menu-function))
+		 completion-browser-menu-function))
+  (completion-show-menu overlay menu)
+)
+
 
 
 
