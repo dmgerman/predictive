@@ -38,6 +38,7 @@
 ;; * honour user's choices in `auto-completion-syntax-alist' and
 ;;   `auto-completion-override-syntax-alist' in
 ;;   `predictive-latex-load-regexps'
+;; * improved regexp definitions that start with "\"
 ;;
 ;; Version 0.10
 ;; * separated off predictive-latex-auto-dict overlays into stand-alone
@@ -539,18 +540,30 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id brace
-	      ("\\\\usepackage{"
+	      ("[^\\]\\(\\\\\\\\\\)*\\\\usepackage{"
 	       :edge start
 	       (dict . t)
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\label{"
+	      ("^\\\\usepackage{"
+	       :edge start
+	       (dict . t)
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ("[^\\]\\(\\\\\\\\\\)*\\\\label{"
 	       :edge start
 	       :id label
 	       (dict . t)
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\ref{"
+	      ("^\\\\label{"
+	       :edge start
+	       :id label-bol
+	       (dict . t)
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
+	      ("[^\\]\\(\\\\\\\\\\)*\\\\\\(eq\\)?ref{"
 	       :edge start
 	       (dict . predictive-latex-label-dict)
 	       (priority . 40)
@@ -575,9 +588,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       ,word-complete))
 		   (?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\eqref{"
+
+	      ("^\\\\\\(eq\\)?ref{"
 	       :edge start
-	       (dict . predictive-latex-label-dict) (priority . 40)
+	       (dict . predictive-latex-label-dict)
+	       (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (completion-word-thing . predictive-latex-label-word)
@@ -587,47 +602,92 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 						(?. . (add ,word-complete))
 						(t  . (reject none))))
 	       (auto-completion-override-syntax-alist
-		. ((?: . ((lambda ()
-			    (predictive-latex-completion-add-till-regexp ":")
-			    nil)
-			  ,word-complete))
+		. ((?:
+		    . ((lambda ()
+			 (predictive-latex-completion-add-till-regexp ":")
+			 nil)
+		       ,word-complete))
+		   (?_
+		    . ((lambda ()
+			 (predictive-latex-completion-add-till-regexp "\\W")
+			 nil)
+		       ,word-complete))
 		   (?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\cite{"
+
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\cite{\\)" . 2)
 	       :edge start
 	       (dict . t) (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\begin{"
+	      (("^\\(\\\\cite{\\)" . 1)
+	       :edge start
+	       (dict . t) (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 2)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\end{"
+	      (("^\\(\\\\begin{\\)" . 1)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\text{"
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 2)
+	       :edge start
+	       (dict . predictive-latex-env-dict) (priority . 40)
+	       (completion-menu
+		. predictive-latex-construct-browser-menu)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("^\\(\\\\end{\\)" . 1)
+	       :edge start
+	       (dict . predictive-latex-env-dict) (priority . 40)
+	       (completion-menu
+		. predictive-latex-construct-browser-menu)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 2)
 	       :edge start
 	       (dict . predictive-main-dict) (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\documentclass\\(\\[.*\\]\\)?{"
+	      (("^\\(\\\\text{\\)" . 1)
+	       :edge start
+	       (dict . predictive-main-dict) (priority . 40)
+	       (completion-menu
+		. predictive-latex-construct-browser-menu)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)"
+		. 2)
 	       :edge start
 	       (dict . dict-latex-docclass) (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\\\bibliographystyle\\(\\[.*\\]\\)?{"
+	      (("^\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 1)
+	       :edge start
+	       (dict . dict-latex-docclass) (priority . 40)
+	       (completion-menu
+		. predictive-latex-construct-browser-menu)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)"
+		. 2)
 	       :edge start
 	       (dict . dict-latex-bibstyle)
 	       (priority . 40)
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("^\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 1)
+	       :edge start
+	       (dict . dict-latex-bibstyle)
+	       (priority . 40)
+	       (completion-menu
+		. predictive-latex-construct-browser-menu)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      ;; Note: the following regexps contain a lot of \'s because they
 	      ;; have to check whether number of \'s in front of { is even or
 	      ;; odd. Also, since auto-overlay regexps aren't allowed to match
@@ -695,12 +755,23 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id preamble
-	      ("\\\\documentclass\\(\\[.*?\\]\\)?{.*?}"
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)"
+		. 2)
 	       :edge start
 	       (dict . predictive-latex-preamble-dict)
 	       (priority . 20)
 	       (completion-menu . predictive-latex-construct-browser-menu))
-	      ("\\\\begin{document}"
+	      (("^\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 1)
+	       :edge start
+	       (dict . predictive-latex-preamble-dict)
+	       (priority . 20)
+	       (completion-menu . predictive-latex-construct-browser-menu))
+	      (("[^\\]\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 2)
+	       :edge end
+	       (dict . predictive-latex-preamble-dict)
+	       (priority . 20)
+	       (completion-menu . predictive-latex-construct-browser-menu))
+	      (("^\\(\\\\begin{document}\\)" . 1)
 	       :edge end
 	       (dict . predictive-latex-preamble-dict)
 	       (priority . 20)
@@ -721,7 +792,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; load the regexps into the list
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+     `(("[^\\]\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 2)
        :edge start
        (dict . predictive-latex-math-dict)
        (priority . 10)
@@ -729,7 +800,15 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+     `(("^\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+       :edge start
+       (dict . predictive-latex-math-dict)
+       (priority . 10)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (face . (background-color . ,predictive-overlay-debug-colour))))
+    (auto-overlay-load-regexp
+     'predictive 'environment
+     `(("[^\\]\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 2)
        :edge end
        (dict . predictive-latex-math-dict)
        (priority . 10)
@@ -737,14 +816,36 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
-     '(("\\\\begin{\\(.*?\\)}" 0 1)
+     `(("^\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
+       :edge end
+       (dict . predictive-latex-math-dict)
+       (priority . 10)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (face . (background-color . ,predictive-overlay-debug-colour))))
+    (auto-overlay-load-regexp
+     'predictive 'environment
+     '(("[^\\]\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 2)
        :edge start
        (priority . 10)
        (dict . nil)
        (face . nil)))
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\\\end{\\(.*?\\)}" 0 1)
+     '(("^\\\\begin{\\(.*?\\)}" 0 1)
+       :edge start
+       (priority . 10)
+       (dict . nil)
+       (face . nil)))
+    (auto-overlay-load-regexp
+     'predictive 'environment
+     `(("[^\\]\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 2)
+       :edge end
+       (priority . 10)
+       (dict . nil)
+       (face . nil)))
+    (auto-overlay-load-regexp
+     'predictive 'environment
+     `(("^\\\\end{\\(.*?\\)}" 0 1)
        :edge end
        (priority . 10)
        (dict . nil)
@@ -758,7 +859,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      '(predictive-latex-docclass
-       (("\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
+       (("[^\\]\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}"
+	 . 3))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-latex-docclass
+       (("^\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
 
 
     ;; \usepackage loads a latex package. Through the use of a special
@@ -767,7 +873,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      '(predictive-latex-usepackage
-       (("\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
+       (("[^\\]\\(\\\\\\\\\\)*\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 3))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-latex-usepackage
+       (("^\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
 
 
     ;; \label creates a cross-reference label. Through the use of a special
@@ -777,7 +887,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      '(predictive-auto-dict
        :id label
-       (("\\\\label{\\(.*?\\)}" . 1)
+       (("[^\\]\\(\\\\\\\\\\)*\\\\label{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-label-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id label-bol
+       (("^\\\\label{\\(.*?\\)}" . 1)
 	(auto-dict . predictive-latex-label-dict))))
 
     ;; \newcommand defines a new command. Through the use of a special
@@ -789,7 +905,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      '(predictive-auto-dict
        :id newcommand
-       (("\\\\newcommand\\*?{\\(.*?\\)}" . 1)
+       (("[^\\]\\(\\\\\\\\\\)*\\\\newcommand\\*?{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-local-latex-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id newcommand-bol
+       (("^\\\\newcommand\\*?{\\(.*?\\)}" . 1)
 	(auto-dict . predictive-latex-local-latex-dict))))
 
     ;; \newenvironment and \newtheorem define new environments. Through the use
@@ -799,13 +921,25 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      '(predictive-auto-dict
        :id newenvironment
-       (("\\\\newenvironment{\\(.*?\\)}" . 1)
+       (("[^\\]\\(\\\\\\\\\\)*\\\\newenvironment{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-local-env-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id newenvironment-bol
+       (("^\\\\newenvironment{\\(.*?\\)}" . 1)
 	(auto-dict . predictive-latex-local-env-dict))))
     (auto-overlay-load-definition
      'predictive
      '(predictive-auto-dict
        :id newtheorem
-       (("\\\\newtheorem{\\(.*?\\)}" . 1)
+       (("[^\\]\\(\\\\\\\\\\)*\\\\newtheorem{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-local-env-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id newtheorem-bol
+       (("^\\\\newtheorem{\\(.*?\\)}" . 1)
 	(auto-dict . predictive-latex-local-env-dict))))
 
     ;; \DeclareMathOperator defines a new math-mode command. Through the use of
@@ -815,7 +949,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      '(predictive-auto-dict
        :id DeclareMathOperator
-       (("\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
+       (("[^\\]\\(\\\\\\\\\\)*\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 2)
+	(auto-dict . predictive-latex-local-math-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id DeclareMathOperator-bol
+       (("^\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
 	(auto-dict . predictive-latex-local-math-dict))))
     )
 )
@@ -1145,7 +1285,7 @@ refers to."
     ;; when we're not within a referencing command (which we check by checking
     ;; if current dictionary is the label dictionary), display a message,
     ;; otherwise...
-    (if (null (member (eval (predictive-latex-auto-dict-name "latex-label"))
+    (if (null (member (eval (predictive-auto-dict-name "latex-label"))
 		      current-dict))
 	(message "Not on LaTeX cross-reference")
 

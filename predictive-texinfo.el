@@ -264,7 +264,22 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id brace
-	      ("@\\(x\\|px\\|info\\)?ref{"
+	      ("[^@]\\(@@\\)*@\\(x\\|px\\|info\\)?ref{"
+	       :edge start
+	       (dict . predictive-texinfo-node-dict)
+	       (priority . 40)
+	       (completion-menu
+		. predictive-texinfo-construct-browser-menu)
+	       (completion-word-thing . predictive-texinfo-node-word)
+	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+						(?_ . (add ,word-complete))
+						(?  . (,whitesp-resolve none))
+						(?. . (add ,word-complete))
+						(t  . (reject none))))
+	       (auto-completion-override-syntax-alist
+		. ((?} . (,punct-resolve none))))
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ("^@\\(x\\|px\\|info\\)?ref{"
 	       :edge start
 	       (dict . predictive-texinfo-node-dict)
 	       (priority . 40)
@@ -327,9 +342,50 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       :edge start
 	       (dict . (dict-texinfo-math dict-latex-math))
 	       (priority . 40)
+	       (completion-word-thing . predictive-latex-word)
+	       (auto-completion-override-syntax-alist
+		. ((?\\ . ((lambda ()
+			     (if (and (char-before) (= (char-before) ?\\)
+				      (or (not (char-before (1- (point))))
+					  (not (= (char-before (1- (point)))
+						  ?\\))))
+				 'add ',punct-resolve))
+			   ,word-complete))
+		   (?_ . (,punct-resolve none))
+		   (?^ . (,punct-resolve none))
+		   (?{ . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				',punct-complete 'none))))
+		   (?} . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				',punct-complete 'none))))
+		   (?\; . ((lambda ()
+			     (if (and (char-before) (= (char-before) ?\\))
+				 'add ',punct-resolve))
+			   (lambda ()
+			     (if (and (char-before (1- (point)))
+				      (= (char-before (1- (point))) ?\\))
+				 ',punct-complete 'none))))
+		   (?! . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before (1- (point)))
+				     (= (char-before (1- (point))) ?\\))
+				',punct-complete 'none))))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("@value{"
+	      ("[^@]\\(@@\\)*@value{"
+	       :edge start
+	       (dict . dict-texinfo-flag) (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ("^@value{"
 	       :edge start
 	       (dict . dict-texinfo-flag) (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))

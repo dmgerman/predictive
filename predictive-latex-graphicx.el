@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2006 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: predictive, latex, package, graphicx
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,6 +31,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2.1
+;; * improved regexp definitions
+;;
 ;; Version 0.2
 ;; * updated for new auto-overlay regexp definition interface
 ;;
@@ -54,9 +57,18 @@
   ;; load regexp
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\\\includegraphics\\(\\[.*?\\]\\)?{"
+   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)" . 2)
      :edge start
      :id graphicx
+     (dict . t)
+     (priority . 40)
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `(("^\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)" . 1)
+     :edge start
+     :id graphicx-bol
      (dict . t)
      (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
@@ -68,6 +80,7 @@
 (defun predictive-latex-unload-graphicx ()
   ;; unload regexp
   (auto-overlay-unload-regexp 'predictive 'brace 'graphicx)
+  (auto-overlay-unload-regexp 'predictive 'brace 'graphicx-bol)
 )
 
 ;;; predictive-latex-graphicx ends here

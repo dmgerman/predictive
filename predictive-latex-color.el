@@ -5,7 +5,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: predictive, latex, package, color
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.1
+;; * improved regexp definitions
+;;
 ;; Version 0.1
 ;; * initial version
 
@@ -52,7 +55,7 @@
   ;; Load regexps
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\\\color\\(\\[.*?\\]\\)?{"
+   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 2)
      :edge start
      :id color
      (dict . dict-latex-colours)
@@ -61,7 +64,16 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\\\textcolor\\(\\[.*?\\]\\)?{"
+   `(("^\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 1)
+     :edge start
+     :id color-bol
+     (dict . dict-latex-colours)
+     (priority . 40)
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)" . 2)
      :edge start
      :id textcolor
      (dict . dict-latex-colours)
@@ -70,9 +82,27 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\\\pagecolor\\(\\[.*?\\]\\)?{"
+   `(("^\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)" . 1)
+     :edge start
+     :id textcolor-bol
+     (dict . dict-latex-colours)
+     (priority . 40)
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)" . 2)
      :edge start
      :id pagecolor
+     (dict . dict-latex-colours)
+     (priority . 40)
+     (face . (background-color . ,predictive-overlay-debug-color)))
+   t)
+  (auto-overlay-load-regexp
+   'predictive 'brace
+   `(("^\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)" . 1)
+     :edge start
+     :id pagecolor-bol
      (dict . dict-latex-colours)
      (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
@@ -84,8 +114,11 @@
 (defun predictive-latex-unload-color ()
   ;; unload regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'color)
+  (auto-overlay-unload-regexp 'predictive 'brace 'color-bol)
   (auto-overlay-unload-regexp 'predictive 'brace 'textcolor)
+  (auto-overlay-unload-regexp 'predictive 'brace 'textcolor-bol)
   (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor)
+  (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor-bol)
   ;; unload colour dictionary
   (predictive-unload-dict 'dict-latex-colours)
 )

@@ -34,6 +34,7 @@
 ;; Version 0.2.1
 ;; * honour user's choices in `auto-completion-syntax-alist' and
 ;;   `auto-completion-override-syntax-alist'
+;; * improved regexp definitions
 ;;
 ;; Version 0.2
 ;; * updated for new auto-overlay regexp definition interface
@@ -70,8 +71,35 @@
     ;; Load subfig regexps
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\\\subref{"
+     `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\subref{\\)" . 2)
        :id subref
+       :edge start
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (completion-word-thing . predictive-latex-label-word)
+       (completion-dynamic-syntax-alist . ((?w . (add ,word-complete))
+					   (?_ . (add ,word-complete))
+					   (?  . (,whitesp-resolve none))
+					   (?. . (add ,word-complete))
+					   (t  . (reject none))))
+       (completion-dynamic-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-to-regexp ":")
+		    nil)
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-to-regexp "\\W")
+		    nil)
+		  ,word-complete))
+	   (?} . (,punct-resolve t none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `(("^\\(\\\\subref{\\)" . 1)
+       :id subref-bol
        :edge start
        (dict . predictive-latex-label-dict)
        (priority . 40)
@@ -102,6 +130,7 @@
 (defun predictive-latex-unload-subfig ()
   ;; Unload subfig regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'subref)
+  (auto-overlay-unload-regexp 'predictive 'brace 'subref-bol)
 )
 
 ;;; predictive-latex-subfig ends here
