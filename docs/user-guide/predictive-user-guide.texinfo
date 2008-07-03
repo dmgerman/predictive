@@ -61,92 +61,92 @@ liking.
 @cindex configuration file
 
 @menu
-* What is predictive completion?::  
-* Obtaining and Installing::    
-* Quick-Start::                 
-* Completing Words::            
-* Dictionaries::                
-* Advanced Customisation::      
-* Bugs and Future Improvements::  
-* Credits::                     
-* Command Index::               
-* Variable Index::              
-* Concept Index::               
-* Copying this Manual::         
+* What is predictive completion?::
+* Obtaining and Installing::
+* Quick-Start::
+* Completing Words::
+* Dictionaries::
+* Advanced Customisation::
+* Bugs and Future Improvements::
+* Credits::
+* Command Index::
+* Variable Index::
+* Concept Index::
+* Copying this Manual::
 
 @detailmenu
  --- The Detailed Node Listing ---
 
 Completing Words
 
-* Overview::                    
-* Basic Completion Commands::   
-* Auto-Completion Mode::        
-* Dynamic Completion::          
-* Completion Hotkeys::          
-* Displaying Completions in the Echo Area ::  
-* Completion Tooltip::          
-* Pop-Up Frame::                
-* Completion Menu and Browser::  
-* Auto-Show a List of Completions::  
-* Miscellaneous Options::       
+* Overview::
+* Basic Completion Commands::
+* Auto-Completion Mode::
+* Dynamic Completion::
+* Completion Hotkeys::
+* Displaying Completions in the Echo Area ::
+* Completion Tooltip::
+* Pop-Up Frame::
+* Completion Menu and Browser::
+* Auto-Show a List of Completions::
+* Miscellaneous Options::
 
 Overview
 
-* Basic Completion Commands::   
-* Auto-Completion Mode::        
-* Dynamic Completion::          
-* Completion Hotkeys::          
-* Displaying Completions in the Echo Area ::  
-* Completion Tooltip::          
-* Pop-Up Frame::                
-* Completion Menu and Browser::  
-* Miscellaneous Options::       
+* Basic Completion Commands::
+* Auto-Completion Mode::
+* Dynamic Completion::
+* Completion Hotkeys::
+* Displaying Completions in the Echo Area ::
+* Completion Tooltip::
+* Pop-Up Frame::
+* Completion Menu and Browser::
+* Miscellaneous Options::
 
 Basic Completion Commands
 
-* Inserting Completions::       
-* Deleting Characters::         
+* Inserting Completions::
+* Deleting Characters::
 
 Dictionaries
 
-* Creating Dictionaries::       
-* Loading and Saving Dictionaries::  
-* Basic Dictionary Usage::      
-* Region-Local Dictionaries::   
-* Dictionary Learning::         
-* Getting the Most out of Dictionaries::  
+* Creating Dictionaries::
+* Loading and Saving Dictionaries::
+* Basic Dictionary Usage::
+* Region-Local Dictionaries::
+* Dictionary Learning::
+* Getting the Most out of Dictionaries::
 
 Dictionary Learning
 
-* Learning from Buffers and Files::  
-* Automatic Learning::          
-* Relationships Between Words::  
+* Learning from Buffers and Files::
+* Automatic Learning::
+* Relationships Between Words::
 
 Advanced Customisation
 
-* Character Syntax and Key Bindings::  
-* Major Modes::                 
+* Character Syntax and Key Bindings::
+* Major Modes::
 
 Character Syntax and Key Bindings
 
-* Keymaps and Key Bindings::    
-* Syntax::                      
+* Keymaps and Key Bindings::
+* Syntax::
 
 Major Modes
 
-* LaTeX Support::               
-* HTML Support::                
+* LaTeX Support::
+* HTML Support::
 
 @LaTeX{} Support
 
-* LaTeX Packages::              
-* Automatically Created Files::  
+* LaTeX Packages::
+* Automatically Created Files::
 
 Bugs and Future Improvements
 
-* Known Bugs::                  
-* Future Improvements::         
+* Known Bugs::
+* Future Improvements::
 
 Copying this Manual
 
@@ -306,7 +306,7 @@ DESTDIR=/path/to/install/ DICTDIR=/path/to/dictionaries/}.
 Finally, put the following lines in your .emacs file (replace the paths
 as appropriate if you're not using the default install locations):
 
-@lisp  
+@lisp
 ;; predictive install location
 (add-to-list 'load-path "~/.emacs.d/predictive/")
 ;; dictionary locations
@@ -474,17 +474,17 @@ convenience for use in hooks.
 
 
 @menu
-* Overview::                    
-* Basic Completion Commands::   
-* Auto-Completion Mode::        
-* Dynamic Completion::          
-* Completion Hotkeys::          
-* Displaying Completions in the Echo Area ::  
-* Completion Tooltip::          
-* Pop-Up Frame::                
-* Completion Menu and Browser::  
-* Auto-Show a List of Completions::  
-* Miscellaneous Options::       
+* Overview::
+* Basic Completion Commands::
+* Auto-Completion Mode::
+* Dynamic Completion::
+* Completion Hotkeys::
+* Displaying Completions in the Echo Area ::
+* Completion Tooltip::
+* Pop-Up Frame::
+* Completion Menu and Browser::
+* Auto-Show a List of Completions::
+* Miscellaneous Options::
 @end menu
 
 @node Overview
@@ -627,15 +627,15 @@ a long delay.}.
 
 
 @menu
-* Basic Completion Commands::   
-* Auto-Completion Mode::        
-* Dynamic Completion::          
-* Completion Hotkeys::          
-* Displaying Completions in the Echo Area ::  
-* Completion Tooltip::          
-* Pop-Up Frame::                
-* Completion Menu and Browser::  
-* Miscellaneous Options::       
+* Basic Completion Commands::
+* Auto-Completion Mode::
+* Dynamic Completion::
+* Completion Hotkeys::
+* Displaying Completions in the Echo Area ::
+* Completion Tooltip::
+* Pop-Up Frame::
+* Completion Menu and Browser::
+* Miscellaneous Options::
 @end menu
 
 
@@ -646,8 +646,8 @@ a long delay.}.
 @cindex commands, basic
 
 @menu
-* Inserting Completions::       
-* Deleting Characters::         
+* Inserting Completions::
+* Deleting Characters::
 @end menu
 
 
@@ -917,13 +917,13 @@ file. @xref{Keymaps and Key Bindings}.
 Of course, however many characters are in @env{completion-hotkey-list},
 there cannot be more completions available than the number actually
 found! The maximum number to find is limited by
-@env{predictive-max-completions}, @ref{Miscellaneous Options}.
-@vindex predictive-max-completions
+@env{completion-max-candidates}, @ref{Miscellaneous Options}.
+@vindex completion-max-candidates
 
 
 
 
-@node Displaying Completions in the Echo Area 
+@node Displaying Completions in the Echo Area
 @section Displaying Completions in the Echo Area
 @cindex completion help-echo
 @cindex help-echo
@@ -1053,9 +1053,11 @@ them (@pxref{Completion Hotkeys}).
 The completion menu also contains a @code{Browser} entry, which replaces
 the completion menu with the completion browser. This hierarchically
 lists @emph{all} possible completions, irrespective of the setting of
-@env{predictive-max-completions} (@pxref{Miscellaneous Options}). If
-it's taking too long to construct the browser, you can hit @kbd{C-g} to
-cancel it.
+@env{completion-max-candidates} (@pxref{Miscellaneous Options}). If it's
+taking too long to construct the browser, you can hit @kbd{C-g} to
+cancel it. You can also display the browser directly using
+@command{completion-show-browser-menu} (not bound to any key by
+default).
 
 The completion menu can be displayed automatically when completing,
 optionally after a time-delay, though because it steals the keyboard
@@ -1258,12 +1260,12 @@ dictionaries. (As soon as Emacs becomes sentient -- surely not far off
 -- it will probably go on strike through being forced to work too fast!)
 
 @menu
-* Creating Dictionaries::       
-* Loading and Saving Dictionaries::  
-* Basic Dictionary Usage::      
-* Region-Local Dictionaries::   
-* Dictionary Learning::         
-* Getting the Most out of Dictionaries::  
+* Creating Dictionaries::
+* Loading and Saving Dictionaries::
+* Basic Dictionary Usage::
+* Region-Local Dictionaries::
+* Dictionary Learning::
+* Getting the Most out of Dictionaries::
 @end menu
 
 
@@ -1606,9 +1608,9 @@ weights from them. Predictive mode provides two ways to do this:
 learning from existing files, and automatic learning as you type.
 
 @menu
-* Learning from Buffers and Files::  
-* Automatic Learning::          
-* Relationships Between Words::  
+* Learning from Buffers and Files::
+* Automatic Learning::
+* Relationships Between Words::
 @end menu
 
 
@@ -2051,8 +2053,8 @@ describing all the features available to Lisp packages is beyond the
 scope of this user guide.
 
 @menu
-* Character Syntax and Key Bindings::  
-* Major Modes::                 
+* Character Syntax and Key Bindings::
+* Major Modes::
 @end menu
 
 
@@ -2074,8 +2076,8 @@ This chapter describes the mechanisms that determine the behaviour of
 different characters, and how to customize them.
 
 @menu
-* Keymaps and Key Bindings::    
-* Syntax::                      
+* Keymaps and Key Bindings::
+* Syntax::
 @end menu
 
 
@@ -2336,7 +2338,7 @@ welcome!.
 @c eclectic mix, which reflects the things I use emacs for most often,
 @c and perhaps also the fact that predictive completion mode is somewhat
 @c better suited to markup languages than programming languages at the
-@c moment. 
+@c moment.
 You must ensure that the dictionaries required in order to support these
 major-modes (which are also included in the package, @pxref{Obtaining
 and Installing}) can be found in your @env{load-path}. The @LaTeX{} and
@@ -2345,8 +2347,8 @@ variables. @xref{LaTeX Support}.
 @c Support for the other major-modes is more rudimentary.
 
 @menu
-* LaTeX Support::               
-* HTML Support::                
+* LaTeX Support::
+* HTML Support::
 @end menu
 
 
@@ -2437,8 +2439,8 @@ predictive mode will be enabled in its buffer, and all buffers with the
 same @env{TeX-master} will share various predictive mode settings.
 
 @menu
-* LaTeX Packages::              
-* Automatically Created Files::  
+* LaTeX Packages::
+* Automatically Created Files::
 @end menu
 
 
@@ -2573,8 +2575,8 @@ Emacs it runs under are useful at this stage (though check the web-site
 is not already listed).
 
 @menu
-* Known Bugs::                  
-* Future Improvements::         
+* Known Bugs::
+* Future Improvements::
 @end menu
 
 
