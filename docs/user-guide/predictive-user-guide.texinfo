@@ -84,7 +84,7 @@ Completing Words
 * Auto-Completion Mode::
 * Dynamic Completion::
 * Completion Hotkeys::
-* Displaying Completions in the Echo Area ::
+* Displaying Completions in the Echo Area::
 * Completion Tooltip::
 * Pop-Up Frame::
 * Completion Menu and Browser::
@@ -136,12 +136,17 @@ Character Syntax and Key Bindings
 Major Modes
 
 * LaTeX Support::
+* Texinfo Support::
 * HTML Support::
 
 @LaTeX{} Support
 
 * LaTeX Packages::
-* Automatically Created Files::
+* Automatically Created Files for @LaTeX{}::
+
+Texinfo Support
+
+* Automatically Created Files for Texinfo::
 
 Bugs and Future Improvements
 
@@ -479,7 +484,7 @@ convenience for use in hooks.
 * Auto-Completion Mode::
 * Dynamic Completion::
 * Completion Hotkeys::
-* Displaying Completions in the Echo Area ::
+* Displaying Completions in the Echo Area::
 * Completion Tooltip::
 * Pop-Up Frame::
 * Completion Menu and Browser::
@@ -2331,7 +2336,8 @@ particular major-mode, the easiest way to do this is to add the
 @end lisp
 
 The predictive package itself includes comprehensive support for
-@LaTeX{} (@command{predictive-setup-latex}) and HTML
+@LaTeX{} (@command{predictive-setup-latex}), Texinfo
+(@command{predictive-setup-texinfo}) and HTML
 (@command{predictive-setup-html}). More contributions are always
 welcome!.
 @c and Fortran 90/95 (@command{predictive-setup-f90}) @footnote{An
@@ -2341,13 +2347,15 @@ welcome!.
 @c moment.
 You must ensure that the dictionaries required in order to support these
 major-modes (which are also included in the package, @pxref{Obtaining
-and Installing}) can be found in your @env{load-path}. The @LaTeX{} and
-HTML support goes far beyond simply changing a few configuration
-variables. @xref{LaTeX Support}.
+and Installing}) can be found in your @env{load-path}. The @LaTeX{},
+Texinfo, and HTML support goes far beyond simply changing a few
+configuration variables. @xref{LaTeX Support}, @ref{Texinfo Support},
+and @ref{HTML Support}.
 @c Support for the other major-modes is more rudimentary.
 
 @menu
 * LaTeX Support::
+* Texinfo Support::
 * HTML Support::
 @end menu
 
@@ -2393,9 +2401,9 @@ respectively, @code{dict-latex}, @code{dict-latex-math},
 are dictionaries for @LaTeX{} document classes
 (@code{dict-latex-docclass}), bibliography styles
 (@code{dict-latex-bibstyle}). Finally, a dictionary of cross-reference
-labels, and dictionaries of locally defined @LaTeX{} commands and
-environments, are generated automatically (@pxref{Automatically Created
-Files}).
+labels and dictionaries of locally defined @LaTeX{} commands and
+environments, unique to each @LaTeX{} file, are generated automatically
+(@pxref{Automatically Created Files for @LaTeX{}}).
 
 Predictive mode will automatically complete words from the correct
 dictionary in different regions of your @LaTeX{} document@footnote{The
@@ -2440,7 +2448,7 @@ same @env{TeX-master} will share various predictive mode settings.
 
 @menu
 * LaTeX Packages::
-* Automatically Created Files::
+* Automatically Created Files for @LaTeX{}::
 @end menu
 
 
@@ -2499,9 +2507,9 @@ important@footnote{Dictionaries and Elisp code welcome!}.
 
 
 
-@node Automatically Created Files
+@node Automatically Created Files for @LaTeX{}
 @subsubsection Automatically Created Files
-@cindex automatically created files
+@cindex automatically created files, @LaTeX{}
 @cindex @LaTeX{}, automatically created files
 
 The predictive completion @LaTeX{} support automatically creates and
@@ -2531,11 +2539,98 @@ created even for buffers that share the same @env{TeX-master}.)
 
 
 
+@node Texinfo Support
+@subsection Texinfo Support
+@cindex texinfo support
+@cindex major modes, texinfo
+@cindex texinfo, major-mode support
+
+The predictive mode Texinfo support shares much in common with the
+@LaTeX{} support, but Texinfo is a somewhat simpler markup language than
+@LaTeX{} (@TeX{}nically they're both @TeX{}, of course!). With the
+default settings, Texinfo support is enabled automatically when
+predictive completion mode is turned on in a Texinfo buffer, via an
+entry in @env{predictive-major-mode-alist} (@pxref{Major Modes}).
+
+Four Texinfo dictionaries are provided: @code{dict-texinfo} containing
+the main Texinfo @@-commands, @code{dict-texinfo-env} containing the
+environment names (things that are ended by @samp{@@end}),
+@code{dict-texinfo-indicating} containing just the Texinfo
+``indicating'' commands (@pxref{Indicating, , , Texinfo, GNU Texinfo
+Manual}), and @code{dict-texinfo-math} containing Texinfo @@-commands
+that are specific to math-mode (@samp{@@\} is the only one!). In
+addition, @code{dict-latex-math} is used in math-mode@footnote{It ought
+to be @code{dict-tex-math}, but that will have to await @TeX{}
+support. @xref{Known Bugs}.} (see @pxref{LaTeX Support}). Finally, a
+dictionary of node names, a dictionary of locally defined Texinfo
+commands, add a dictionary of Texinfo flags, unique to each Texinfo
+file, are generated automatically (@pxref{Automatically Created Files
+for Texinfo}).
+
+Predictive mode will automatically complete words from the correct
+dictionary in different regions of your Texinfo document@footnote{The
+automatic dictionary switching is implemented using the
+@dfn{auto-overlays} Elisp package.}. In the main body of the document it
+will complete from the main dictionary, as usual, and also from the
+dictionaries of Texinfo @@-commands. After @samp{@@end}, it will offer
+environment names as completions, whereas after @samp{@@table},
+@samp{@@vtable}, and @samp{@@ftable} it will offer Texinfo
+``indicating'' commands. Inside @samp{@@xref@{@dots{}@}},
+@samp{@@pxref@{@dots{}@}} and @samp{@@ref@{@dots{}@}}, it will use the
+dictionary of node names, which is created and updated automatically for
+each Texinfo document. Inside @samp{@@clear@{@dots{}@}},
+@samp{@@ifset@{@dots{}@}} and @samp{@@ifcler@{@dots{}@}}, it will use
+the automatically-generated dictionary of flag names. Inside
+@samp{@@math@{@dots{}@}} it will offer standard @TeX{} maths commands as
+completions@footnote{Currently, it actually offers @LaTeX{} maths
+commands, @pxref{Known Bugs}.}.
+
+The behaviour of different character syntax classes, and the behaviour
+of certain individual characters, is set up appropriately for Texinfo
+(@pxref{Character Syntax and Key Bindings}). Also, a special Texinfo
+completion browser menu, more appropriate for browsing Texinfo commands,
+is used instead of the default one.
+
+
+@menu
+* Automatically Created Files for Texinfo::
+@end menu
+
+@node Automatically Created Files for Texinfo
+@subsubsection Automatically Created Files
+@cindex automatically created files, Texinfo
+@cindex Texinfo, automatically created files
+
+The predictive completion Texinfo support automatically creates and
+updates dictionaries of node names, dictionaries of locally-defined
+Texinfo commands (defined using @samp{@@macro}, @samp{@@rmacro} or
+@samp{@@alias}), and a dictionary of flags (defined using @samp{@@set}),
+for each buffer.
+
+All these dictionaries are saved to the directory specified by
+@env{predictive-auxiliary-file-location} (@pxref{Miscellaneous
+Options}), so by default they will be saved to a @file{.predictive/}
+subdirectory of the directory containing the Texinfo file. They are
+given a filename of the form
+@file{dict-texinfo-@var{type}-@var{filename}.elc}, where @var{type} is
+the type of dictionary (@file{node}, @file{local-texinfo}, or
+@file{flag}), and @var{filename} is the name of the Texinfo file.
+
+To speed up loading of predictive mode's Texinfo support, a file
+containing information about the location of different regions within
+the document is saved to @file{auto-overlays-@var{filename}} also
+located in @env{predictive-auxiliary-file-location}.
+
+
+
+
 @node HTML Support
 @subsection HTML Support
 @cindex HTML support
+@cindex html support
 @cindex major modes, HTML
 @cindex HTML, major-mode support
+@cindex html, major-mode support
 
 HTML is a simpler markup language than @LaTeX{}, and the predictive mode
 support for it is correspondingly simpler. It includes a dictionary of
@@ -2543,7 +2638,10 @@ HTML tags, @code{dict-html}, and dictionaries of valid attributes for
 different tags, @code{dict-html-@var{tag}}. Completion is
 context-sensitive: typing a @samp{<} character will start completing an
 HTML tag, whereas within a tag predictive mode will complete from the
-appropriate tag attribute dictionaries.
+appropriate tag attribute dictionaries. With the default settings, HTML
+support is enabled automatically when predictive completion mode is
+turned on in an HTML buffer, via an entry in
+@env{predictive-major-mode-alist} (@pxref{Major Modes}).
 
 To speed up loading of predictive mode's HTML support, a file containing
 information about the location of different regions within the document
@@ -2605,6 +2703,10 @@ There are probably still bugs remaining in the @code{auto-overlay} code,
 used in some major modes to set up region-local dictionaries. If you
 find one, please report it, along with precise instructions on how to
 reproduce it. They're fiendishly difficult to track down!
+
+@item
+The predictive mode Texinfo support uses @code{dict-latex-math} inside
+@samp{@@math@{@dots{}@}}, when it should only use @TeX{} maths commands.
 @end enumerate
 
 

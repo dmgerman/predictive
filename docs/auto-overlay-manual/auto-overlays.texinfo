@@ -164,9 +164,9 @@ functions related to extending the auto-overlays
 package. @xref{Extending the Auto-Overlays Package}.
 
 @menu
-* Defining Regexps::            
-* Starting and Stopping Auto-Overlays::  
-* Searching for Overlays::      
+* Defining Regexps::
+* Starting and Stopping Auto-Overlays::
+* Searching for Overlays::
 @end menu
 
 
@@ -372,7 +372,7 @@ If the overlays are being loaded from a file, but optional argument
 no-regexp-check is non-nil, the file of saved overlays will be used, but
 no check will be made to ensure regexp refinitions are the same as when
 the overlays were saved.
- 
+
 
 
 @item (auto-overlay-stop @var{set-id} @@optional @var{buffer} @var{save-file} @var{leave-overlays})
@@ -724,6 +724,7 @@ a perfect demonstration of a @code{line} regexp. Here's a first attempt:
  `(line ("%" (face . (background-color
                       . ,(face-attribute 'default :background))))))
 @end lisp
+
 @noindent
 We use the standard Emacs @command{face-attribute} function to retrieve
 the default background colour, which is evaluated before the regexp
@@ -946,7 +947,7 @@ never be highlighted! The @code{@{} regexp must come @emph{after} the
 @code{\begin@{} and @code{\end@{} regexps, to ensure it is only used if
 neither of them match (it doesn't matter whether it appears before or
 after the @code{@{} regexp, since the latter will never match the same
-text and neither set dictionaries):
+text):
 
 @lisp
 (auto-overlay-load-definition
@@ -1160,11 +1161,11 @@ scratch. @xref{Standard Parse and Suicide Functions}.
 
 
 @menu
-* Auto-Overlays in Depth::      
-* Integrating New Overlay Classes::  
-* Functions for Writing New Overlay Classes::  
-* Auto-Overlay Hooks::          
-* Auto-Overlay Modification Pseudo-Hooks::  
+* Auto-Overlays in Depth::
+* Integrating New Overlay Classes::
+* Functions for Writing New Overlay Classes::
+* Auto-Overlay Hooks::
+* Auto-Overlay Modification Pseudo-Hooks::
 @end menu
 
 @node Auto-Overlays in Depth
@@ -1322,9 +1323,9 @@ interface for this, since the internal implementation may change between
 releases of the auto-overlays package.
 
 @menu
-* Standard Parse and Suicide Functions::  
-* Functions for Modifying Overlays::  
-* Functions for Querying Overlays::  
+* Standard Parse and Suicide Functions::
+* Functions for Modifying Overlays::
+* Functions for Querying Overlays::
 @end menu
 
 
