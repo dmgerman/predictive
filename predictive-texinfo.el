@@ -31,7 +31,7 @@
 ;;; Change Log:
 ;;
 ;; Version 0,1
-;; * initial release
+;; * initial release, borrowing heavily from predictive-latex.el
 
 
 
@@ -42,6 +42,7 @@
 (require 'auto-overlay-line)
 (require 'auto-overlay-self)
 (require 'auto-overlay-nested)
+(require 'predictive-latex)
 
 (provide 'predictive-texinfo)
 (add-to-list 'predictive-major-mode-alist
@@ -103,7 +104,8 @@ between \\begin{...} and \\end{...} commands."
 ;; prevent bogus compiler warnings
 (eval-when-compile
   (defvar dict-texinfo)
-  (defvar dict-texinfo-env))
+  (defvar dict-texinfo-env)
+  (defvar dict-texinfo-indicating))
 
 
 ;; background color for certain auto-overlays to aid debugging
@@ -151,7 +153,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		(throw 'load-fail nil)))
 	    ;; FIXME: should create and use separate dict-tex-math instead of
 	    ;;        using dict-latex-math
-	    '(dict-texinfo dict-texinfo-math dict-texinfo-env dict-latex-math))
+	    '(dict-texinfo dict-texinfo-env dict-texinfo-indicating
+			   dict-texinfo-math dict-latex-math))
       ;; load/create the node and local Texinfo dictionaries
       (predictive-load-auto-dict "texinfo-node")
       (predictive-load-auto-dict "texinfo-local-texinfo")
@@ -214,229 +217,276 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-texinfo-load-regexps ()
   "Load the predictive mode Texinfo auto-overlay regexp definitions."
 
-  ;; @c starts comments that last till end of line
-  (auto-overlay-load-definition
-   'predictive
-   `(line :id short-comment
-	  ("@c \\|@comment "
-	   (dict . predictive-main-dict)
-	   (priority . 50)
-	   (exclusive . t)
-	   (face . (background-color . ,predictive-overlay-debug-colour)))))
+  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+	 (word-complete (completion-get-completion-behaviour word-behaviour))
+	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+	 (whitesp-complete (completion-get-completion-behaviour
+			    whitesp-behaviour))
+	 (whitesp-resolve (completion-get-resolve-behaviour
+			   whitesp-behaviour)))
 
-  ;; "@ignore ... @end ignore" defines an extended comment
-  (auto-overlay-load-definition
-   'predictive
-   `(nested :id long-comment
-	    ("@ignore[[:blank:]]*$"
-	     :edge start
+    ;; @c starts comments that last till end of line
+    (auto-overlay-load-definition
+     'predictive
+     `(line :id short-comment
+	    ("@c \\|@comment "
 	     (dict . predictive-main-dict)
 	     (priority . 50)
 	     (exclusive . t)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@end ignore$"
-	     :edge end
-	     (dict . predictive-main-dict)
-	     (priority . 50)
-	     (exclusive . t)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ))
+	     (face . (background-color . ,predictive-overlay-debug-colour)))))
+
+    ;; "@ignore ... @end ignore" defines an extended comment
+    (auto-overlay-load-definition
+     'predictive
+     `(nested :id long-comment
+	      ("@ignore[[:blank:]]*$"
+	       :edge start
+	       (dict . predictive-main-dict)
+	       (priority . 50)
+	       (exclusive . t)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ("@end ignore$"
+	       :edge end
+	       (dict . predictive-main-dict)
+	       (priority . 50)
+	       (exclusive . t)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ))
 
 
-  ;; \<command>{'s do various things in Texinfo. All are ended by } but not by
-  ;; \}. The { is included to ensure all { and } match, but \{ is excluded
-  (auto-overlay-load-definition
-   'predictive
-   `(nested :id brace
-	    ("@ref{"
-	     :edge start
-	     (dict . predictive-texinfo-node-dict)
-	     (priority . 40)
-	     (completion-menu
-	      . predictive-texinfo-construct-browser-menu)
-	     (completion-word-thing . predictive-texinfo-node-word)
-	     (auto-completion-syntax-alist . ((?w . (add word))
-					      (?_ . (add word))
-					      (?  . (accept none))
-					      (?. . (add word))
-					      (t  . (reject none))))
-	     (auto-completion-override-syntax-alist . ((?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@xref{"
-	     :edge start
-	     (dict . predictive-texinfo-node-dict)
-	     (priority . 40)
-	     (completion-menu
-	      . predictive-texinfo-construct-browser-menu)
-	     (completion-word-thing . predictive-texinfo-node-word)
-	     (auto-completion-syntax-alist . ((?w . (add word))
-					      (?_ . (add word))
-					      (?  . (accept none))
-					      (?. . (add word))
-					      (t  . (reject none))))
-	     (auto-completion-override-syntax-alist . ((?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@pxref{"
-	     :edge start
-	     (dict . predictive-texinfo-node-dict)
-	     (priority . 40)
-	     (completion-menu
-	      . predictive-texinfo-construct-browser-menu)
-	     (completion-word-thing . predictive-texinfo-node-word)
-	     (auto-completion-syntax-alist . ((?w . (add word))
-					      (?_ . (add word))
-					      (?  . (accept none))
-					      (?. . (add word))
-					      (t  . (reject none))))
-	     (auto-completion-override-syntax-alist . ((?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@inforef{"
-	     :edge start
-	     (dict . predictive-texinfo-node-dict)
-	     (priority . 40)
-	     (completion-menu
-	      . predictive-texinfo-construct-browser-menu)
-	     (completion-word-thing . predictive-texinfo-node-word)
-	     (auto-completion-syntax-alist . ((?w . (add word))
-					      (?_ . (add word))
-					      (?  . (accept none))
-					      (?. . (add word))
-					      (t  . (reject none))))
-	     (auto-completion-override-syntax-alist . ((?} . (accept none))))
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@math{"
-	     :edge start
-	     (dict . (dict-texinfo-math dict-latex-math))
+    ;; \<command>{'s do various things in Texinfo. All are ended by } but not
+    ;; by \}. The { is included to ensure all { and } match, but @{ and @} are
+    ;; excluded
+    (auto-overlay-load-definition
+     'predictive
+     `(nested :id brace
+	      ("@\\(x\\|px\\|info\\)?ref{"
+	       :edge start
+	       (dict . predictive-texinfo-node-dict)
+	       (priority . 40)
+	       (completion-menu
+		. predictive-texinfo-construct-browser-menu)
+	       (completion-word-thing . predictive-texinfo-node-word)
+	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+						(?_ . (add ,word-complete))
+						(?  . (,whitesp-resolve none))
+						(?. . (add ,word-complete))
+						(t  . (reject none))))
+	       (auto-completion-override-syntax-alist
+		. ((?} . (,punct-resolve none))))
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ("@value{"
-	     :edge start
-	     (dict . dict-texinfo-flag) (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ;; Note: the following regexps are complicated because they have
-	    ;; to check whether number of @'s in front of { is even or
-	    ;; odd. Also, since auto-overlay regexps aren't allowed to match
-	    ;; across lines, we have to deal with the case of { or } at the
-	    ;; start of a line separately.
-	    (("^\\({\\)" . 1)
-	     :edge start
-	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    (("[^@]\\(@@\\)*\\({\\)" . 2)
-	     :edge start
-	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    (("^\\(}\\)" . 1)
-	     :edge end
-	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    (("[^@]\\(@@\\)*\\(}\\)" . 2)
-	     :edge end
-	     (priority . 40)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))
-	    ))
+	      ("[^@]\\(@@\\)*@math{"
+	       :edge start
+	       (dict . (dict-texinfo-math dict-latex-math))
+	       (priority . 40)
+	       (completion-word-thing . predictive-latex-word)
+	       (auto-completion-override-syntax-alist
+		. ((?\\ . ((lambda ()
+			     (if (and (char-before) (= (char-before) ?\\)
+				      (or (not (char-before (1- (point))))
+					  (not (= (char-before (1- (point)))
+						  ?\\))))
+				 'add ',punct-resolve))
+			   ,word-complete))
+		   (?_ . (,punct-resolve none))
+		   (?^ . (,punct-resolve none))
+		   (?{ . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				',punct-complete 'none))))
+		   (?} . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				',punct-complete 'none))))
+		   (?\; . ((lambda ()
+			     (if (and (char-before) (= (char-before) ?\\))
+				 'add ',punct-resolve))
+			   (lambda ()
+			     (if (and (char-before (1- (point)))
+				      (= (char-before (1- (point))) ?\\))
+				 ',punct-complete 'none))))
+		   (?! . ((lambda ()
+			    (if (and (char-before) (= (char-before) ?\\))
+				'add ',punct-resolve))
+			  (lambda ()
+			    (if (and (char-before (1- (point)))
+				     (= (char-before (1- (point))) ?\\))
+				',punct-complete 'none))))))
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
+	      ("^@math{"
+	       :edge start
+	       (dict . (dict-texinfo-math dict-latex-math))
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-  ;; @end ends a Texinfo environment (the second definition deals with
-  ;; overlays that have to extend to the end of the line
-  (auto-overlay-load-definition
-   'predictive
-   `(word
-     :id environment
-     (("@end \\([[:alpha:]]*\\)[^[:alpha:]]" . 1)
-      (priority . 10)
-      (dict . dict-texinfo-env)
-      (face . (background-color . ,predictive-overlay-debug-colour)))))
-  (auto-overlay-load-definition
-   'predictive
-   `(word
-     :id environment-eol
-     (("@end \\([[:alpha:]]*\\)$" . 1)
-      (priority . 10)
-      (dict . dict-texinfo-env)
-      (face . (background-color . ,predictive-overlay-debug-colour)))))
+	      ("@value{"
+	       :edge start
+	       (dict . dict-texinfo-flag) (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
+	      ;; Note: the following regexps are complicated because they have
+	      ;; to check whether number of @'s in front of { is even or
+	      ;; odd. Also, since auto-overlay regexps aren't allowed to match
+	      ;; across lines, we have to deal with the case of { or } at the
+	      ;; start of a line separately.
+	      (("^\\({\\)" . 1)
+	       :edge start
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^@]\\(@@\\)*\\({\\)" . 2)
+	       :edge start
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("^\\(}\\)" . 1)
+	       :edge end
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("[^@]\\(@@\\)*\\(}\\)" . 2)
+	       :edge end
+	       (priority . 40)
+	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ))
 
 
-  ;; @node and @anchor create cross-reference labels. Through the use of a
-  ;; special "auto-dict" regexp class defined below, this automagically adds
-  ;; the label to the label dictionary.
-  (auto-overlay-load-definition
-   'predictive
-   '(predictive-auto-dict
-     :id node
-     (("@node \\(.*?\\)\\(,.*\\|$\\)" . 1)
-      (auto-dict . predictive-texinfo-node-dict))))
-  (auto-overlay-load-definition
-   'predictive
-   '(predictive-auto-dict
-     :id anchor
-     (("@anchor{\\(.*?\\)}" . 1)
-      (auto-dict . predictive-texinfo-node-dict))))
+    ;; @end ends a Texinfo environment (the second definition deals with
+    ;; overlays that have to extend to the end of the line)
+    (auto-overlay-load-definition
+     'predictive
+     `(word
+       :id environment
+       (("@end \\([[:alpha:]]*\\)[^[:alpha:]]" . 1)
+	(priority . 10)
+	(dict . dict-texinfo-env)
+	(face . (background-color . ,predictive-overlay-debug-colour)))))
+    (auto-overlay-load-definition
+     'predictive
+     `(word
+       :id environment-eol
+       (("@end \\([[:alpha:]]*\\)$" . 1)
+	(priority . 10)
+	(dict . dict-texinfo-env)
+	(face . (background-color . ,predictive-overlay-debug-colour)))))
 
 
-  ;; the other optional arguments of @node are references to other nodes
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id node-args1
-     (("@node [^,]*,\\([^,]*\\)\\($\\|,\\)" . 1)
-      (dict . predictive-texinfo-node-dict))))
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id node-args2
-     (("@node \\([^,]*,\\)\\{2\\}\\([^,]*\\)\\($\\|,\\)" . 2)
-      (dict . predictive-texinfo-node-dict))))
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id node-args3
-     (("@node \\([^,]*,\\)\\{3\\}\\([^,]*\\)\\($\\|,\\)" . 2)
-      (dict . predictive-texinfo-node-dict))))
+    ;; @table, @vtable and @ftable define two-column tables, and should be
+    ;; followed by a Texinfo "indicating" command (the second definition deals
+    ;; with overlays that have to extend to the end of the line)
+    (auto-overlay-load-definition
+     'predictive
+     `(word
+       :id table
+       (("@[vf]?table \\([[:alpha:]]*\\)[^[:alpha:]]" . 1)
+	(priority . 10)
+	(dict . dict-texinfo-indicating)
+	(face . (background-color . ,predictive-overlay-debug-colour)))))
+    (auto-overlay-load-definition
+     'predictive
+     `(word
+       :id table-eol
+       (("@[vf]?table \\([[:alpha:]]*\\)$" . 1)
+	(priority . 10)
+	(dict . dict-texinfo-indicating)
+	(face . (background-color . ,predictive-overlay-debug-colour)))))
 
 
-  ;; @macro defines a new command. Through the use of a special "auto-dict"
-  ;; regexp class defined below, this automagically adds the command to the
-  ;; Texinfo dictionary.
-  (auto-overlay-load-definition
-   'predictive
-   '(predictive-auto-dict
-     :id macro
-     (("@macro \\(.*?\\)\\($\\|{\\)" . 1)
-      (auto-dict . predictive-texinfo-local-texinfo-dict))))
+    ;; @node and @anchor create cross-reference labels. Through the use of a
+    ;; special "auto-dict" regexp class defined below, this automagically adds
+    ;; the label to the label dictionary.
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id node
+       (("@node \\(.*?\\)\\(,.*\\|$\\)" . 1)
+	(auto-dict . predictive-texinfo-node-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id anchor
+       (("@anchor{\\(.*?\\)}" . 1)
+	(auto-dict . predictive-texinfo-node-dict))))
 
 
-  ;; @set defines and/or sets a flag. Through the use of a special "auto-dict"
-  ;; regexp class defined below, this automagically adds the command to the
-  ;; flags dictionary.
-  (auto-overlay-load-definition
-   'predictive
-   '(predictive-auto-dict
-     :id set
-     (("@set \\(.*\\)\\([^ ]\\|$\\)" . 1)
-      (dict . predictive-texinfo-flag-dict))))
+    ;; the other optional arguments of @node are references to other nodes
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id node-args1
+       (("@node [^,]*,\\([^,]*\\)\\($\\|,\\)" . 1)
+	(dict . predictive-texinfo-node-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id node-args2
+       (("@node \\([^,]*,\\)\\{2\\}\\([^,]*\\)\\($\\|,\\)" . 2)
+	(dict . predictive-texinfo-node-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id node-args3
+       (("@node \\([^,]*,\\)\\{3\\}\\([^,]*\\)\\($\\|,\\)" . 2)
+	(dict . predictive-texinfo-node-dict))))
 
 
-  ;; @clear, @ifset and @ifclear refer to flags defined by @set
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id clear
-     (("@clear \\(.*\\)\\([^ ]\\|$\\)" . 1)
-      (dict . predictive-texinfo-flag-dict))))
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id ifset
-     (("@ifset \\(.*\\)\\([^ ]\\|$\\)" . 1)
-      (dict . predictive-texinfo-flag-dict))))
-  (auto-overlay-load-definition
-   'predictive
-   '(word
-     :id ifclear
-     (("@ifclear \\(.*\\)\\([^ ]\\|$\\)" . 1)
-      (dict . predictive-texinfo-flag-dict))))
+    ;; @macro and @rmacro define new Texinfo macros. Through the use of a
+    ;; special "auto-dict" regexp class defined below, this automagically adds
+    ;; the command to the Texinfo dictionary.
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id macro
+       (("@r?macro \\(.*?\\)[[:blank:]]*\\({\\|$\\)" . 1)
+	(auto-dict . predictive-texinfo-local-texinfo-dict))))
+
+    ;; @alias defines a new alias to a Texinfo macro
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id alias
+       (("@alias \\(.*?\\)[[:blank:]]*=" . 1)
+	(auto-dict . predictive-texinfo-local-texinfo-dict))))
+
+
+    ;; @set defines and/or sets a flag. Through the use of a special "auto-dict"
+    ;; regexp class defined below, this automagically adds the command to the
+    ;; flags dictionary.
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id set
+       (("@set \\(.*\\)\\([^ ]\\|$\\)" . 1)
+	(dict . predictive-texinfo-flag-dict))))
+
+
+    ;; @clear, @ifset and @ifclear refer to flags defined by @set
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id clear
+       (("@clear \\(.*\\)\\([^ ]\\|$\\)" . 1)
+	(dict . predictive-texinfo-flag-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id ifset
+       (("@ifset \\(.*\\)\\([^ ]\\|$\\)" . 1)
+	(dict . predictive-texinfo-flag-dict))))
+    (auto-overlay-load-definition
+     'predictive
+     '(word
+       :id ifclear
+       (("@ifclear \\(.*\\)\\([^ ]\\|$\\)" . 1)
+	(dict . predictive-texinfo-flag-dict))))
+    )
 )
 
 
