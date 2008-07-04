@@ -61,8 +61,7 @@
 ;; customization variables:
 ;;
 ;; * Dynamic completion: provisionally insert the first available
-;;   completion candidate into the buffer, and accept, reject or update
-;;   it based on character syntax.
+;;   completion candidate into the buffer.
 ;;
 ;; * Completion hotkeys: single-key selection of a completion
 ;;   candidate.
@@ -559,7 +558,11 @@ characters rather than syntax descriptors."
 ;;; ===== Dynamic completion customizations =====
 
 (defcustom completion-use-dynamic t
-  "*Enable dynamic completion."
+  "*Enable dynamic completion.
+Dynamic completion directly inserts the first completion into the
+buffer without further action required by the user. It is still a
+provisional completion, so until it is accepted all the usual
+mechanisms for selecting completions are still available."
   :group 'completion-ui
   :type 'boolean)
 
