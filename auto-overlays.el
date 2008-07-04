@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.2
+;; Version: 0.9.3
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,7 +30,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.9,2
+;; Version 0.9.3
+;; * fixed bug in `auto-overlay-unload-definition'
+;;
+;; Version 0.9.2
 ;; * allow SAVE-FILE argument of `auto-overlay-start/stop' to specify a
 ;;   location to save to
 ;; * made corresponding modifications to `auto-overlay-save/load-overlays'
@@ -186,6 +189,11 @@
 (defmacro auto-o-get-regexps (set-id)
   ;; Return the list of regexp definitions for regexp set SET-ID.
   `(cddr (assq ,set-id auto-overlay-regexps)))
+
+
+;; (defmacro auto-o-set-regexps (set-id regexps)
+;;   ;; Set the list of regexp definitions for regexp set SET-ID.
+;;   `(setcdr (cdr (assq ,set-id auto-overlay-regexps)) ,regexps))
 
 
 
@@ -687,10 +695,13 @@ from the current buffer. Returns the deleted definition."
 				`((eq set-id ,set-id)
 				  (eq definition-id ,definition-id))))))
     ;; delete definition
-    (let* ((defs (auto-o-get-regexps set-id))
-	   (olddef (assq definition-id defs))
+    (let ((olddef (assq definition-id (auto-o-get-regexps set-id)))
 	   def-id class regexps regexp edge regexp-id props)
-      (assq-delete-all definition-id defs)
+      ;; safe to delete by side effect here because definition is guaranteed
+      ;; not to be the first element of the list (the first two elements of a
+      ;; regexp set are always the set-id and the buffer list)
+      (assq-delete-all definition-id (assq set-id auto-overlay-regexps))
+
 
       ;; massage deleted definition into form suitable for
       ;; `auto-overlay-load-definition'
@@ -733,6 +744,9 @@ Returns the deleted regexp."
     (let* ((def (cdr (assq definition-id (auto-o-get-regexps set-id))))
 	   (oldregexp (assq regexp-id def))
 	   id edge regexp props)
+      ;; can safely delete by side effect here because the regexp definition
+      ;; is guaranteed not to be the first element of the list (the first two
+      ;; elements of a definition are always the :id and class)
       (assq-delete-all regexp-id def)
 
       ;; massage deleted definition into form suitable for
@@ -1229,6 +1243,12 @@ overlays were saved."
 		    (forward-line 0)
 		    (while (let ((case-fold-search nil))
 			     (re-search-forward regexp (line-end-position) t))
+		      ;; sanity check regexp definition against match
+		      (when (or (null (match-beginning group))
+				(null (match-end group)))
+			(error "Match for regexp \"%s\" has no group %d"
+			       regexp group))
+
 		      (cond
 		       ;; ignore match if it already has a match overlay
 		       ((auto-o-matched-p (match-beginning 0) (match-end 0)
