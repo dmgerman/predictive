@@ -55,7 +55,7 @@
   ;; Load regexps
   (auto-overlay-load-regexp
    'predictive 'brace
-   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 2)
+   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\color\\(\\[.*?\\]\\)?{"
      :edge start
      :id color
      (dict . dict-latex-colours)
@@ -64,16 +64,7 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `(("^\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 1)
-     :edge start
-     :id color-bol
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)" . 2)
+   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\textcolor\\(\\[.*?\\]\\)?{"
      :edge start
      :id textcolor
      (dict . dict-latex-colours)
@@ -82,27 +73,9 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `(("^\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)" . 1)
-     :edge start
-     :id textcolor-bol
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)" . 2)
+   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\pagecolor\\(\\[.*?\\]\\)?{"
      :edge start
      :id pagecolor
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("^\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)" . 1)
-     :edge start
-     :id pagecolor-bol
      (dict . dict-latex-colours)
      (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
@@ -114,11 +87,8 @@
 (defun predictive-latex-unload-color ()
   ;; unload regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'color)
-  (auto-overlay-unload-regexp 'predictive 'brace 'color-bol)
   (auto-overlay-unload-regexp 'predictive 'brace 'textcolor)
-  (auto-overlay-unload-regexp 'predictive 'brace 'textcolor-bol)
   (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor)
-  (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor-bol)
   ;; unload colour dictionary
   (predictive-unload-dict 'dict-latex-colours)
 )

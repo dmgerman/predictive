@@ -57,18 +57,9 @@
   ;; load regexp
   (auto-overlay-load-regexp
    'predictive 'brace
-   `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)" . 2)
+   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\includegraphics\\(\\[.*?\\]\\)?{"
      :edge start
      :id graphicx
-     (dict . t)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("^\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)" . 1)
-     :edge start
-     :id graphicx-bol
      (dict . t)
      (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
@@ -80,7 +71,6 @@
 (defun predictive-latex-unload-graphicx ()
   ;; unload regexp
   (auto-overlay-unload-regexp 'predictive 'brace 'graphicx)
-  (auto-overlay-unload-regexp 'predictive 'brace 'graphicx-bol)
 )
 
 ;;; predictive-latex-graphicx ends here

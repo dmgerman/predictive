@@ -70,36 +70,9 @@
     ;; \thref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `(("[^\\]\\(\\\\\\\\\\)*\\(\\\\thref{\\)" . 2)
+     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\thref{"
        :edge start
        :id thref
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
-       (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("^\\(\\\\thref{\\)" . 1)
-       :edge start
-       :id thref-bol
        (dict . predictive-latex-label-dict)
        (priority . 40)
        (completion-menu . predictive-latex-construct-browser-menu)
@@ -128,13 +101,7 @@
      'predictive
      `(word
        :id newshadedtheorem
-       (("[^\\]\\(\\\\\\\\\\)*\\\\newshadedtheorem{\\(.*?\\)}" . 2)
-	(auto-dict . predictive-latex-local-env-dict))))
-    (auto-overlay-load-definition
-     'predictive
-     `(word
-       :id newshadedtheorem-bol
-       (("^\\\\newshadedtheorem{\\(.*?\\)}" . 1)
+       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newshadedtheorem{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-env-dict))))
 
     ;; \newframedtheorem
@@ -142,13 +109,7 @@
      'predictive
      `(word
        :id newframedtheorem
-       (("[^\\]\\(\\\\\\\\\\)*\\\\newframedtheorem{\\(.*?\\)}" . 2)
-	(auto-dict . predictive-latex-local-env-dict))))
-    (auto-overlay-load-definition
-     'predictive
-     `(word
-       :id newframedtheorem-bol
-       (("^\\\\newframedtheorem{\\(.*?\\)}" . 1)
+       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newframedtheorem{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-env-dict))))
     )
 )
@@ -158,11 +119,8 @@
 (defun predictive-latex-unload-ntheorem ()
   ;; Unload cleveref regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'thref)
-  (auto-overlay-unload-regexp 'predictive 'brace 'thref-bol)
   (auto-overlay-unload-definition 'predictive 'newshadedtheorem)
-  (auto-overlay-unload-definition 'predictive 'newshadedtheorem-bol)
   (auto-overlay-unload-definition 'predictive 'newframedtheorem)
-  (auto-overlay-unload-definition 'predictive 'newframedtheorem-bol)
 )
 
 ;;; predictive-latex-ntheorem ends here
