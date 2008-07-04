@@ -129,7 +129,7 @@
 ;;;                Replacements for CL functions
 
 (defmacro tstree--signum (n)  ; INTERNAL USE ONLY
-  ;; Return 1 if x is positive, -1 if negativs, 0 if zero.
+  ;; Return 1 if x is positive, -1 if negative, 0 if zero.
   `(cond ((> ,n 0) 1) ((< ,n 0) -1) (t 0))
 )
 
@@ -137,7 +137,7 @@
 
 
 ;;; ================================================================
-;;;  Internal functions for use in the ternary search tree package
+;;;  Internal functions only for use within the tstree package
 
 
 (defmacro tstree--tree-root (tree)  ; INTERNAL USE ONLY.
@@ -235,7 +235,7 @@
 
 (defun tstree--node-find (tree sequence)  ; INTERNAL USE ONLY
   ;; Returns the node corresponding to SEQUENCE, or nil if none found.
-  
+
   (cond
    ;; don't search for nil!
    ((null sequence) nil)
@@ -246,7 +246,7 @@
 	    (node (tstree--tree-root tree))
 	    (c 0) (chr (elt sequence 0)) (d 0)
 	    (len (length sequence)))
-	
+
         ;; as long as we keep finding nodes, keep descending the tree
 	(while (and node (< c len))
 	  (setq d (funcall cmpfun chr (tstree--node-split node)))
@@ -316,7 +316,7 @@ than\". Used by `tstree-complete-ordered' to rank completions."
 	 ;; rank function defaults to >
 	 (rankfun (if rank-function rank-function
 		    (lambda (a b) (> (cdr a) (cdr b))))))
-  
+
     (cons 'TSTREE
 	  (cons (tstree--node-create nil nil nil t)
 		(cons cmpfun
@@ -334,24 +334,18 @@ than\". Used by `tstree-complete-ordered' to rank completions."
 
 
 
-(defun tstree-compare-function (tree)
-  "Return the comparison function for the ternary search tree TREE."
-  (tstree--tree-cmpfun tree)
-)
+(defalias 'tstree-compare-function 'tstree--tree-cmpfun
+  "Return the comparison function for the ternary search tree TREE.")
 
 
 
-(defun tstree-insert-function (tree)
-  "Return the insertion function for the ternary search tree TREE."
-  (tstree--tree-insfun tree)
-)
+(defalias 'tstree-insert-function 'tstree--tree-insfun
+  "Return the insertion function for the ternary search tree TREE.")
 
 
 
-(defun tstree-rank-function (tree)
-  "Return the rank function for the ternary seach tree TREE."
-  (tstree--tree-rankfun tree)
-)
+(defalias 'tstree-rank-function 'tstree--tree-rankfun
+  "Return the rank function for the ternary seach tree TREE.")
 
 
 
@@ -374,17 +368,16 @@ in the tree, or nil. The first is the data DATA, the second is
 the data associated with KEY, or nil if KEY doesn't yet exist. It
 should return the same type. The return value is stored in the
 tree."
-  
+
   ;; don't add empty keys to the tree
   (if (= 0 (length key)) nil
-    
+
     (let ((cmpfun (tstree--tree-cmpfun tree))
-	  (insfun (if insert-function insert-function
-		    (tstree--tree-insfun tree)))
+	  (insfun (or insert-function (tstree--tree-insfun tree)))
 	  (node (tstree--tree-dummyroot tree))
 	  (c 0) (chr (elt key 0)) (d 0)
 	  (len (length key)) newdata)
-      
+
       ;; as long as we keep finding nodes, keep descending the tree
       (while (and node (tstree--node-branch node d))
 	(setq node (tstree--node-branch node d))
@@ -401,7 +394,7 @@ tree."
 			  (funcall insfun data
 				   (tstree--node-equal node))))
 	      (setq node nil)))))  ; forces loop to exit
-      
+
       ;; once we've found one node that doesn't exist, must create all
       ;; others
       (while node
@@ -419,8 +412,8 @@ tree."
 	   node d (tstree--node-create
 		   nil (setq newdata (funcall insfun data nil))
 		   nil nil))
-	  (setq node nil)))  ; fores loop to exit
-      
+	  (setq node nil)))  ; forces loop to exit
+
       ;; return the newly inserted data
       newdata)
   )
@@ -434,7 +427,7 @@ tree."
 or nil if KEY has no association.
 
 Note: this will not distinguish between a non-existant KEY and
-a KEY whose data is nil. Use `tstree-member-p' instead.
+a KEY whose data is nil. See `tstree-member-p'.
 
 If TREE is a list of trees, the return value will be created by
 combining data from all trees containing KEY, by calling
@@ -444,14 +437,14 @@ the insersion function of the first tree in the list."
   ; wrap tree in a list if not already
   (when (tstree-p tree) (setq tree (list tree)))
 
-  
+
   (let (data node)
     ;; loop over all trees
     (dotimes (i (length tree))
-      
+
       ;; find first node corresponding to KEY
       (setq node (tstree--node-find (nth i tree) key))
-      
+
       ;; keep following the low branch until we find the data node, or
       ;; can't go any further (Note: no need to deal with deleted data
       ;; nodes specially, since they have null equal nodes anyway and
@@ -472,7 +465,7 @@ the insersion function of the first tree in the list."
 
 (defun tstree-member-p (tree key)
   "Return t if KEY is in tree TREE, nil otherwise."
-  
+
   (let ((node (tstree--node-find tree key)))
     ;; keep descending low child until we find data node or can't go any
     ;; further
@@ -511,7 +504,7 @@ the insersion function of the first tree in the list."
 Returns non-nil if KEY was deleted, nil if KEY was not in TREE."
   (let ((node (tstree--tree-root tree))
 	stack)
-    
+
     ;; as long as we keep finding nodes, keep descending the tree and
     ;; adding the nodes to the stack
     (let ((cmpfun (tstree--tree-cmpfun tree))
@@ -531,7 +524,7 @@ Returns non-nil if KEY was deleted, nil if KEY was not in TREE."
       (setq node (if (tstree--node-split node) (tstree--node-low node)
 		   (tstree--node-equal node))))
     (setq node (pop stack))
-    
+
     (cond
      ;; if KEY is not in TREE, return nil
      ((or (tstree--node-split node)
@@ -592,7 +585,7 @@ function calls is returned. Don't use this. Use the
 
   ;; wrap tree in list if not already
   (when (tstree-p tree) (setq tree (list tree)))
-  
+
   (let (stack str node result accumulate)
     ;; loop over all trees in list
     (dolist (tr tree)
@@ -604,17 +597,17 @@ function calls is returned. Don't use this. Use the
 	 ((eq type 'string) (push "" stack))
 	 ((eq type 'list) (push () stack))
 	 (t (push [] stack)))
-	
+
 	;; keep going until we've traversed all nodes (stack is empty)
 	(while (not (null stack))
 	  (setq str (pop stack))
 	  (setq node (pop stack))
-	  
+
 	  ;; add the high child to the stack, if it exists
 	  (when (tstree--node-high node)
 	    (push (tstree--node-high node) stack)
 	    (push str stack))
-	  
+
 	  ;; if we're at a data node that hasn't been flagged as deleted, call
 	  ;; FUNCTION, otherwise add the equal child to the stack
 	  (if (and (null (tstree--node-split node))
@@ -634,14 +627,14 @@ function calls is returned. Don't use this. Use the
 		     (t (vconcat str
 				 (vector (tstree--node-split node)))))
 		    stack)))
-	  
+
 	  ;; add the low child to the stack, if it exists
 	  (when (and (tstree--node-low node)
 		     (not (eq (tstree--node-low node) 'deleted)))
 	    (push (tstree--node-low node) stack)
 	    (push str stack))
 	  )))
-    
+
     ;; return accumulated list of results (nil if MAPCAR was nil)
     (nreverse accumulate))
 )
@@ -704,7 +697,7 @@ completions. If supplied, it is called for each possible
 completion with two arguments: the completion, and its associated
 data. If the filter function returns nil, the completion is not
 included in the results."
-  
+
   (let (stack completions seq num node data sortfun)
     ;; wrap tree and sequence in lists, if not already lists
     (setq tree (if (tstree-p tree) (list tree) tree))
@@ -718,12 +711,12 @@ included in the results."
 	(setq sequence (list sequence))
       ;; sort sequences in list
       (setq sequence (sort sequence sortfun)))
-    
-    
+
+
     ;; loop over all trees in the list
     (dotimes (i (length tree))
       (setq num 0)
-      
+
       ;; ----- initialise the stack -----
       ;; add initial nodes for each sequence in the sequence list
       (dolist (seq sequence)
@@ -731,19 +724,19 @@ included in the results."
 	(if (car (push (tstree--node-find (nth i tree) seq) stack))
 	    (push seq stack)
 	  (pop stack)))
-      
+
       ;; ----- search the tree -----
       ;; Keep going until we've searched all nodes (node stack is
       ;; empty), or have found enough completions.
       (while (and stack (or (null maxnum) (< num maxnum)))
 	(setq seq (pop stack))
 	(setq node (pop stack))
-	
+
         ;; add the high child to the stack, if it exists
 	(when (tstree--node-high node)
 	  (push (tstree--node-high node) stack)
 	  (push seq stack))
-	
+
         ;; if we're not at a data node, add the equal child to the stack
 	(if (tstree--node-split node)
 	    (when (tstree--node-equal node)
@@ -781,15 +774,15 @@ included in the results."
 	      (setq completions (cons (cons seq data) completions))
 	      (setq num (1+ num))))
 	  )
-	
+
 	;; add the low child to the stack, if it exists
 	(when (and (tstree--node-low node)
 		   (not (eq (tstree--node-low node) 'deleted)))
 	  (push (tstree--node-low node) stack)
 	  (push seq stack))
 	))
-    
-    
+
+
     ;; ----- construct the list of completions -----
     ;; if searching across multiple trees, need to sort completions
     (when (> (length tree) 1)
@@ -797,11 +790,11 @@ included in the results."
       (let ((cmpl-sortfun `(lambda (a b) (,sortfun (car a) (car b)))))
 	;; sort completions
 	(setq completions (sort completions cmpl-sortfun))))
-    
+
     ;; discard any excess completions
     (when (and maxnum (> (length completions) maxnum))
       (setcdr (nthcdr (1- maxnum) completions) nil))
-    
+
     ;; return the completions
     (nreverse completions))
 )
@@ -858,7 +851,7 @@ completion with two arguments: the completion (a sequence of the
 same type as KEY), and its associated data. If the filter
 function returns nil, the completion is not included in the
 results."
-  
+
   (let* (stack heap)
     ;; wrap tree and key in lists if necessary
     (when (tstree-p tree) (setq tree (list tree)))
@@ -868,7 +861,7 @@ results."
 	      (and (listp key) (not (sequencep (car key)))))
       (setq key (list key)))
 
-    
+
     ;; ----- initialise the heap -----
     (let ((rankfun (or rank-function
 		       (tstree--tree-rankfun (car tree)))))
@@ -876,12 +869,12 @@ results."
       ;; tree in the list
       (setq heap (heap-create `(lambda (a b) (not (,rankfun a b)))
 			      (1+ maxnum))))
-    
+
     (let (num seq node data newdata)
       ;; loop over all trees in the list
       (dotimes (i (length tree))
 	(setq num 0)
-	
+
 	;; ----- initialise the stack -----
 	(dolist (seq key)
 	  ;; if completions exist, add initial node and key to the
@@ -889,20 +882,20 @@ results."
 	  (if (car (push (tstree--node-find (nth i tree) seq) stack))
 	      (push seq stack)
 	    (pop stack)))
-	
-	
+
+
 	;; ------ search the current tree -----
 	;; keep going until we've searched all nodes (node stack is
 	;; empty)
 	(while stack
 	  (setq seq (pop stack))
 	  (setq node (pop stack))
-	  
+
 	  ;; add the high child to the stack, if it exists
 	  (when (tstree--node-high node)
 	    (push (tstree--node-high node) stack)
 	    (push seq stack))
-	  
+
 	  ;; if we're not at a data node, add the equal child to the
 	  ;; stack
 	  (if (tstree--node-split node)
@@ -953,8 +946,8 @@ results."
 	    (push (tstree--node-low node) stack)
 	    (push seq stack))
 	  )))
-    
-    
+
+
     ;; ----- create the completions vector -----
     ;; repeatedly transfer the worst completion left in the heap to the
     ;; front of the completions vector

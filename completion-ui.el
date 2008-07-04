@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9
+;; Version: 0.9.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -78,9 +78,9 @@
 ;;   located below the point, from which completions can be selected.
 ;;
 ;; * Pop-up frame: display a list of completion candidates in a pop-up
-;;   frame located below the point, which can be toggled between display
-;;   some or all completions, and from which completions can be
-;;   selected.
+;;   frame located below the point, which can be toggled between
+;;   displaying some or all completions, and from which completions can
+;;   be selected.
 ;;
 ;; * Completion menu: allow completion candidates to be selected from
 ;;   a drop-down menu located below the point.
@@ -94,7 +94,8 @@
 ;; words as they are typed, using the `completion-function' to find
 ;; completion candidates. The same customization variables determine how
 ;; those candidates are displayed and can be selected. This works
-;; particularly well with dynamic completion (see above).
+;; particularly well with dynamic completion (see above), as long as
+;;`completion-function' is fast.
 ;;
 ;; This package will work alongside the auto-overlays package if it's
 ;; available, but does not require it.
@@ -102,6 +103,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.1
+;; * use :family attribute of `completion-tooltip-face' to set tooltip font
+;;   (thanks to Andy Stewart for the patch)
 ;;
 ;; Version 0.9
 ;; * added `completion-includes-prefix' variable to indicate that completions
@@ -642,8 +647,8 @@ correct position on different window systems."
 (defface completion-tooltip-face
   `((t . (:background ,(or (face-attribute 'menu :background) "white")
 	  :foreground ,(or (face-attribute 'menu :foreground) "black"))))
-  "*Face used in tooltip. Only foreground and background attributes are\
- used."
+  "*Face used in tooltip. Only :foreground, :background and :family
+attributes are used."
   :group 'completion-ui)
 
 
@@ -709,20 +714,32 @@ frame in correct position on different window systems."
   "Function that accepts two arguments, PREFIX and MAXNUM,
 and returns a list of at most MAXNUM completion candidates for
 the PREFIX string. If MAXNUM is nil, it should return all
-completion candidates for PREFIX.")
+completion candidates for PREFIX.
+
+By default, the completion candidates that are returned should be
+the entire completed string, including the prefix. If
+`completion-includes-prefix' is set to nil, they should instead
+be the completion minus the prefix. If
+`completion-replaces-prefix' is non-nil, then the whole
+completion (which need not be a prefix-completion at all) should
+be returned, and `completion-includes-prefix' is ignored.")
 (make-variable-buffer-local 'completion-function)
 (set-default 'completion-function nil)  ; ensure "global" value is nil
 
 
 (defvar completion-prefix-function 'completion-prefix
   "Function that finds a prefix to complete at point.
-It should return the prefix as a string.")
+It should return the prefix as a string.
+
+If `completion-replaces-prefix' is non-nil, then the returned
+string can be anything that `completion-function' can complete,
+which need not necessarily be a prefix.")
 (make-variable-buffer-local 'completion-prefix-function)
 
 
 (defvar completion-includes-prefix t
-  "If nil, the strings returned by calls to `completion-function'
-do *not* include the prefix. If t, then they do. Ignored if
+  "If nil, the strings returned by `completion-function' do *not*
+include the prefix. If t, then they do. Ignored if
 `completion-replaces-prefix' is non-nil.")
 (make-variable-buffer-local 'completion-includes-prefix)
 
@@ -734,7 +751,9 @@ returned by `completion-prefix-function') will be deleted from
 the buffer when a completion is accepted.
 
 Setting this to non-nil allows completion-UI to support things
-other than simple prefix-completion.")
+other than simple prefix-completion. E.g. the \"prefix\" returned
+by `compeltion-prefix-function' could be treated as a regexp to
+be expanded by `completion-function'")
 (make-variable-buffer-local 'completion-replaces-prefix)
 
 
@@ -743,13 +762,15 @@ other than simple prefix-completion.")
 
 Used by `complete-word-at-point' and `completion-backward-delete'
 in calls to `thing-at-point'. See `thing-at-point' for more
-details.
+details. (Note that we require `forward-op' to be defined for
+`completion-word-thing', which is *not* the case for all
+pre-defined \"things\" in `thing-at-point'.)
 
-More precisely, it is used by the default
-`completion-prefix-function', `completion-prefix', which is
+More precisely, `completion-word-thing' is used by the default
+`completion-prefix-function' (`completion-prefix') which is
 called by the above functions to determine the prefix at
 point. So it may be ignored if `completion-prefix-function' is
-set to some other non-default function.")
+set to some other function.")
 (make-variable-buffer-local 'completion-word-thing)
 
 
@@ -2026,6 +2047,7 @@ point is at POINT."
 		 (completion-frame-posn-at-point)))
 	  (fg (face-attribute 'completion-tooltip-face :foreground))
 	  (bg (face-attribute 'completion-tooltip-face :background))
+	  (font (face-attribute 'completion-tooltip-face :family))
 	  params text text-func)
 
       ;; construct the tooltip text using the "overlay-local" binding
@@ -2059,6 +2081,8 @@ point is at POINT."
       (when (stringp bg)
 	(setq params
 	      (tooltip-set-param params 'background-color bg)))
+      (when (stringp font)
+	(setq params (tooltip-set-param params 'font font)))
       (setq params
 	    (tooltip-set-param params 'internal-border-width 0))
       (setq params
