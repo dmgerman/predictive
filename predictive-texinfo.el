@@ -242,7 +242,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; "@ignore ... @end ignore" defines an extended comment
     (auto-overlay-load-definition
      'predictive
-     `(nested :id long-comment
+     `(flat :id long-comment
 	      ("@ignore[[:blank:]]*$"
 	       :edge start
 	       (dict . predictive-main-dict)

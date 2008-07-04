@@ -2,7 +2,7 @@
 ;;; auto-overlay-flat.el --- flat start/end-delimited automatic overlays
 
 
-;; Copyright (C) 2006-2007 Toby Cubitt
+;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1.2
@@ -51,7 +51,7 @@
 (provide 'auto-overlay-flat)
 
 
-;; set nest overlay parsing and suicide functions, and indicate class requires
+;; set flat overlay parsing and suicide functions, and indicate class requires
 ;; separate start and end regexps
 (put 'flat 'auto-overlay-parse-function 'auto-o-parse-flat-match)
 (put 'flat 'auto-overlay-suicide-function 'auto-o-flat-suicide)
@@ -65,7 +65,7 @@
 
   (let (o-parent)
     (cond
-     
+
      ;; if match is for a start regexp...
      ((eq (auto-o-edge o-match) 'start)
       ;; if match is within an existing overlay, ignore match
@@ -74,7 +74,7 @@
 	       `((identity auto-overlay)
 		 (eq set-id ,(overlay-get o-match 'set-id))
 		 (eq definition-id ,(overlay-get o-match 'definition-id))))
-	
+
 	;; otherwise, look for next end-match...
 	(let ((o-end (auto-o-next-flat-match o-match 'end)))
 	  (cond
@@ -91,21 +91,23 @@
 	      (setq o-parent (make-overlay pos pos nil nil 'rear-advance)))
 	    (overlay-put o-parent 'auto-overlay t)
 	    (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	    (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
+	    (overlay-put o-parent 'definition-id
+			 (overlay-get o-match 'definition-id))
 	    (auto-o-match-overlay o-parent o-match o-end)
 	    o-parent)
-	   
+
 	   (t ;; otherwise, make a new, end-unmatched overlay and return it
 	    (let ((pos (overlay-get o-match 'delim-end)))
 	      (setq o-parent (make-overlay pos pos nil nil 'read-advance))
 	      (overlay-put o-parent 'auto-overlay t)
 	      (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	      (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
+	      (overlay-put o-parent 'definition-id
+			   (overlay-get o-match 'definition-id))
 	      (auto-o-match-overlay o-parent o-match 'unmatched)
 	      o-parent))
 	   ))))
-     
-     
+
+
      (t ;; if match is for an end regexp...
       ;; if match is within existing overlay with same set-d and definition-id...
       (when (setq o-parent
@@ -115,7 +117,7 @@
 		  `((identity auto-overlay)
 		    (eq set-id ,(overlay-get o-match 'set-id))
 		    (eq definition-id ,(overlay-get o-match 'definition-id))))))
-	
+
 	;; if overlay can simply be re-matched with new end-match, do so
 	(let ((o-end (overlay-get o-parent 'end))
 	      (o-start (auto-o-next-flat-match o-match 'start)))
@@ -123,7 +125,7 @@
 			(<= (overlay-get o-start 'delim-end)
 			    (overlay-get o-end 'delim-start))))
 	      (progn (auto-o-match-overlay o-parent nil o-match) nil)
-	    
+
 	    ;; if overlay was end-matched, and there's a start match within
 	    ;; existing overlay that will be "unmasked" when end is stolen,
 	    ;; create a new overlay between that start match and the end match
@@ -133,7 +135,8 @@
 	      (setq o-parent (make-overlay pos pos nil nil 'read-advance))
 	      (overlay-put o-parent 'auto-overlay t)
 	      (overlay-put o-parent 'set-id (overlay-get o-match 'set-id))
-	      (overlay-put o-parent 'definition-id (overlay-get o-match 'definition-id))
+	      (overlay-put o-parent 'definition-id
+			   (overlay-get o-match 'definition-id))
 	      (auto-o-match-overlay o-parent o-start o-end))
 	    o-parent))  ; return newly created overlay
 	))))
@@ -149,7 +152,7 @@
     (cond
      ;; if we have no parent, don't need to do anything
      ((null o-parent))
-     
+
      ;; if we're a start-match...
      ((eq (auto-o-edge o-self) 'start)
       ;; if parent is end-unmatched, delete parent
@@ -163,8 +166,8 @@
 	      (auto-o-match-overlay o-parent o-start)
 	    ;; otherwise, delete parent
 	    (auto-o-delete-overlay o-parent)))))
-     
-     
+
+
      (t ;; if we're an end-match, look for next end-match...
       (let ((o-start (overlay-get o-parent 'start))
 	    (o-end (auto-o-next-flat-match o-self 'end)))
@@ -177,7 +180,7 @@
 	  (when (overlay-get o-end 'parent)
 	    (auto-o-delete-overlay (overlay-get o-end 'parent) 'no-parse))
 	  (auto-o-match-overlay o-parent nil o-end))
-	 
+
 	 (t ;; otherwise, make parent end-unmatched
 	  (auto-o-match-overlay o-parent nil 'unmatched)))))
      ))
