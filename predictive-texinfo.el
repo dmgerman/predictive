@@ -129,9 +129,17 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (catch 'load-fail
       ;; save overlays and unload regexp definitions along with buffer
       (add-hook 'after-save-hook
-		(lambda () (auto-overlay-save-overlays
-			    'predictive nil
-			    predictive-auxiliary-file-location))
+		(lambda ()
+		  (auto-overlay-save-overlays
+		   'predictive nil
+		   predictive-auxiliary-file-location))
+		nil t)
+      (add-hook 'kill-buffer-hook
+		(lambda ()
+		  (when (not (buffer-modified-p))
+		    (auto-overlay-save-overlays
+		     'predictive nil
+		     predictive-auxiliary-file-location)))
 		nil t)
 
       ;; use Texinfo browser menu if first character of prefix is "\"
@@ -204,9 +212,17 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'completion-menu)
     ;; remove hook function that saves overlays
     (remove-hook 'after-save-hook
-		 (lambda () (auto-overlay-save-overlays
-			     'predictive nil
-			     predictive-auxiliary-file-location))
+		 (lambda ()
+		   (auto-overlay-save-overlays
+		    'predictive nil
+		    predictive-auxiliary-file-location))
+		 t)
+    (remove-hook 'kill-buffer-hook
+		 (lambda ()
+		   (when (not (buffer-modified-p))
+		     (auto-overlay-save-overlays
+		      'predictive nil
+		      predictive-auxiliary-file-location)))
 		 t)
 
     t))  ; indicate successful reversion of changes

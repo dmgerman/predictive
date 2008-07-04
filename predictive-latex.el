@@ -39,6 +39,7 @@
 ;;   `auto-completion-override-syntax-alist' in
 ;;   `predictive-latex-load-regexps'
 ;; * improved regexp definitions that start with "\"
+;; * save overlays when unmodified buffers are killed
 ;;
 ;; Version 0.10
 ;; * separated off predictive-latex-auto-dict overlays into stand-alone
@@ -326,6 +327,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			    'predictive nil
 			    predictive-auxiliary-file-location))
 		nil t)
+      (add-hook 'kill-buffer-hook
+		(lambda ()
+		  (when (not (buffer-modified-p))
+		    (auto-overlay-save-overlays
+		     'predictive nil
+		     predictive-auxiliary-file-location)))
+		nil t)
 
       ;; use latex browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
@@ -503,6 +511,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		 (lambda () (auto-overlay-save-overlays
 			     'predictive nil
 			     predictive-auxiliary-file-location))
+		 t)
+    (remove-hook 'kill-buffer-hook
+		 (lambda ()
+		   (when (not (buffer-modified-p))
+		     (auto-overlay-save-overlays
+		      'predictive nil
+		      predictive-auxiliary-file-location)))
 		 t)
 
     t))  ; indicate successful reversion of changes
@@ -1531,25 +1546,29 @@ This loads the package dictionary and runs the load functions for
 the package, if they exist."
   (interactive "sPackage name: ")
 
-  (let (dict)
+  (let (dict func loaded)
     ;; try to load package dictionaries and add them to the appropriate lists
     ;; if they exists
     (dolist (dic predictive-latex-dict-classes)
       (setq dict (concat (cdr dic) package))
       (when (predictive-load-dict dict)
+	(setq loaded t)
 	(setq dict (intern-soft dict))
 	(if (and (listp (eval (car dic)))
 		 (not (dictree-p (eval (car dic)))))
 	    (nconc (eval (car dic)) (list dict))
-	  (set (car dic) (list (eval (car dic)) dict))))))
-
-  ;; try to load lisp library for the package
-  (require (intern (concat "predictive-latex-" package)) nil t)
-  ;; run load function for package, if one is defined
-  (let ((func (nth 1 (assoc package predictive-latex-usepackage-functions))))
-    (when func (funcall func)))
-  ;; display message
-  (message (format "LaTeX package \"%s\" loaded" package))
+	  (set (car dic) (list (eval (car dic)) dict)))))
+    
+    ;; try to load lisp library for the package
+    (require (intern (concat "predictive-latex-" package)) nil t)
+    ;; run load function for package, if one is defined
+    (setq func (nth 1 (assoc package predictive-latex-usepackage-functions)))
+    (when func
+      (funcall func)
+      (setq loaded t))
+    ;; display message if we've loaded something
+    (when loaded
+      (message (format "LaTeX package \"%s\" loaded" package))))
 )
 
 
