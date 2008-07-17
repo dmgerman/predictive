@@ -30,6 +30,10 @@
 
 ;;; Commentary:
 ;;
+;; *******************************************************************
+;; *     This package is obsolete; it is superseded by trie.el       *
+;; *******************************************************************
+;;
 ;; A ternary search tree associates data with keys. The keys can be
 ;; any ordered sequence of elements: vector, list or string. It stores
 ;; them in such a way that both storage size and data lookup are
