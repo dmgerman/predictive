@@ -2108,19 +2108,9 @@ mode) is enabled.
 @item auto-completion-map
 Keymap enabled whenever @command{auto-completion-mode} is.
 
-@item completion-hotkey-map
-Keymap used when hotkey completion is enabled. Constructed from
-@env{completion-hotkey-list}. Warning: setting this directly will cause
-errors! Set @env{completion-hotkey-list} instead. @xref{Completion
-Hotkeys}.
-
 @item completion-hotkey-list
 List of hotkey characters to use for selecting completions. Default is
-numerical characters 0 to 9. This must be set @emph{before} predictive
-mode is loaded, so can not be customized, and must instead be set
-manually in your @file{.emacs} file before the @code{(require
-'predictive)} line (@pxref{Obtaining and Installing}. @xref{Completion
-Hotkeys}.
+numerical characters 0 to 9.
 
 @item completion-dynamic-map auto-completion-dynamic-map
 Keymaps assigned to the overlay used to highlight the provisional
@@ -2157,13 +2147,6 @@ completion (@pxref{Dynamic Completion}). The former is used when
 @command{auto-completion-mode} is disabled, the latter when it is
 enabled. They are used to provide key bindings for most of the
 completion features.
-
-The @env{completion-hotkey-map} is is constructed automatically from the
-characters listed in @env{completion-hotkey-list}, and binds all those
-characters to @command{predictive-select-completion}. It should
-@emph{not} be set directly; you may get strange results if the keymap
-and key list do not correspond!
-@findex completion-select
 
 If the keymaps are not defined when predictive mode is first loaded
 (@pxref{Obtaining and Installing}), it creates the default keymaps and

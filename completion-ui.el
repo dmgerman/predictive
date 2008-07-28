@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.1
+;; Version: 0.9.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.2
+;; * define hotkey bindings on the fly in `completion-setup-overlay', getting
+;;   rid of `completion-tooltip-map' entirely
+;; * `completion-hotkey-list' can revert to being a customization option
 ;;
 ;; Version 0.9.1
 ;; * use :family attribute of `completion-tooltip-face' to set tooltip font
@@ -450,41 +455,40 @@ after deleting backwards in auto-completion mode."
 Used by the `auto-completion-self-insert' function to decide what
 to do based on a typed character's syntax.
 
-The predefined choices can be used to set two syntax-dependent
-completion behaviours: how the prefix is chosen when characters
-are typed, and how provisional completions are accepted. These
-are specified by a cons cell, whose cdr is either \"type
-normally\" or \"punctuation accepts\", and controls how
-completions are accepted, and whose car is either \"word\" or
+When customizing this variable, predefined choices can be used to
+configure two separate syntax-dependent completion behaviours:
+how provisional completions are accepted, and how the prefix is
+chosen when characters are typed. The first choice is between
+\"type normally\" or \"punctuation accepts\", and controls how
+completions are accepted. The second is between \"word\" or
 \"string\", and controls how the prefix is chosen.
 
-If the car is set to \"type normally\", the provisional
-completions that appear as you type are only accepted if you call
+If \"type normally\" is selected, the provisional completions
+that appear as you type are only accepted if you call
 `completion-accept' manually. You are free to ignore them
-entirely and type normally. If the car is instead set to
-\"punctuation accepts\", the provisional completions are
-automatically accepted whenever you type any punctuation or
-whitespace character (as defined by the buffers' syntax
-table). For example, hitting SPC will usually accept the current
-provisional completion and insert a space after it. Once your
-fingers get used to it, this can allow you to type faster as you
-can quickly accept a completion and move onto the next
-word. However, you can no longer entirely ignore the completions
-and type normally, since you may accidentally accept a completion
-you didn't want.
+entirely and type normally. If \"punctuation accepts\" is
+selected, the provisional completions are automatically accepted
+whenever you type any punctuation or whitespace character (as
+defined by the buffers' syntax table). For example, hitting SPC
+will usually accept the current provisional completion and insert
+a space after it. Once your fingers get used to it, this can
+allow you to type faster as you can quickly accept a completion
+and move onto the next word. However, you can no longer entirely
+ignore the completions and type normally, since you may
+accidentally accept a completion you didn't want.
 
-If the cdr is set to \"word\", typing a word-constituent
-character (as defined by the buffers' syntax table) will cause
-the part of the word before point to be completed. That is, the
-completion prefix will be all those characters in the word at
-point that come before the point (`completion-word-thing'
-determines which characters form the word). If the cdr is instead
-set to \"string\", typing a word-constituent character will
-complete the current string that has been built up by typing
-characters. That is, the prefix will consist of the characters
-you've typed sequentially in the buffer. The two behaviours
-usually only differ if you insert characters in the middle or at
-the end of an existing word.
+If \"word\" is selected, typing a word-constituent character (as
+defined by a buffers' syntax table) will cause the part of the
+word before point to be completed. That is, the completion prefix
+will be all those characters in the word at point that come
+before the point (`completion-word-thing' determines which
+characters form the word). If instead \"string\" is selected,
+typing a word-constituent character will complete the current
+string that has been built up by typing characters. That is, the
+prefix will consist of the characters you've typed sequentially
+in the buffer. The two behaviours usually only differ if you
+insert characters in the middle or at the end of an existing
+word.
 
 
 Customizing the behaviour for each syntax individually gives more
@@ -494,15 +498,18 @@ behaviour. In this case, the value of
 syntax descriptors (characters) with behaviours (two-element
 lists).
 
-The first element of the list must be one of symbols 'accept,
-'reject or 'add. The first two again have the same meaning as in
-the predefined behaviours, whereas 'add causes characters with
-that syntax to be added to the current completion prefix.
+The first element of the behaviour list must be one of symbols
+'accept, 'reject or 'add. The first two again have the same
+meaning as the predefined behaviours \"punctuation accepts\" and
+\"type normally\", though they now apply only to one syntax
+descriptor, whereas 'add causes characters with that syntax to be
+added to the current completion prefix (this is the usual setting
+for word-constutuent characters).
 
 The second element of the list must be one of the symbols 'word,
-'string or 'none. 'word and 'string have the same meaning as in
-the predefined behaviours, though they now apply only to one
-syntax class, whereas 'none prevents characters with that syntax
+'string or 'none. 'word and 'string have the same meaning as the
+predefined behaviours, though they now apply only to one syntax
+descriptor, whereas 'none prevents characters with that syntax
 from invoking auto-completion.
 
 
@@ -510,9 +517,10 @@ When `auto-completion-syntax-alist' is set from Lisp code, in
 addition to the symbol values described above the list entries
 can also be functions which return one of those symbols. The list
 can also have an additional third entry, which determines whether
-the typed character is inserted or not: the character is inserted
-if it is non-nil, not if it is nil. Again if the third entry is a
-function, its return value determines the insertion behaviour."
+or not the typed character is inserted into the buffer: the
+character is inserted if it is non-nil, not if it is nil. Again
+if the third entry is a function, its return value determines the
+insertion behaviour."
   :group 'completion-ui
   :type '(choice
 	  (cons :tag "Predefined"
@@ -609,11 +617,11 @@ pop-up frames."
 
 ;; not a defcustom, since setting it after loading completion-ui.el (as
 ;; defcustom typically will) does not work
-(defvar completion-hotkey-list
-  '([?0] [?1] [?2] [?3] [?4] [?5] [?6] [?7] [?8] [?9])
+(defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)
   "*List of keys (vectors) to use for selecting completions
-when `completion-use-hotkeys' is enabled. This variable must be
-set *before* completion-ui.el is laoded to take effect.")
+when `completion-use-hotkeys' is enabled."
+  :group 'completion-ui
+  :type '(repeat character))
 
 
 
@@ -844,16 +852,6 @@ prefix argument supplied to an interactive rejection command.")
 
 (defvar completion-map nil
   "Keymap active when a completion-function is defined.")
-
-(defvar completion-hotkey-map nil
-  "Keymap used for hotkey completion (single-key selection of
-  completions).
-
-  Do NOT bind keys in this keymap directly. The keymap is
-  constructed automatically from `completion-hotkey-list'. You
-  should modify that instead, before `completion-ui.el' is
-  loaded.")
-
 
 (defvar completion-dynamic-map nil
   "Keymap active in a dynamic completion overlay.")
@@ -1290,15 +1288,6 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 )
 
 
-
-
-;; Construct the keymap used for hotkey selection from
-;; `completion-hotkey-list'. This keymap is active if
-;; `completion-use-hotkeys' is enabled.
-(setq completion-hotkey-map (make-sparse-keymap))
-(dolist (key completion-hotkey-list)
-  (define-key completion-hotkey-map key
-    'completion-select-if-within-overlay))
 
 ;; make sure completion-hotkey-map is in minor-mode-keymap-alist
 (let ((existing (assq 'completion-use-hotkeys minor-mode-map-alist)))
@@ -2811,7 +2800,8 @@ Intended to be bound to keys in `completion-hotkey-map'."
     (let ((key (this-command-keys-vector)))
       ;; FIXME: work around apparent bug where keys are doubled in vector
       (when (> (length key) 1) (setq key (vector (aref key 0))))
-      (setq n (completion--position key completion-hotkey-list))))
+      (setq n (completion--position
+	       key (mapcar 'vector completion-hotkey-list)))))
 
   ;; if within a completion overlay...
   (when overlay
@@ -3554,12 +3544,20 @@ property is left unchanged."
     ;; set permanent overlay properties
     (overlay-put overlay 'completion-overlay t)
     (overlay-put overlay 'face 'completion-dynamic-face)
-    (if auto-completion-mode
-	(overlay-put overlay 'keymap auto-completion-dynamic-map)
-      (overlay-put overlay 'keymap completion-dynamic-map))
-    (overlay-put overlay 'help-echo
-		 'completion-construct-help-echo-text)
+    (overlay-put overlay 'help-echo 'completion-construct-help-echo-text)
     (overlay-put overlay 'priority 100)
+    ;; set overlay keymap
+    (let ((map (make-sparse-keymap)))
+      (overlay-put overlay 'keymap map)
+      (set-keymap-parent map (if auto-completion-mode
+				 auto-completion-dynamic-map
+			       completion-dynamic-map))
+      ;; construct hotkey selection bindings from `completion-hotkey-list'
+      (when completion-use-hotkeys
+	(dolist (key completion-hotkey-list)
+	  (define-key map (vector key)
+	    'completion-select-if-within-overlay))))
+    ;; setup common prefix overlay if enabled
     (when completion-dynamic-highlight-common-prefix
       (let ((o (make-overlay (point) (point))))
       (overlay-put overlay 'common-prefix o)
@@ -3922,7 +3920,7 @@ inserted dynamic completion."
 	      (concat str " "
 		      (format "(%s)"
 			      (key-description
-			       (nth i completion-hotkey-list))))))
+			       (vector (nth i completion-hotkey-list)))))))
       ;; if current completion is the inserted dynamic completion, use
       ;; `completion-dynamic-face' to highlight it
       (when (and num (= i num))
@@ -3962,7 +3960,7 @@ inserted dynamic completion."
 	      (concat
 	       (format "(%s) "
 		       (key-description
-			(nth i completion-hotkey-list))) str)))
+			(vector (nth i completion-hotkey-list)))) str)))
        (completion-use-hotkeys
 	(setq str (concat "() " str))))
       (setq text (concat text str "  ")))
@@ -3992,7 +3990,7 @@ of completion overlay."
 	      (setq str
 		    (format "(%c)"
 			    (key-description
-			     (nth i completion-hotkey-list))))
+			     (vector (nth i completion-hotkey-list)))))
 	    (setq str "    "))
 	  ;; add completion to text
 	  (setq str (concat str " "
@@ -4028,8 +4026,9 @@ of completion overlay."
 		      ;; add hotkey for current completion, if any
 		      (if (and completion-use-hotkeys
 			       (< i (length completion-hotkey-list)))
-			  (format " (%s)" (key-description
-					   (nth i completion-hotkey-list)))
+			  (format " (%s)"
+				  (key-description
+				   (vector (nth i completion-hotkey-list))))
 			""))))))
     lines)  ; return pop-up frame lines
 )
@@ -4059,7 +4058,7 @@ of completion overlay."
 	      :keys (when (and completion-use-hotkeys
 			       (< n (length completion-hotkey-list)))
 		      (key-description
-		       (nth n completion-hotkey-list))))))
+		       (vector (nth n completion-hotkey-list)))))))
 
     ;; add entry to switch to completion browser
     (define-key-after menu [separator-browser] '(menu-item "--"))

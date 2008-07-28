@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.7
+;; Version: 0.17.8
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.17.7
+;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
+;;   to ensure `predictive-map' comes before it in `minor-mode-map-alist'
 ;;
 ;; Version 0.17.7
 ;; * added missing 'buffer option to customization menu for
@@ -530,9 +534,15 @@ weight increment is multiplied by this number. See also
 
 (defcustom predictive-use-auto-learn-cache t
   "*If non-nil, auto-learned and auto-added words will be cached
-and only added to the dictionary when Emacs is idle. This makes
-predictive mode more responsive, since learning or adding words
-can otherwise cause a small but noticeable delay when typing.
+and only added to the dictionary when Emacs is idle.
+
+This makes predictive mode more responsive, since learning or
+adding words can otherwise cause a small but noticeable delay
+when typing. However, it also means that dictionaries will not
+immediately reflect changes due to auto-learning or
+auto-adding. In particular, auto-added words will not appear as
+completions until Emacs has been idle long enough for them to
+have been added.
 
 This has no effect unless `predictive-auto-learn' or
 `predictive-auto-add' are enabled. See also
@@ -812,27 +822,10 @@ Setting this variable directly will have no effect. Use \\[customize] or
 
 
 ;; add the minor mode keymap to the list
-(let ((existing (assq 'predictive-mode minor-mode-map-alist))
-      (mode-alist minor-mode-map-alist)
-      (new (cons 'predictive-mode predictive-map)))
-
-  ;; if it's already there, just update the keymap part
+(let ((existing (assq 'predictive-mode minor-mode-map-alist)))
   (if existing
       (setcdr existing predictive-map)
-
-    ;; otherwise, we have to make sure predictive mode's keymap comes after
-    ;; `completion-hotkey-map', so search the list for its enabling
-    ;; variable: `completion-use-hotkeys'
-    (while (and mode-alist
-		(not (eq (car (nth 0 mode-alist)) 'completion-use-hotkeys)))
-      (setq mode-alist (cdr mode-alist)))
-    ;; if it was found in the list, add `predictive-map' after it
-    (if mode-alist
-	(setcdr mode-alist (cons new (cdr mode-alist)))
-    ;; otherwise, just add `predictive-map' to the front (though this should
-    ;; never happen if `predictive-selection' package loaded successfully
-      (push new minor-mode-map-alist))
-    ))
+    (push (cons 'predictive-mode predictive-map) minor-mode-map-alist)))
 
 
 
