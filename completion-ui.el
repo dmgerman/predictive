@@ -106,7 +106,7 @@
 ;;
 ;; Version 0.9.2
 ;; * define hotkey bindings on the fly in `completion-setup-overlay', getting
-;;   rid of `completion-tooltip-map' entirely
+;;   rid of `completion-hotkey-map' entirely
 ;; * `completion-hotkey-list' can revert to being a customization option
 ;;
 ;; Version 0.9.1
@@ -1286,15 +1286,6 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 ;;;       (interactive)
 ;;;       (auto-completion-self-insert ?/ ?w t)))
 )
-
-
-
-;; make sure completion-hotkey-map is in minor-mode-keymap-alist
-(let ((existing (assq 'completion-use-hotkeys minor-mode-map-alist)))
-  (if existing
-      (setcdr existing completion-hotkey-map)
-    (push (cons 'completion-use-hotkeys completion-hotkey-map)
-	  minor-mode-map-alist)))
 
 
 
@@ -2790,7 +2781,8 @@ instead. If OVERLAY is supplied, use that instead of finding one
 at point. The point had better be within OVERLAY or a meteorite
 will smash through your ceiling.
 
-Intended to be bound to keys in `completion-hotkey-map'."
+Characters in `completion-hotkey-list' get bound to this
+internally. It should *never* be bound in a keymap."
   (interactive)
   (completion-cancel-tooltip)
 
