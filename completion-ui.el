@@ -108,6 +108,11 @@
 ;; * define hotkey bindings on the fly in `completion-setup-overlay', getting
 ;;   rid of `completion-hotkey-map' entirely
 ;; * `completion-hotkey-list' can revert to being a customization option
+;; * remove `completion-cancel-tooltip' from `after-change-functions', since
+;;   this prevents tooltip being displayed when `flyspell-mode' is enabled
+;;   (it's in `before-command-hook' anyway, which should be enough)
+;; * use `run-with-timer' instead of `run-with-idle-timer' in
+;;   `completion-auto-show', as it seems to make more sense
 ;;
 ;; Version 0.9.1
 ;; * use :family attribute of `completion-tooltip-face' to set tooltip font
@@ -1978,9 +1983,9 @@ from timer)."
     ;; if delaying, setup timer to call ourselves later
     (if (and completion-auto-show-delay (null point))
 	(setq completion-auto-timer
-	      (run-with-idle-timer completion-auto-show-delay nil
-				   'completion-auto-show
-				   overlay (point)))
+	      (run-with-timer completion-auto-show-delay nil
+			      'completion-auto-show
+			      overlay (point)))
 
       ;; otherwise, display whatever we're displaying
       (cond
@@ -4574,8 +4579,8 @@ in WINDOW'S frame."
 ;;; =================================================================
 ;;;                 Set modification hook functions
 
-(add-hook 'after-change-functions
-	  (lambda (&rest unused) (completion-cancel-tooltip)))
+;; (add-hook 'after-change-functions
+;; 	  (lambda (&rest unused) (completion-cancel-tooltip)))
 
 ;; we reset tooltip flag after any command because Emacs hides tooltips
 ;; after any command
