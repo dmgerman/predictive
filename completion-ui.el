@@ -113,6 +113,8 @@
 ;;   (it's in `before-command-hook' anyway, which should be enough)
 ;; * use `run-with-timer' instead of `run-with-idle-timer' in
 ;;   `completion-auto-show', as it seems to make more sense
+;; * move backspace and delete bindings to `completion-dynamic-map' and
+;;   `auto-completion-map'
 ;;
 ;; Version 0.9.1
 ;; * use :family attribute of `completion-tooltip-face' to set tooltip font
@@ -987,66 +989,6 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
        (lambda () (interactive) (completion-resolve-current nil ?\r ? ))
        'completion-function 'before)))
 
-  ;; if command remapping is supported, remap delete commands
-  (if (fboundp 'command-remapping)
-      (progn
-	(define-key completion-map [remap delete-char]
-	  'completion-delete-char)
-	(define-key completion-map [remap backward-delete-char]
-	  'completion-backward-delete-char)
-	(define-key completion-map [remap delete-backward-char]
-	  'completion-backward-delete-char)
-	(define-key completion-map [remap backward-delete-char-untabify]
-	  'completion-backward-delete-char-untabify)
-	(define-key completion-map [remap kill-word]
-	  'completion-kill-word)
-	(define-key completion-map [remap backward-kill-word]
-	  'completion-backward-kill-word)
-	(define-key completion-map [remap kill-sentenve]
-	  'completion-kill-sentenve)
-	(define-key completion-map [remap backward-kill-sentenve]
-	  'completion-backward-kill-sentenve)
-	(define-key completion-map [remap kill-sexp]
-	  'completion-kill-sexp)
-	(define-key completion-map [remap backward-kill-sexp]
-	  'completion-backward-kill-sexp)
-	(define-key completion-map [remap kill-paragraphs]
-	  'completion-kill-paragraph)
-	(define-key completion-map [remap backward-kill-paragraph]
-	  'completion-backward-kill-paragraph))
-
-    ;; otherwise, can't do better than define bindings for the keys
-    ;; that are currently bound to them
-    (dolist (key '([delete] [deletechar] [backspace] "\d"
-		   [(control delete)] [(control deletechar)]
-		   [(meta delete)] [(meta deletechar)]
-		   [(control backspace)] [(meta backspace)] "\M-\d"))
-      (catch 'rebound
-	(dolist (binding '((delete-char . completion-delete-char)
-			   (kill-word . completion-kill-word)
-			   (kill-sentence . completion-kill-sentence)
-			   (kill-sexp . completion-kill-sexp)
-			   (kill-paragraph . completion-kill-paragraph)
-			   (backward-delete-char
-			    . completion-backward-delete-char)
-			   (delete-backward-char
-			    . completion-backward-delete-char)
-			   (backward-delete-char-untabify
-			    . completion-backward-delete-char-untabify)
-			   (backward-kill-word
-			    . completion-backward-kill-word)
-			   (backward-kill-sentence
-			    . completion-backward-kill-sentence)
-			   (backward-kill-sexp
-			    . completion-backward-kill-sexp)
-			   (backward-kill-paragraph
-			    . completion-backward-kill-paragraph)))
-	  (when (eq (key-binding key) (car binding))
-	    (define-key completion-map key (cdr binding))
-	    (throw 'rebound t)))))
-    )
-
-
   ;; ----- Simulated overlay keybindings -----
 
   ;; Note: could remove this and leave it up to the call to the
@@ -1154,6 +1096,66 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 
   ;; clicking on a completion displays the completion menu
   (define-key completion-dynamic-map [mouse-2] 'completion-show-menu)
+
+
+  ;; if command remapping is supported, remap delete commands
+  (if (fboundp 'command-remapping)
+      (progn
+	(define-key completion-dynamic-map [remap delete-char]
+	  'completion-delete-char)
+	(define-key completion-dynamic-map [remap backward-delete-char]
+	  'completion-backward-delete-char)
+	(define-key completion-dynamic-map [remap delete-backward-char]
+	  'completion-backward-delete-char)
+	(define-key completion-dynamic-map [remap backward-delete-char-untabify]
+	  'completion-backward-delete-char-untabify)
+	(define-key completion-dynamic-map [remap kill-word]
+	  'completion-kill-word)
+	(define-key completion-dynamic-map [remap backward-kill-word]
+	  'completion-backward-kill-word)
+	(define-key completion-dynamic-map [remap kill-sentenve]
+	  'completion-kill-sentenve)
+	(define-key completion-dynamic-map [remap backward-kill-sentenve]
+	  'completion-backward-kill-sentenve)
+	(define-key completion-dynamic-map [remap kill-sexp]
+	  'completion-kill-sexp)
+	(define-key completion-dynamic-map [remap backward-kill-sexp]
+	  'completion-backward-kill-sexp)
+	(define-key completion-dynamic-map [remap kill-paragraphs]
+	  'completion-kill-paragraph)
+	(define-key completion-dynamic-map [remap backward-kill-paragraph]
+	  'completion-backward-kill-paragraph))
+
+    ;; otherwise, can't do better than define bindings for the keys
+    ;; that are currently bound to them
+    (dolist (key '([delete] [deletechar] [backspace] "\d"
+		   [(control delete)] [(control deletechar)]
+		   [(meta delete)] [(meta deletechar)]
+		   [(control backspace)] [(meta backspace)] "\M-\d"))
+      (catch 'rebound
+	(dolist (binding '((delete-char . completion-delete-char)
+			   (kill-word . completion-kill-word)
+			   (kill-sentence . completion-kill-sentence)
+			   (kill-sexp . completion-kill-sexp)
+			   (kill-paragraph . completion-kill-paragraph)
+			   (backward-delete-char
+			    . completion-backward-delete-char)
+			   (delete-backward-char
+			    . completion-backward-delete-char)
+			   (backward-delete-char-untabify
+			    . completion-backward-delete-char-untabify)
+			   (backward-kill-word
+			    . completion-backward-kill-word)
+			   (backward-kill-sentence
+			    . completion-backward-kill-sentence)
+			   (backward-kill-sexp
+			    . completion-backward-kill-sexp)
+			   (backward-kill-paragraph
+			    . completion-backward-kill-paragraph)))
+	  (when (eq (key-binding key) (car binding))
+	    (define-key completion-dynamic-map key (cdr binding))
+	    (throw 'rebound t)))))
+    )
 )
 
 
@@ -1175,73 +1177,63 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
     (completion-bind-printable-chars auto-completion-map
 				     'auto-completion-self-insert))
 
-
-;;;   ;; ----- Simulated overlay keybindings -----
-
-;;;   ;; C-<space> abandons
-;;;   (define-key auto-completion-map [?\C- ]
-;;;     (lambda ()
-;;;       "Reject current provisional completion if any, otherwise
-;;; run whatever would normally be bound to \"C-<SPC>\"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        'completion-reject 'auto-completion-mode)))
-
-;;;   ;; M-<space> abandons and inserts a space
-;;;   (define-key auto-completion-map "\M- "
-;;;     (lambda (&optional arg)
-;;;       "Reject any current provisional completion if any and insert a space,
-;;; otherwise run whatever would normally be bound to \"M-<SPC>\"."
-;;;       (interactive "P")
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive) (completion-reject arg) (insert " "))
-;;;        'auto-completion-mode)))
-
-;;;   ;; M-S-<space> inserts a space as a word-constituent
-;;;   (define-key auto-completion-map [?\M-\S- ]
-;;;     (lambda ()
-;;;       "Insert a space as though it were a word-constituent if
-;;; there's a provisional completion at point, otherwise run whatever
-;;; would normally be bound to \"M-S\\ \"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive) (auto-completion-self-insert ?\  ?w t))
-;;;        'auto-completion-mode)))
-
-
-;;;   ;; M-. inserts "." as a word-constituent
-;;;   (define-key auto-completion-map "\M-."
-;;;     (lambda ()
-;;;       "Insert \".\" as though it were a word-constituent if
-;;; there's a provisional completion at point, otherwise run whatever
-;;; would normally be bound to \"M-.\"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive) (auto-completion-self-insert ?. ?w t))
-;;;        'auto-completion-mode)))
-
-;;;   ;; M-- inserts "-" as a word-constituent
-;;;   (define-key auto-completion-map "\M--"
-;;;     (lambda ()
-;;;       "Insert \"-\" as though it were a word-constituent if
-;;; there's a provisional completion at point, otherwise run whatever
-;;; would normally be bounds to \"M--\"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive) (auto-completion-self-insert ?- ?w t))
-;;;        'auto-completion-mode)))
-
-;;;   ;; M-/ inserts "/" as a word-constituent
-;;;   (define-key auto-completion-map "\M-/"
-;;;     (lambda ()
-;;;       "Insert \"/\" as though it were a word-constituent if
-;;; there's a provisional completion at point, otherwise run whatever
-;;; would normally be bound to \"M-/\"."
-;;;       (interactive)
-;;;       (completion-run-if-within-overlay
-;;;        (lambda () (interactive)
-;;;           (auto-completion-self-insert ?/ ?w t))
-;;;        'auto-completion-mode)))
+  ;; if command remapping is supported, remap delete commands
+  (if (fboundp 'command-remapping)
+      (progn
+	(define-key auto-completion-map [remap delete-char]
+	  'completion-delete-char)
+	(define-key auto-completion-map [remap backward-delete-char]
+	  'completion-backward-delete-char)
+	(define-key auto-completion-map [remap delete-backward-char]
+	  'completion-backward-delete-char)
+	(define-key auto-completion-map [remap backward-delete-char-untabify]
+	  'completion-backward-delete-char-untabify)
+	(define-key auto-completion-map [remap kill-word]
+	  'completion-kill-word)
+	(define-key auto-completion-map [remap backward-kill-word]
+	  'completion-backward-kill-word)
+	(define-key auto-completion-map [remap kill-sentenve]
+	  'completion-kill-sentenve)
+	(define-key auto-completion-map [remap backward-kill-sentenve]
+	  'completion-backward-kill-sentenve)
+	(define-key auto-completion-map [remap kill-sexp]
+	  'completion-kill-sexp)
+	(define-key auto-completion-map [remap backward-kill-sexp]
+	  'completion-backward-kill-sexp)
+	(define-key auto-completion-map [remap kill-paragraphs]
+	  'completion-kill-paragraph)
+	(define-key auto-completion-map [remap backward-kill-paragraph]
+	  'completion-backward-kill-paragraph))
+    ;; otherwise, can't do better than define bindings for the keys
+    ;; that are currently bound to them
+    (dolist (key '([delete] [deletechar] [backspace] "\d"
+		   [(control delete)] [(control deletechar)]
+		   [(meta delete)] [(meta deletechar)]
+		   [(control backspace)] [(meta backspace)] "\M-\d"))
+      (catch 'rebound
+	(dolist (binding '((delete-char . completion-delete-char)
+			   (kill-word . completion-kill-word)
+			   (kill-sentence . completion-kill-sentence)
+			   (kill-sexp . completion-kill-sexp)
+			   (kill-paragraph . completion-kill-paragraph)
+			   (backward-delete-char
+			    . completion-backward-delete-char)
+			   (delete-backward-char
+			    . completion-backward-delete-char)
+			   (backward-delete-char-untabify
+			    . completion-backward-delete-char-untabify)
+			   (backward-kill-word
+			    . completion-backward-kill-word)
+			   (backward-kill-sentence
+			    . completion-backward-kill-sentence)
+			   (backward-kill-sexp
+			    . completion-backward-kill-sexp)
+			   (backward-kill-paragraph
+			    . completion-backward-kill-paragraph)))
+	  (when (eq (key-binding key) (car binding))
+	    (define-key auto-completion-map key (cdr binding))
+	    (throw 'rebound t)))))
+    )
 )
 
 
