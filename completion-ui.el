@@ -115,6 +115,9 @@
 ;;   `completion-auto-show', as it seems to make more sense
 ;; * move backspace and delete bindings to `completion-dynamic-map' and
 ;;   `auto-completion-map'
+;; * added `completion-browser-recurse-on-completions' variable to control
+;;   whether the browser lists completions of completions (of completions
+;;   of...)
 ;;
 ;; Version 0.9.1
 ;; * use :family attribute of `completion-tooltip-face' to set tooltip font
@@ -770,6 +773,17 @@ other than simple prefix-completion. E.g. the \"prefix\" returned
 by `compeltion-prefix-function' could be treated as a regexp to
 be expanded by `completion-function'")
 (make-variable-buffer-local 'completion-replaces-prefix)
+
+
+(defvar completion-browser-recurse-on-completions t
+  "If non-nil, the completion browser will recursively list
+completions of completions (of completions of completions...).
+If nil, it will only display the original list of completions,
+organised hierarchically.
+
+Note that setting `completion-replaces-prefix' makes the browser
+act as though this variable is set to nil, regardless of its
+actual value.")
 
 
 (defvar completion-word-thing 'word
@@ -4225,7 +4239,8 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     ;; completions of completions (of completions of completions...) when
     ;; doing something other than prefix-completion, so the entry is just the
     ;; original completion itself if `completion-replaces-prefix' is non-nil.
-    (unless completion-replaces-prefix
+    (when (and completion-browser-recurse-on-completions
+	       (not completion-replaces-prefix))
       (setq completions
 	    (completion-call-completion-function
 	     completion-function (concat prefix cmpl)))
