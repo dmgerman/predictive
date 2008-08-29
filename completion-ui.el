@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.2
+;; Version: 0.9.3
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.3
+;; * added 'accept-common option to `completion-resolve-behaviour'
+;;   (thanks to Henry Weller for the patch)
+;; * other code refactorings (thanks to Henry Weller again)
 ;;
 ;; Version 0.9.2
 ;; * define hotkey bindings on the fly in `completion-setup-overlay', getting
@@ -394,13 +399,15 @@
 (defcustom completion-resolve-behaviour 'accept
   "*What to do with unfinished completions elsewhere in the buffer:
 
-  'leave:   leave the old completions pending
-  'accept:  automatically accept the old completions
-  'reject:  automatically reject the old completions
-  'ask:     ask what to do with the old completions"
+  'leave:         leave the old completions pending
+  'accept:        automatically accept the old completions
+  'accept-common: automatically accept the common part of the completions
+  'reject:        automatically reject the old completions
+  'ask:           ask what to do with the old completions"
   :group 'completion-ui
   :type '(choice (const :tag "leave" leave)
                  (const :tag "accept" accept)
+                 (const :tag "accept-common" accept-common)
                  (const :tag "reject" reject)
                  (const :tag "ask" ask)))
 
@@ -423,8 +430,7 @@ one is set."
   :type '(choice (const :tag "none" nil)
                  (const tooltip)
                  (const menu)
-                 (const :tag "pop-up frame" pop-up))
-  )
+                 (const :tag "pop-up frame" pop-up)))
 
 
 (defcustom completion-auto-show-delay 3
@@ -936,464 +942,6 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 
 
 
-;;; =================================================================
-;;;                     Setup default keymaps
-
-;; Set the default keymap if it hasn't been defined already (most likely
-;; in an init file). This keymap is active whenever `completion-function'
-;; is non-nil.
-(unless completion-map
-  ;; If the current Emacs version doesn't support overlay keybindings
-  ;; half decently and doesn't support command remapping, we're going to
-  ;; have to bind all printable characters in this keymap, so we might as
-  ;; well create a full keymap
-  (if (and (<= emacs-major-version 21)
-           (not (fboundp 'command-remapping)))
-      (setq completion-map (make-keymap))
-    (setq completion-map (make-sparse-keymap)))
-
-  ;; M-<tab> and M-/ cycle or complete word at point
-  (define-key completion-map [?\M-\t]
-    (lambda ()
-      "Cycle through available completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle)
-        (complete-word-at-point))))
-  (define-key completion-map "\M-/"
-    (lambda ()
-      "Cycle through available completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle)
-        (complete-word-at-point))))
-
-  ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
-  (define-key completion-map [(meta shift iso-lefttab)]
-    (lambda ()
-      "Cycle backwards through completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle -1)
-        (complete-word-at-point))))
-  (define-key completion-map "\M-?"
-    (lambda ()
-      "Cycle backwards through completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle -1)
-        (complete-word-at-point))))
-
-  ;; RET deals with any pending completion candidate, then runs
-  ;; whatever is usually bound to RET.
-  ;; Note: although this uses `completion-run-if-within-overlay', it is
-  ;;       not a hack to work-around poor overlay keybinding
-  ;;       support. Rather, we are using it to run
-  ;;       `completion-resolve-current' and then run the normal RET
-  ;;       keybinding. We bind it here instead of in the overlay keymap
-  ;;       because it's easier to disable this keymap.
-  (define-key completion-map "\r"
-    (lambda () "Resolve current completion, then run whatever\
- would normally be bound to RET."
-      (interactive)
-      (completion-run-if-within-overlay
-       (lambda () (interactive) (completion-resolve-current nil ?\r ? ))
-       'completion-function 'before)))
-
-  ;; ----- Simulated overlay keybindings -----
-
-  ;; Note: could remove this and leave it up to the call to the
-  ;;       `completion-simulate-overlay-keybindings' function at the very end
-  ;;       of this file, if only that function could deal with remappings
-
-  ;; If the current Emacs version doesn't support overlay keybindings
-  ;; half decently, have to simulate them using the
-  ;; `completion-run-if-within-overlay' hack.
-  (when (<= emacs-major-version 21)
-    ;; if we can remap commands, remap `self-insert-command' to
-    ;; `completion-self-insert'
-    (if (fboundp 'command-remapping)
-        (define-key completion-map [remap self-insert-command]
-          'completion-self-insert)
-      ;; otherwise, rebind all printable characters to
-      ;; `completion-self-insert' manually
-      (completion-bind-printable-chars completion-map
-                                       'completion-self-insert))
-
-;;;     ;; C-RET accepts, C-DEL rejects
-;;;     (define-key completion-map [(control return)]
-;;;       'completion-accept-if-within-overlay)
-;;;     (define-key completion-map [(control backspace)]
-;;;       'completion-reject-if-within-overlay)
-
-;;;     ;; <tab> does traditional tab-completion
-;;;     (define-key completion-map "\t"
-;;;       'completion-tab-complete-if-within-overlay)
-
-;;;     ;; C-<tab> scoots ahead
-;;;     (define-key completion-map [(control tab)]
-;;;       'completion-scoot-ahead-if-within-overlay)
-
-;;;     ;; C-<space> abandons
-;;;     (define-key completion-map [?\C- ]
-;;;       'completion-reject-if-within-overlay)
-
-;;;     ;; S-<down>, M-<down> and C-<down> display the compltion tooltip,
-;;;     ;; menu, and pop-up frame
-;;;     (define-key completion-map [S-down]
-;;;       'completion-show-tooltip-if-within-overlay)
-;;;     (define-key completion-map [M-down]
-;;;       'completion-show-menu-if-within-overlay)
-;;;     (define-key completion-map [C-down]
-;;;       'completion-popup-frame-if-within-overlay)
-    ))
-
-
-;; make sure completion-map is associated with `completion-function' in
-;; the minor-mode-keymap-alist, so that the bindings are enabled whenever
-;; a completion function is defined
-(let ((existing (assq 'completion-function minor-mode-map-alist)))
-  (if existing
-      (setcdr existing completion-map)
-    (push (cons 'completion-function completion-map)
-          minor-mode-map-alist)))
-
-
-
-
-;; Set the default bindings for the keymap assigned to the completion
-;; overlays created when dynamic completion is enabled, if it hasn't been
-;; defined already (most likely in an init file).
-(unless completion-dynamic-map
-  ;; Note: rebinding printable characters here is redundant if
-  ;;       `auto-completion-mode' is enabled, since they are also bound
-  ;;       in `auto-completion-map', but we still need to ensure that the
-  ;;       provisional completion is correctly dealt with even if
-  ;;       `auto-completion-mode' is disabled.
-
-  ;; if we can remap commands, remap `self-insert-command' to
-  ;; `completion-self-insert'
-  (if (fboundp 'command-remapping)
-      (progn
-        (setq completion-dynamic-map (make-sparse-keymap))
-        (define-key completion-dynamic-map [remap self-insert-command]
-          'completion-self-insert))
-    ;; otherwise, create a great big keymap and rebind all printable
-    ;; characters to `completion-self-insert' manually
-    (setq completion-dynamic-map (make-keymap))
-    (completion-bind-printable-chars completion-dynamic-map
-                                     'completion-self-insert))
-
-  ;; C-RET accepts, C-DEL rejects
-  (define-key completion-dynamic-map [(control return)] 'completion-accept)
-  (define-key completion-dynamic-map [(control backspace)] 'completion-reject)
-
-  ;; <tab> does traditional tab-completion
-  (define-key completion-dynamic-map "\t" 'completion-tab-complete)
-
-  ;; C-<tab> scoots ahead
-  (define-key completion-dynamic-map [(control tab)]
-    'completion-scoot-ahead)
-
-  ;; C-<space> abandons
-  (define-key completion-dynamic-map [?\C- ] 'completion-reject)
-
-  ;; S-<down>, M-<down> and C-<down> display the completion tooltip,
-  ;; menu, or pop-up frame
-  (define-key completion-dynamic-map [S-down] 'completion-show-tooltip)
-  (define-key completion-dynamic-map [M-down] 'completion-show-menu)
-  (define-key completion-dynamic-map [C-down] 'completion-popup-frame)
-
-  ;; clicking on a completion displays the completion menu
-  (define-key completion-dynamic-map [mouse-2] 'completion-show-menu)
-
-
-  ;; if command remapping is supported, remap delete commands
-  (if (fboundp 'command-remapping)
-      (progn
-        (define-key completion-dynamic-map [remap delete-char]
-          'completion-delete-char)
-        (define-key completion-dynamic-map [remap backward-delete-char]
-          'completion-backward-delete-char)
-        (define-key completion-dynamic-map [remap delete-backward-char]
-          'completion-backward-delete-char)
-        (define-key completion-dynamic-map [remap backward-delete-char-untabify]
-          'completion-backward-delete-char-untabify)
-        (define-key completion-dynamic-map [remap kill-word]
-          'completion-kill-word)
-        (define-key completion-dynamic-map [remap backward-kill-word]
-          'completion-backward-kill-word)
-        (define-key completion-dynamic-map [remap kill-sentenve]
-          'completion-kill-sentenve)
-        (define-key completion-dynamic-map [remap backward-kill-sentenve]
-          'completion-backward-kill-sentenve)
-        (define-key completion-dynamic-map [remap kill-sexp]
-          'completion-kill-sexp)
-        (define-key completion-dynamic-map [remap backward-kill-sexp]
-          'completion-backward-kill-sexp)
-        (define-key completion-dynamic-map [remap kill-paragraphs]
-          'completion-kill-paragraph)
-        (define-key completion-dynamic-map [remap backward-kill-paragraph]
-          'completion-backward-kill-paragraph))
-
-    ;; otherwise, can't do better than define bindings for the keys
-    ;; that are currently bound to them
-    (dolist (key '([delete] [deletechar] [backspace] "\d"
-                   [(control delete)] [(control deletechar)]
-                   [(meta delete)] [(meta deletechar)]
-                   [(control backspace)] [(meta backspace)] "\M-\d"))
-      (catch 'rebound
-        (dolist (binding '((delete-char . completion-delete-char)
-                           (kill-word . completion-kill-word)
-                           (kill-sentence . completion-kill-sentence)
-                           (kill-sexp . completion-kill-sexp)
-                           (kill-paragraph . completion-kill-paragraph)
-                           (backward-delete-char
-                            . completion-backward-delete-char)
-                           (delete-backward-char
-                            . completion-backward-delete-char)
-                           (backward-delete-char-untabify
-                            . completion-backward-delete-char-untabify)
-                           (backward-kill-word
-                            . completion-backward-kill-word)
-                           (backward-kill-sentence
-                            . completion-backward-kill-sentence)
-                           (backward-kill-sexp
-                            . completion-backward-kill-sexp)
-                           (backward-kill-paragraph
-                            . completion-backward-kill-paragraph)))
-          (when (eq (key-binding key) (car binding))
-            (define-key completion-dynamic-map key (cdr binding))
-            (throw 'rebound t)))))
-    ))
-
-
-
-;; Set the default auto-completion-mode keymap if it hasn't been defined
-;; already (most likely in an init file). This keymap is active when
-;; `auto-completion-mode' is enabled.
-(unless auto-completion-map
-  ;; if we can remap commands, remap `self-insert-command'
-  (if (fboundp 'command-remapping)
-      (progn
-        (setq auto-completion-map (make-sparse-keymap))
-        (define-key auto-completion-map [remap self-insert-command]
-          'auto-completion-self-insert))
-    ;; otherwise, create a great big keymap where all printable characters run
-    ;; `auto-completion-self-insert', which decides what to do based on the
-    ;; character's syntax
-    (setq auto-completion-map (make-keymap))
-    (completion-bind-printable-chars auto-completion-map
-                                     'auto-completion-self-insert))
-
-  ;; if command remapping is supported, remap delete commands
-  (if (fboundp 'command-remapping)
-      (progn
-        (define-key auto-completion-map [remap delete-char]
-          'completion-delete-char)
-        (define-key auto-completion-map [remap backward-delete-char]
-          'completion-backward-delete-char)
-        (define-key auto-completion-map [remap delete-backward-char]
-          'completion-backward-delete-char)
-        (define-key auto-completion-map [remap backward-delete-char-untabify]
-          'completion-backward-delete-char-untabify)
-        (define-key auto-completion-map [remap kill-word]
-          'completion-kill-word)
-        (define-key auto-completion-map [remap backward-kill-word]
-          'completion-backward-kill-word)
-        (define-key auto-completion-map [remap kill-sentenve]
-          'completion-kill-sentenve)
-        (define-key auto-completion-map [remap backward-kill-sentenve]
-          'completion-backward-kill-sentenve)
-        (define-key auto-completion-map [remap kill-sexp]
-          'completion-kill-sexp)
-        (define-key auto-completion-map [remap backward-kill-sexp]
-          'completion-backward-kill-sexp)
-        (define-key auto-completion-map [remap kill-paragraphs]
-          'completion-kill-paragraph)
-        (define-key auto-completion-map [remap backward-kill-paragraph]
-          'completion-backward-kill-paragraph))
-    ;; otherwise, can't do better than define bindings for the keys
-    ;; that are currently bound to them
-    (dolist (key '([delete] [deletechar] [backspace] "\d"
-                   [(control delete)] [(control deletechar)]
-                   [(meta delete)] [(meta deletechar)]
-                   [(control backspace)] [(meta backspace)] "\M-\d"))
-      (catch 'rebound
-        (dolist (binding '((delete-char . completion-delete-char)
-                           (kill-word . completion-kill-word)
-                           (kill-sentence . completion-kill-sentence)
-                           (kill-sexp . completion-kill-sexp)
-                           (kill-paragraph . completion-kill-paragraph)
-                           (backward-delete-char
-                            . completion-backward-delete-char)
-                           (delete-backward-char
-                            . completion-backward-delete-char)
-                           (backward-delete-char-untabify
-                            . completion-backward-delete-char-untabify)
-                           (backward-kill-word
-                            . completion-backward-kill-word)
-                           (backward-kill-sentence
-                            . completion-backward-kill-sentence)
-                           (backward-kill-sexp
-                            . completion-backward-kill-sexp)
-                           (backward-kill-paragraph
-                            . completion-backward-kill-paragraph)))
-          (when (eq (key-binding key) (car binding))
-            (define-key auto-completion-map key (cdr binding))
-            (throw 'rebound t)))))
-    ))
-
-
-
-;; Set the default bindings for the keymap assigned to the completion overlays
-;; created when dynamic completion and auto-completion are enabled, if it
-;; hasn't been defined already (most likely in an init file).
-(unless auto-completion-dynamic-map
-  ;; inherit all keybindings from completion-dynamic-map, then add
-  ;; auto-completion specific ones below
-  (setq auto-completion-dynamic-map (make-sparse-keymap))
-  (set-keymap-parent auto-completion-dynamic-map completion-dynamic-map)
-
-  ;; M-<space> abandons and inserts a space
-  (define-key auto-completion-dynamic-map "\M- "
-    (lambda (&optional arg)
-      "Reject any current provisional completion and insert a space."
-      (interactive "P")
-      (completion-reject arg)
-      (insert " ")))
-
-  ;; M-S-<space> inserts a space as a word-constituent
-  (define-key auto-completion-dynamic-map [?\M-\S- ]
-    (lambda ()
-      "Insert a space as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?\  ?w t)))
-
-  ;; M-. inserts "." as a word-constituent
-  (define-key auto-completion-dynamic-map "\M-."
-    (lambda ()
-      "Insert \".\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?. ?w t)))
-
-  ;; M-- inserts "-" as a word-constituent
-  (define-key auto-completion-dynamic-map "\M--"
-    (lambda ()
-      "Insert \"-\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?- ?w t)))
-
-;;;   ;; M-/ inserts "/" as a word-constituent
-;;;   (define-key auto-completion-dynamic-map "\M-/"
-;;;     (lambda ()
-;;;       "Insert \"/\" as though it were a word-constituent."
-;;;       (interactive)
-;;;       (auto-completion-self-insert ?/ ?w t)))
-)
-
-
-
-;; Note: `completion-tooltip-active' is reset by `pre-command-hook' (see
-;;       end of file), so the keymap below is disabled before every
-;;       command is executed. However, the key bindings are looked up
-;;       before `pre-command-hook' runs, so the first key sequence after
-;;       displaying a tooltip has a chance of running something from
-;;       here. This is exactly what we want, since Emacs hides tooltips
-;;       after every command and we only want this keymap to be active if
-;;       a tooltip is visible.
-;;
-;;       The cycling commands bound below re-display the completion
-;;       tooltip, which causes `completion-tooltip-active' to be set to t
-;;       again. So after they've run, the keymap is left active again for
-;;       the next key sequence.
-
-;; Set default key bindings for the keymap used when a completion tooltip
-;; is displayed, unless it's already been set (most likely in an init
-;; file). This keymap is active when `completion-tooltip-active' is
-;; non-nil.
-(unless completion-tooltip-map
-  (let ((map (make-sparse-keymap)))
-    ;; <up> and <down> cycle completions, which appears to move selection
-    ;; up and down tooltip entries
-    (define-key map [down] 'completion-tooltip-cycle)
-    (define-key map [up]
-      (lambda () (interactive) (completion-tooltip-cycle -1)))
-    (setq completion-tooltip-map map)))
-
-
-;; make sure completion-tooltip-map is in minor-mode-keymap-alist
-(let ((existing (assq 'completion-tooltip-active minor-mode-map-alist)))
-  (if existing
-      (setcdr existing completion-tooltip-map)
-    (push (cons 'completion-tooltip-active completion-tooltip-map)
-          minor-mode-map-alist)))
-
-
-
-;; Set default keybindings for the keymap used in completion pop-up
-;; frames (actually, used by the completion-popup-frame major mode),
-;; unless it's already been set (most likely in an init file).
-(unless completion-popup-frame-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\M-n" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map "\C-n" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map [down] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map "\M-p" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'previous-line arg)))
-    (define-key map "\C-p" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'previous-line arg)))
-    (define-key map [up] (lambda (&optional arg) (interactive)
-                           (completion-popup-frame-motion
-                            'previous-line arg)))
-    (define-key map "\C-v" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-up arg)))
-    (define-key map [next] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-up arg)))
-    (define-key map "\M-v" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-down arg)))
-    (define-key map [prior] (lambda (&optional arg) (interactive)
-                              (completion-popup-frame-motion
-                               'scroll-down arg)))
-    (define-key map [home] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'beginning-of-buffer arg)))
-    (define-key map "\M-<" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'beginning-of-buffer arg)))
-    (define-key map [end] (lambda (&optional arg) (interactive)
-                            (completion-popup-frame-motion
-                             'end-of-buffer arg)))
-    (define-key map "\M->" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'end-of-buffer arg)))
-    (define-key map "\C-u" 'universal-argument)
-    (define-key map [?\C--] 'negative-argument)
-    (define-key map [C-up] 'completion-popup-frame-dismiss)
-    (define-key map [M-up] 'completion-popup-frame-dismiss)
-    (define-key map [?\M-\t] 'completion-popup-frame-toggle-show-all)
-    (define-key map "\M-/" 'completion-popup-frame-toggle-show-all)
-    (define-key map [t] 'completion-popup-frame-unread-key)
-    (setq completion-popup-frame-mode-map map)))
-
-
-
-
 ;;; ===============================================================
 ;;;                  Keybinding functions
 
@@ -1429,9 +977,72 @@ SYNTAX."
            (interactive)
            (completion-run-if-within-overlay
             (lambda () (interactive)
-              (auto-completion-self-insert ,char ,syntax
-                                           ,no-syntax-override))
+              (auto-completion-self-insert ,char ,syntax ,no-syntax-override))
             'completion-function))))))
+
+
+
+(defun completion-remap-delete-commands (map)
+  "Remap deletion commands to completion-UI versions
+\(or substitute existing bindings, if remapping is not supported\)."
+
+  ;; If command remapping is supported, remap delete commands
+  (if (fboundp 'command-remapping)
+      (progn
+        (define-key map [remap delete-char]
+          'completion-delete-char)
+        (define-key map [remap backward-delete-char]
+          'completion-backward-delete-char)
+        (define-key map [remap delete-backward-char]
+          'completion-backward-delete-char)
+        (define-key map [remap backward-delete-char-untabify]
+          'completion-backward-delete-char-untabify)
+        (define-key map [remap kill-word]
+          'completion-kill-word)
+        (define-key map [remap backward-kill-word]
+          'completion-backward-kill-word)
+        (define-key map [remap kill-sentenve]
+          'completion-kill-sentenve)
+        (define-key map [remap backward-kill-sentenve]
+          'completion-backward-kill-sentenve)
+        (define-key map [remap kill-sexp]
+          'completion-kill-sexp)
+        (define-key map [remap backward-kill-sexp]
+          'completion-backward-kill-sexp)
+        (define-key map [remap kill-paragraphs]
+          'completion-kill-paragraph)
+        (define-key map [remap backward-kill-paragraph]
+          'completion-backward-kill-paragraph))
+
+    ;; Otherwise, can't do better than define bindings for the keys
+    ;; that are currently bound to them
+    (dolist (key '([delete] [deletechar] [backspace] "\d"
+                   [(control delete)] [(control deletechar)]
+                   [(meta delete)] [(meta deletechar)]
+                   [(control backspace)] [(meta backspace)] "\M-\d"))
+      (catch 'rebound
+        (dolist (binding '((delete-char . completion-delete-char)
+                           (kill-word . completion-kill-word)
+                           (kill-sentence . completion-kill-sentence)
+                           (kill-sexp . completion-kill-sexp)
+                           (kill-paragraph . completion-kill-paragraph)
+                           (backward-delete-char
+                            . completion-backward-delete-char)
+                           (delete-backward-char
+                            . completion-backward-delete-char)
+                           (backward-delete-char-untabify
+                            . completion-backward-delete-char-untabify)
+                           (backward-kill-word
+                            . completion-backward-kill-word)
+                           (backward-kill-sentence
+                            . completion-backward-kill-sentence)
+                           (backward-kill-sexp
+                            . completion-backward-kill-sexp)
+                           (backward-kill-paragraph
+                            . completion-backward-kill-paragraph)))
+          (when (eq (key-binding key) (car binding))
+            (define-key map key (cdr binding))
+            (throw 'rebound t)))))))
 
 
 
@@ -1659,8 +1270,326 @@ used if the current Emacs version lacks command remapping support."
    ;; anything else is an error
    (t (error (concat "Unexpected binding in "
                      "`completion-construct-simulated-overlay-binding': %s")
-             binding))
-   ))
+             binding))))
+
+
+
+
+;;; =================================================================
+;;;                     Setup default keymaps
+
+;; Set the default keymap if it hasn't been defined already (most likely
+;; in an init file). This keymap is active whenever `completion-function'
+;; is non-nil.
+(unless completion-map
+  ;; If the current Emacs version doesn't support overlay keybindings
+  ;; half decently and doesn't support command remapping, we're going to
+  ;; have to bind all printable characters in this keymap, so we might as
+  ;; well create a full keymap
+  (if (and (<= emacs-major-version 21)
+           (not (fboundp 'command-remapping)))
+      (setq completion-map (make-keymap))
+    (setq completion-map (make-sparse-keymap)))
+
+  ;; M-<tab> and M-/ cycle or complete word at point
+  (define-key completion-map [?\M-\t]
+    (lambda ()
+      "Cycle through available completions if there are any,\
+ otherwise complete the word at point."
+      (interactive)
+      (if (completion-overlay-at-point)
+          (completion-cycle)
+        (complete-word-at-point))))
+  (define-key completion-map "\M-/"
+    (lambda ()
+      "Cycle through available completions if there are any,\
+ otherwise complete the word at point."
+      (interactive)
+      (if (completion-overlay-at-point)
+          (completion-cycle)
+        (complete-word-at-point))))
+
+  ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
+  (define-key completion-map [(meta shift iso-lefttab)]
+    (lambda ()
+      "Cycle backwards through completions if there are any,\
+ otherwise complete the word at point."
+      (interactive)
+      (if (completion-overlay-at-point)
+          (completion-cycle -1)
+        (complete-word-at-point))))
+  (define-key completion-map "\M-?"
+    (lambda ()
+      "Cycle backwards through completions if there are any,\
+ otherwise complete the word at point."
+      (interactive)
+      (if (completion-overlay-at-point)
+          (completion-cycle -1)
+        (complete-word-at-point))))
+
+  ;; RET deals with any pending completion candidate, then runs
+  ;; whatever is usually bound to RET.
+  ;; Note: although this uses `completion-run-if-within-overlay', it is
+  ;;       not a hack to work-around poor overlay keybinding
+  ;;       support. Rather, we are using it to run
+  ;;       `completion-resolve-current' and then run the normal RET
+  ;;       keybinding. We bind it here instead of in the overlay keymap
+  ;;       because it's easier to disable this keymap.
+  (dolist (key '("\r" "\n" [return]))
+    (define-key completion-map key
+      (lambda ()
+        "Resolve current completion, then run whatever \
+would normally be bound to key."
+        (interactive)
+        (completion-run-if-within-overlay
+         (lambda () (interactive) (completion-resolve-current nil nil ? ))
+         'completion-function 'before))))
+
+
+  ;; ----- Simulated overlay keybindings -----
+
+  ;; Note: could remove this and leave it up to the call to the
+  ;;       `completion-simulate-overlay-keybindings' function at the very end
+  ;;       of this file, if only that function could deal with remappings
+
+  ;; If the current Emacs version doesn't support overlay keybindings
+  ;; half decently, have to simulate them using the
+  ;; `completion-run-if-within-overlay' hack.
+  (when (<= emacs-major-version 21)
+    ;; if we can remap commands, remap `self-insert-command' to
+    ;; `completion-self-insert'
+    (if (fboundp 'command-remapping)
+        (define-key completion-map [remap self-insert-command]
+          'completion-self-insert)
+      ;; otherwise, rebind all printable characters to
+      ;; `completion-self-insert' manually
+      (completion-bind-printable-chars completion-map
+                                       'completion-self-insert))))
+
+
+;; make sure completion-map is associated with `completion-function' in
+;; the minor-mode-keymap-alist, so that the bindings are enabled whenever
+;; a completion function is defined
+(let ((existing (assq 'completion-function minor-mode-map-alist)))
+  (if existing
+      (setcdr existing completion-map)
+    (push (cons 'completion-function completion-map)
+          minor-mode-map-alist)))
+
+
+
+
+;; Set the default bindings for the keymap assigned to the completion
+;; overlays created when dynamic completion is enabled, if it hasn't been
+;; defined already (most likely in an init file).
+(unless completion-dynamic-map
+  ;; Note: rebinding printable characters here is redundant if
+  ;;       `auto-completion-mode' is enabled, since they are also bound
+  ;;       in `auto-completion-map', but we still need to ensure that the
+  ;;       provisional completion is correctly dealt with even if
+  ;;       `auto-completion-mode' is disabled.
+
+  ;; if we can remap commands, remap `self-insert-command' to
+  ;; `completion-self-insert'
+  (if (fboundp 'command-remapping)
+      (progn
+        (setq completion-dynamic-map (make-sparse-keymap))
+        (define-key completion-dynamic-map [remap self-insert-command]
+          'completion-self-insert))
+    ;; otherwise, create a great big keymap and rebind all printable
+    ;; characters to `completion-self-insert' manually
+    (setq completion-dynamic-map (make-keymap))
+    (completion-bind-printable-chars completion-dynamic-map
+                                     'completion-self-insert))
+
+  ;; C-RET accepts, C-DEL rejects
+  (define-key completion-dynamic-map [(control return)] 'completion-accept)
+  (define-key completion-dynamic-map [(control backspace)] 'completion-reject)
+
+  ;; <tab> does traditional tab-completion
+  (define-key completion-dynamic-map "\t" 'completion-tab-complete)
+
+  ;; C-<tab> scoots ahead
+  (define-key completion-dynamic-map [(control tab)]
+    'completion-scoot-ahead)
+
+  ;; C-<space> abandons
+  (define-key completion-dynamic-map [?\C- ] 'completion-reject)
+
+  ;; S-<down>, M-<down> and C-<down> display the completion tooltip,
+  ;; menu, or pop-up frame
+  (define-key completion-dynamic-map [S-down] 'completion-show-tooltip)
+  (define-key completion-dynamic-map [M-down] 'completion-show-menu)
+  (define-key completion-dynamic-map [C-down] 'completion-popup-frame)
+
+  ;; clicking on a completion displays the completion menu
+  (define-key completion-dynamic-map [mouse-2] 'completion-show-menu)
+
+  ;; remap the deletion commands
+  (completion-remap-delete-commands completion-dynamic-map))
+
+
+;; Set the default auto-completion-mode keymap if it hasn't been defined
+;; already (most likely in an init file). This keymap is active when
+;; `auto-completion-mode' is enabled.
+(unless auto-completion-map
+  ;; if we can remap commands, remap `self-insert-command'
+  (if (fboundp 'command-remapping)
+      (progn
+        (setq auto-completion-map (make-sparse-keymap))
+        (define-key auto-completion-map [remap self-insert-command]
+          'auto-completion-self-insert))
+    ;; otherwise, create a great big keymap where all printable characters run
+    ;; `auto-completion-self-insert', which decides what to do based on the
+    ;; character's syntax
+    (setq auto-completion-map (make-keymap))
+    (completion-bind-printable-chars auto-completion-map
+                                     'auto-completion-self-insert))
+  ;; remap the deletion commands
+  (completion-remap-delete-commands auto-completion-map))
+
+
+
+;; Set the default bindings for the keymap assigned to the completion overlays
+;; created when dynamic completion and auto-completion are enabled, if it
+;; hasn't been defined already (most likely in an init file).
+(unless auto-completion-dynamic-map
+  ;; inherit all keybindings from completion-dynamic-map, then add
+  ;; auto-completion specific ones below
+  (setq auto-completion-dynamic-map (make-sparse-keymap))
+  (set-keymap-parent auto-completion-dynamic-map completion-dynamic-map)
+
+  ;; M-<space> abandons and inserts a space
+  (define-key auto-completion-dynamic-map "\M- "
+    (lambda (&optional arg)
+      "Reject any current provisional completion and insert a space."
+      (interactive "P")
+      (completion-reject arg)
+      (insert " ")))
+
+  ;; M-S-<space> inserts a space as a word-constituent
+  (define-key auto-completion-dynamic-map [?\M-\S- ]
+    (lambda ()
+      "Insert a space as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?\  ?w t)))
+
+  ;; M-. inserts "." as a word-constituent
+  (define-key auto-completion-dynamic-map "\M-."
+    (lambda ()
+      "Insert \".\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?. ?w t)))
+
+  ;; M-- inserts "-" as a word-constituent
+  (define-key auto-completion-dynamic-map "\M--"
+    (lambda ()
+      "Insert \"-\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?- ?w t)))
+
+;;;   ;; M-/ inserts "/" as a word-constituent
+;;;   (define-key auto-completion-dynamic-map "\M-/"
+;;;     (lambda ()
+;;;       "Insert \"/\" as though it were a word-constituent."
+;;;       (interactive)
+;;;       (auto-completion-self-insert ?/ ?w t)))
+)
+
+
+
+;; Note: `completion-tooltip-active' is reset by `pre-command-hook' (see
+;;       end of file), so the keymap below is disabled before every
+;;       command is executed. However, the key bindings are looked up
+;;       before `pre-command-hook' runs, so the first key sequence after
+;;       displaying a tooltip has a chance of running something from
+;;       here. This is exactly what we want, since Emacs hides tooltips
+;;       after every command and we only want this keymap to be active if
+;;       a tooltip is visible.
+;;
+;;       The cycling commands bound below re-display the completion
+;;       tooltip, which causes `completion-tooltip-active' to be set to t
+;;       again. So after they've run, the keymap is left active again for
+;;       the next key sequence.
+
+;; Set default key bindings for the keymap used when a completion tooltip
+;; is displayed, unless it's already been set (most likely in an init
+;; file). This keymap is active when `completion-tooltip-active' is
+;; non-nil.
+(unless completion-tooltip-map
+  (let ((map (make-sparse-keymap)))
+    ;; <up> and <down> cycle completions, which appears to move selection
+    ;; up and down tooltip entries
+    (define-key map [down] 'completion-tooltip-cycle)
+    (define-key map [up]
+      (lambda () (interactive) (completion-tooltip-cycle -1)))
+    (setq completion-tooltip-map map)))
+
+
+;; make sure completion-tooltip-map is in minor-mode-keymap-alist
+(let ((existing (assq 'completion-tooltip-active minor-mode-map-alist)))
+  (if existing
+      (setcdr existing completion-tooltip-map)
+    (push (cons 'completion-tooltip-active completion-tooltip-map)
+          minor-mode-map-alist)))
+
+
+
+;; Set default keybindings for the keymap used in completion pop-up
+;; frames (actually, used by the completion-popup-frame major mode),
+;; unless it's already been set (most likely in an init file).
+(unless completion-popup-frame-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\M-n" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'next-line arg)))
+    (define-key map "\C-n" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'next-line arg)))
+    (define-key map [down] (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'next-line arg)))
+    (define-key map "\M-p" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'previous-line arg)))
+    (define-key map "\C-p" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'previous-line arg)))
+    (define-key map [up] (lambda (&optional arg) (interactive)
+                           (completion-popup-frame-motion
+                            'previous-line arg)))
+    (define-key map "\C-v" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'scroll-up arg)))
+    (define-key map [next] (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'scroll-up arg)))
+    (define-key map "\M-v" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'scroll-down arg)))
+    (define-key map [prior] (lambda (&optional arg) (interactive)
+                              (completion-popup-frame-motion
+                               'scroll-down arg)))
+    (define-key map [home] (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'beginning-of-buffer arg)))
+    (define-key map "\M-<" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'beginning-of-buffer arg)))
+    (define-key map [end] (lambda (&optional arg) (interactive)
+                            (completion-popup-frame-motion
+                             'end-of-buffer arg)))
+    (define-key map "\M->" (lambda (&optional arg) (interactive)
+                             (completion-popup-frame-motion
+                              'end-of-buffer arg)))
+    (define-key map "\C-u" 'universal-argument)
+    (define-key map [?\C--] 'negative-argument)
+    (define-key map [C-up] 'completion-popup-frame-dismiss)
+    (define-key map [M-up] 'completion-popup-frame-dismiss)
+    (define-key map [?\M-\t] 'completion-popup-frame-toggle-show-all)
+    (define-key map "\M-/" 'completion-popup-frame-toggle-show-all)
+    (define-key map [t] 'completion-popup-frame-unread-key)
+    (setq completion-popup-frame-mode-map map)))
 
 
 
@@ -1804,10 +1733,9 @@ A negative prefix argument turns it off.
 In auto-completion-mode, Emacs will try to complete words as you
 type, using whatever completion method has been set up (either by the
 major mode, or by another minor mode)."
-  nil                  ; init-value
-  " Complete"          ; lighter
-  auto-completion-map  ; keymap
-)
+  nil                   ; init-value
+  " Complete"           ; lighter
+  auto-completion-map)  ; keymap
 
 
 
@@ -1936,12 +1864,9 @@ cauliflower will start growing out of your ears."
             (when (eq str t) (setq str (car completions)))
             (move-overlay (overlay-get overlay 'common-prefix)
                           pos (+ pos (length str))))))
-      ;; move point to appropriate position (start of overlay, unless
-      ;; we're not auto-completing but are accepting or leaving old
-      ;; completions)
-      (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
-          (goto-char (overlay-start overlay))
-        (goto-char (overlay-end overlay))))
+
+      ;; move point to appropriate position in the overlay
+      (completion-position-point-in-overlay overlay))
 
     ;; delete temporary marker
     (set-marker pos nil)))
@@ -2065,14 +1990,14 @@ point is at POINT."
             (tooltip-set-param params 'internal-border-width 0))
       (setq params
             (tooltip-set-param params 'border-width 0))
-      ;;  (setq params
-      ;;        (tooltip-set-param
-      ;;         params 'left
-      ;;         (+ (car pos) completion-tooltip-x-offset)))
-      ;;  (setq params
-      ;;        (tooltip-set-param
-      ;;         params 'top
-      ;;         (+ (cdr pos) completion-tooltip-y-offset)))
+;;      (setq params
+;;            (tooltip-set-param
+;;             params 'left
+;;             (+ (car pos) completion-tooltip-x-offset)))
+;;      (setq params
+;;            (tooltip-set-param
+;;             params 'top
+;;             (+ (cdr pos) completion-tooltip-y-offset)))
 
       ;; make sure tooltip is cancelled before displaying it, otherwise
       ;; x-show-tip "magically" moves it to the top of the frame!
@@ -2142,18 +2067,15 @@ there is none."
 
       ;; if we've constructed a menu, display it
       (when keymap
-        (let ((pos (save-excursion
-                     (goto-char (overlay-start overlay))
-                     (completion-frame-posn-at-point))))
-          (setq result
-                (popup-menu
-                 keymap
-                 (list
-                  (list
-                   (+ (car pos) (car completion-menu-offset))
-                   (+ (cdr pos) (cdr completion-menu-offset)
-                      (frame-char-height) 3))
-                  (selected-window)))))
+        (setq result
+              (x-popup-menu (save-excursion
+                              (goto-char (overlay-start overlay))
+                              (completion-posn-at-point-as-event
+                               nil nil
+                               (car completion-menu-offset)
+                               (+ (frame-char-height) 3
+                                  (cdr completion-menu-offset))))
+                            keymap))
 
         ;; if they ain't selected nuffin', don't do nuffin'!
         (when result
@@ -2198,7 +2120,7 @@ there is none."
 ;; bound to the key sequence used to invoke this command."
 ;;   (interactive)
 ;;   (completion-run-if-within-overlay 'completion-show-menu
-;;                  'completion-function)
+;;                                     'completion-function)
 ;; )
 
 
@@ -2336,7 +2258,7 @@ If no OVERLAY is supplied, tried to find one at point."
 ;; bound to the key sequence used to invoke this command."
 ;;   (interactive)
 ;;   (completion-run-if-within-overlay 'completion-show-menu
-;;                  'completion-function)
+;;                                     'completion-function)
 ;; )
 
 
@@ -2384,15 +2306,10 @@ If ARG is supplied, it is passed through to COMMAND."
                     (+ (overlay-start overlay) (length str)))
       (overlay-put overlay 'completion-num (1- num)))
 
-    ;; move point to appropriate position in parent frame (start of overlay,
-    ;; unless we're not auto-completing but are accepting or leaving old
-    ;; completions)
+    ;; move point to appropriate position in the overlay
     (select-frame completion-popup-frame-parent-frame)
-    (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
-        (goto-char (overlay-start overlay))
-      (goto-char (overlay-end overlay)))
-    (select-frame-set-input-focus frame)
-    ))
+    (completion-position-point-in-overlay overlay)
+    (select-frame-set-input-focus frame)))
 
 
 
@@ -3010,12 +2927,8 @@ be auto-displayed."
         (when (eq str t) (setq str (car (overlay-get overlay 'completions))))
         (move-overlay (overlay-get overlay 'common-prefix)
                       pos (+ pos (length str))))
-      ;; move point to appropriate position (start of overlay, unless
-      ;; we're not auto-completing but are accepting or leaving old
-      ;; completions)
-      (if (or auto-completion-mode (eq completion-resolve-behaviour 'reject))
-          (goto-char pos)
-        (goto-char (overlay-end overlay)))
+      ;; move point to appropriate position in the overlay
+      (completion-position-point-in-overlay overlay)
       ;; display echo text if using it
       (when completion-use-echo (complete-echo overlay))
       ;; if pop-up frame is displayed, update it
@@ -3083,7 +2996,7 @@ green over night."
 ;; to invoke this command."
 ;;   (interactive)
 ;;   (completion-run-if-within-overlay 'completion-tab-complete
-;;                  'completion-function)
+;;                                     'completion-function)
 ;; )
 
 
@@ -3107,104 +3020,105 @@ complete what remains of that word."
          (word-pos (save-excursion
                      (forward-thing word-thing -1) (point))))
 
-    (combine-after-change-calls
+    ;(combine-after-change-calls
 
       ;; ----- not auto-completing -----
       (if (not auto-completion-mode)
-	  (progn
-	    ;; if within a completion...
-	    (when overlay
-	      ;; if rejecting old completions, delete everything after
-	      ;; the point
-	      (when (eq completion-resolve-behaviour 'reject)
-		(delete-region (point) (overlay-end overlay)))
-	      ;; delete overlay, effectively accepting (rest of) the
-	      ;; completion at point
-	      (completion-delete-overlay overlay))
-	    ;; resolve old provisional completions and delete backwards
-	    (completion-resolve-old)
-	    (apply command args))
+          (progn
+            ;; if within a completion...
+            (when overlay
+              ;; if rejecting old completions, delete everything after
+              ;; the point
+              (when (eq completion-resolve-behaviour 'reject)
+                (delete-region (point) (overlay-end overlay)))
+              ;; delete overlay, effectively accepting (rest of) the
+              ;; completion at point
+              (completion-delete-overlay overlay))
+            ;; resolve old provisional completions and delete backwards
+            (completion-resolve-old)
+            (apply command args))
 
 
-	;; ----- auto-completing -----
-	;; resolve any old provisional completions
-	(completion-resolve-old overlay)
+        ;; ----- auto-completing -----
+        ;; resolve any old provisional completions
+        (completion-resolve-old overlay)
 
-	;; if point is in a completion...
-	(when overlay
-	  ;; if point is at start of completion, delete completion but
-	  ;; keep overlay
-	  (if (= (point) (overlay-start overlay))
-	      (delete-region (overlay-start overlay)
-			     (overlay-end overlay))
-	    ;; otherwise, delete provisional completion characters after
-	    ;; point, then delete the overlay, effectively accepting
-	    ;; (rest of) completion, preserving pop-up frame
-	    (delete-region (point) (overlay-end overlay))
-	    (completion-delete-overlay overlay t)
-	    (setq overlay nil)))
+        ;; if point is in a completion...
+        (when overlay
+          ;; if point is at start of completion, delete completion but
+          ;; keep overlay
+          (if (= (point) (overlay-start overlay))
+              (delete-region (overlay-start overlay)
+                             (overlay-end overlay))
+            ;; otherwise, delete provisional completion characters after
+            ;; point, then delete the overlay, effectively accepting
+            ;; (rest of) completion, preserving pop-up frame
+            (delete-region (point) (overlay-end overlay))
+            (completion-delete-overlay overlay t)
+            (setq overlay nil)))
 
-	;; delete backwards
-	(apply command args)
+        ;; delete backwards
+        (apply command args)
 
-	(cond
-	 ;; if we're not in or at the end of a word...
-	 ((and (not (completion-within-word-p))
-	       (not (completion-end-of-word-p)))
-	  ;; delete any overlay and pop-up frame at point
-	  (when overlay (completion-delete-overlay overlay))
-	  ;; cancel any timer that's been set up
-	  (when (timerp completion-backward-delete-timer)
-	    (cancel-timer completion-backward-delete-timer))
-	  (setq completion-backward-delete-timer nil))
+        (cond
+         ;; if we're not in or at the end of a word...
+         ((and (not (completion-within-word-p))
+               (not (completion-end-of-word-p)))
+          ;; delete any overlay and pop-up frame at point
+          (when overlay (completion-delete-overlay overlay))
+          ;; cancel any timer that's been set up
+          (when (timerp completion-backward-delete-timer)
+            (cancel-timer completion-backward-delete-timer))
+          (setq completion-backward-delete-timer nil))
 
 
-	 ;; otherwise, we're in or at the end of a word, so complete the
-	 ;; word at point
-	 (t
-	  ;; if point was at start of completion or start of word before
-	  ;; deleting, and we're now within or at end of a word...
-	  (when (or overlay
-		    (and wordstart
-			 (or (completion-within-word-p)
-			     (completion-end-of-word-p))))
-	    ;; delete any overlay, since prefix is wrong and we need it
-	    ;; out the way so that we can get new one below
-	    (when overlay
-	      (completion-delete-overlay
-	       overlay (not (and popup (<= (point) word-pos)))))
-	    ;; setup overlay to prevent word after point being deleted
-	    (let ((pos (point)) prefix prefix-fun)
-	      (setq prefix-fun
-		    (or (and (fboundp 'auto-overlay-local-binding)
-			     (auto-overlay-local-binding
-			      'completion-prefix))
-			completion-prefix-function))
-	      (setq prefix (funcall prefix-fun))
-	      (setq overlay
-		    (completion-setup-overlay prefix nil nil overlay))
-	      (move-overlay overlay (point) (point))
-	      ;; if we've not deleted beyond start of word, and a pop-up
-	      ;; frame was being displayed, make sure it's updated when
-	      ;; completing
-	      (when (and popup (> (point) word-pos))
-		(overlay-put overlay 'popup-frame popup))))
+         ;; otherwise, we're in or at the end of a word, so complete the
+         ;; word at point
+         (t
+          ;; if point was at start of completion or start of word before
+          ;; deleting, and we're now within or at end of a word...
+          (when (or overlay
+                    (and wordstart
+                         (or (completion-within-word-p)
+                             (completion-end-of-word-p))))
+            ;; delete any overlay, since prefix is wrong and we need it
+            ;; out the way so that we can get new one below
+            (when overlay
+              (completion-delete-overlay
+               overlay (not (and popup (<= (point) word-pos)))))
+            ;; setup overlay to prevent word after point being deleted
+            (let ((pos (point)) prefix prefix-fun)
+              (setq prefix-fun
+                    (or (and (fboundp 'auto-overlay-local-binding)
+                             (auto-overlay-local-binding
+                              'completion-prefix))
+                        completion-prefix-function))
+              (setq prefix (funcall prefix-fun))
+              (setq overlay
+                    (completion-setup-overlay prefix nil nil overlay))
+              (move-overlay overlay (point) (point))
+              ;; if we've not deleted beyond start of word, and a pop-up
+              ;; frame was being displayed, make sure it's updated when
+              ;; completing
+              (when (and popup (> (point) word-pos))
+                (overlay-put overlay 'popup-frame popup))))
 
-	  ;; if there's no existing timer, set one up to complete
-	  ;; remainder of word after some idle time
-	  (when (timerp completion-backward-delete-timer)
-	    (cancel-timer completion-backward-delete-timer))
-	  (if auto-completion-backward-delete-delay
-	      (setq completion-backward-delete-timer
-		    (run-with-idle-timer
-		     auto-completion-backward-delete-delay nil
-		     ;; FIXME: tooltip key-bindings don't work - why?
-		     `(lambda ()
-			(setq completion-backward-delete-timer nil)
-			(complete-in-buffer nil 'auto ,(point)))))
-	    ;; if completing with no delay, do so
-	    (complete-in-buffer nil 'auto (point)))
-	  ))))))
+          ;; if there's no existing timer, set one up to complete
+          ;; remainder of word after some idle time
+          (when (timerp completion-backward-delete-timer)
+            (cancel-timer completion-backward-delete-timer))
+          (if auto-completion-backward-delete-delay
+              (setq completion-backward-delete-timer
+                    (run-with-idle-timer
+                     auto-completion-backward-delete-delay nil
+                     ;; FIXME: tooltip key-bindings don't work - why?
+                     `(lambda ()
+                        (setq completion-backward-delete-timer nil)
+                        (complete-in-buffer nil 'auto ,(point)))))
+            ;; if completing with no delay, do so
+            (complete-in-buffer nil 'auto (point)))
+          ))));)
+  )
 
 
 
@@ -3539,6 +3453,34 @@ associated with OVERLAY."
 
 
 
+(defun completion-position-point-in-overlay (overlay)
+  "Move point to appropriate position in OVERLAY,
+the start for `auto-completion-mode' or if it is to be rejected,
+the end of the common prefix for `accept-common' or
+the end if it is to be accepted."
+  (cond
+   ;; reject or auto-completion-mode
+   ((or auto-completion-mode (eq completion-resolve-behaviour 'reject))
+    (goto-char (overlay-start overlay)))
+
+   ;; accept-common
+   ((eq completion-resolve-behaviour 'accept-common)
+    (if (overlayp (overlay-get overlay 'common-prefix))
+        ;; If the common-prefix already exists goto the end of it
+        (goto-char (overlay-end (overlay-get overlay 'common-prefix)))
+      ;; If the common-prefix doesn't exist search for it
+      (let* ((completions (overlay-get overlay 'completions))
+             (str (try-completion "" completions)))
+        ;; (try-completion returns t if there's only one completion)
+        (when (eq str t) (setq str (car completions)))
+        (goto-char (+ (overlay-start overlay) (length str))))))
+
+   ;; accept
+   (t (goto-char (overlay-end overlay))))
+)
+
+
+
 (defun completion-resolve-old (&optional overlay)
   "Resolve old dynamic completions according to the setting of
 `completion-reslove-method'. Any completion overlay specified by
@@ -3589,7 +3531,8 @@ OVERLAY will be left alone."
     (setq completion-overlay-list nil))
 
    ;; reject old completions
-   ((eq completion-resolve-behaviour 'reject)
+   ((or (eq completion-resolve-behaviour 'reject)
+        (eq completion-resolve-behaviour 'accept-common))
     (mapc (lambda (o)
             (run-hook-with-args 'completion-reject-functions
                                 (overlay-get o 'prefix)
@@ -3672,7 +3615,8 @@ inserting anything)."
       ;; SYNTAX were supplied...
       (if (or (not auto-completion-mode) (not (or char syntax)))
           (cond
-           ((eq completion-resolve-behaviour 'reject)
+           ((or (eq completion-resolve-behaviour 'reject)
+                (eq completion-resolve-behaviour 'accept-common))
             (setq resolve 'reject))
            ((eq completion-resolve-behaviour 'accept)
             (setq resolve 'accept))
@@ -3921,8 +3865,8 @@ of completion overlay."
                                   (key-description
                                    (vector (nth i completion-hotkey-list))))
                         ""))))))
-    ;; return pop-up frame lines
-    lines))
+    lines)  ; return pop-up frame lines
+  )
 
 
 
@@ -3960,6 +3904,7 @@ of completion overlay."
                             (auto-overlay-local-binding
                              'completion-browser-menu-function))))
               )))
+
     ;; return the menu keymap
     menu))
 
@@ -4106,6 +4051,7 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                              prefix (completion--sublist completions i j)
                              menu-item-func sub-menu-func))))
           )))
+
     ;; return constructed menu
     menu))
 
@@ -4144,7 +4090,6 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                 `(lambda () (insert ,cmpl))))
         ;; return the menu keymap
         menu))))
-
 
 
 
@@ -4199,7 +4144,6 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                        'completion-word-thing)
                     completion-word-thing)))
            (= point (cdr bounds))))))
-
 
 
 
@@ -4285,7 +4229,6 @@ See also `completion-window-posn-at-point' and
 
 
 
-
 ;;; ===============================================================
 ;;;                     Compatibility Stuff
 
@@ -4313,7 +4256,7 @@ to the position of point in the selected window."
                                 position
                                 (cons (window-width) (window-height))
                                 (window-width)
-                                        ; prob. shouldn't be 0
+                                ; prob. shouldn't be 0
                                 (cons (window-hscroll) 0)
                                 window))
            (x (nth 1 x-y))
@@ -4440,19 +4383,17 @@ in WINDOW'S frame."
       (cons xoffset yoffset)))
 
 
-
   (defun completion-compat-line-number-at-pos (pos)
     "Return (narrowed) buffer line number at position POS.
 \(Defaults to the point.\)"
     (1+ (count-lines (point-min) pos)))
 
 
-
   (defalias 'completion-posn-at-point-as-event
     'completion-compat-posn-at-point-as-event)
   (defalias 'completion-frame-posn-at-point
     'completion-compat-frame-posn-at-point)
-  )
+)
 
 
 
@@ -4460,7 +4401,7 @@ in WINDOW'S frame."
 ;;;                 Set modification hook functions
 
 ;; (add-hook 'after-change-functions
-;;    (lambda (&rest unused) (completion-cancel-tooltip)))
+;;           (lambda (&rest unused) (completion-cancel-tooltip)))
 
 ;; we reset tooltip flag after any command because Emacs hides tooltips
 ;; after any command
