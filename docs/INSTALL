@@ -12,8 +12,8 @@ Developed and maintained by Toby Cubitt (toby-predictive@dr-qubit.org).
 
 
 
-Backing-Up Dictionaries      
------------------------     
+Backing-Up Dictionaries
+-----------------------
 
 *************   If you are upgrading from a previous version of the
 * IMPORTANT *   predictive completion package, make sure you first backup
@@ -95,7 +95,7 @@ This can of course be combined with the DESTDIR option:
 
 Finally, put the following lines in your .emacs file (replace the paths
 as appropriate if you're not using the default install locations):
-  
+
   ;; predictive install location
   (add-to-list 'load-path "~/.emacs.d/predictive/")
   ;; dictionary locations
@@ -121,12 +121,12 @@ by replacing the final line as follows:
 If you want to install the info documentation into your local info
 system, you should run the following command AS ROOT:
 
-  make info-install
+  make install-info
 
 If your info dir file is not located in /usr/share/info/, then you can
 specify its location using
 
-  make info-install INFODIR=/path/to/info/
+  make install-info INFODIR=/path/to/info/
 
 
 
