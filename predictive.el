@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.8
+;; Version: 0.17.9
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -46,7 +46,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.17.7
+;; Version 0.17.9
+;; * updated for compatibility with new dict-tree.el
+;;
+;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
 ;;   to ensure `predictive-map' comes before it in `minor-mode-map-alist'
 ;;
