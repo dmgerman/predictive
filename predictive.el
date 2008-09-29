@@ -887,7 +887,7 @@ do: emails, academic research articles, letters...)"
    ((not predictive-mode)
     ;; set the completion function
     (setq completion-function 'predictive-complete)
-    (setq completion-includes-prefix nil)
+    (setq completion-includes-prefix t)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)
@@ -1173,9 +1173,7 @@ for uncapitalized version."
 	(setq str (list prefix (downcase prefix))))
       ;; complete the prefix using the current dictionary
       (setq completions
-	    (if (null maxnum)
-		(dictree-complete dict str)
-	      (dictree-complete-ordered dict str maxnum nil filter)))
+	    (dictree-complete dict str t maxnum nil nil filter))
       (when completions (setq completions (mapcar 'car completions)))
 
       ;; return the completions
@@ -1295,7 +1293,7 @@ load. Interactively, it is read from the mini-buffer."
 
     ;; indicate successful loading
     (message "Dictionary %s loaded in buffer %s"
-	     (dictree--name dict) (buffer-name (current-buffer)))
+	     (dictree-name dict) (buffer-name (current-buffer)))
     t)
 )
 
@@ -1322,7 +1320,7 @@ disabled (see `predictive-dict-autosave-on-kill-buffer' and
   ;; remove dictionary from buffer's used dictionary list
   (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
   (message "Dictionary %s unloaded from buffer %s"
-	   (dictree--name dict) (buffer-name (current-buffer)))
+	   (dictree-name dict) (buffer-name (current-buffer)))
 )
 
 
@@ -1435,9 +1433,9 @@ respectively."
 			(> (cdr a) (cdr b))))))
 
       ;; create the new dictionary
-      (setq dict (dictree-create dictname file autosave
-				 nil nil complete-speed nil
-				 nil insfun rankfun))
+      (setq dict (dictree-create dictname file autosave nil
+				 '< insfun rankfun nil nil
+				 nil nil complete-speed))
       ;; populate it
       (if (null populate)
 	  (when (interactive-p) (message "Created dictionary %s" dictname))
@@ -1512,9 +1510,9 @@ The other arguments are as for `predictive-create-dict'."
 			(> (cdr a) (cdr b))))))
 
       ;; create the new dictionary
-      (setq dict (dictree-create-meta-dict dictname dictlist file autosave
-					   nil nil complete-speed nil
-					   combfun rankfun))
+      (setq dict (dictree-meta-dict-create dictlist dictname file autosave
+					   nil combfun nil nil
+					   nil nil complete-speed))
       ;; return the new dictionary
       dict))
 )
@@ -1611,7 +1609,7 @@ specified by the prefix argument."
 
     ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
-    (dolist (prefix (dictree-lookup-meta-data dict word))
+    (dolist (prefix (dictree-get-meta-data dict word))
       (setq pweight (dictree-lookup dict prefix))
       (when (and pweight (< pweight newweight))
 	(dictree-insert dict prefix newweight (lambda (a b) a)))))
@@ -1649,10 +1647,10 @@ Interactively, WORD and DICT are read from the minibuffer."
   (if (dictree-delete dict word)
       (when (interactive-p)
 	(message "\"%s\" deleted from dictionary %s" word
-		 (dictree--name dict)))
+		 (dictree-name dict)))
     (when (interactive-p)
       (message "\"%s\" not found in dictionary %s" word
-	       (dictree--name dict))))
+	       (dictree-name dict))))
 )
 
 
@@ -1719,7 +1717,7 @@ See also `predictive-fast-learn-from-buffer'."
 		   dictname dictsize))
 
 	;; map over all words in dictionary
-	(dictree-map
+	(dictree-mapc
 	 (lambda (word weight)   ; (value passed to weight is ignored)
 	   ;; construct regexp for word
 	   (setq regexp (regexp-quote word))
@@ -2067,7 +2065,7 @@ If WEIGHT is supplied, reset to that value instead of
 	(when (interactive-p)
 	  (message "Resetting word weights in %s...(word 1 of %d)"
 		   (dictree-name dict) count))
-	(dictree-map
+	(dictree-mapc
 	 (lambda (word ignored)
 	   (when (and (interactive-p) (setq i (1+ i)) (= (mod i 10) 0))
 	     (message "Resetting word weights in %s...(word %d of %d)"
@@ -2143,7 +2141,7 @@ as the weight of WORD."
 		     "\"%s\" is not a prefix of \"%s\". Continue anyway? "
 		     prefix word))))
 
-      (let ((prefixes (dictree-lookup-meta-data dict word)))
+      (let ((prefixes (dictree-get-meta-data dict word)))
 	;; unless prefix is already defined, define it
 	(unless (member prefix prefixes)
 	  (dictree-set-meta-data dict word (cons prefix prefixes))))
@@ -2186,7 +2184,7 @@ least as large as the weight of WORD."
       (setq prefix (predictive-guess-prefix word))))
 
   ;; delete prefix, displaying message if called interactively
-  (let ((prefixes (dictree-lookup-meta-data dict word)))
+  (let ((prefixes (dictree-get-meta-data dict word)))
     (if (and (interactive-p) (not (member prefix prefixes)))
 	(message "\"%s\" is not defined as a prefix of \"%s\"" prefix word)
       (dictree-set-meta-data dict word (delete prefix prefixes))
@@ -2258,7 +2256,7 @@ LENGTH is the integer prefix argument."
       (if prefix (funcall prefix-fun prefix)
 
 	;; define all prefixes
-	(dictree-map
+	(dictree-mapc
 	 (lambda (word weight)
 	   (when (and (interactive-p) (setq i (1+ i)) (= 0 (mod i 50)))
 	     (message "Defining prefixes in %s...(word %d of %d)"
@@ -2320,7 +2318,7 @@ confirmation first if called interactively)."
 		  ;; remove PREFIX if it appears in word's prefix list
 		  (when (member prefix
 				(setq prefix-list
-				      (dictree-lookup-meta-data dict word)))
+				      (dictree-get-meta-data dict word)))
 		    (dictree-set-meta-data dict word
 					   (delete prefix prefix-list)))))
 	(setq prefix-fun
@@ -2339,7 +2337,7 @@ confirmation first if called interactively)."
 		     prefix (dictree-name dict) count)
 	  (message "Undefining prefixes in %s...(word 1 of %d)"
 		   (dictree-name dict) count)))
-      (dictree-map prefix-fun dict 'string)
+      (dictree-mapc prefix-fun dict 'string)
       (when (interactive-p)
 	(if prefix
 	    (message "Undefining prefix \"%s\" in %s...done"
@@ -2449,8 +2447,8 @@ there's only one."
 	  (load filename)
 	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
 	  ;; function
-	  (dictree--set-filename (eval (predictive-buffer-local-dict-name))
-				 filename)
+	  (setf (dictree-filename (eval (predictive-buffer-local-dict-name)))
+		filename)
 	  (setq buffer-dict (eval (predictive-buffer-local-dict-name))))
       ;; The insertion function inserts a weight multiplied by the multiplier
       ;; if none already exists, otherwise it adds the new weight times the
@@ -2469,9 +2467,9 @@ there's only one."
       ;; create the buffer-local dictionary
       (setq buffer-dict
 	    (dictree-create (predictive-buffer-local-dict-name)
-			    filename (when filename t) nil nil
-			    predictive-completion-speed nil
-			    nil insfun rankfun)))
+			    filename (when filename t) nil
+			    '< insfun rankfun nil nil
+			    nil nil predictive-completion-speed)))
 
 
     ;; ----- meta-dictionary -----
@@ -2484,13 +2482,13 @@ there's only one."
     (when (and filename (file-exists-p filename))
       (load filename)
       ;; FIXME: probably shouldn't be using an internal dict-tree.el function
-      (dictree--set-filename (eval (predictive-buffer-local-meta-dict-name))
-			     filename)
+      (setf (dictree-filename (eval (predictive-buffer-local-meta-dict-name)))
+	    filename)
       ;; if the meta-dictionary is not based on the current main dictionary,
       ;; prompt user to update it
       (when (and
 	     (not (memq (eval predictive-main-dict)
-			(dictree--dict-list
+			(dictree--meta-dict-dictlist
 			 (eval (predictive-buffer-local-meta-dict-name)))))
 	     (y-or-n-p "Existing buffer-local dictionary is not based on the\
  current main dictionary. Update it? "))
@@ -2507,11 +2505,11 @@ there's only one."
 		    (t (cons (+ (car a) (car b)) (cdr b))))))
       ;; create the buffer-local meta-dictionary
       (setq meta-dict
-	    (dictree-create-meta-dict
+	    (dictree-meta-dict-create
+	     (list buffer-dict (eval predictive-main-dict))
 	     (predictive-buffer-local-meta-dict-name)
-	     (list buffer-dict (eval predictive-main-dict)) filename
-	     (when filename t) nil nil predictive-completion-speed
-	     nil combfun rankfun)))
+	     filename (when filename t) nil combfun nil nil
+	     nil nil predictive-completion-speed)))
 
     ;; set buffer's dictionary to the meta-dictionary
     (setq predictive-buffer-dict (predictive-buffer-local-meta-dict-name))
@@ -2603,8 +2601,9 @@ predictive mode."
 	;; dictionary it's based on instead
 	(if (and (>= (length (dictree-name dic)) 10)
 		 (string= (substring (dictree-name dic) 0 10) "dict-meta-")
-		 (dictree--meta-dict-p dic))
-	    (setq name (dictree-name (nth 1 (dictree--dict-list dic))))
+		 (dictree-meta-dict-p dic))
+	    (setq name
+		  (dictree-name (nth 1 (dictree-meta-dict-dictlist dic))))
 	  (setq name (dictree-name dic)))
 ;;; 	;; truncate to 15 characters
 ;;; 	(when (> (length name) 15) (setq name (substring name 0 15)))
@@ -2622,8 +2621,9 @@ predictive mode."
 			(if (and (>= (length (dictree-name dic)) 10)
 				 (string= (substring (dictree-name dic) 0 10)
 					  "dict-meta-")
-				 (dictree--meta-dict-p dic))
-			    (dictree-name (nth 1 (dictree--dict-list dic)))
+				 (dictree-meta-dict-p dic))
+			    (dictree-name
+			     (nth 1 (dictree-meta-dict-dictlist dic)))
 			  (dictree-name dic)))
 		      dict "\n"))
 	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
