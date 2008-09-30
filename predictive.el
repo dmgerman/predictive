@@ -289,7 +289,6 @@
 
 ;;; Code:
 
-(provide 'predictive)
 (require 'completion-ui)
 (require 'dict-tree)
 (require 'auto-overlays)
@@ -2653,8 +2652,14 @@ predictive mode."
 (unless (fboundp 'replace-regexp-in-string)
   (require 'predictive-compat)
   (defalias 'replace-regexp-in-string
-            'predictive-compat-replace-regexp-in-string)
-)
+            'predictive-compat-replace-regexp-in-string))
 
+
+
+
+;;; ===============================================================
+;;;                       Provide package
+
+(provide 'predictive)
 
 ;;; predictive.el ends here
