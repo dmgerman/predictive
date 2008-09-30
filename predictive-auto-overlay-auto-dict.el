@@ -176,7 +176,7 @@
 	  (predictive-load-dict dictname)
 	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
 	  ;;        function
-	  (dictree--set-filename (eval dictname) filename)))
+	  (setf (dictree-filename (eval dictname)) filename)))
       ;; set the NAME dictionary to the loaded/new dictionary
       (set dict (eval dictname)))
 
@@ -186,8 +186,8 @@
       (setq dict (eval dict))
       ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
       ;;        need to make `predictive-create-dict' interface more flexible.
-      (dictree--set-name dict name)
-      (dictree--set-autosave dict nil))
+      (setf (dictree-name dict) name)
+      (setf (dictree-autosave dict) nil))
      ))
 )
 
