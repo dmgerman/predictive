@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.3
+;; Version: 0.9.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -103,6 +103,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.4
+;; * modified `completion-run-if-condition' and `completion-select' to get key
+;;   sequence used to invoke it via `unread-command-keys' and
+;;   `read-key-sequence', to ensure key sequence translation takes place
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -2682,57 +2687,61 @@ internally. It should *never* be bound in a keymap."
   (completion-cancel-tooltip)
 
   (unless overlay (setq overlay (completion-overlay-at-point)))
-  ;; find completion index corresponding to last input event
-  (unless n
-    (let ((key (this-command-keys-vector)))
+
+  ;; get last input event by unreading and re-reading it, to ensure key
+  ;; sequence translation can take place
+  (let (key)
+    (setq unread-command-events (listify-key-sequence (this-command-keys)))
+    (setq key (read-key-sequence-vector ""))
+    ;; find completion index corresponding to last input event
+    (unless n
       ;; FIXME: work around apparent bug where keys are doubled in vector
       (when (> (length key) 1) (setq key (vector (aref key 0))))
       (setq n (completion--position
-               key (mapcar 'vector completion-hotkey-list)))))
+               key (mapcar 'vector completion-hotkey-list))))
 
-  ;; if within a completion overlay...
-  (when overlay
-    (let ((completions (overlay-get overlay 'completions)))
-      (cond
-       ;; if there are no completions, run whatever would otherwise be
-       ;; bound to the key
-       ((null completions)
-        (when completion-trap-recursion
-          (error "Recursive call to `completion-select'"))
-        (setq completion-use-hotkeys nil)
-        (let ((completion-trap-recursion t))
-          (unwind-protect
-              (command-execute
-               (key-binding (this-command-keys) t))
-            (setq completion-use-hotkeys t))))
+    ;; if within a completion overlay...
+    (when overlay
+      (let ((completions (overlay-get overlay 'completions)))
+	(cond
+	 ;; if there are no completions, run whatever would otherwise be
+	 ;; bound to the key
+	 ((null completions)
+	  (when completion-trap-recursion
+	    (error "Recursive call to `completion-select'"))
+	  (setq completion-use-hotkeys nil)
+	  (let ((completion-trap-recursion t))
+	    (unwind-protect
+		(command-execute (key-binding key t))
+	      (setq completion-use-hotkeys t))))
 
-       ;; if there are too few completions, display message
-       ((>= n (length completions))
-        (beep)
-        (message "Only %d completions available"
-                 (length (overlay-get overlay 'completions))))
+	 ;; if there are too few completions, display message
+	 ((>= n (length completions))
+	  (beep)
+	  (message "Only %d completions available"
+		   (length (overlay-get overlay 'completions))))
 
-       ;; otherwise, replace dynamic completion with selected one
-       (t
-        ;; delete old provisional completion, including prefix if
-        ;; `completion-replaces-prefix' is non-nil
-        (delete-region (- (overlay-start overlay)
-                          (if (and completion-replaces-prefix
-                                   (not (overlay-get overlay
-                                                     'prefix-replaced)))
-                              (length (overlay-get overlay 'prefix))
-                            0))
-                       (overlay-end overlay))
-        (let ((overwrite-mode nil)) (insert (nth n completions)))
-        ;; run accept hooks
-        (run-hook-with-args 'completion-accept-functions
-                            (overlay-get overlay 'prefix)
-                            (concat (if completion-replaces-prefix
-                                        "" (overlay-get overlay 'prefix))
-                                    (nth n completions)))
-        ;; delete overlay
-        (completion-delete-overlay overlay))
-       ))))
+	 ;; otherwise, replace dynamic completion with selected one
+	 (t
+	  ;; delete old provisional completion, including prefix if
+	  ;; `completion-replaces-prefix' is non-nil
+	  (delete-region (- (overlay-start overlay)
+			    (if (and completion-replaces-prefix
+				     (not (overlay-get overlay
+						       'prefix-replaced)))
+				(length (overlay-get overlay 'prefix))
+			      0))
+			 (overlay-end overlay))
+	  (let ((overwrite-mode nil)) (insert (nth n completions)))
+	  ;; run accept hooks
+	  (run-hook-with-args 'completion-accept-functions
+			      (overlay-get overlay 'prefix)
+			      (concat (if completion-replaces-prefix
+					  "" (overlay-get overlay 'prefix))
+				      (nth n completions)))
+	  ;; delete overlay
+	  (completion-delete-overlay overlay)))))
+    ))
 
 
 (defun completion-select-if-within-overlay ()
@@ -3701,8 +3710,10 @@ sequence in a keymap."
           (restore (eval variable))
           command)
       (set variable nil)
-      (setq command
-            (key-binding (this-command-keys) t))
+      ;; we add (this-command-keys) to `unread-command-events' and then
+      ;; re-read it in order to ensure key sequence translation takes place
+      (setq unread-command-events (listify-key-sequence (this-command-keys)))
+      (setq command (key-binding (read-key-sequence "") t))
       (unwind-protect
           (when (commandp command)
             (command-execute command)
