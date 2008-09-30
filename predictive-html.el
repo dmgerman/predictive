@@ -102,31 +102,31 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ;; ----- enabling html setup -----
    ((> arg 0)
     (catch 'load-fail
-      
+
       ;; save predictive-main-dict; restored when predictive mode is disabled
       (setq predictive-restore-main-dict predictive-main-dict)
-      
+
       ;; load the dictionaries
       (mapc (lambda (dic)
 	      (unless (predictive-load-dict dic)
 		(message "Failed to load dictionary %s" dic)
 		(throw 'load-fail nil)))
 	    predictive-html-dicts)
-      
+
       ;; add html dictionaries to main dictionary list
       (make-local-variable 'predictive-main-dict)
       (when (atom predictive-main-dict)
 	(setq predictive-main-dict (list predictive-main-dict)))
       (setq predictive-main-dict
 	    (append predictive-main-dict '(dict-html dict-html-char-entity)))
-      
+
       ;; save overlays and unload regexp definitions before killing buffer
       (add-hook 'kill-buffer-hook
 		(lambda ()
 		  (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
 		  (auto-overlay-unload-set 'predictive))
 		nil t)
-      
+
       ;; use html browser menu if first character of prefix is "<" or "&"
       (make-local-variable 'completion-menu)
       (setq completion-menu
@@ -136,18 +136,18 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		  (predictive-html-construct-browser-menu prefix completions)
 		(completion-construct-menu prefix completions))
 	      ))
-      
+
       ;; delete any existing predictive auto-overlay regexps and load html
       ;; auto-overlay regexps
       (auto-overlay-unload-set 'predictive)
       (predictive-html-load-regexps)
       (auto-overlay-start 'predictive)
-      
+
       ;; load the keybindings and related settings
       (predictive-html-load-keybindings)
       ;; consider \ as start of a word
       (setq completion-word-thing 'predictive-html-word)
-      
+
       t))  ; indicate successful setup
 
 
@@ -173,7 +173,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		   (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
 		   (auto-overlay-unload-set 'predictive))
 		 t)
-    
+
     t))  ; indicate successful reversion of changes
 )
 
@@ -199,7 +199,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	   (priority . 20)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
 	  ))
-  
+
   ;; "<..." starts various tags, ended by ">". "<" makes sure all other ">"s
   ;; are matched
   (auto-overlay-load-definition
@@ -395,7 +395,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-html-load-keybindings ()
   "Load the predictive mode html key bindings."
-  
+
   ;; make "<", ">", and "&" do the right thing
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
