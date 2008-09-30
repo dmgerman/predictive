@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.10.1
+;; Version: 0.10.2
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.10.2
+;; * define delimiter portion of all brace regexps to fix overlay bug
 ;;
 ;; Version 0.10.1
 ;; * moved auto-dict utility functions to predictive-auto-overlay-auto-dict.el
@@ -630,7 +633,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 		   (?} . (,punct-resolve none))))
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\cite{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cite{\\)" . 3)
 	       :edge start
 	       (dict . t) (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -638,7 +641,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       :edge start
 ;;; 	       (dict . t) (priority . 40)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (completion-menu
@@ -650,7 +653,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (completion-menu
 ;;; 		. predictive-latex-construct-browser-menu)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (completion-menu
@@ -662,7 +665,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (completion-menu
 ;;; 		. predictive-latex-construct-browser-menu)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\text{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
 	       :edge start
 	       (dict . predictive-main-dict) (priority . 40)
 	       (completion-menu
@@ -674,7 +677,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (completion-menu
 ;;; 		. predictive-latex-construct-browser-menu)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*\\]\\)?{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
 	       (dict . dict-latex-docclass) (priority . 40)
 	       (completion-menu
@@ -686,7 +689,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (completion-menu
 ;;; 		. predictive-latex-construct-browser-menu)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\bibliographystyle\\(\\[.*\\]\\)?{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
 	       (dict . dict-latex-bibstyle)
 	       (priority . 40)
@@ -710,7 +713,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       :edge start
 ;;; 	       (priority . 40)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\({\\)" . 3)
 	       :edge start
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1558,7 +1561,7 @@ the package, if they exist."
 		 (not (dictree-p (eval (car dic)))))
 	    (nconc (eval (car dic)) (list dict))
 	  (set (car dic) (list (eval (car dic)) dict)))))
-    
+
     ;; try to load lisp library for the package
     (require (intern (concat "predictive-latex-" package)) nil t)
     ;; run load function for package, if one is defined

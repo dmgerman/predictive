@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.3
+;; Version: 0.9.4
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9,4
+;; * made inequalities strict in `auto-o-overlapping-match' (fixes a bug, but
+;;   does it introduce others?!)
 ;;
 ;; Version 0.9.3
 ;; * fixed bug in `auto-overlay-unload-definition'
@@ -1779,8 +1783,8 @@ overlay changes."
 			 (not (eq (overlay-get o 'regexp-id) regexp-id))
 			 (eq (auto-o-edge o) edge)
 			 ;; check delimeter (not just o) overlaps BEG to END
-			 (<= (overlay-get o 'delim-start) end)
-			 (>= (overlay-get o 'delim-end) beg))
+			 (< (overlay-get o 'delim-start) end)
+			 (> (overlay-get o 'delim-end) beg))
 		(setq o-overlap o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
