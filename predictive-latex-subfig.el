@@ -71,7 +71,7 @@
     ;; Load subfig regexps
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\subref{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\subref{\\)" . 3)
        :id subref
        :edge start
        (dict . predictive-latex-label-dict)

@@ -70,7 +70,7 @@
     ;; \thref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\thref{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\thref{\\)" . 3)
        :edge start
        :id thref
        (dict . predictive-latex-label-dict)

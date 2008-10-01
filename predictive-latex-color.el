@@ -55,7 +55,7 @@
   ;; Load regexps
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\color\\(\\[.*?\\]\\)?{"
+   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 3)
      :edge start
      :id color
      (dict . dict-latex-colours)
@@ -64,7 +64,8 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\textcolor\\(\\[.*?\\]\\)?{"
+   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)"
+      . 3)
      :edge start
      :id textcolor
      (dict . dict-latex-colours)
@@ -73,7 +74,8 @@
    t)
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\pagecolor\\(\\[.*?\\]\\)?{"
+   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)"
+      . 3)
      :edge start
      :id pagecolor
      (dict . dict-latex-colours)

@@ -121,7 +121,7 @@
     ;; \cref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\cref{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cref{\\)" . 3)
        :edge start
        :id cref
        (dict . predictive-latex-label-dict)
@@ -150,7 +150,7 @@
     ;; \Cref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\Cref{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\Cref{\\)" . 3)
        :edge start
        :id Cref
        (dict . predictive-latex-label-dict)
@@ -179,7 +179,7 @@
     ;; \crefrange
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\crefrange{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\crefrange{\\)" . 3)
        :edge start
        :id crefrange
        (dict . predictive-latex-label-dict)
@@ -208,7 +208,7 @@
     ;; \Crefrange
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\Crefrange{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\Crefrange{\\)" . 3)
        :edge start
        :id Crefrange
        (dict . predictive-latex-label-dict)
@@ -239,7 +239,7 @@
 	  (auto-overlay-unload-regexp 'predictive 'brace 'label))
     (auto-overlay-load-regexp
      'predictive 'brace
-     `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label\\(\\[.*?\\]\\)?{"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\label\\(\\[.*?\\]\\)?{\\)" . 3)
        :edge start
        :id label
        (dict . t)

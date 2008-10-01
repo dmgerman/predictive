@@ -57,7 +57,8 @@
   ;; load regexp
   (auto-overlay-load-regexp
    'predictive 'brace
-   `("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\includegraphics\\(\\[.*?\\]\\)?{"
+   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)"
+      . 3)
      :edge start
      :id graphicx
      (dict . t)
