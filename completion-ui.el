@@ -108,6 +108,9 @@
 ;; * modified `completion-run-if-condition' and `completion-select' to get key
 ;;   sequence used to invoke it via `unread-command-keys' and
 ;;   `read-key-sequence', to ensure key sequence translation takes place
+;; * added new 'pop-up setting for `completion-use-hotkeys' which only enables
+;;   hotkeys when a tooltip or pop-up frame is active (thanks to Henry Weller
+;;   for the suggestion)
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -632,9 +635,17 @@ pop-up frames."
 ;; ===== Hotkey customizations =====
 
 (defcustom completion-use-hotkeys t
-  "*Enable completion hotkeys (single-key selection of completions)."
+  "*Enable completion hotkeys (single-key selection of completions).
+
+If t, enable hotkeys whenever completions are available. If nil,
+disable hotkeys entirely. If set to the symbol 'pop-up, only
+enable hotkeys when a tooltip or pop-up frame is active (the
+completion menu steals keyboard focus, so enabling hotkeys when
+the menu is active is pointless)."
   :group 'completion-ui
-  :type 'boolean)
+  :type '(choice (const t)
+                 (const pop-up)
+                 (const nil)))
 
 
 ;; not a defcustom, since setting it after loading completion-ui.el (as
@@ -1512,10 +1523,10 @@ would normally be bound to key."
 ;;       after every command and we only want this keymap to be active if
 ;;       a tooltip is visible.
 ;;
-;;       The cycling commands bound below re-display the completion
-;;       tooltip, which causes `completion-tooltip-active' to be set to t
-;;       again. So after they've run, the keymap is left active again for
-;;       the next key sequence.
+;;       The cycling commands bound below re-display the completion tooltip,
+;;       which causes `completion-tooltip-active' to be set to non-nil
+;;       again. So after they've run, the keymap is left active again for the
+;;       next key sequence.
 
 ;; Set default key bindings for the keymap used when a completion tooltip
 ;; is displayed, unless it's already been set (most likely in an init
@@ -2019,9 +2030,14 @@ point is at POINT."
                   (+ (- (cdr pos) (cddr mouse-pos)) (frame-char-height)
                      (cdr completion-tooltip-offset)))
 
-      ;; set flag to indicate tooltip is active at point (this enables
+      ;; if enabling hotkeys only when a tooltip or pop-up frame is active,
+      ;; construct hotkey bindings from `completion-hotkey-list'
+      (when (eq completion-use-hotkeys 'pop-up)
+	(completion-enable-hotkeys overlay))
+
+      ;; set flag to indicate tooltip is active for this overlay (this enables
       ;; tooltip-related key bindings)
-      (setq completion-tooltip-active (point))
+      (setq completion-tooltip-active overlay)
       )))
 
 
@@ -2253,8 +2269,13 @@ If no OVERLAY is supplied, tried to find one at point."
                 (make-overlay pos (point)))
           (overlay-put completion-popup-frame-overlay
                        'face 'completion-dynamic-face))
-        (move-overlay completion-popup-frame-overlay pos (point)))
-      )))
+        (move-overlay completion-popup-frame-overlay pos (point))))
+
+    ;; if enabling hotkeys only when a tooltip or pop-up frame is active,
+    ;; construct hotkey bindings from `completion-hotkey-list'
+    (when (eq completion-use-hotkeys 'pop-up)
+      (completion-enable-hotkeys overlay))
+    ))
 
 
 ;; (defun completion-popup-frame-if-within-overlay ()
@@ -2337,6 +2358,9 @@ If ARG is supplied, it is passed through to COMMAND."
                          cmpl-fun prefix completion-max-candidates))
       (overlay-put completion-popup-frame-parent-overlay
                    'completions completions)))
+  ;; disable hotkeys if only enabled when a tooltip or pop-up frame is active
+  (when (eq completion-use-hotkeys 'pop-up)
+    (completion-disable-hotkeys completion-popup-frame-parent-overlay))
   ;; delete pop-up frame
   (let ((frame (selected-frame)))
     (select-frame completion-popup-frame-parent-frame)
@@ -2709,11 +2733,12 @@ internally. It should *never* be bound in a keymap."
 	 ((null completions)
 	  (when completion-trap-recursion
 	    (error "Recursive call to `completion-select'"))
-	  (setq completion-use-hotkeys nil)
-	  (let ((completion-trap-recursion t))
-	    (unwind-protect
-		(command-execute (key-binding key t))
-	      (setq completion-use-hotkeys t))))
+	  (let ((restore completion-use-hotkeys))
+	    (setq completion-use-hotkeys nil)
+	    (let ((completion-trap-recursion t))
+	      (unwind-protect
+		  (command-execute (key-binding key t))
+		(setq completion-use-hotkeys restore)))))
 
 	 ;; if there are too few completions, display message
 	 ((>= n (length completions))
@@ -3380,10 +3405,8 @@ property is left unchanged."
                                  auto-completion-dynamic-map
                                completion-dynamic-map))
       ;; construct hotkey selection bindings from `completion-hotkey-list'
-      (when completion-use-hotkeys
-        (dolist (key completion-hotkey-list)
-          (define-key map (vector key)
-            'completion-select-if-within-overlay))))
+      (when (eq completion-use-hotkeys t)
+	(completion-enable-hotkeys overlay)))
     ;; setup common prefix overlay if enabled
     (when completion-dynamic-highlight-common-prefix
       (let ((o (make-overlay (point) (point))))
@@ -3662,12 +3685,29 @@ inserting anything)."
 
 
 
+(defun completion-enable-hotkeys (overlay)
+  "Enable completion hotkeys for OVERLAY."
+  (dolist (key completion-hotkey-list)
+    (define-key (overlay-get overlay 'keymap) (vector key)
+      'completion-select)))
+
+
+(defun completion-disable-hotkeys (overlay)
+  "Disable completion hotkeys for OVERLAY."
+  (dolist (key completion-hotkey-list)
+    (define-key (overlay-get overlay 'keymap) (vector key) nil)))
+
+
+
 (defun completion-cancel-tooltip ()
   "Hide the completion tooltip and cancel timers."
   (interactive)
   ;; cancel timer
   (when (timerp completion-auto-timer)
     (cancel-timer completion-auto-timer))
+  ;; disable hotkeys if only enabled when a tooltip or pop-up frame is active
+  (when (and (eq completion-use-hotkeys 'pop-up) completion-tooltip-active)
+    (completion-disable-hotkeys completion-tooltip-active))
   ;; cancel tooltip
   (when (and completion-function window-system (fboundp 'x-show-tip))
     (tooltip-hide)
@@ -3803,14 +3843,14 @@ inserted dynamic completion."
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
       (cond
-       ((and completion-use-hotkeys
+       ((and (eq completion-use-hotkeys t)
              (< i (length completion-hotkey-list)))
         (setq str
               (concat
                (format "(%s) "
                        (key-description
                         (vector (nth i completion-hotkey-list)))) str)))
-       (completion-use-hotkeys
+       ((eq completion-use-hotkeys t)
         (setq str (concat "() " str))))
       (setq text (concat text str "  ")))
 
@@ -3833,16 +3873,19 @@ of completion overlay."
         (dotimes (i (length completions))
           ;; if using hotkeys and one is assigned to current
           ;; completion, show it next to completion text
-          (if (and completion-use-hotkeys
-                   (< i (length completion-hotkey-list)))
-              (setq str
-                    (format "(%c)"
-                            (key-description
-                             (vector (nth i completion-hotkey-list)))))
-            (setq str "    "))
+          (if (or (eq completion-use-hotkeys t)
+		  (and (eq completion-use-hotkeys 'pop-up)
+		       (or (eq completion-tooltip-active overlay)
+			   (overlay-get overlay 'popup-frame))))
+	      (if (< i (length completion-hotkey-list))
+		  (setq str
+			(format "(%s) "
+				(key-description
+				 (vector (nth i completion-hotkey-list)))))
+		(setq str "     "))
+	    (setq str ""))
           ;; add completion to text
-          (setq str (concat str " "
-                            (if completion-replaces-prefix "" prefix)
+          (setq str (concat str (if completion-replaces-prefix "" prefix)
                             (nth i completions)))
           (setq text (concat text str "\n")))
 
