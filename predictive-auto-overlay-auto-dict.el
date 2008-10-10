@@ -31,6 +31,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2.1
+;; * fix bug causing two duplicate deletions from dict by removing
+;;   `predictive-auto-dict-suicide' entirely; word already gets deleted by
+;;   `predictive-auto-dict-update'
+;;
 ;; Version 0.2
 ;; * moved utility functions from predictive-latex.el
 ;;
@@ -58,7 +63,8 @@
 (put 'predictive-auto-dict 'auto-overlay-parse-function
      'predictive-parse-auto-dict-match)
 (put 'predictive-auto-dict 'auto-overlay-suicide-function
-     'predictive-auto-dict-suicide)
+     (lambda (o) (auto-o-delete-overlay (overlay-get o 'parent))))
+
 
 
 (defun predictive-parse-auto-dict-match (o-match)
@@ -94,17 +100,17 @@
 
 
 
-(defun predictive-auto-dict-suicide (o-match)
-  ;; Delete the word overlay, and delete the word from the dictionary
+;; (defun predictive-auto-dict-suicide (o-match)
+;;   ;; Delete the word overlay, and delete the word from the dictionary
 
-  (let ((word (overlay-get o-match 'word))
-	(dict (overlay-get o-match 'auto-dict)))
-    ;; delete the overlay
-    (auto-o-delete-overlay (overlay-get o-match 'parent))
-    ;; delete the word from the dictionary
-    (unless (dictree-p dict) (setq dict (eval dict)))
-    (dictree-delete dict word))
-)
+;;   (let ((word (overlay-get o-match 'word))
+;; 	(dict (overlay-get o-match 'auto-dict)))
+;;     ;; delete the overlay
+;;     (auto-o-delete-overlay (overlay-get o-match 'parent))
+;;     ;; delete the word from the dictionary
+;;     (unless (dictree-p dict) (setq dict (eval dict)))
+;;     (dictree-delete dict word))
+;; )
 
 
 
