@@ -111,6 +111,8 @@
 ;; * added new 'pop-up setting for `completion-use-hotkeys' which only enables
 ;;   hotkeys when a tooltip or pop-up frame is active (thanks to Henry Weller
 ;;   for the suggestion)
+;; * attempted to fix bug preventing default `completion-tooltip-face' being
+;;   set correctly
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -686,8 +688,11 @@ correct position on different window systems."
 
 
 (defface completion-tooltip-face
-  `((t . (:background ,(or (face-attribute 'menu :background) "white")
-          :foreground ,(or (face-attribute 'menu :foreground) "black"))))
+  `((t . ,(or (and (stringp (face-attribute 'menu :background))
+		   (stringp (face-attribute 'menu :foreground))
+		   (list :background (face-attribute 'menu :background)
+			 :foreground (face-attribute 'menu :foreground)))
+	      '(:background "grey" :foreground "black"))))
   "*Face used in tooltip. Only :foreground, :background and :family
 attributes are used."
   :group 'completion-ui)
