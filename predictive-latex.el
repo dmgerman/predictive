@@ -1198,11 +1198,11 @@ delimeter."
 	 (car (sort (auto-overlays-at-point
 		     nil `((eq auto-overlay-match t)
 			   (eq set-id predictive)
-			   (,(lambda (entry-id)
-			       (or (eq entry-id 'environment)
-				   (eq entry-id 'inline-math)
-				   (eq entry-id 'display-math)))
-			    entry-id)))
+			   (,(lambda (definition-id)
+			       (or (eq definition-id 'environment)
+				   (eq definition-id 'inline-math)
+				   (eq definition-id 'display-math)))
+			    definition-id)))
 		    (lambda (a b)
 		      (and (<= (- (overlay-end a) (overlay-start a))
 			       (- (overlay-end b) (overlay-start b)))))
@@ -1222,6 +1222,7 @@ delimeter."
 					   'end 'start)))))
 	  (message "Unmatched LaTeX delimeter")
 	;; otherwise, move point to the other edge
+	(push-mark)
 	(goto-char (overlay-get o-other
 				(if (eq o-other (overlay-get o-parent 'start))
 				    'delim-end 'delim-start)))))
@@ -1240,11 +1241,11 @@ math-mode, move to the start of it."
 	 (car (sort (auto-overlays-at-point
 		     nil `((identity auto-overlay)
 			   (eq set-id predictive)
-			   (,(lambda (entry-id)
-			       (or (eq entry-id 'environment)
-				   (eq entry-id 'inline-math)
-				   (eq entry-id 'display-math)))
-			    entry-id)))
+			   (,(lambda (definition-id)
+			       (or (eq definition-id 'environment)
+				   (eq definition-id 'inline-math)
+				   (eq definition-id 'display-math)))
+			    definition-id)))
 		    (lambda (a b)
 		      (and (<= (- (overlay-end a) (overlay-start a))
 			       (- (overlay-end b) (overlay-start b)))))
@@ -1254,7 +1255,9 @@ math-mode, move to the start of it."
     ;; if we've found an overlay, and it's start-matched, move to its start
     ;; match
     (if (and overlay (setq o-match (overlay-get overlay 'start)))
-	(goto-char (overlay-get o-match 'delim-end))
+	(progn
+	  (push-mark)
+	  (goto-char (overlay-get o-match 'delim-end)))
       (message "Not within a LaTeX environment")))
 )
 
@@ -1270,11 +1273,11 @@ math-mode, move to the end of it."
 	 (car (sort (auto-overlays-at-point
 		     nil `((identity auto-overlay)
 			   (eq set-id predictive)
-			   (,(lambda (entry-id)
-			       (or (eq entry-id 'environment)
-				   (eq entry-id 'inline-math)
-				   (eq entry-id 'display-math)))
-			    entry-id)))
+			   (,(lambda (definition-id)
+			       (or (eq definition-id 'environment)
+				   (eq definition-id 'inline-math)
+				   (eq definition-id 'display-math)))
+			    definition-id)))
 		    (lambda (a b)
 		      (and (<= (- (overlay-end a) (overlay-start a))
 			       (- (overlay-end b) (overlay-start b)))))
@@ -1284,7 +1287,9 @@ math-mode, move to the end of it."
     ;; if we've found an overlay, and it's start-matched, move to its start
     ;; match, otherwise display message
     (if (and overlay (setq o-match (overlay-get overlay 'end)))
-	(goto-char (overlay-get o-match 'delim-start))
+	(progn
+	  (push-mark)
+	  (goto-char (overlay-get o-match 'delim-start)))
       (message "Not within a LaTeX environment")))
 )
 
@@ -1314,7 +1319,7 @@ refers to."
       (setq overlay-list (auto-overlays-in (point-min) (point-max)
 					   '((identity auto-overlay)
 					     (eq set-id predictive)
-					     (eq entry-id label))))
+					     (eq definition-id label))))
       ;; filter overlay list for matching label name (filtered list should
       ;; only contain one element, unless label is multiply defined)
       (mapc (lambda (o)
@@ -1326,6 +1331,7 @@ refers to."
       ;; goto matching label definition, displaying warning if the label is
       ;; multiply defined
       (when filtered-list
+	(push-mark)
 	(goto-char (overlay-start (car filtered-list)))
 	(when (> (length filtered-list) 1)
 	  (message "LaTeX label \"%s\" is multiply defined" label)))
