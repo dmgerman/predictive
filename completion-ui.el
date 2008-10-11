@@ -113,6 +113,8 @@
 ;;   for the suggestion)
 ;; * attempted to fix bug preventing default `completion-tooltip-face' being
 ;;   set correctly
+;; * fixed bugs in `completion-browser-sub-menu' and
+;;   `completion-browser-menu-iterm'
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -4036,7 +4038,7 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 
     ;; if menu does not need to be divided into buckets, just add the
     ;; completions themselves to the keymap
-    (if (< num-completions completion-browser-max-items)
+    (if (<= num-completions completion-browser-max-items)
         (dotimes (i num-completions)
           (define-key-after menu
             (vector (intern (concat "completion-insert-"
@@ -4058,11 +4060,12 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                ;; contents
                ((eq completion-browser-buckets 'max)
                 completion-browser-max-items)
-               ;; minimuze number of buckets, maximize size of
+               ;; minimize number of buckets, maximize size of
                ;; contents
                ((eq completion-browser-buckets 'min)
-                (1+ (/ (1- num-completions)
-                       completion-browser-max-items)))
+                (min completion-browser-max-items
+		     (1+ (/ (1- num-completions)
+			    completion-browser-max-items))))
                ;; balance number of buckets and size of contents
                (t
                 (min completion-browser-max-items
@@ -4128,9 +4131,11 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     ;; original completion itself if `completion-replaces-prefix' is non-nil.
     (when (and completion-browser-recurse-on-completions
                (not completion-replaces-prefix))
-      (setq completions
-            (completion-call-completion-function
-             completion-function (concat prefix cmpl)))
+      ;; don't list completions of original prefix again
+      (unless (string= cmpl "")
+	(setq completions
+	      (completion-call-completion-function
+	       completion-function (concat prefix cmpl))))
       (setq completions
             (mapcar (lambda (c) (concat cmpl c)) completions))
       (setq completions (cdr completions)))
