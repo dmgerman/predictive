@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.20
+0.21
 @c --version--
 
 Copyright @copyright{} 2005--2008 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.20
+@subtitle Version 0.21
 @c --version--
 @author Toby Cubitt
 
@@ -528,15 +528,15 @@ when @command{auto-completion-mode} is enabled, you can do so using
 @cindex auto-completion mode
 @findex auto-completion-mode
 
-If aren't using @command{auto-completion-mode}, you will need to call
-the @command{complete-word-at-point} command whenever you want to
+If you aren't using @command{auto-completion-mode}, you will need to
+call the @command{complete-word-at-point} command whenever you want to
 complete the word at or next to the point. This is bound to @kbd{M-TAB},
 @kbd{M-SHIFT-TAB}, @kbd{M-/} and @kbd{M-?}. There are then two
 ``styles'' of behaviour: completions can either be ephemeral, acting
 purely as a visual indicator, and disappearing unless you explicitly
 accept them using @command{completion-accept}, bound to
 @kbd{C-RET}. (You may be used to this style of behaviour from word
-processing software such as OpenOffice Writer). Or alternatively,
+processing software such as OpenOffice Writer). Alternatively,
 completions can be permanent, so that completing a word really does
 insert those characters into the buffer unless you explicitly reject it
 using @command{completion-reject}, bound to @kbd{C-DEL}. (This the more
@@ -573,7 +573,9 @@ can see which candidates are available! The candidates can be displayed
 in the echo area, and/or in a tooltip below the point (@pxref{Displaying
 Completions in the Echo Area}, and @pxref{Completion Tooltip}). When
 completion hot-keys are enabled, both of these also indicate which
-completion candidate corresponds to which hot-key.
+completion candidate corresponds to which hot-key. If you only want the
+hotkeys to be enabled when the tooltip or pop-up frame (see below) are
+displayed, then set @env{completion-use-hotkeys} to @code{'pop-up}.
 
 The completion tooltip is more than just a visual reminder of which
 completions are available. When it is displayed, you can select a
@@ -600,7 +602,7 @@ anything.
 The completion menu is the most flexible way of selecting completions,
 and can be displayed using @command{completion-show-menu}, bound to
 @kbd{M-down}. Again, it displays the completion candidates and lets you
-select them, and like the pop-up frame, it also allows you to see all
+select them, and, like the pop-up frame, it also allows you to see all
 possible completions, rather than just displaying the most likely ones,
 by bringing up the completion browser. But selecting the @samp{Browser}
 menu item doesn't just display all possible completions in a big
@@ -864,9 +866,10 @@ likely completion (@pxref{Auto-Completion Mode}).
 
 Note that since the @command{completion-reject} command ends the
 completion process, if you want to find completions for the same prefix
-again you have to do it manually with @command{complete-word-at-point}
-even when @command{auto-completion-mode} is enabled. @xref{Inserting
-Completions}, and @ref{Auto-Completion Mode}.
+again after previously rejectng a completion, you have to do it manually
+with @command{complete-word-at-point} even when
+@command{auto-completion-mode} is enabled. @xref{Inserting Completions},
+and @ref{Auto-Completion Mode}.
 @findex complete-word-at-point
 @findex auto-completion-mode
 
@@ -902,7 +905,9 @@ you will be able to select a completion by typing a single character
 You will probably also want to display a list of the possible
 completions, so that you know which completion will be selected by each
 of these ``hotkeys'' (@pxref{Displaying Completions in the Echo Area},
-and @ref{Completion Tooltip}).
+and @ref{Completion Tooltip}). By setting @env{completion-use-hotkeys}
+to @code{'pop-up}, the hotkeys will only be enabled when the tooltip or
+pop-up frame (@pxref{Pop-Up Frame}) are displayed.
 
 @noindent
 The following variables affect the behaviour of the completion hotkeys:
@@ -910,7 +915,10 @@ The following variables affect the behaviour of the completion hotkeys:
 @vtable @env
 @item completion-use-hotkeys
 When non-nil, enable completion hotkeys, allowing completion candidates
-to be selected by hitting a single key.
+to be selected by hitting a single key. When set to the symbol
+@code{'pop-up}, the hotkeys are only enabled when the tooltip
+(@pxref{Completion Tooltip}) or pop-up frame (@pxref{Pop-Up Frame}) are
+displayed.
 
 @item completion-hotkey-list
 List of keys to use for selecting completions. Default is numerical
@@ -983,8 +991,8 @@ offset the tooltip by in the x and y directions (car and cdr,
 respectively).
 
 @item completion-tooltip-face
-The face to use in the tooltip. Only the @code{:foreground} and
-@code{:background} attributes are actually used.
+The face to use in the tooltip. Only the @code{:foreground},
+@code{:background} and @code{:family} attributes are actually used.
 @end vtable
 
 
@@ -1120,10 +1128,10 @@ feature:
 
 @vtable @env
 @item completion-auto-show
-When set to 'tooltip, 'pop-up or 'menu, the corresponding list of
-completions is displayed automatically when completing. When nil,
-nothing is displayed automatically (they can still be displayed manually
-when required).
+When set to @code{'tooltip}, @code{'pop-up} or @code{'menu}, the
+corresponding list of completions is displayed automatically when
+completing. When nil, nothing is displayed automatically (they can still
+be displayed manually when required).
 
 @item completion-auto-show-delay
 Number of seconds (integer) that Emacs must be idle before the list of
@@ -1147,8 +1155,9 @@ Determines what to do with dynamics completions that have not explicitly
 been accepted or rejected. The options are: @code{'leave}, which just
 leaves the old provisional completion in place to return to later if you
 so desire, @code{'accept} and @code{'reject}, which accept or reject the
-completion, and @code{'ask}, which asks you whether you want to accept
-or reject.
+completion, @code{'accept-common}, which accepts the longest common
+prefix of the completion but deletes the rest, and @code{'ask}, which
+asks you whether you want to accept or reject.
 @end vtable
 
 @env{completion-resolve-behaviour} controls what happens when you move
@@ -1165,9 +1174,10 @@ characters.
 
 There is one exception to this behaviour: whether or not
 @command{auto-completion-mode} is enabled, if you move the point to
-somewhere @emph{within} a dynamic completion and start typing, that
-completion is always accepted. This is almost always what you intended,
-and leads to less surprises.
+somewhere @emph{within} a dynamic completion and start typing, the part
+of the completion before the point is always accepted (and the remaining
+characters deleted). This is almost always what you intended, and leads
+to less surprises.
 @cindex completion, automatic
 @cindex auto-completion mode
 @findex complete-word-at-point
