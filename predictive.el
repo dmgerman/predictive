@@ -1169,7 +1169,8 @@ for uncapitalized version."
 	(setq str (list prefix (downcase prefix))))
       ;; complete the prefix using the current dictionary
       (setq completions
-	    (dictree-complete dict str t maxnum nil nil filter))
+	    (dictree-complete dict str (if maxnum t nil) maxnum
+			      nil nil filter))
       (when completions (setq completions (mapcar 'car completions)))
 
       ;; return the completions
