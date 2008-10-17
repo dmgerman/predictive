@@ -73,91 +73,6 @@ liking.
 * Variable Index::
 * Concept Index::
 * Copying this Manual::
-
-@detailmenu
- --- The Detailed Node Listing ---
-
-Completing Words
-
-* Overview::
-* Basic Completion Commands::
-* Auto-Completion Mode::
-* Dynamic Completion::
-* Completion Hotkeys::
-* Displaying Completions in the Echo Area::
-* Completion Tooltip::
-* Pop-Up Frame::
-* Completion Menu and Browser::
-* Auto-Show a List of Completions::
-* Miscellaneous Options::
-
-Overview
-
-* Basic Completion Commands::
-* Auto-Completion Mode::
-* Dynamic Completion::
-* Completion Hotkeys::
-* Displaying Completions in the Echo Area ::
-* Completion Tooltip::
-* Pop-Up Frame::
-* Completion Menu and Browser::
-* Miscellaneous Options::
-
-Basic Completion Commands
-
-* Inserting Completions::
-* Deleting Characters::
-
-Dictionaries
-
-* Creating Dictionaries::
-* Loading and Saving Dictionaries::
-* Basic Dictionary Usage::
-* Region-Local Dictionaries::
-* Dictionary Learning::
-* Getting the Most out of Dictionaries::
-
-Dictionary Learning
-
-* Learning from Buffers and Files::
-* Automatic Learning::
-* Relationships Between Words::
-
-Advanced Customisation
-
-* Character Syntax and Key Bindings::
-* Major Modes::
-
-Character Syntax and Key Bindings
-
-* Keymaps and Key Bindings::
-* Syntax::
-
-Major Modes
-
-* LaTeX Support::
-* Texinfo Support::
-* HTML Support::
-
-@LaTeX{} Support
-
-* LaTeX Packages::
-* Automatically Created Files for @LaTeX{}::
-
-Texinfo Support
-
-* Automatically Created Files for Texinfo::
-
-Bugs and Future Improvements
-
-* Known Bugs::
-* Future Improvements::
-
-Copying this Manual
-
-* GNU Free Documentation License::
-
-@end detailmenu
 @end menu
 
 @end ifnottex
@@ -1563,11 +1478,10 @@ you want to set the default main dictionary permanently, customize
 
 Using overlays, it is possible to set up dictionaries that are local to
 specific regions of text. The predictive mode support for a number of
-major modes (notably the @LaTeX{} support) makes use of this feature
-(@pxref{Major Modes}). Configuring region-local dictionaries is,
-however, beyond the scope of this user-guide. @xref{Region-Local
-Dictionaries, , , predictive-programmer-guide, Predictive Programmer
-Guide}.
+major modes makes use of this feature (@pxref{Major Modes}). Configuring
+region-local dictionaries is, however, beyond the scope of this
+user-guide. @xref{Region-Local Dictionaries, , ,
+predictive-programmer-guide, Predictive Programmer Guide}.
 
 @ftable @command
 @item predictive-which-dict-mode
@@ -2286,11 +2200,11 @@ characters @samp{.}, @samp{-} and @samp{/}.
 
 The many features of predictive mode allow you to set things up
 appropriately for whatever language you are typing, whether it be plain
-text, markup languages such as @LaTeX{} or HTML, programming languages
-such as C or Lisp, etc. Predictive mode will work happily alongside the
-appropriate major-mode. However, since each language makes different
-demands of predictive completion, you may find yourself changing a large
-number of settings when switching major modes.
+text, markup languages such as @LaTeX{}, HTML or Texinfo, programming
+languages such as C or Lisp, etc. Predictive mode will work happily
+alongside the appropriate major-mode. However, since each language makes
+different demands of predictive completion, you may find yourself
+changing a large number of settings when switching major modes.
 
 To facilitate using predictive completion alongside different
 major-modes, predictive mode can run a setup function determined by the
@@ -2366,6 +2280,28 @@ enabled automatically when predictive completion mode is turned on in a
 @LaTeX{} buffer, via an entry in @env{predictive-major-mode-alist}
 (@pxref{Major Modes}).
 
+@menu
+* Parsing LaTeX Documents::
+* LaTeX Navigation Commands::
+* LaTeX Packages::
+* Automatically Created Files for @LaTeX{}::
+@end menu
+
+
+
+@node Parsing LaTeX Documents
+@subsubsection Parsing @LaTeX{} Documents
+@cindex parsing @LaTeX{} documents
+@cindex @LaTeX{}, parsing
+@cindex @LaTeX{} dictionaries
+@cindex dictionaries, @LaTeX{}
+
+Predictive mode's @LaTeX{} support parses the @LaTeX{} file as you type
+(without any noticeable slow-down!), in order to identify different
+contexts. The main use for this information is to switch to the
+appropriate dictionary in different regions of a @LaTeX{} document.
+
+The following customization options affect this parsing:
 @vtable @env
 @item predictive-latex-docclass-alist
 Alist associating LaTeX document classes (the @env{docclass} appearing
@@ -2425,13 +2361,7 @@ different @code{\begin} somewhere else in the document. Also, when the
 environment name within either a @code{\begin} @emph{or} an @code{\end}
 command is modified, the environment name within its matching partner is
 also modified accordingly. WARNING: this feature is known to have bugs,
-and should probably now be used at the moment (@pxref{Known Bugs}).
-
-The behaviour of different character syntax classes, and the behaviour
-of certain individual characters, is set up appropriately for @LaTeX{}
-(@pxref{Character Syntax and Key Bindings}). Also, a special @LaTeX{}
-completion browser menu, more appropriate for browsing @LaTeX{}
-commands, is used instead of the default one.
+and should probably not be used at the moment (@pxref{Known Bugs}).
 
 Predictive @LaTeX{} mode honours the @env{TeX-master} variable. If it is
 turned on in a buffer whose @env{TeX-master} variable is set to the name
@@ -2439,11 +2369,62 @@ of another @LaTeX{} file, the @env{TeX-master} file will be visited,
 predictive mode will be enabled in its buffer, and all buffers with the
 same @env{TeX-master} will share various predictive mode settings.
 
-@menu
-* LaTeX Packages::
-* Automatically Created Files for @LaTeX{}::
-@end menu
+The behaviour of different character syntax classes, and the behaviour
+of certain individual characters, is set up appropriately for @LaTeX{}
+(@pxref{Character Syntax and Key Bindings}). Also, a special @LaTeX{}
+completion browser menu, more appropriate for browsing @LaTeX{}
+commands, is used instead of the default one.
 
+
+
+@node LaTeX Navigation Commands
+@subsubsection @LaTeX{} Navigation Commands
+@cindex @LaTeX{} navigation commands
+@cindex navigation commands, @LaTeX{}
+
+@ftable @command
+@item predictive-latex-jump-to-definition
+Jump to the definition of whatever is at the point. If point in already
+on a definition, jump to the next duplicate definition of the same
+thing. This works for cross-references, labels, and any commands or
+environments that are defined in your documents preamble.
+
+@item predictive-latex-jump-to-label-definition
+Jump to the definition of a label in the current @LaTeX{} document. The
+label is read from the mini-buffer. If the point is already on the label
+definition, jump to the next duplicate definition of the label.
+
+@item predictive-latex-jump-to-command-definition
+Jump to the definition of a @LaTeX{} command in the current
+document. The command is read from the mini-buffer. If the point is
+already on the command definition, jump to the next duplicate definition
+of the command.
+
+@item predictive-latex-jump-to-environment-definition
+Jump to the definition of a @LaTeX{} environment in the current
+document. The environment is read from the mini-buffer. If the point is
+already on the environment definition, jump to the next duplicate
+definition of the environment.
+
+@item predictive-latex-jump-to-section
+Jump to a section (or subsection, subsubsection, etc.) in the current
+document. The section name is read from the mini-buffer. If the point is
+already on the sectioning command, jump to the next section with the
+same name (if there is one).
+
+@item predictive-latex-jump-to-matching-delimiter
+Jump to the delimiter matching the one at the point, if any. This will
+jump from @samp{\begin{...}} to @samp{\end{...}}, @samp{\[} to
+@samp{\]}, @samp{$} to matching @samp{$}, and vice versa.
+
+@item predictive-latex-jump-to-start-delimiter
+Jump to the start delimiter of the innermost environment or
+equation. This will jump to @samp{\begin{...}}, @samp{\[} or @samp{$}.
+
+@item predictive-latex-jump-to-end-delimiter
+Jump to the end delimiter of the innermost environment or equation. This
+will jump to @samp{\end{...}}, @samp{\]} or @samp{$}.
+@end ftable
 
 
 @node LaTeX Packages
@@ -2499,7 +2480,6 @@ The predictive completion package already comes with support for some
 important@footnote{Dictionaries and Elisp code welcome!}.
 
 
-
 @node Automatically Created Files for @LaTeX{}
 @subsubsection Automatically Created Files
 @cindex automatically created files, @LaTeX{}
@@ -2545,6 +2525,25 @@ default settings, Texinfo support is enabled automatically when
 predictive completion mode is turned on in a Texinfo buffer, via an
 entry in @env{predictive-major-mode-alist} (@pxref{Major Modes}).
 
+@menu
+* Parsing Texinfo Documents::
+* Texinfo Navigation Commands::
+* Automatically Created Files for Texinfo::
+@end menu
+
+
+@node Parsing Texinfo Documents
+@subsubsection Parsing Texinfo Documents
+@cindex parsing Texinfo documents
+@cindex Texinfo, parsing
+@cindex Texinfo dictionaries
+@cindex dictionaries, Texinfo
+
+Predictive mode parses Texinfo files as you type (without any noticeable
+slow-down!), in order to identify different contexts. The main use for
+this information is to switch to the appropriate dictionary in different
+regions of a Texinfo document.
+
 Four Texinfo dictionaries are provided: @code{dict-texinfo} containing
 the main Texinfo @@-commands, @code{dict-texinfo-env} containing the
 environment names (things that are ended by @samp{@@end}),
@@ -2585,9 +2584,35 @@ completion browser menu, more appropriate for browsing Texinfo commands,
 is used instead of the default one.
 
 
-@menu
-* Automatically Created Files for Texinfo::
-@end menu
+@node Texinfo Navigation Commands
+@subsubsection Texinfo Navigation Commands
+@cindex Texinfo navigation commands
+@cindex navigation commands, Texinfo
+
+@ftable @command
+@item predictive-texinfo-jump-to-definition
+Jump to the definition of whatever is at the point. If point in already
+on a definition, jump to the next duplicate definition of the same
+thing. This works for cross-references, node names, flags, and any
+commands that are defined in your documents preamble.
+
+@item predictive-texinfo-jump-to-node-definition
+Jump to the definition of a node in the current Texinfo document. The
+node is read from the mini-buffer. If the point is already on the node
+definition, jump to the next duplicate definition of the node.
+
+@item predictive-texinfo-jump-to-command-definition
+Jump to the definition of a Texinfo command in the current document. The
+command is read from the mini-buffer. If the point is already on the
+command definition, jump to the next duplicate definition of the
+command.
+
+@item predictive-texinfo-jump-to-flag-definition
+Jump to the definition of a Texinfo flag in the current document. The
+flag name is read from the mini-buffer. If the point is already on the
+flag definition, jump to the next duplicate definition of the flag.
+@end ftable
+
 
 @node Automatically Created Files for Texinfo
 @subsubsection Automatically Created Files
@@ -2625,10 +2650,10 @@ located in @env{predictive-auxiliary-file-location}.
 @cindex HTML, major-mode support
 @cindex html, major-mode support
 
-HTML is a simpler markup language than @LaTeX{}, and the predictive mode
-support for it is correspondingly simpler. It includes a dictionary of
-HTML tags, @code{dict-html}, and dictionaries of valid attributes for
-different tags, @code{dict-html-@var{tag}}. Completion is
+HTML is a simpler markup language than @LaTeX{} or Texinfo, and the
+predictive mode support for it is correspondingly simpler. It includes a
+dictionary of HTML tags, @code{dict-html}, and dictionaries of valid
+attributes for different tags, @code{dict-html-@var{tag}}. Completion is
 context-sensitive: typing a @samp{<} character will start completing an
 HTML tag, whereas within a tag predictive mode will complete from the
 appropriate tag attribute dictionaries. With the default settings, HTML
