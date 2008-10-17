@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.17.9
+;; Version: 0.18
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -46,8 +46,9 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.17.9
+;; Version 0.18
 ;; * updated for compatibility with new dict-tree.el
+;; * simplified `predictive-update-which-dict' a bit
 ;;
 ;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
@@ -569,7 +570,7 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   :type 'boolean)
 
 
-(defcustom predictive-which-dict-delay 1
+(defcustom predictive-which-dict-delay 0.5
   "*Number of seconds of idle time before which-dict display is updated.
 
 See also `predictive-which-dict-mode' and `predictive-which-dict'."
@@ -720,7 +721,6 @@ to the dictionary, nil if it should not. Only used when
 (defvar predictive-buffer-dict nil)
 (make-variable-buffer-local 'predictive-buffer-dict)
 
-
 ;; stores list of dictionaries used by buffer
 (defvar predictive-used-dict-list nil)
 (make-variable-buffer-local 'predictive-used-dict-list)
@@ -731,11 +731,6 @@ to the dictionary, nil if it should not. Only used when
 (defvar predictive-which-dict-list nil)
 (make-variable-buffer-local 'predictive-which-dict-name)
 (make-variable-buffer-local 'predictive-which-dict-list)
-
-
-;; Store buffer and point for which last dictionary name update was performed
-(defvar predictive-which-dict-last-update nil)
-
 
 ;; Stores idle-timer that updates the current dictionary name
 (defvar predictive-which-dict-timer nil)
@@ -1247,9 +1242,7 @@ To set it permanently, you should customize
    ((dictree-p dict) (setq dict (intern-soft (dictree-name dict)))))
   ;; set main dictionary in current buffer
   (make-local-variable 'predictive-main-dict)
-  (setq predictive-main-dict dict)
-  ;; clear predictive-which-dict-last-update so mode-line gets updated
-  (setq predictive-which-dict-last-update nil))
+  (setq predictive-main-dict dict))
 
 
 
@@ -1401,20 +1394,11 @@ respectively."
 
     (let (dict
 	  (complete-speed (if speed speed predictive-completion-speed))
-	  (autosave (if autosave autosave predictive-dict-autosave))
-	  ;; the rank function compares by weight (larger is "better"), failing
-	  ;; that by string length (smaller is "better"), and failing that it
-	  ;; compares the strings alphabetically
-	  (rankfun '(lambda (a b)
-		      (if (= (cdr a) (cdr b))
-			  (if (= (length (car a)) (length (car b)))
-			      (string< (car a) (car b))
-			    (< (length (car a)) (length (car b))))
-			(> (cdr a) (cdr b))))))
+	  (autosave (if autosave autosave predictive-dict-autosave)))
 
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave nil
-				 '< '+ rankfun nil nil
+				 '< '+ 'predictive-dict-rank-function nil nil
 				 nil nil complete-speed))
       ;; populate it
       (if (null populate)
@@ -1477,16 +1461,7 @@ The other arguments are as for `predictive-create-dict'."
 	  (combfun '(lambda (a b)
 		      ;; (need nil at end of append so both cdr's are copied)
 		      (cons (cond ((null a) b) ((null b) a) (+ a b))
-			    (delete-dups (append (cdr a) (cdr b) nil)))))
-	  ;; the rank function compares by weight (larger is "better"), failing
-	  ;; that by string length (smaller is "better"), and failing that it
-	  ;; compares the strings alphabetically
-	  (rankfun '(lambda (a b)
-		      (if (= (cdr a) (cdr b))
-			  (if (= (length (car a)) (length (car b)))
-			      (string< (car a) (car b))
-			    (< (length (car a)) (length (car b))))
-			(> (cdr a) (cdr b))))))
+			    (delete-dups (append (cdr a) (cdr b) nil))))))
 
       ;; create the new dictionary
       (setq dict (dictree-meta-dict-create dictlist dictname file autosave
@@ -1587,7 +1562,7 @@ specified by the prefix argument."
 
     ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
-    (dolist (prefix (dictree-get-meta-data dict word))
+    (dolist (prefix (dictree-get-property dict word :prefixes))
       (setq pweight (dictree-lookup dict prefix))
       (when (and pweight (< pweight newweight))
 	(dictree-insert dict prefix newweight (lambda (a b) a)))))
@@ -2111,10 +2086,10 @@ as the weight of WORD."
 		     "\"%s\" is not a prefix of \"%s\". Continue anyway? "
 		     prefix word))))
 
-      (let ((prefixes (dictree-get-meta-data dict word)))
+      (let ((prefixes (dictree-get-property dict word :prefixes)))
 	;; unless prefix is already defined, define it
 	(unless (member prefix prefixes)
-	  (dictree-set-meta-data dict word (cons prefix prefixes))))
+	  (dictree-put-property dict word :prefixes (cons prefix prefixes))))
 
       ;; make sure prefix's weight is at least as large as word's
       (let ((weight (dictree-lookup dict word))
@@ -2152,10 +2127,10 @@ least as large as the weight of WORD."
       (setq prefix (predictive-guess-prefix word))))
 
   ;; delete prefix, displaying message if called interactively
-  (let ((prefixes (dictree-get-meta-data dict word)))
+  (let ((prefixes (dictree-get-property dict word :prefixes)))
     (if (and (interactive-p) (not (member prefix prefixes)))
 	(message "\"%s\" is not defined as a prefix of \"%s\"" prefix word)
-      (dictree-set-meta-data dict word (delete prefix prefixes))
+      (dictree-put-property dict word :prefixes (delete prefix prefixes))
       (when (interactive-p)
 	(message "Prefix \"%s\" of \"%s\" removed" prefix word)))))
 
@@ -2282,16 +2257,17 @@ confirmation first if called interactively)."
 		  ;; remove PREFIX if it appears in word's prefix list
 		  (when (member prefix
 				(setq prefix-list
-				      (dictree-get-meta-data dict word)))
-		    (dictree-set-meta-data dict word
-					   (delete prefix prefix-list)))))
+				      (dictree-get-property
+				       dict word :prefixes)))
+		    (dictree-put-property dict word :prefixes
+					  (delete prefix prefix-list)))))
 	(setq prefix-fun
 	      (lambda (word dummy)
 		(when (and interactive (setq i (1+ i)) (= 0 (mod i 50)))
-		  (message "Undefining prefixes in %s...(word %d of %d)"
+		  (message "Undefining all prefixes in %s...(word %d of %d)"
 			   (dictree-name dict) i count))
 		;; clear word's prefix list
-		(dictree-set-meta-data dict word nil))))
+		(dictree-put-property dict word :prefixes nil))))
 
 
       ;; do actual work...
@@ -2313,8 +2289,17 @@ confirmation first if called interactively)."
 
 
 ;;; ===================================================================
-;;;    Internal functions and variables to do with predictive mode
-;;;    dictionaries
+;;;    Internal functions and variables to do with dictionaries
+
+(defun predictive-dict-rank-function (a b)
+  ;; The dictionary rank function compares by weight (larger is "better"),
+  ;; failing that by string length (smaller is "better"), and failing that it
+  ;; compares the strings alphabetically
+  (if (= (cdr a) (cdr b))
+      (if (= (length (car a)) (length (car b)))
+	  (string< (car a) (car b))
+	(< (length (car a)) (length (car b))))
+    (> (cdr a) (cdr b))))
 
 
 (defun predictive-current-dict (&optional point)
@@ -2501,8 +2486,8 @@ A positive prefix argument turns the mode on.
 A negative prefix argument turns it off.
 
 Note that simply setting the minor-mode variable
-`predictive-which-dict-mode' is not sufficient to enable
-predictive mode."
+`predictive-which-dict-mode' is *not* sufficient to enable the
+minor mode."
 
     ;; initial value, mode-line indicator, and keymap
     nil nil nil
@@ -2522,7 +2507,6 @@ predictive mode."
       (when predictive-which-dict-timer
 	(cancel-timer predictive-which-dict-timer)
 	(setq predictive-which-dict-timer nil)
-	(setq predictive-which-dict-last-update nil)
 	(setq predictive-which-dict-name nil)
 	(setq predictive-which-dict-list nil))))
 
@@ -2534,62 +2518,42 @@ predictive mode."
   ;; function.
 
   ;; only run if predictive mode is enabled and point has moved since last run
-  (unless (or ;;(null predictive-mode)
-	      ;;(null predictive-which-dict-mode)
-	      (and (eq (current-buffer)
-		       (car predictive-which-dict-last-update))
-		   (eq (point) (cdr predictive-which-dict-last-update))))
+  (when predictive-mode
+    (let ((dict (predictive-current-dict)) name list)
+      (when (dictree-p dict) (setq dict (list dict)))
 
-    ;; store buffer and point at which update is being performed
-    (setq predictive-which-dict-last-update (cons (current-buffer) (point)))
-
-    (let ((dict (predictive-current-dict)) name list dic)
       ;; get current dictionary name(s)
-      (if (null dict) (setq name "" list nil)
+      (if (null dict)
+	  (setq name "" list nil)
 
-	;; get name of first dictionary in list
-	(if (dictree-p dict) (setq dic dict) (setq dic (car dict)))
 	;; if dict is the buffer-local meta-dictioary, display name of main
 	;; dictionary it's based on instead
-	(if (and (>= (length (dictree-name dic)) 10)
-		 (string= (substring (dictree-name dic) 0 10) "dict-meta-")
-		 (dictree-meta-dict-p dic))
-	    (setq name
-		  (dictree-name (nth 1 (dictree-meta-dict-dictlist dic))))
-	  (setq name (dictree-name dic)))
+	(if (and (string= (dictree-name (car dict))
+			  (predictive-buffer-local-dict-name))
+		 (dictree-meta-dict-p (car dict)))
+	    (setq name (dictree-name (nth 1 (dictree-meta-dict-dictlist
+					     (car dict)))))
+	  (setq name (dictree-name (car dict))))
 ;;; 	;; truncate to 15 characters
 ;;; 	(when (> (length name) 15) (setq name (substring name 0 15)))
-	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
+	;; filter list to remove "-dict-" and "-predictive-" prefixes
 	(when (string-match "-*dict-*\\|-*predictive-*" name)
 	  (setq name (replace-match "" nil nil name)))
 
 	;; if current dictionary is a list, add "..." to end of name, and
 	;; construct list of all dictionary names for help-echo text
-	(if (or (dictree-p dict) (= (length dict) 1))
+	(if (= (length dict) 1)
 	    (setq list nil)
 	  (setq name (concat name "..."))
-	  (setq list (mapconcat
-		      (lambda (dic)
-			(if (and (>= (length (dictree-name dic)) 10)
-				 (string= (substring (dictree-name dic) 0 10)
-					  "dict-meta-")
-				 (dictree-meta-dict-p dic))
-			    (dictree-name
-			     (nth 1 (dictree-meta-dict-dictlist dic)))
-			  (dictree-name dic)))
-		      dict "\n"))
+	  (setq list (mapconcat 'dictree-name dict "\n"))
 	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
 	  (while (string-match "-*dict-*\\|-*predictive-*" list)
 	    (setq list (replace-match "" nil nil list)))))
 
-
-      ;; if dictionary name has changed, update the mode line
-      (unless (and (string= name predictive-which-dict-name)
-		   (or (and (null list) (null predictive-which-dict-list))
-		       (string= list predictive-which-dict-list)))
-	(setq predictive-which-dict-name name)
-	(setq predictive-which-dict-list list)
-	(force-mode-line-update))
+      ;; update the mode line
+      (setq predictive-which-dict-name name)
+      (setq predictive-which-dict-list list)
+      (force-mode-line-update)
       )))
 
 
