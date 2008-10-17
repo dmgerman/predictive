@@ -115,6 +115,8 @@
 ;;   set correctly
 ;; * fixed bugs in `completion-browser-sub-menu' and
 ;;   `completion-browser-menu-iterm'
+;; * made most anonymous lambda bindings into names functions (lambdas just
+;;   confuse people, and make it hard to bind other keys to the same thing)
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -1315,40 +1317,13 @@ used if the current Emacs version lacks command remapping support."
     (setq completion-map (make-sparse-keymap)))
 
   ;; M-<tab> and M-/ cycle or complete word at point
-  (define-key completion-map [?\M-\t]
-    (lambda ()
-      "Cycle through available completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle)
-        (complete-word-at-point))))
-  (define-key completion-map "\M-/"
-    (lambda ()
-      "Cycle through available completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle)
-        (complete-word-at-point))))
+  (define-key completion-map [?\M-\t] 'complete-or-cycle-word-at-point)
+  (define-key completion-map "\M-/" 'complete-or-cycle-word-at-point)
 
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
   (define-key completion-map [(meta shift iso-lefttab)]
-    (lambda ()
-      "Cycle backwards through completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle -1)
-        (complete-word-at-point))))
-  (define-key completion-map "\M-?"
-    (lambda ()
-      "Cycle backwards through completions if there are any,\
- otherwise complete the word at point."
-      (interactive)
-      (if (completion-overlay-at-point)
-          (completion-cycle -1)
-        (complete-word-at-point))))
+    'complete-or-cycle-backwards-word-at-point)
+  (define-key completion-map "\M-?" 'complete-or-cycle-backwards-word-at-point)
 
   ;; RET deals with any pending completion candidate, then runs
   ;; whatever is usually bound to RET.
@@ -1359,14 +1334,7 @@ used if the current Emacs version lacks command remapping support."
   ;;       keybinding. We bind it here instead of in the overlay keymap
   ;;       because it's easier to disable this keymap.
   (dolist (key '("\r" "\n" [return]))
-    (define-key completion-map key
-      (lambda ()
-        "Resolve current completion, then run whatever \
-would normally be bound to key."
-        (interactive)
-        (completion-run-if-within-overlay
-         (lambda () (interactive) (completion-resolve-current nil nil ? ))
-         'completion-function 'before))))
+    (define-key completion-map key 'completion-resolve-then-run-command))
 
 
   ;; ----- Simulated overlay keybindings -----
@@ -2682,24 +2650,22 @@ The Emacs `self-insert-command' is remapped to this when
 
 
 
-(defun completion-prefix ()
-  "Return the completion prefix at point.
-The `completion-prefix-function' is set to this by default."
+(defun complete-or-cycle-word-at-point (&optional n)
+  "Cycle through available completions if there are any,
+otherwise complete the word at point."
+  (interactive "p")
+  (if (completion-overlay-at-point)
+      (completion-cycle n)
+    (complete-word-at-point)))
 
-  (let ((word-thing (if (fboundp 'auto-overlay-local-binding)
-                        (auto-overlay-local-binding
-                         'completion-word-thing)
-                      completion-word-thing))
-        (overlay (completion-overlay-at-point))
-        (pos (point)))
 
-    ;; if point is within existing completion overlay, return its prefix
-    (if overlay
-        (overlay-get overlay 'prefix)
-      ;; otherwise, prefix is the word before point
-      (save-excursion
-        (forward-thing word-thing -1)
-        (buffer-substring-no-properties (point) pos)))))
+(defun complete-or-cycle-backwards-word-at-point (&optional n)
+  "Cycle backwards through available completions if there are any,
+otherwise complete the word at point."
+  (interactive "p")
+  (if (completion-overlay-at-point)
+      (completion-cycle (- n))
+    (complete-word-at-point)))
 
 
 
@@ -2887,6 +2853,16 @@ the prefix and the completion string\). Otherwise returns nil."
       (completion-delete-overlay overlay)
       ;; return cons cell containing prefix and rejected completion
       (cons prefix completion))))
+
+
+
+(defun completion-resolve-then-run-command ()
+ "Resolve current completion, then run command
+that would normally be bound to this key."
+ (interactive)
+ (completion-run-if-within-overlay
+  (lambda () (interactive) (completion-resolve-current nil nil ? ))
+  'completion-function 'before))
 
 
 
@@ -3388,6 +3364,27 @@ as for `completion-kill-paragraph'.\)"
 
 ;;; ==============================================================
 ;;;                    Internal functions
+
+(defun completion-prefix ()
+  "Return the completion prefix at point.
+The `completion-prefix-function' is set to this by default."
+
+  (let ((word-thing (if (fboundp 'auto-overlay-local-binding)
+                        (auto-overlay-local-binding
+                         'completion-word-thing)
+                      completion-word-thing))
+        (overlay (completion-overlay-at-point))
+        (pos (point)))
+
+    ;; if point is within existing completion overlay, return its prefix
+    (if overlay
+        (overlay-get overlay 'prefix)
+      ;; otherwise, prefix is the word before point
+      (save-excursion
+        (forward-thing word-thing -1)
+        (buffer-substring-no-properties (point) pos)))))
+
+
 
 (defun completion-setup-overlay
   (prefix &optional completions num overlay)
