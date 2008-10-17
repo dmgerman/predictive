@@ -6,7 +6,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.3
 ;; Keywords: predictive, automatic, overlays, dictionary, auto-dict
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,10 +31,13 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.2.1
+;; Version 0.3
 ;; * fix bug causing two duplicate deletions from dict by removing
 ;;   `predictive-auto-dict-suicide' entirely; word already gets deleted by
 ;;   `predictive-auto-dict-update'
+;; * keep track of which overlays defined each auto-dict word
+;; * wrote `predictive-auto-dict-jump-to-def' function to jump to definition
+;;   corresponding to an auto-dict word
 ;;
 ;; Version 0.2
 ;; * moved utility functions from predictive-latex.el
@@ -55,8 +58,11 @@
 (require 'auto-overlay-word)
 (require 'dict-tree)
 (require 'predictive)
+(require 'completion-ui)  ; we use `completion--position' replacement for
+			  ; cl function `positon'
 
 (provide 'predictive-auto-overlay-auto-dict)
+
 
 ;; set auto-dict overlay parsing and suicide functions, and indicate class
 ;; requires separate start and end regexps
@@ -93,10 +99,22 @@
 		       (overlay-get o-new 'insert-behind-hooks)))
     ;; add word to dictionary
     (unless (dictree-p dict) (setq dict (eval dict)))
-    (predictive-add-to-dict dict word 0)
+    (dictree-insert dict word 0
+		    ;; no duplicate definition warning if starting
+		    ;; predictive-mode (all auto-dict entries get re-added at
+		    ;; that stage)
+		    (when predictive-mode
+		      (lambda (new old)
+			(message "Warning: dupliacte definition of \"%s\""
+				 word)
+			(+ new old))))
+    ;; store reference to this definition overlay
+    (let ((defs (remove (buffer-file-name (overlay-buffer o-new))
+			(dictree-get-property dict word :definitions))))
+      (dictree-put-property dict word :definitions
+			    (pushnew o-new defs :test 'eq)))
     ;; return the new overlay
-    o-new)
-)
+    o-new))
 
 
 
@@ -121,8 +139,7 @@
   ;; functions have been called
   (unless modified
     (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-auto-dict-update o-self)))
-)
+		 (list 'predictive-auto-dict-update o-self))))
 
 
 
@@ -130,26 +147,41 @@
   ;; Update the auto-dict with new word. Runs after modifications.
 
   (let ((dict (overlay-get (overlay-get o-self 'start) 'auto-dict))
-	word)
-    (unless (dictree-p dict) (setq dict (eval dict)))
-    ;; delete old word from label dictionary
-    (dictree-delete dict (overlay-get (overlay-get o-self 'start) 'word))
+	(word (overlay-get (overlay-get o-self 'start) 'word))
+	defs)
+    (unless (dictree-p dict)
+      (setq dict (eval dict)))
+    ;; delete definition overlay from :definitions property of word in
+    ;; auto-dict, deleting word entirely if this was last definition overlay
+    (when (null (dictree-put-property
+		 dict word :definitions
+		 (delq o-self (dictree-get-property dict word :definitions))))
+      (dictree-delete dict word))
 
     ;; if overlay has not been deleted...
     (when (overlay-buffer o-self)
-      ;; extract word
+      ;; extract new word
       (setq word (buffer-substring-no-properties
 		  (overlay-start o-self) (overlay-end o-self)))
       ;; save label in overlay property
       (overlay-put (overlay-get o-self 'start) 'word word)
-      ;; add new label to dictionary
-      (predictive-add-to-dict dict word 0)))
-)
+      ;; add new word to auto-dict
+      (dictree-insert dict word 0
+		      (lambda (new old)
+			(message "Warning: dupliacte definition of \"%s\""
+				 word)
+			(+ new old)))
+      ;; store reference to this definition overlay
+      (dictree-put-property
+       dict word :definitions
+       (cons o-self (remove (buffer-file-name (overlay-buffer o-self))
+			    (dictree-get-property dict word :definitions)))))
+    ))
 
 
 
 ;;; =================================================================
-;;;    Utility functions for automatically generated dictionaries
+;;;    Internal functions for automatically generated dictionaries
 
 (defmacro predictive-auto-dict-name (name)
   ;; Return a dictionary name constructed from NAME and the buffer name
@@ -160,7 +192,7 @@
 
 
 
-(defun predictive-load-auto-dict (name)
+(defun predictive-auto-dict-load (name)
   "Load/create a NAME dictionary for the current buffer."
   (let ((dict (intern (concat "predictive-" name "-dict")))
 	dictname filename)
@@ -174,36 +206,108 @@
 		    (symbol-name dictname) ".elc"))
       ;; create directory for dictionary file if necessary
       (predictive-create-auxiliary-file-location)
-      ;; if a dictionary isn't loaded, load or create it
+      ;; if dictionary isn't loaded, load or create it
       (unless (featurep dictname)
 	(if (not (file-exists-p filename))
-	    (predictive-create-dict dictname filename)
+	    (dictree-create dictname filename
+			    predictive-dict-autosave nil
+			    '< '+ 'predictive-dict-rank-function
+			    nil nil nil nil predictive-completion-speed
+			    nil nil nil nil
+			    'predictive-auto-dict-plist-savefun nil)
 	  (load filename)
-	  (predictive-load-dict dictname)
-	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
-	  ;;        function
-	  (setf (dictree-filename (eval dictname)) filename)))
+	  (setf (dictree-filename (eval dictname)) filename))
+	(predictive-load-dict dictname))
       ;; set the NAME dictionary to the loaded/new dictionary
       (set dict (eval dictname)))
 
-     ;; if buffer is not associated with a file,
-     (t
-      (set dict (predictive-create-dict))
+     (t  ;; if buffer is not associated with a file...
+      (set dict (dictree-create dictname filename nil nil
+				'< '+ 'predictive-dict-rank-function
+				nil nil nil nil predictive-completion-speed
+				nil nil nil nil
+				'predictive-auto-dict-plist-savefun nil))
       (setq dict (eval dict))
-      ;; FIXME: shouldn't be using internal dict-tree.el functions. Probably
-      ;;        need to make `predictive-create-dict' interface more flexible.
-      (setf (dictree-name dict) name)
-      (setf (dictree-autosave dict) nil))
-     ))
-)
+      (setf (dictree-name dict) name))
+     )))
 
 
 
-(defun predictive-unload-auto-dict (name)
+(defun predictive-auto-dict-unload (name &optional dont-save)
   "Unload and possibly save the current buffer's NAME dictionary."
   (let ((dict (eval (intern (concat "predictive-" name "-dict")))))
-    (dictree-unload (if (dictree-p dict) dict (eval dict))))
-)
+    (dictree-unload (if (dictree-p dict) dict (eval dict)) dont-save)))
+
+
+
+(defun predictive-auto-dict-plist-savefun (plist)
+  ;; convert overlays to buffer file names in :definitions property
+  (let ((defs (plist-get plist :definitions))
+	strings)
+    (mapc
+     (lambda (o)
+       (add-to-list 'strings
+		    (if (overlayp o)
+			(buffer-file-name (overlay-buffer o))
+		      o)))
+     defs)
+    (setq plist (copy-sequence plist))
+    (plist-put plist :definitions strings)
+    plist))
+
+
+
+
+;;; =================================================================
+;;;    Utility functions for automatically generated dictionaries
+
+(defun predictive-auto-dict-jump-to-def (dict key &optional overlay)
+  "Jump to definition of KEY from auto-dict DICT.
+If OVERLAY is supplied and is a definition overlay for KEY, jump
+to the next definition in the list after the one corresponding to
+OVERLAY."
+
+  (let ((defs (dictree-get-property dict key :definitions))
+	i)
+    (when defs
+      ;; find index of first definition after OVERLAY in list if supplied
+      (setq i (mod (or (and overlay
+			    (1+ (or (completion--position overlay defs) -1)))
+		       0)
+		   (length defs)))
+      ;; process list until we find a definition overlay
+      (while (and defs
+		  (not (and (overlayp (nth i defs))
+			    (overlay-buffer (nth i defs)))))
+	(cond
+	 ;; if we find a filename in the list, open the file and enable
+	 ;; predictive-mode (which will replace the filename with overlays)
+	 ((stringp (nth i defs))
+	  ;; if file doesn't exist, remove filename from list
+	  (if (not (file-exists-p (nth i defs)))
+	      (progn
+		(setq defs (delq (nth i defs) defs))
+		(setq i 0))
+	    (save-window-excursion
+	      (find-file (nth i defs))
+	      (turn-on-predictive-mode))))
+	 ;; if we find an obsolete overlay in the list, delete it from list
+	 ;; (should never occur!)
+	 ((overlayp (nth i defs))
+	  (setq defs (delq (nth i defs) defs))
+	  (setq i 0))))
+
+      (when defs
+	;; jump to definition, unless we're already at it
+	(let ((o-def (nth i defs)))
+	(unless (and (eq (overlay-buffer o-def) (current-buffer))
+		     (>= (point) (overlay-start o-def))
+		     (<= (point) (overlay-end o-def)))
+	  (push-mark)
+	  (switch-to-buffer (overlay-buffer (nth i defs)))
+	  (goto-char (overlay-start (nth i defs))))))
+
+      defs)))  ; return list of definition
 
 
 ;;; predictive-auto-overlay-auto-dict.el ends here

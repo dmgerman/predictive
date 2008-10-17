@@ -1,11 +1,12 @@
 
+
 ;;; predictive-texinfo.el --- predictive mode Texinfo setup function
 
 
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: predictive, setup function, texinfo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +30,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2
+;; * define delimiter portion of all brace regexps to fix overlay bug
+;; * added `predictive-texinfo-jump-to-*-definition' commands which use the
+;;   new auto-dict features for tracking definitions
 ;;
 ;; Version 0,1
 ;; * initial release, borrowing heavily from predictive-latex.el
@@ -56,7 +62,7 @@
 ;;;                  Customization Options
 
 (defgroup predictive-texinfo nil
-  "Predictive completion mode LaTeX support."
+  "Predictive completion mode Texinfo support."
   :group 'predictive)
 
 
@@ -72,11 +78,12 @@ between \\begin{...} and \\end{...} commands."
 ;;;============================================================
 ;;;                       Variables
 
-;; set up 'predictive-texinfo-word to be a `thing-at-point' symbol
+;; set `thing-at-point' symbols
 (put 'predictive-texinfo-word 'forward-op 'predictive-texinfo-forward-word)
-;; set up 'predictive-texinfo-node-word to be a `thing-at-point' symbol
 (put 'predictive-texinfo-node-word 'forward-op
      'predictive-texinfo-node-forward-word)
+(put 'predictive-texinfo-node-def-word 'forward-op
+     'predictive-texinfo-node-def-forward-word)
 
 
 ;; variables holding dictionaries
@@ -134,13 +141,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		   'predictive nil
 		   predictive-auxiliary-file-location))
 		nil t)
-      (add-hook 'kill-buffer-hook
-		(lambda ()
-		  (when (not (buffer-modified-p))
-		    (auto-overlay-save-overlays
-		     'predictive nil
-		     predictive-auxiliary-file-location)))
-		nil t)
+      (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
 
       ;; use Texinfo browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
@@ -164,9 +165,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    '(dict-texinfo dict-texinfo-env dict-texinfo-indicating
 			   dict-texinfo-math dict-latex-math))
       ;; load/create the node and local Texinfo dictionaries
-      (predictive-load-auto-dict "texinfo-node")
-      (predictive-load-auto-dict "texinfo-local-texinfo")
-      (predictive-load-auto-dict "texinfo-local-flag")
+      (predictive-auto-dict-load "texinfo-node")
+      (predictive-auto-dict-load "texinfo-local-texinfo")
+      (predictive-auto-dict-load "texinfo-local-flag")
 
       ;; add Texinfo dictionaries to main dictionary list
       (make-local-variable 'predictive-main-dict)
@@ -182,8 +183,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (predictive-texinfo-load-regexps)
 
       ;; start the auto-overlays
-      (auto-overlay-start 'predictive nil
-			  predictive-auxiliary-file-location)
+      (auto-overlay-start 'predictive nil predictive-auxiliary-file-location)
 
       ;; load the keybindings and related settings
       (predictive-texinfo-load-keybindings)
@@ -217,13 +217,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		    'predictive nil
 		    predictive-auxiliary-file-location))
 		 t)
-    (remove-hook 'kill-buffer-hook
-		 (lambda ()
-		   (when (not (buffer-modified-p))
-		     (auto-overlay-save-overlays
-		      'predictive nil
-		      predictive-auxiliary-file-location)))
-		 t)
+    (remove-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer t)
 
     t))  ; indicate successful reversion of changes
 )
@@ -280,7 +274,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id brace
-	      ("[^@]\\(@@\\)*@\\(x\\|px\\|info\\)?ref{"
+	      (("\\([^@]\\|^\\)\\(@@\\)*\\(@\\(x\\|px\\|info\\)?ref{\\)" . 3)
 	       :edge start
 	       (dict . predictive-texinfo-node-dict)
 	       (priority . 40)
@@ -295,23 +289,23 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (auto-completion-override-syntax-alist
 		. ((?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("^@\\(x\\|px\\|info\\)?ref{"
-	       :edge start
-	       (dict . predictive-texinfo-node-dict)
-	       (priority . 40)
-	       (completion-menu
-		. predictive-texinfo-construct-browser-menu)
-	       (completion-word-thing . predictive-texinfo-node-word)
-	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-						(?_ . (add ,word-complete))
-						(?  . (,whitesp-resolve none))
-						(?. . (add ,word-complete))
-						(t  . (reject none))))
-	       (auto-completion-override-syntax-alist
-		. ((?} . (,punct-resolve none))))
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
+;;; 	      ("^@\\(x\\|px\\|info\\)?ref{"
+;;; 	       :edge start
+;;; 	       (dict . predictive-texinfo-node-dict)
+;;; 	       (priority . 40)
+;;; 	       (completion-menu
+;;; 		. predictive-texinfo-construct-browser-menu)
+;;; 	       (completion-word-thing . predictive-texinfo-node-word)
+;;; 	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+;;; 						(?_ . (add ,word-complete))
+;;; 						(?  . (,whitesp-resolve none))
+;;; 						(?. . (add ,word-complete))
+;;; 						(t  . (reject none))))
+;;; 	       (auto-completion-override-syntax-alist
+;;; 		. ((?} . (,punct-resolve none))))
+;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("[^@]\\(@@\\)*@math{"
+	      (("\\([^@]\\|^\\)\\(@@\\)*\\(@math{\\)" . 3)
 	       :edge start
 	       (dict . (dict-texinfo-math dict-latex-math))
 	       (priority . 40)
@@ -354,79 +348,77 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 				',punct-complete 'none))))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("^@math{"
-	       :edge start
-	       (dict . (dict-texinfo-math dict-latex-math))
-	       (priority . 40)
-	       (completion-word-thing . predictive-latex-word)
-	       (auto-completion-override-syntax-alist
-		. ((?\\ . ((lambda ()
-			     (if (and (char-before) (= (char-before) ?\\)
-				      (or (not (char-before (1- (point))))
-					  (not (= (char-before (1- (point)))
-						  ?\\))))
-				 'add ',punct-resolve))
-			   ,word-complete))
-		   (?_ . (,punct-resolve none))
-		   (?^ . (,punct-resolve none))
-		   (?{ . ((lambda ()
-			    (if (and (char-before) (= (char-before) ?\\))
-				'add ',punct-resolve))
-			  (lambda ()
-			    (if (and (char-before) (= (char-before) ?\\))
-				',punct-complete 'none))))
-		   (?} . ((lambda ()
-			    (if (and (char-before) (= (char-before) ?\\))
-				'add ',punct-resolve))
-			  (lambda ()
-			    (if (and (char-before) (= (char-before) ?\\))
-				',punct-complete 'none))))
-		   (?\; . ((lambda ()
-			     (if (and (char-before) (= (char-before) ?\\))
-				 'add ',punct-resolve))
-			   (lambda ()
-			     (if (and (char-before (1- (point)))
-				      (= (char-before (1- (point))) ?\\))
-				 ',punct-complete 'none))))
-		   (?! . ((lambda ()
-			    (if (and (char-before) (= (char-before) ?\\))
-				'add ',punct-resolve))
-			  (lambda ()
-			    (if (and (char-before (1- (point)))
-				     (= (char-before (1- (point))) ?\\))
-				',punct-complete 'none))))))
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
+;;; 	      ("^@math{"
+;;; 	       :edge start
+;;; 	       (dict . (dict-texinfo-math dict-latex-math))
+;;; 	       (priority . 40)
+;;; 	       (completion-word-thing . predictive-latex-word)
+;;; 	       (auto-completion-override-syntax-alist
+;;; 		. ((?\\ . ((lambda ()
+;;; 			     (if (and (char-before) (= (char-before) ?\\)
+;;; 				      (or (not (char-before (1- (point))))
+;;; 					  (not (= (char-before (1- (point)))
+;;; 						  ?\\))))
+;;; 				 'add ',punct-resolve))
+;;; 			   ,word-complete))
+;;; 		   (?_ . (,punct-resolve none))
+;;; 		   (?^ . (,punct-resolve none))
+;;; 		   (?{ . ((lambda ()
+;;; 			    (if (and (char-before) (= (char-before) ?\\))
+;;; 				'add ',punct-resolve))
+;;; 			  (lambda ()
+;;; 			    (if (and (char-before) (= (char-before) ?\\))
+;;; 				',punct-complete 'none))))
+;;; 		   (?} . ((lambda ()
+;;; 			    (if (and (char-before) (= (char-before) ?\\))
+;;; 				'add ',punct-resolve))
+;;; 			  (lambda ()
+;;; 			    (if (and (char-before) (= (char-before) ?\\))
+;;; 				',punct-complete 'none))))
+;;; 		   (?\; . ((lambda ()
+;;; 			     (if (and (char-before) (= (char-before) ?\\))
+;;; 				 'add ',punct-resolve))
+;;; 			   (lambda ()
+;;; 			     (if (and (char-before (1- (point)))
+;;; 				      (= (char-before (1- (point))) ?\\))
+;;; 				 ',punct-complete 'none))))
+;;; 		   (?! . ((lambda ()
+;;; 			    (if (and (char-before) (= (char-before) ?\\))
+;;; 				'add ',punct-resolve))
+;;; 			  (lambda ()
+;;; 			    (if (and (char-before (1- (point)))
+;;; 				     (= (char-before (1- (point))) ?\\))
+;;; 				',punct-complete 'none))))))
+;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("[^@]\\(@@\\)*@value{"
+	      (("\\([^@]\\|^\\)\\(@@\\)*\\(@value{\\)" . 3)
 	       :edge start
 	       (dict . dict-texinfo-flag) (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("^@value{"
-	       :edge start
-	       (dict . dict-texinfo-flag) (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
+;;; 	      ("^@value{"
+;;; 	       :edge start
+;;; 	       (dict . dict-texinfo-flag) (priority . 40)
+;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      ;; Note: the following regexps are complicated because they have
 	      ;; to check whether number of @'s in front of { is even or
-	      ;; odd. Also, since auto-overlay regexps aren't allowed to match
-	      ;; across lines, we have to deal with the case of { or } at the
-	      ;; start of a line separately.
-	      (("^\\({\\)" . 1)
+	      ;; odd.
+	      (("\\([^@]\\|^\\)\\(@@\\)*\\({\\)" . 3)
 	       :edge start
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      (("[^@]\\(@@\\)*\\({\\)" . 2)
-	       :edge start
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      (("^\\(}\\)" . 1)
+;;; 	      (("^\\({\\)" . 1)
+;;; 	       :edge start
+;;; 	       (priority . 40)
+;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      (("\\([^@]\\|^\\)\\(@@\\)*\\(}\\)" . 3)
 	       :edge end
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      (("[^@]\\(@@\\)*\\(}\\)" . 2)
-	       :edge end
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
+;;; 	      (("^\\(}\\)" . 1)
+;;; 	       :edge end
+;;; 	       (priority . 40)
+;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      ))
 
 
@@ -536,7 +528,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      '(predictive-auto-dict
        :id set
        (("@set \\(.*\\)\\([^ ]\\|$\\)" . 1)
-	(dict . predictive-texinfo-flag-dict))))
+	(auto-dict . predictive-texinfo-flag-dict))))
 
 
     ;; @clear, @ifset and @ifclear refer to flags defined by @set
@@ -558,8 +550,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id ifclear
        (("@ifclear \\(.*\\)\\([^ ]\\|$\\)" . 1)
 	(dict . predictive-texinfo-flag-dict))))
-    )
-)
+    ))
 
 
 
@@ -723,10 +714,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			       (= (char-before (1- (point))) ?@))
 			  ',punct-complete 'none))))
  	     )
-	   auto-completion-override-syntax-alist) ; append
+	   auto-completion-override-syntax-alist) ; append target
 	  )
-    )
-)
+    ))
 
 
 ;; FIXME: these probably need to go in a math auto-overlay
@@ -743,6 +733,299 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
 
+(defun predictive-texinfo-kill-buffer ()
+  ;; Function called from `kill-buffer-hook' to tidy things up
+  ;; save overlays and local dicts if buffer was saved
+
+  ;; save overlays if buffer was saved
+  (when (buffer-modified-p)
+    (auto-overlay-save-overlays
+     'predictive nil
+     predictive-auxiliary-file-location))
+  ;; unload local dicts, without saving if buffer wasn't saved
+  (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p)))
+
+
+
+(defun predictive-texinfo-reparse-buffer ()
+  "Clear all auto-overlays, then reparse buffer from scratch."
+  (interactive)
+
+  ;; stop the predictive auto-overlays without saving to file
+  (auto-overlay-stop 'predictive)
+  ;; revert to saved auto-dicts
+  (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p))
+  (predictive-auto-dict-load "texinfo-node")
+  (predictive-auto-dict-load "texinfo-local-texinfo")
+  (predictive-auto-dict-load "texinfo-local-flag")
+  ;; clear and reload the overlay definitions (have to do this, otherwise some
+  ;; auto-overlays try to add duplicate regexp definitions when reparsed)
+  (setq auto-overlay-regexps nil)
+  (predictive-texinfo-load-regexps)
+  ;; restart the predictive auto-overlays; we let-bind predictive-mode to
+  ;; prevent duplicate definition warnings
+  (let ((predictive-mode nil))
+    (auto-overlay-start 'predictive nil 'ignore-save-file)))
+
+
+
+
+;;;=======================================================================
+;;;                       Navigation commands
+
+(defun predictive-texinfo-jump-to-definition ()
+  "Jump to definition of whatever is at point.
+\(Can be a label, or a command or environemtn defined in the
+document's preamble\).
+
+If point is already on a definition, cycle to next duplicate
+definition of the same thing."
+  (interactive)
+
+  (let ((current-dict (predictive-current-dict))
+	word dict o-def type)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    (or
+     ;; when we're on either a cross-reference or a node definition...
+     (and (or (member (setq dict (eval (predictive-auto-dict-name
+					"texinfo-node")))
+		      current-dict)
+	      (setq o-def (car (auto-overlays-at-point
+				nil `((identity auto-overlay)
+				      (eq set-id predictive)
+				      (,(lambda (id)
+					  (or (eq id 'node)
+					      (eq id 'anchor)))
+				       definition-id))))))
+	  ;; look for node name at point
+	  (setq word (or (thing-at-point 'predictive-texinfo-node-word)
+			 (thing-at-point 'predictive-texinfo-node-def-word)))
+	  (setq word (replace-regexp-in-string "\n+" " " word))
+	  (set-text-properties 0 (length word) nil word)
+	  (setq type "node"))
+
+     ;; when we're on either a texinfo command or a definition thereof...
+     (and (or (member (setq dict (eval (predictive-auto-dict-name
+					"texinfo-local-texinfo")))
+		      current-dict)
+	      (setq o-def (car (auto-overlays-at-point
+				nil `((identity auto-overlay)
+				      (eq set-id predictive)
+				      (,(lambda (id)
+					  (or (eq id 'alias)
+					      (eq id 'macro)))
+				       definition-id))))))
+	  ;; look for command at point
+	  (setq word (thing-at-point 'predictive-texinfo-word))
+	  (set-text-properties 0 (length word) nil word)
+	  ;; verify we're on a command by checking first character is "@"
+	  (= (elt word 0) ?@)
+	  (setq type "command"))
+
+     ;; when we're on either a flag or definition thereof...
+     (and (or (member (setq dict (eval (predictive-auto-dict-name
+					"texinfo-local-flag")))
+		      current-dict)
+	      (setq o-def (car (auto-overlays-at-point
+				nil '((identity auto-overlay)
+				      (eq set-id predictive)
+				      (eq definition-id set))))))
+	  ;; look for environment at point
+	  (setq word (thing-at-point 'predictive-texinfo-word))
+	  (set-text-properties 0 (length word) nil word)
+	  (setq type "flag")))
+
+
+    (if (null type)
+	(message "Nothing to jump to")
+      ;; jump to definition
+      (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
+      (cond
+       ;; we only find out here whether a command or environment was defined
+       ;; or preamble or globally, so might have jumped no where
+       ((null o-def) (message "Nothing to jump to"))
+       ;; display warning if multiply defined
+       ((> (length o-def) 1)
+	(message "Texinfo %s \"%s\" multiply defined" type word))))
+    ))
+
+
+
+(defvar predictive-texinfo-node-history nil
+  "History list for commands that read a Texinfo node name.")
+
+(defun predictive-texinfo-jump-to-node-definition (&optional node)
+  "Jump to the definition of NODE in the current Texinfo document.
+
+Interactively, NODE is read from the mini-buffer, defaulting to
+the node name at point (if any)."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "texinfo-node")))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for node name or definition at point
+    (unless node
+      (when (or (member dict current-dict)
+		(setq o-def (car (auto-overlays-at-point
+				  nil `((identity auto-overlay)
+					(eq set-id predictive)
+					(,(lambda (id)
+					    (or (eq id 'node)
+						(eq id 'anchor)))
+					 definition-id))))))
+	(when (setq node
+		    (or (thing-at-point 'predictive-texinfo-node-word)
+			(thing-at-point 'predictive-texinfo-node-def-word)))
+	  (set-text-properties 0 (length node) nil node)
+	  (setq node (replace-regexp-in-string "\n+" " " node)))))
+
+    ;; interactively, read node from minibuffer, defaulting to what we've
+    ;; found
+    (when (interactive-p)
+      (let ((node-tmp
+	     (completing-read
+	      (if node
+		  (format "Texinfo node (default \"%s\"): " node)
+		"Texinfo node: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-node-history node t)))
+	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= node node-tmp)
+	  (setq node node-tmp)
+	  (setq o-def nil))))
+
+    ;; jump to definition
+    (unless (or (null node) (string= node ""))
+      (setq o-def (predictive-auto-dict-jump-to-def dict node o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "Texinfo node \"%s\" multiply defined" node))
+      t)  ; return t to indicate we jumped somehwere
+    ))
+
+
+
+(defvar predictive-texinfo-command-history nil
+  "History list for commands that read a Texinfo command.")
+
+(defun predictive-texinfo-jump-to-command-definition (&optional command)
+  "Jump to the definition of COMMAND in the current Texinfo document.
+
+Interactively, COMMAND is read from the mini-buffer, defaulting to
+the command at point (if any)."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "texinfo-local-texinfo")))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for command or definition thereof at point
+    (unless command
+      (when (or (member dict current-dict)
+		(setq o-def (car (auto-overlays-at-point
+				  nil `((identity auto-overlay)
+					(eq set-id predictive)
+					(,(lambda (id)
+					    (or (eq id 'alias)
+						(eq id 'macro)))
+					 definition-id))))))
+	(when (setq command (thing-at-point 'predictive-texinfo-word))
+	  (if (= (elt command 0) ?@)
+	      (set-text-properties 0 (length command) nil command)
+	    (setq command nil)))))
+
+    ;; interactively, read command from minibuffer, defaulting to what we've
+    ;; found
+    (when (interactive-p)
+      (let ((command-tmp
+	     (completing-read
+	      (if command
+		  (format "Texinfo command (default \"%s\"): " command)
+		"Texinfo command: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-command-history command t)))
+	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= command command-tmp)
+	  (setq command command-tmp)
+	  (setq o-def nil))))
+
+    ;; jump to definition
+    (unless (or (null command) (string= command ""))
+      (setq o-def (predictive-auto-dict-jump-to-def dict command o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "Texinfo command \"%s\" multiply defined" command))
+      t)  ; return t to indicate we jumped somehwere
+    ))
+
+
+
+(defvar predictive-texinfo-flag-history nil
+  "History list for commands that read a Texinfo flag.")
+
+(defun predictive-texinfo-jump-to-flag-definition (&optional flag)
+  "Jump to the definition of FLAG in the current Texinfo document.
+
+Interactively, FLAG is read from the mini-buffer, defaulting to
+the flag at point (if any)."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "texinfo-flag")))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for flag name or definition at point
+    (unless flag
+      (when (or (member dict current-dict)
+		(setq o-def (car (auto-overlays-at-point
+				  nil '((identity auto-overlay)
+					(eq set-id predictive)
+					(eq definition-id set))))))
+	(when (setq flag (thing-at-point 'predictive-texinfo-word))
+	  (set-text-properties 0 (length flag) nil flag))))
+
+    ;; interactively, read flag from minibuffer, defaulting to what we've
+    ;; found
+    (when (interactive-p)
+      (let ((flag-tmp
+	     (completing-read
+	      (if flag
+		  (format "Texinfo flag (default \"%s\"): " flag)
+		"Texinfo flag: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-flag-history flag t)))
+	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= flag flag-tmp)
+	  (setq flag flag-tmp)
+	  (setq o-def nil))))
+
+    ;; jump to definition
+    (unless (or (null flag) (string= flag ""))
+      (setq o-def (predictive-auto-dict-jump-to-def dict flag o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "Texinfo flag \"%s\" multiply defined" flag))
+      t)  ; return t to indicate we jumped somehwere
+    ))
+
+
+
 
 ;;;=============================================================
 ;;;                Completion-browser functions
@@ -755,8 +1038,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; since we're using the browser as the default menu)
   (let ((menu (completion-construct-browser-menu
 	       prefix completions 'predictive-texinfo-browser-menu-item)))
-    (setq menu (butlast menu 2)))
-)
+    (setq menu (butlast menu 2))))
 
 
 
@@ -782,8 +1064,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	menu)
 
     ;; otherwise, create a selectable completion item
-    `(lambda () (insert ,completion)))
-)
+    `(lambda () (insert ,completion))))
 
 
 
@@ -833,8 +1114,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (backward-char))
 	(re-search-forward "@\\W\\|@\\w+\\|\\w+" nil t)
 	(when (= (char-before) ?\n) (backward-char))))
-    )
-)
+    ))
 
 
 
@@ -843,24 +1123,31 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (if (and n (< n 0))
       (unless (bobp)
 	(setq n (- n))
-	(when (= ?\\ (char-before))
-	  (while (= ?\\ (char-before)) (backward-char))
-	  (setq n (1- n)))
 	(dotimes (i n)
-	  (when (and (char-before) (= (char-syntax (char-before)) ?w))
-	    (backward-word 1))  ; argument not optional in Emacs 21
-	  (while (and (char-before) (/= (char-before) ?{))
-	    (backward-char))))
+	  (while (and (char-before) (/= (char-before) ?{)
+		      (or (and (= (char-syntax (char-before)) ?w)
+			       (backward-word 1))
+			  (or (backward-char) t))))))
     ;; going forwards...
     (unless (eobp)
       (setq n (if n n 1))
       (dotimes (i n)
-	(when (and (char-after) (= (char-syntax (char-after)) ?w))
-	  (forward-word 1))  ; argument not optional in Emacs 21
-	(while (and (char-after) (/= (char-after) ?}) (/= (char-after) ?\n))
-	  (forward-char))))
-    )
-)
+	(while (and (char-after) (/= (char-after) ?})
+		    (or (and (= (char-syntax (char-after)) ?w)
+			     (forward-word 1))
+			(or (forward-char) t))))))))
+
+
+
+(defun predictive-texinfo-node-def-forward-word (&optional n)
+  ;; going backwards...
+  (if (and n (< n 0))
+      (unless (bobp)
+	(setq n (- n))
+	(when (re-search-backward "^@node[[:space:]]*" nil t n)
+	  (forward-char (- (match-end 0) (match-beginning 0)))))
+    ;; going forwards...
+    (goto-char (line-end-position))))
 
 
 

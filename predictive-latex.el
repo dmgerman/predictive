@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.10.2
+;; Version: 0.11
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,16 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11
+;; * renamed "goto" commands to "jump-to" commands for consistency with
+;;   similar Emacs commands, and made them set the mark before jumping
+;; * replaced `predictive-latex-goto-label-def' with new, generalised
+;;   `predictive-latex-jump-to-definition' command, which can jump to
+;;   definition of commands and environments as well as labels, and works
+;;   correctly for multifile documents, by using the new auto-dict features
+;;   for tracking definitions
+;; * added `predictive-latex-jump-to-*-definition' commands
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -268,6 +278,8 @@ When a document class is in the list, "
 (make-variable-buffer-local 'predictive-latex-local-math-dict)
 (defvar predictive-latex-local-env-dict nil)
 (make-variable-buffer-local 'predictive-latex-local-env-dict)
+(defvar predictive-latex-section-dict nil)
+(make-variable-buffer-local 'predictive-latex-section-dict)
 
 
 ;; alist holding functions called when loading and unloading latex packages
@@ -330,13 +342,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			    'predictive nil
 			    predictive-auxiliary-file-location))
 		nil t)
-      (add-hook 'kill-buffer-hook
-		(lambda ()
-		  (when (not (buffer-modified-p))
-		    (auto-overlay-save-overlays
-		     'predictive nil
-		     predictive-auxiliary-file-location)))
-		nil t)
+      (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
 
       ;; use latex browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
@@ -407,10 +413,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      predictive-latex-env-dict
 		      predictive-latex-bibstyle-dict))
 	;; load/create the label and local latex dictionaries
-	(predictive-load-auto-dict "latex-label")
-	(predictive-load-auto-dict "latex-local-latex")
-	(predictive-load-auto-dict "latex-local-math")
-	(predictive-load-auto-dict "latex-local-env")
+	(predictive-auto-dict-load "latex-label")
+	(predictive-auto-dict-load "latex-local-latex")
+	(predictive-auto-dict-load "latex-local-math")
+	(predictive-auto-dict-load "latex-local-env")
+	(predictive-auto-dict-load "latex-section")
 
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
@@ -443,7 +450,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(setq predictive-main-dict
 	      (append predictive-main-dict predictive-latex-dict))
 
-
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
@@ -460,7 +466,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			      'no-regexp-check)
 	  (set-buffer-modified-p restore-modified))
 	))
-
 
       ;; load the keybindings and related settings
       (predictive-latex-load-keybindings)
@@ -515,16 +520,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			     'predictive nil
 			     predictive-auxiliary-file-location))
 		 t)
-    (remove-hook 'kill-buffer-hook
-		 (lambda ()
-		   (when (not (buffer-modified-p))
-		     (auto-overlay-save-overlays
-		      'predictive nil
-		      predictive-auxiliary-file-location)))
-		 t)
+    (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
 
-    t))  ; indicate successful reversion of changes
-)
+    t)))  ; indicate successful reversion of changes
 
 
 
@@ -558,7 +556,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id brace
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\usepackage{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\usepackage{\\)" . 3)
 	       :edge start
 	       (dict . t)
 	       (priority . 40)
@@ -568,7 +566,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (dict . t)
 ;;; 	       (priority . 40)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\label{\\)" . 3)
 	       :edge start
 	       :id label
 	       (dict . t)
@@ -581,7 +579,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (priority . 40)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-	      ("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(eq\\)?ref{"
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(eq\\)?ref{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-label-dict)
 	       (priority . 40)
@@ -771,8 +769,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(nested :id preamble
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)"
-		. 3)
+	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-preamble-dict)
 	       (priority . 20)
@@ -808,8 +805,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; load the regexps into the list
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
-	0 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
        :edge start
        (dict . predictive-latex-math-dict)
        (priority . 10)
@@ -825,8 +821,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;;        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}"
-	0 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
        :edge end
        (dict . predictive-latex-math-dict)
        (priority . 10)
@@ -877,8 +872,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      '(predictive-latex-docclass
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}"
-	 . 4))))
+       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
 ;;;     (auto-overlay-load-definition
 ;;;      'predictive
 ;;;      '(predictive-latex-docclass
@@ -971,6 +965,21 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\DeclareMathOperator\\*?{\\(.*?\\)}"
 	 . 3)
 	(auto-dict . predictive-latex-local-math-dict))))
+;;;     (auto-overlay-load-definition
+;;;      'predictive
+;;;      '(predictive-auto-dict
+;;;        :id DeclareMathOperator-bol
+;;;        (("^\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
+;;; 	(auto-dict . predictive-latex-local-math-dict))))
+
+    ;; the sectioning commands automagically add the section names to a local
+    ;; sections dictionary, purely for navigation
+    (auto-overlay-load-definition
+     'predictive
+     '(predictive-auto-dict
+       :id section
+       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
+	(auto-dict . predictive-latex-section-dict))))
 ;;;     (auto-overlay-load-definition
 ;;;      'predictive
 ;;;      '(predictive-auto-dict
@@ -1151,13 +1160,27 @@ mode is enabled via entry in `predictive-major-mode-alist'."
  	     )
 	   auto-completion-override-syntax-alist) ; append
 	  )
-    )
-)
+    ))
 
 
 
-;;;=======================================================================
-;;;                 Miscelaneous interactive commands
+(defun predictive-latex-kill-buffer ()
+  ;; Function called from `kill-buffer-hook' to tidy things up
+  ;; save overlays and local dicts if buffer was saved
+
+  ;; save overlays if buffer was saved
+  (when (buffer-modified-p)
+    (auto-overlay-save-overlays
+     'predictive nil
+     predictive-auxiliary-file-location))
+  ;; unload local dicts, without saving if buffer wasn't saved
+  (predictive-auto-dict-unload "latex-label" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-latex" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-math" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-env" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-section" (buffer-modified-p)))
+
+
 
 (defun predictive-latex-reparse-buffer ()
   "Clear all auto-overlays, then reparse buffer from scratch."
@@ -1177,20 +1200,331 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (make-local-variable 'predictive-latex-env-dict)
   (kill-local-variable 'predictive-latex-bibstyle-dict)
   (make-local-variable 'predictive-latex-bibstyle-dict)
+  ;; revert to saved auto-dicts
+  (predictive-auto-dict-unload "latex-label" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-latex" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-math" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-env" (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-section" (buffer-modified-p))
+  (predictive-auto-dict-load "latex-label")
+  (predictive-auto-dict-load "latex-local-latex")
+  (predictive-auto-dict-load "latex-local-math")
+  (predictive-auto-dict-load "latex-local-env")
+  (predictive-auto-dict-load "latex-section")
   ;; clear and reload the overlay definitions (have to do this, otherwise some
   ;; auto-overlays try to add duplicate regexp definitions when reparsed)
   (setq auto-overlay-regexps nil)
   (predictive-latex-load-regexps)
-  ;; restart the predictive auto-overlays
-  (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)
-)
+  ;; restart the predictive auto-overlays; we let-bind predictive-mode to
+  ;; prevent duplicate definition warnings
+  (let ((predictive-mode nil))
+    (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)))
 
 
 
-(defun predictive-latex-goto-matching-delim ()
-  "If the point is currently on some kind of LaTeX delimeter
-\(\\begin{...}, \\end{...}, \\[, \\] or $\), move to its matching
-delimeter."
+
+;;;=======================================================================
+;;;                       Jump commands
+
+(defun predictive-latex-jump-to-definition ()
+  "Jump to definition of whatever is at point.
+\(Can be a label, or a command or environemtn defined in the
+document's preamble\).
+
+If point is already on a definition, cycle to next duplicate
+definition of the same thing."
+  (interactive)
+
+  (let ((current-dict (predictive-current-dict))
+	word dict o-def type)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    (or
+     ;; when we're on either a cross-reference or a label definition...
+     (and (or (member (setq dict (eval (predictive-auto-dict-name
+					"latex-label")))
+		      current-dict)
+	      (setq o-def (car (auto-overlays-at-point
+				nil '((identity auto-overlay)
+				      (eq set-id predictive)
+				      (eq definition-id label))))))
+	  ;; look for label at point
+	  (setq word (thing-at-point 'predictive-latex-label-word))
+	  (set-text-properties 0 (length word) nil word)
+	  (setq type "label"))
+
+     ;; when we're on either a LaTeX command or a definition thereof...
+     (and (or (member (eval (predictive-auto-dict-name "latex-local-latex"))
+		      current-dict)
+	      (member (eval (predictive-auto-dict-name "latex-local-math"))
+		      current-dict)
+	      (setq o-def
+		    (car (auto-overlays-at-point
+			  nil `((identity auto-overlay)
+				(eq set-id predictive)
+				(,(lambda (id)
+				    (or (eq id 'newcommand)
+					(eq id 'DeclareMathOperator)))
+				 definition-id))))))
+	  ;; set dict to temporary meta-dict that combines local-latex and
+	  ;; local-math dicts
+	  (setq dict (dictree-meta-dict-create
+		      (list (predictive-auto-dict-name "latex-local-latex")
+			    (predictive-auto-dict-name "latex-local-math"))
+		      nil nil nil t '+))
+	  ;; look for command at point
+	  (setq word (thing-at-point 'predictive-latex-word))
+	  (set-text-properties 0 (length word) nil word)
+	  ;; verify we're on a command by checking first character is "\"
+	  (= (elt word 0) ?\\)
+	  (setq type "command"))
+
+     ;; when we're on either a LaTeX environment or definition thereof...
+     (and (or (member (setq dict (eval (predictive-auto-dict-name
+					"latex-local-env")))
+		      current-dict)
+	      (setq o-def (car (auto-overlays-at-point
+				nil `((identity auto-overlay)
+				      (eq set-id predictive)
+				      (,(lambda (id)
+					  (or (eq id 'newenvironment)
+					      (eq id 'newtheorem)))
+				       definition-id))))))
+	  ;; look for environment at point
+	  (setq word (thing-at-point 'predictive-latex-word))
+	  (set-text-properties 0 (length word) nil word)
+	  (setq type "environment")))
+
+
+    (if (null type)
+	(message "Nothing to jump to")
+      ;; jump to definition
+      (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
+      (cond
+       ;; we only find out here whether a command or environment was defined
+       ;; or preamble or globally, so might have jumped no where
+       ((null o-def) (message "Nothing to jump to"))
+       ;; display warning if multiply defined
+       ((> (length o-def) 1)
+	(message "LaTeX %s \"%s\" multiply defined" type word))))
+    ))
+
+
+
+(defvar predictive-latex-label-history nil
+  "History list for commands that read a LaTeX label.")
+
+(defun predictive-latex-jump-to-label-definition (&optional label)
+  "Jump to the definition of LABEL in the current LaTeX document.
+If point is already on the definition of LABEL, jump to the next
+duplicate definition of LABEL.
+
+Interactively, LABEL is read from the mini-buffer, defaulting to
+the label at point (if any)."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "latex-label")))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for cross-reference or label definition at point
+    (unless label
+      (when (or (member dict current-dict)
+		(setq o-def (car (auto-overlays-at-point
+				  nil '((identity auto-overlay)
+					(eq set-id predictive)
+					(eq definition-id label))))))
+	(setq label (thing-at-point 'predictive-latex-label-word))
+	(when label (set-text-properties 0 (length label) nil label))))
+
+    ;; interactively, read label from minibuffer, defaulting to what we've
+    ;; found
+    (when (interactive-p)
+      (let ((label-tmp
+	     (completing-read
+	      (if label
+		  (format "LaTeX label (default \"%s\"): " label)
+		"LaTeX label: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-label-history label t)))
+	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= label label-tmp)
+	  (setq label label-tmp)
+	  (setq o-def nil))))
+
+    ;; jump to definition
+    (unless (or (null label) (string= label ""))
+      (setq o-def (predictive-auto-dict-jump-to-def dict label o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "LaTeX label \"%s\" multiply defined" label))
+      t)  ; return t to indicate we jumped somehwere
+    ))
+
+
+
+(defvar predictive-latex-command-history nil
+  "History list for commands that read a LaTeX command.")
+
+(defun predictive-latex-jump-to-command-definition (&optional command)
+  "Jump to the definition of COMMAND in the current LaTeX document.
+
+Interactively, COMMAND is read from the mini-buffer, defaulting
+to the command at point (if any). This only jumps to commands
+that are defined in the document's preamble."
+  (interactive)
+
+  (let ((dict (dictree-meta-dict-create
+	       (list (predictive-auto-dict-name "latex-local-latex")
+		     (predictive-auto-dict-name "latex-local-math"))
+		      nil nil nil t '+))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for command name or definition at point
+    (unless command
+      (when (or (member (eval (predictive-auto-dict-name "latex-local-latex"))
+			current-dict)
+		(member (eval (predictive-auto-dict-name "latex-local-math"))
+			current-dict)
+		(setq o-def
+		      (car (auto-overlays-at-point
+			    nil `((identity auto-overlay)
+				  (eq set-id predictive)
+				  (,(lambda (id)
+				      (or (eq id 'newcommand)
+					  (eq id 'DeclareMathOperator)))
+				   definition-id))))))
+	(setq command (thing-at-point 'predictive-latex-word))
+	(when command
+	  (set-text-properties 0 (length command) nil command)
+	  (unless (= (elt command 0) ?\\) (setq command nil)))))
+
+    ;; interactively, read command from minibuffer, defaulting to what we've
+    ;; found
+    (when (interactive-p)
+      (let ((command-tmp
+	     (completing-read
+	      (if command
+		  (format "LaTeX command (default \"%s\"): " command)
+		"LaTeX command: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-command-history command t)))
+      	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= command command-tmp)
+	  (setq command command-tmp)
+	  (setq o-def nil))))
+
+    ;; jump to definition
+    (unless (or (null command) (string= command ""))
+      (setq o-def (predictive-auto-dict-jump-to-def dict command o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "LaTeX command \"%s\" multiply defined" command))
+      t)  ; return t to indicate we jumped somewhere
+    ))
+
+
+
+(defvar predictive-latex-environment-history nil
+  "History list for commands that read a LaTeX environment.")
+
+(defun predictive-latex-jump-to-environment-definition (&optional env)
+  "Jump to the definition of ENV environment in the current LaTeX document.
+
+Interactively, ENV is read from the mini-buffer, defaulting to
+the environment at point (if any). This only jumps to
+environments that are defined in the document's preamble."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "latex-local-env")))
+	(current-dict (predictive-current-dict))
+	o-def)
+    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
+
+    ;; look for environment name or defininition at point
+    (unless env
+      (when (or (member dict (predictive-current-dict))
+		(setq o-def (car (auto-overlays-at-point
+				  nil `((identity auto-overlay)
+					(eq set-id predictive)
+					(,(lambda (id)
+					    (or (eq id 'newenvironment)
+						(eq id 'newtheorem)))
+					 definition-id))))))
+	;; look for environment at point
+	(setq env (thing-at-point 'predictive-latex-word))
+	(when env (set-text-properties 0 (length env) nil env))))
+
+    ;; interactively, read environment from minibuffer, defaulting to what
+    ;; we've found
+    (when (interactive-p)
+      (let ((env-tmp
+	     (completing-read
+	      (if env
+		  (format "LaTeX environment (default \"%s\"): " env)
+		"LaTeX environment: ")
+	      (lambda (string predicate all)
+		(dictree-collection-function dict string predicate all))
+	      nil t nil 'predictive-latex-environment-history env t)))
+	;; unless user accepted default, any overlay we found is no longer
+	;; relevant
+	(unless (string= env env-tmp)
+	  (setq env env-tmp)
+	  (setq o-def nil))))
+
+    (unless (or (null env) (string= env ""))
+      ;; jump to definition
+      (setq o-def (predictive-auto-dict-jump-to-def dict env o-def))
+      ;; display warning if multiply defined
+      (when (> (length o-def) 1)
+	(message "LaTeX environment \"%s\" multiply defined" env))
+      t)  ; return t to indicate we jumped somewhere
+    ))
+
+
+
+(defvar predictive-latex-section-history nil
+  "History list for commands that read a LaTeX section name.")
+
+(defun predictive-latex-jump-to-section (&optional section)
+  "Jump to the start of SECTION in the current LaTeX document.
+
+Interactively, SECTION is read from the mini-buffer."
+  (interactive)
+
+  (let ((dict (eval (predictive-auto-dict-name "latex-section"))))
+
+    ;; interactively, read section name from minibuffer, defaulting to what
+    ;; we've found
+    (when (interactive-p)
+      (setq section
+	    (completing-read
+	     "Section: "
+	     (lambda (string predicate all)
+	       (dictree-collection-function dict string predicate all))
+	     nil t nil 'predictive-latex-section-history nil t)))
+
+    ;; jump to section
+    (unless (or (null section) (string= section ""))
+      (let ((o-def (predictive-auto-dict-jump-to-def dict section)))
+	;; display warning if multiply defined
+	(when (> (length o-def) 1)
+	  (message "Multiple sections called \"%s\"" section))
+	t))  ; return t to indicate we jumped somehwere
+    ))
+
+
+
+(defun predictive-latex-jump-to-matching-delimiter ()
+  "Jump to LaTeX delimiter matching the one at point
+\(\\begin{...} <-> \\end{...}, \\[ <-> \\], or $ <-> $\)."
   (interactive)
 
   ;; get innermost LaTeX environment match overlay
@@ -1226,14 +1560,12 @@ delimeter."
 	(goto-char (overlay-get o-other
 				(if (eq o-other (overlay-get o-parent 'start))
 				    'delim-end 'delim-start)))))
-    )
-)
+    ))
 
 
 
-(defun predictive-latex-goto-delim-start ()
-  "If the point is currently within a LaTeX environment or
-math-mode, move to the start of it."
+(defun predictive-latex-jump-to-start-delimiter ()
+  "Jump to start of LaTeX environment or equation at point."
   (interactive)
 
   ;; get innermost LaTeX environment overlay
@@ -1258,14 +1590,12 @@ math-mode, move to the start of it."
 	(progn
 	  (push-mark)
 	  (goto-char (overlay-get o-match 'delim-end)))
-      (message "Not within a LaTeX environment")))
-)
+      (message "Not within a LaTeX environment"))))
 
 
 
-(defun predictive-latex-goto-delim-end ()
-  "If the point is currently within a LaTeX environment or
-math-mode, move to the end of it."
+(defun predictive-latex-jump-to-end-delimiter ()
+  "Jump to end of LaTeX environment or equation at point."
   (interactive)
 
   ;; get innermost LaTeX environment overlay
@@ -1290,53 +1620,7 @@ math-mode, move to the end of it."
 	(progn
 	  (push-mark)
 	  (goto-char (overlay-get o-match 'delim-start)))
-      (message "Not within a LaTeX environment")))
-)
-
-
-
-;;; FIXME: generalise label searching to allow cycling through all label
-;;;        definitions and references
-
-(defun predictive-latex-goto-label-def ()
-  "If the point is on a reference command, move to the label it
-refers to."
-  (interactive)
-
-  (let ((current-dict (predictive-current-dict))
-	label overlay-list filtered-list)
-    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
-
-    ;; when we're not within a referencing command (which we check by checking
-    ;; if current dictionary is the label dictionary), display a message,
-    ;; otherwise...
-    (if (null (member (eval (predictive-auto-dict-name "latex-label"))
-		      current-dict))
-	(message "Not on LaTeX cross-reference")
-
-      ;; get label name and list of label overlays
-      (setq label (thing-at-point 'predictive-latex-label-word))
-      (setq overlay-list (auto-overlays-in (point-min) (point-max)
-					   '((identity auto-overlay)
-					     (eq set-id predictive)
-					     (eq definition-id label))))
-      ;; filter overlay list for matching label name (filtered list should
-      ;; only contain one element, unless label is multiply defined)
-      (mapc (lambda (o)
-	      (when (string= (buffer-substring-no-properties
-			      (overlay-start o) (overlay-end o))
-			     label)
-		(push o filtered-list)))
-	    overlay-list)
-      ;; goto matching label definition, displaying warning if the label is
-      ;; multiply defined
-      (when filtered-list
-	(push-mark)
-	(goto-char (overlay-start (car filtered-list)))
-	(when (> (length filtered-list) 1)
-	  (message "LaTeX label \"%s\" is multiply defined" label)))
-      ))
-)
+      (message "Not within a LaTeX environment"))))
 
 
 
