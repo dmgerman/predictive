@@ -5,8 +5,7 @@
     (let ((prefix (semantic-ctxt-current-symbol (point))))
       (setq prefix (nth (1- (length prefix)) prefix))
       (set-text-properties 0 (length prefix) nil prefix)
-      prefix))
-)
+      prefix)))
 
 
 
@@ -23,13 +22,12 @@ return."
 	    (when (and (featurep 'semanticdb-find)
 		       auto-completion-mode)
 	      (remq 'unloaded semanticdb-find-default-throttle)))
-	   
+
 	   (ctxt (semantic-analyze-current-context))
 	   (acomp (semantic-analyze-possible-completions ctxt)))
-      (when (> (length acomp) maxnum)
+      (when (and maxnum (> (length acomp) maxnum))
 	(setq acomp (subseq acomp 0 (1- maxnum))))
-      (mapcar 'semantic-tag-name acomp)))
-)
+      (mapcar 'semantic-tag-name acomp))))
 
 
 
@@ -39,5 +37,4 @@ return."
   (setq completion-function 'semantic-completion-wrapper)
   (setq completion-prefix-function 'semantic-prefix-wrapper)
   (setq auto-completion-override-syntax-alist '((?. . (add word))))
-  (define-key completion-map "." 'completion-self-insert)
-)
+  (define-key completion-map "." 'completion-self-insert))
