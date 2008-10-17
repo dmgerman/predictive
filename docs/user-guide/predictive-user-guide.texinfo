@@ -2414,16 +2414,16 @@ same name (if there is one).
 
 @item predictive-latex-jump-to-matching-delimiter
 Jump to the delimiter matching the one at the point, if any. This will
-jump from @samp{\begin{...}} to @samp{\end{...}}, @samp{\[} to
+jump from @samp{\begin@{...@}} to @samp{\end@{...@}}, @samp{\[} to
 @samp{\]}, @samp{$} to matching @samp{$}, and vice versa.
 
 @item predictive-latex-jump-to-start-delimiter
 Jump to the start delimiter of the innermost environment or
-equation. This will jump to @samp{\begin{...}}, @samp{\[} or @samp{$}.
+equation. This will jump to @samp{\begin@{...@}}, @samp{\[} or @samp{$}.
 
 @item predictive-latex-jump-to-end-delimiter
 Jump to the end delimiter of the innermost environment or equation. This
-will jump to @samp{\end{...}}, @samp{\]} or @samp{$}.
+will jump to @samp{\end@{...@}}, @samp{\]} or @samp{$}.
 @end ftable
 
 
