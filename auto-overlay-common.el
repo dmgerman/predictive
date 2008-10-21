@@ -74,7 +74,7 @@ Note that this function returns any overlay. If you want to
 restrict it to auto overlays, include '(identity auto-overlay) in
 PROP-TEST."
   (when (null point) (setq point (point)))
-  
+
   (let (overlay-list)
     ;; get overlays overlapping POINT and zero-length overlays at POINT
     (setq overlay-list
@@ -89,7 +89,7 @@ PROP-TEST."
       (when (and (> (overlay-end o) point)
 		 (= (overlay-start o) point))
 	(push o overlay-list)))
-    
+
     overlay-list)
 )
 
@@ -139,15 +139,15 @@ PROP-TEST."
       (setq prop-test (list '(null inactive) prop-test))))
    (t
     (unless inactive (setq prop-test (push '(null inactive) prop-test)))))
-  
-  (let (overlay-list function prop-list value-list result)    
+
+  (let (overlay-list function prop-list value-list result)
     ;; check properties of each overlay in region
     (dolist (o (overlays-in start end))
       ;; check overlay is entirely within region
       (if (and within
 	       (or (< (overlay-start o) start) (> (overlay-end o) end)))
 	  (setq result nil)
-	
+
 	;; if it is, or we don't care
 	(setq result t)
 	(catch 'failed
@@ -164,7 +164,7 @@ PROP-TEST."
 			(and (setq value-list (nth 2 test))  ; nil isn't list
 			     (listp value-list)))
 	      (setq value-list (list value-list)))
-	    
+
 	    ;; apply the test
 	    (setq result
 		  (and result
@@ -173,7 +173,7 @@ PROP-TEST."
 					      prop-list)
 				      value-list))))
 	    (when (null result) (throw 'failed nil)))))
-      
+
       ;; add overlay to result list if its properties matched
       (when result (push o overlay-list)))
     ;; return result list
@@ -190,9 +190,9 @@ precedence (i.e. the one that begins later, or if they begin at
 the same point the one that ends earlier).
 
 See `auto-overlays-at' for ane explanation of the PROPTEST argument."
-  
+
   (unless point (setq point (point)))
-  
+
   ;; get all overlays at point with a non-nil SYMBOL property
   (let* ((overlay-list (auto-overlays-at-point point proptest))
 	 (overlay (pop overlay-list))
@@ -228,7 +228,7 @@ the highest priority overlay is returned.
 
 See `auto-overlay-highest-priority-at-point' for a definition of
 \"highest priority\"."
-  
+
   (let ((overlay (auto-overlay-highest-priority-at-point
 		  point `(identity ,symbol))))
     (if overlay

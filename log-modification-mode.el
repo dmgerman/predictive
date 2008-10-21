@@ -95,7 +95,7 @@ name of the buffer in which log-modification-mode is enabled."
       (goto-char (point-max))
       (insert (format "(delete-region %d %d)\n" beg (+ beg len))))))
 
-  
+
   ;; if we've reached a checkpoint...
   (setq log-modification-count (1+ log-modification-count))
   (when (= 0 (mod log-modification-count
@@ -118,7 +118,7 @@ name of the buffer in which log-modification-mode is enabled."
 	  (set-buffer log-modification-buffer)
 	  (goto-char (point-max))
 	  (insert (format "%% checkpoint %d" i)))
-	
+
 	;; if we've exceded maximum number of checkpoints, delete oldest one
 	(when (> log-modification-checkpoint-count
 		 log-modification-checkpoints)
@@ -132,7 +132,7 @@ name of the buffer in which log-modification-mode is enabled."
 	    (set-buffer log-modification-buffer)
 	    (insert (format " (checkpoint %d expired)"
 			    (- i log-modification-checkpoints)))))
-	
+
 	(save-excursion
 	  (set-buffer log-modification-buffer)
 	  (insert "\n")))

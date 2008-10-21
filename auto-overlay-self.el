@@ -108,17 +108,17 @@
 (defun auto-o-parse-self-match (o-match)
   ;; perform any necessary updates of auto overlays due to a match for a self
   ;; regexp
-  
+
   (let* ((overlay-list (auto-o-self-list o-match))
 	 (o (car overlay-list)))
-    
+
     (cond
      ;; if stack is empty, create a new end-unmatched overlay, adding it to
      ;; the list of unascaded overlays (avoids treating it as a special
      ;; case), and return it
      ((null overlay-list)
       (auto-o-make-self o-match nil))
-     
+
      ;; if new delimiter is inside the first existing overlay and existing one
      ;; is end-unmatched, just match it
      ((and (not (overlay-get o 'end))
@@ -128,8 +128,8 @@
       (setq auto-o-pending-self-cascade (delq o auto-o-pending-self-cascade))
       ;; return nil since haven't created any new overlays
       nil)
-     
-     
+
+
      ;; otherwise...
      (t
       (let (o-new)
@@ -140,7 +140,7 @@
 	    (setq o-new (auto-o-make-self
 			 o-match
 			 (overlay-get (overlay-get o 'start) 'delim-start)))
-	  
+
 	  ;; if the new match is inside an existing overlay...
 	  (setq o (pop overlay-list))
 	  ;; create overlay from end of existing one till start of the one
@@ -154,7 +154,7 @@
 	  ;; match end of existing one with the new match, protecting its old
 	  ;; end match which is now matched with start of new one
 	  (auto-o-match-overlay o nil o-match 'no-props nil 'protect-match))
-      
+
       ;; return newly created overlay
       o-new))
      ))
@@ -211,7 +211,7 @@
   ;; If END is nil, the new overlay is end-unmatched and ends at the end of
   ;; the buffer.
   (let (o-new)
-    
+
     ;; create new overlay (location ensures right things happen when matched)
     (let (pos)
       (cond
@@ -219,15 +219,15 @@
        ((number-or-marker-p end) (setq pos end))
        (t (setq pos (point-max))))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance)))
-    
+
     ;; give overlay some basic properties
     (overlay-put o-new 'auto-overlay t)
     (overlay-put o-new 'set-id (overlay-get o-start 'set-id))
     (overlay-put o-new 'definition-id (overlay-get o-start 'definition-id))
-    
+
     ;; if overlay is end-unmatched, add it to the list of uncascaded overlays
     (unless (overlayp end) (push o-new auto-o-pending-self-cascade))
-    
+
     ;; match the new overlay and return it
     (auto-o-match-overlay o-new o-start (if (overlayp end) end nil))
     o-new)
@@ -258,7 +258,7 @@
   (when (> (length overlay-list) 1)
     (let ((o (car overlay-list))
 	  (o1 (nth 1 overlay-list)))
-      
+
       ;; match first (presumably end-matched) overlay and remove it from list
       (pop overlay-list)
       (auto-o-match-overlay o nil (overlay-get o1 'start) 'no-props)
@@ -291,7 +291,7 @@
 				       (delq o1 auto-o-pending-self-cascade))
 				 ;; return t to indicate cascading ended early
 				 t)))))
-	  
+
 	  ;; if there's an overlay left, "flip" it so it's end-unmatched and
 	  ;; extends to next overlay in buffer, and add it to the list of
 	  ;; unmatched overlays
@@ -315,7 +315,7 @@
 ;;   ;; is null, all overlays after O-START are included.
 
 ;;   (when (null end) (setq end (point-max)))
-  
+
 ;;   (let (overlay-list)
 ;;     ;; create list of all overlays corresponding to same entry between O-START
 ;;     ;; and END
@@ -342,7 +342,7 @@
   ;; is null, all overlays after O-START are included.
 
   (when (null end) (setq end (point-max)))
-  
+
   (let (overlay-list)
     ;; create list of all overlays corresponding to same entry between O-START
     ;; and END

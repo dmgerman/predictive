@@ -81,7 +81,7 @@
 			     (save-excursion
 			       (goto-char (overlay-get o-match 'delim-end))
 			       (1+ (line-end-position))))))
-    
+
     ;; give new overlay some basic properties
     (overlay-put o-new 'auto-overlay t)
     (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
@@ -131,7 +131,7 @@
 	  (auto-o-update-exclusive (overlay-get o-self 'set-id)
 				   end (overlay-end o-self)
 				   nil (overlay-get o-self 'priority)))
-	 
+
 	 ;; if we extend beyond end of line...
 	 ((/= (overlay-end o-self) (+ start (match-end 0)))
 	  ;; shrink ourselves so we extend till end of line
@@ -142,6 +142,6 @@
 				   (overlay-get o-self 'priority) nil))
 	 ))))
 )
-      
-  
+
+
 ;; auto-overlay-line.el ends here

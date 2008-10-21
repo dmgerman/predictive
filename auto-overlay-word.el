@@ -80,14 +80,14 @@
       (when (symbolp (car props)) (setq props (list props)))
       (dolist (p (auto-o-props o-match))
 	(overlay-put o-new (car p) (cdr p))))
-    
+
     ;; if new overlay is exclusive, delete lower priority overlays within it
     (when (and (overlay-get o-new 'exclusive)
 	       (/= (overlay-start o-new) (overlay-end o-new)))
       (auto-o-update-exclusive (overlay-get o-new 'set)
 			       (overlay-start o-new) (overlay-end o-new)
 			       nil (overlay-get o-new 'priority)))
-    
+
     ;; return new overlay
     o-new)
 )

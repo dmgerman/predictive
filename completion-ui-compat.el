@@ -44,7 +44,7 @@
   "Return pixel position of top left corner of glyph at POSITION,
 relative to top left corner of frame containing WINDOW. Defaults to the
 position of point in the selected window."
-  
+
   (unless window (setq window (selected-window)))
   (unless position (setq position (window-point window)))
 
@@ -60,20 +60,20 @@ position of point in the selected window."
 	 (offset (completion-compat-window-offsets window))
 	 (restore (mouse-pixel-position))
 	 pixel-pos)
-    
+
     ;; move and restore mouse position using position in units of characters
     ;; to get position in pixels
     (set-mouse-position (window-frame window)
 			(+ x (car offset)) (+ y (cdr offset)))
     (setq pixel-pos (cdr (mouse-pixel-position)))
     (set-mouse-pixel-position (car restore) (cadr restore) (cddr restore))
-    
+
     ;; return pixel position
     (setcdr pixel-pos (- (cdr pixel-pos)
 			 (/ (frame-char-height (window-frame window)) 2)))
     pixel-pos)
 )
-    
+
 
 
 (defun completion-compat-posn-at-point-as-event
@@ -87,7 +87,7 @@ POSITION and WINDOW default to the position of point in the
 selected window.
 
 DX and DY specify optional offsets from the top left of the glyph."
-  
+
   (unless window (setq window (selected-window)))
   (unless position (setq position (window-point window)))
   (unless dx (setq dx 0))
@@ -122,7 +122,7 @@ DX and DY specify optional offsets from the top left of the glyph."
     (setcdr pixel-pos (- (cdr pixel-pos) 1
 			 (* (frame-char-height frame) (nth 1 edges))
 			 (/ (frame-char-height frame) 2)))
-    
+
     ;; return a fake event containing the position
     (setcar pixel-pos (+ (car pixel-pos) dx))
     (setcdr pixel-pos (+ (cdr pixel-pos) dy))

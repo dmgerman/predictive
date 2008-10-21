@@ -36,7 +36,7 @@
 ;;
 ;; Version 0.1.6
 ;; * renamed from "nest" to "nested"
-;; 
+;;
 ;; Version 0.1.5
 ;; * set overlay properties straight after creation in `auto-o-make-nest',
 ;;   rather than leaving it to `auto-overlay-update', in case matching causes
@@ -85,7 +85,7 @@
      ;; if the stack is empty, just create and return a new unmatched overlay
      ((null overlay-stack)
       (auto-o-make-nested o-match 'unmatched))
-     
+
      ;; if appropriate edge of innermost overlay is unmatched, just match it
      ((or (and (eq (auto-o-edge o-match) 'start)
 	       (not (auto-o-start-matched-p o)))
@@ -94,7 +94,7 @@
       (auto-o-match-overlay o o-match)
       ;; return nil since haven't created any new overlays
       nil)
-     
+
      ;; otherwise...
      (t
       ;; create new innermost overlay and add it to the overlay stack
@@ -112,10 +112,10 @@
 (defun auto-o-nested-suicide (o-self)
   ;; Called when match no longer matches. Unmatch the match overlay O-SELF, if
   ;; necessary deleting its parent overlay or cascading the stack.
-  
+
   (let* ((overlay-stack (auto-o-nested-stack o-self))
 	(o-parent (car overlay-stack)))
-    
+
     (cond
      ;; if other end of parent is unmatched, just delete parent
      ((not (auto-o-edge-matched-p
@@ -130,7 +130,7 @@
 	  (auto-o-match-overlay o-parent 'unmatched nil)
 	    ;; if we're an end match, make parent end-unmatched
 	(auto-o-match-overlay o-parent nil 'unmatched)))
-     
+
       ;; otherwise, unmatch ourselves from parent and cascade the stack
      (t
       (overlay-put o-parent (auto-o-edge o-self) nil)
@@ -139,7 +139,7 @@
      ))
 )
 
-      
+
 
 
 (defun auto-o-make-nested (o-match &optional unmatched)
@@ -159,7 +159,7 @@
       (overlay-put o-new 'set-id (overlay-get o-match 'set-id))
       (overlay-put o-new 'definition-id (overlay-get o-match 'definition-id))
       (auto-o-match-overlay o-new o-match 'unmatched))
-     
+
      ((eq (auto-o-edge o-match) 'end)
       (setq pos (overlay-get o-match 'delim-start))
       (setq o-new (make-overlay pos pos nil nil 'rear-advance))
@@ -178,10 +178,10 @@
   ;; Cascade the ends of the overlays in OVERLAY-STACK up or down the stack,
   ;; so as to re-establish a valid stack. It assumes that only the innermost
   ;; is incorrect.
-  
+
   (let ((o (car overlay-stack)) o1)
     (cond
-     
+
      ;; if innermost overlay is start-matched (and presumably
      ;; end-unmatched)...
      ((auto-o-start-matched-p o)
@@ -200,8 +200,8 @@
 	  ;; FIXME: could postpone re-parsing here in case it can be avoided
 	  (auto-o-match-overlay o1 nil 'unmatch nil nil 'protect-match)
 	(auto-o-delete-overlay o1 nil 'protect-match)))
-     
-     
+
+
      ;; if innermost overlay is end-matched (and presumably
      ;; start-unmatched)...
      ((auto-o-end-matched-p o)
@@ -233,7 +233,7 @@
   ;; implies they cover identical regions if overlays are correctly
   ;; stacked). For other overlays with identical lengths, the order is
   ;; undefined.
-  
+
   ;; find overlays corresponding to same entry overlapping O-MATCH
   (let ((overlay-stack (auto-overlays-at-point
 			(if (eq (auto-o-edge o-match) 'start)
