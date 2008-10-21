@@ -35,6 +35,8 @@
 ;; * define delimiter portion of all brace regexps to fix overlay bug
 ;; * added `predictive-texinfo-jump-to-*-definition' commands which use the
 ;;   new auto-dict features for tracking definitions
+;; * added `predictive-texinfo-after-save' and
+;;   `predictive-texinfo-kill-buffer' hook functions
 ;;
 ;; Version 0,1
 ;; * initial release, borrowing heavily from predictive-latex.el
@@ -48,7 +50,7 @@
 (require 'auto-overlay-line)
 (require 'auto-overlay-self)
 (require 'auto-overlay-nested)
-(require 'predictive-latex)
+(require 'predictive-latex)  ; we use dict-latex-math etc. for equations
 
 (provide 'predictive-texinfo)
 (add-to-list 'predictive-major-mode-alist
@@ -69,7 +71,7 @@
 (defcustom predictive-texinfo-electric-environments nil
   "*When enabled, environment names are automatically synchronized
 between \\begin{...} and \\end{...} commands."
-  :group 'predictive-latex
+  :group 'predictive-texinfo
   :type 'boolean)
 
 
@@ -102,10 +104,15 @@ between \\begin{...} and \\end{...} commands."
 (defvar predictive-restore-override-syntax-alist nil)
 (make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
+;; variable storing filename before saving, to detect renaming
+(defvar predictive-texinfo-previous-filename nil)
+(make-variable-buffer-local 'predictive-texinfo-previous-filename)
 
-;; background color for certain auto-overlays to aid debugging
-(defvar predictive-overlay-debug-colour nil)
-(defvaralias 'predictive-overlay-debug-color 'predictive-overlay-debug-colour)
+
+;; variable storing filename before saving, to detect renaming (see
+;; `predictive-texinfo-after-save')
+(defvar predictive-texinfo-previous-filename nil)
+(make-variable-buffer-local 'predictive-texinfo-previous-filename)
 
 
 ;; prevent bogus compiler warnings
@@ -113,6 +120,11 @@ between \\begin{...} and \\end{...} commands."
   (defvar dict-texinfo)
   (defvar dict-texinfo-env)
   (defvar dict-texinfo-indicating))
+
+
+;; background color for certain auto-overlays to aid debugging
+(defvar predictive-overlay-debug-colour nil)
+(defvaralias 'predictive-overlay-debug-color 'predictive-overlay-debug-colour)
 
 
 ;; background color for certain auto-overlays to aid debugging
@@ -742,10 +754,25 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; Function called from `after-save-hook'
   (auto-overlay-save-overlays 'predictive nil
 			      predictive-auxiliary-file-location)
-  ;; save local dicts
-  (predictive-auto-dict-save "texinfo-node")
-  (predictive-auto-dict-save "texinfo-local-texinfo")
-  (predictive-auto-dict-save "texinfo-local-flag")
+  ;; if file has not been renamed, just save local dicts
+  (if (or (and (null predictive-texinfo-previous-filename)
+	       (null (buffer-file-name)))
+	  (string= predictive-texinfo-previous-filename
+		   (buffer-file-name)))
+      (progn
+	(predictive-auto-dict-save "texinfo-node")
+	(predictive-auto-dict-save "texinfo-local-texinfo")
+	(predictive-auto-dict-save "texinfo-local-flag"))
+    ;; otherwise, restart predictive-mode to set everything up afresh
+    (let ((restore (buffer-file-name)))
+      (set-visited-file-name predictive-texinfo-previous-filename)
+      (predictive-mode -1)
+      (set-visited-file-name restore)
+      (set-buffer-modified-p nil)
+      (predictive-mode 1)))
+
+  ;; store visited file name for comparison next time buffer is saved
+  (setq predictive-texinfo-previous-filename (buffer-file-name))
   ;; repeat file save nessage (overwritten by overlay and dict save messages)
   (message "Wrote %s and saved predictive-mode state" (buffer-file-name)))
 
@@ -899,7 +926,7 @@ the node name at point (if any)."
 		"Texinfo node: ")
 	      (lambda (string predicate all)
 		(dictree-collection-function dict string predicate all))
-	      nil t nil 'predictive-latex-node-history node t)))
+	      nil t nil 'predictive-texinfo-node-history node t)))
 	;; unless user accepted default, any overlay we found is no longer
 	;; relevant
 	(unless (string= node node-tmp)
@@ -957,7 +984,7 @@ the command at point (if any)."
 		"Texinfo command: ")
 	      (lambda (string predicate all)
 		(dictree-collection-function dict string predicate all))
-	      nil t nil 'predictive-latex-command-history command t)))
+	      nil t nil 'predictive-texinfo-command-history command t)))
 	;; unless user accepted default, any overlay we found is no longer
 	;; relevant
 	(unless (string= command command-tmp)
@@ -1010,7 +1037,7 @@ the flag at point (if any)."
 		"Texinfo flag: ")
 	      (lambda (string predicate all)
 		(dictree-collection-function dict string predicate all))
-	      nil t nil 'predictive-latex-flag-history flag t)))
+	      nil t nil 'predictive-texinfo-flag-history flag t)))
 	;; unless user accepted default, any overlay we found is no longer
 	;; relevant
 	(unless (string= flag flag-tmp)

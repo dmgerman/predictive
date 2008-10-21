@@ -40,6 +40,8 @@
 ;;   correctly for multifile documents, by using the new auto-dict features
 ;;   for tracking definitions
 ;; * added `predictive-latex-jump-to-*-definition' commands
+;; * added `predictive-latex-after-save' and `predictive-latex-kill-buffer'
+;;   hook functions
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -309,6 +311,11 @@ When a document class is in the list, "
 (defvar predictive-restore-override-syntax-alist nil)
 (make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
+;; variable storing filename before saving, to detect renaming (see
+;; `predictive-latex-after-save')
+(defvar predictive-latex-previous-filename nil)
+(make-variable-buffer-local 'predictive-latex-previous-filename)
+
 
 ;; prevent bogus compiler warnings
 (eval-when-compile
@@ -346,10 +353,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (lambda (prefix completions)
 	      (if (string= (substring prefix 0 1) "\\")
 		  (predictive-latex-construct-browser-menu prefix completions)
-		(completion-construct-menu prefix completions))
-	      ))
+		(completion-construct-menu prefix completions))))
       ;; save predictive-main-dict; restored when predictive mode is disabled
       (setq predictive-restore-main-dict predictive-main-dict)
+      ;; store filename for comparison when saving (see
+      ;; `predictive-latex-after-save')
+      (setq predictive-latex-previous-filename (buffer-file-name))
 
 
       (cond
@@ -361,6 +370,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (setq filename (expand-file-name TeX-master))
 	  (unless (string= (substring filename -4) ".tex")
 	    (setq filename (concat filename ".tex")))
+	  (unless (file-exists-p filename) (throw 'load-fail nil))
 	  (save-window-excursion
 	    (find-file filename)
 	    (turn-on-predictive-mode)
@@ -396,9 +406,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        ;; FIXME: probably need to handle null TeX-master case differently
        (t
 	;; load the latex dictionaries
-	(unless (predictive-load-dict 'dict-latex-docclass)
-	  (message "Failed to load dict-latex-docclass")
-	  (throw 'load-fail nil))
 	(mapc (lambda (dic)
 		(unless (predictive-load-dict dic)
 		  (message "Failed to load %s" dic)
@@ -407,13 +414,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		      predictive-latex-math-dict
 		      predictive-latex-preamble-dict
 		      predictive-latex-env-dict
-		      predictive-latex-bibstyle-dict))
+		      predictive-latex-bibstyle-dict
+		      (list 'dict-latex-docclass)))
 	;; load/create the label and local latex dictionaries
-	(predictive-auto-dict-load "latex-label")
-	(predictive-auto-dict-load "latex-local-latex")
-	(predictive-auto-dict-load "latex-local-math")
-	(predictive-auto-dict-load "latex-local-env")
-	(predictive-auto-dict-load "latex-section")
+	(setq predictive-latex-label-dict
+	      (predictive-auto-dict-load "latex-label")
+	      predictive-latex-local-latex-dict
+	      (predictive-auto-dict-load "latex-local-latex")
+	      predictive-latex-local-math-dict
+	      (predictive-auto-dict-load "latex-local-math")
+	      predictive-latex-local-env-dict
+	      (predictive-auto-dict-load "latex-local-env")
+	      predictive-latex-section-dict
+	      (predictive-auto-dict-load "latex-section"))
 
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
@@ -491,11 +504,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-stop 'predictive nil predictive-auxiliary-file-location)
     (auto-overlay-unload-set 'predictive)
     ;; unload local dicts, without saving if buffer wasn't saved
-    (predictive-auto-dict-unload "latex-label" (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-latex" (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-math" (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-env" (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-section" (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))
+    (kill-local-variable 'predictive-latex-label-dict)
+    (kill-local-variable 'predictive-latex-local-latex-dict)
+    (kill-local-variable 'predictive-latex-local-math-dict)
+    (kill-local-variable 'predictive-latex-local-env-dict)
+    (kill-local-variable 'predictive-latex-section-dict)
     ;; restore predictive-main-dict to saved setting
     (kill-local-variable 'predictive-main-dict)
     (setq predictive-main-dict predictive-restore-main-dict)
@@ -512,10 +530,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-math-dict)
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-map)
-    (kill-local-variable 'predictive-latex-label-dict)
-    (kill-local-variable 'predictive-latex-local-latex-dict)
-    (kill-local-variable 'predictive-latex-local-math-dict)
-    (kill-local-variable 'predictive-latex-local-env-dict)
+    (kill-local-variable 'predictive-latex-previous-filename)
     ;; remove hook function that saves overlays
     (remove-hook 'after-save-hook 'predictive-latex-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
@@ -1171,12 +1186,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-save-overlays
      'predictive nil
      predictive-auxiliary-file-location))
-  ;; unload local dicts, without saving if buffer wasn't saved
-  (predictive-auto-dict-unload "latex-label" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-latex" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-math" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-env" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-section" (buffer-modified-p)))
+  ;; unload local dicts, saving if buffer is saved
+  (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p)))
 
 
 
@@ -1184,12 +1199,27 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; Function called from `after-save-hook'
   (auto-overlay-save-overlays 'predictive nil
 			      predictive-auxiliary-file-location)
-  ;; save local dicts
-  (predictive-auto-dict-save "latex-label")
-  (predictive-auto-dict-save "latex-local-latex")
-  (predictive-auto-dict-save "latex-local-math")
-  (predictive-auto-dict-save "latex-local-env")
-  (predictive-auto-dict-save "latex-section")
+  ;; if file has not been renamed, just save local dicts
+  (if (or (and (null predictive-latex-previous-filename)
+	       (null (buffer-file-name)))
+	  (string= predictive-latex-previous-filename
+		   (buffer-file-name)))
+      (progn
+	(predictive-auto-dict-save "latex-label")
+	(predictive-auto-dict-save "latex-local-latex")
+	(predictive-auto-dict-save "latex-local-math")
+	(predictive-auto-dict-save "latex-local-env")
+	(predictive-auto-dict-save "latex-section"))
+    ;; otherwise, restart predictive-mode to set everything up afresh
+    (let ((restore (buffer-file-name)))
+      (set-visited-file-name predictive-latex-previous-filename)
+      (predictive-mode -1)
+      (set-visited-file-name restore)
+      (set-buffer-modified-p nil)
+      (predictive-mode 1)))
+
+  ;; store visited file name for comparison next time buffer is saved
+  (setq predictive-latex-previous-filename (buffer-file-name))
   ;; repeat file save nessage (overwritten by overlay and dict save messages)
   (message "Wrote %s and saved predictive-mode state" (buffer-file-name)))
 
@@ -1214,16 +1244,21 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (kill-local-variable 'predictive-latex-bibstyle-dict)
   (make-local-variable 'predictive-latex-bibstyle-dict)
   ;; revert to saved auto-dicts
-  (predictive-auto-dict-unload "latex-label" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-latex" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-math" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-env" (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-section" (buffer-modified-p))
-  (predictive-auto-dict-load "latex-label")
-  (predictive-auto-dict-load "latex-local-latex")
-  (predictive-auto-dict-load "latex-local-math")
-  (predictive-auto-dict-load "latex-local-env")
-  (predictive-auto-dict-load "latex-section")
+  (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+  (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))
+  (setq predictive-latex-label-dict
+	(predictive-auto-dict-load "latex-label")
+	predictive-latex-local-latex-dict
+	(predictive-auto-dict-load "latex-local-latex")
+	predictive-latex-local-math-dict
+	(predictive-auto-dict-load "latex-local-math")
+	predictive-latex-local-env-dict
+	(predictive-auto-dict-load "latex-local-env")
+	predictive-latex-section-dict
+	(predictive-auto-dict-load "latex-section"))
   ;; clear and reload the overlay definitions (have to do this, otherwise some
   ;; auto-overlays try to add duplicate regexp definitions when reparsed)
   (setq auto-overlay-regexps nil)

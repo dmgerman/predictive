@@ -32,12 +32,15 @@
 ;;; Change Log:
 ;;
 ;; Version 0.3
-;; * fix bug causing two duplicate deletions from dict by removing
+;; * fixed bug causing two duplicate deletions from dict by removing
 ;;   `predictive-auto-dict-suicide' entirely; word already gets deleted by
 ;;   `predictive-auto-dict-update'
 ;; * keep track of which overlays defined each auto-dict word
 ;; * wrote `predictive-auto-dict-jump-to-def' function to jump to definition
 ;;   corresponding to an auto-dict word
+;; * added `predictive-auto-dict-unload' and `predictive-auto-dict-save'
+;; * `predictive-auto-dict-load' no longer sets auxiliary variable to point to
+;;   dictionaries, it just loads and returns the dictionary
 ;;
 ;; Version 0.2
 ;; * moved utility functions from predictive-latex.el
@@ -105,7 +108,7 @@
 		    ;; that stage)
 		    (when predictive-mode
 		      (lambda (new old)
-			(message "Warning: dupliacte definition of \"%s\""
+			(message "Warning: duplicate definition of \"%s\""
 				 word)
 			(+ new old))))
     ;; store reference to this definition overlay
@@ -183,75 +186,12 @@
 ;;; =================================================================
 ;;;    Internal functions for automatically generated dictionaries
 
-(defmacro predictive-auto-dict-name (name)
+(defmacro predictive-auto-dict-name (name &optional file)
   ;; Return a dictionary name constructed from NAME and the buffer name
   `(intern
     (concat "dict-" ,name "-"
 	    (file-name-sans-extension
-	     (file-name-nondirectory (buffer-file-name))))))
-
-
-
-(defun predictive-auto-dict-load (name)
-  "Load/create a NAME dictionary for the current buffer."
-  (let ((dict (intern (concat "predictive-" name "-dict")))
-	dictname filename)
-    (cond
-     ;; if buffer is associated with a file...
-     ((buffer-file-name)
-      (setq dictname (predictive-auto-dict-name name))
-      (setq filename
-	    (concat (file-name-directory (buffer-file-name))
-		    predictive-auxiliary-file-location
-		    (symbol-name dictname) ".elc"))
-      ;; create directory for dictionary file if necessary
-      (predictive-create-auxiliary-file-location)
-      ;; if dictionary isn't loaded, load or create it
-      (unless (condition-case
-		  error (eval (intern-soft dictname))
-		(void-variable nil))
-	(if (not (file-exists-p filename))
-	    (dictree-create dictname filename
-			    predictive-dict-autosave nil
-			    '< '+ 'predictive-dict-rank-function
-			    nil nil nil nil predictive-completion-speed
-			    nil nil nil nil
-			    'predictive-auto-dict-plist-savefun nil)
-	  (load filename)
-	  (setf (dictree-filename (eval dictname)) filename))
-	(predictive-load-dict dictname))
-      ;; set the NAME dictionary to the loaded/new dictionary
-      (set dict (eval dictname)))
-
-     (t  ;; if buffer is not associated with a file...
-      (set dict (dictree-create dictname filename nil nil
-				'< '+ 'predictive-dict-rank-function
-				nil nil nil nil predictive-completion-speed
-				nil nil nil nil
-				'predictive-auto-dict-plist-savefun nil))
-      (setf (dictree-name (eval dict)) name))
-     )))
-
-
-
-(defun predictive-auto-dict-unload (name &optional dont-save)
-  "Unload and possibly save the current buffer's NAME dictionary."
-  (let ((dict (eval (intern (concat "predictive-" name "-dict"))))
-	dictname)
-    (cond
-     ((buffer-file-name)
-      (setq dictname (predictive-auto-dict-name name))
-      (dictree-unload (eval dictname) dont-save)
-      (set (intern (concat "predictive-" name "-dict")) nil))
-     (t
-      (dictree-unload (if (dictree-p dict) dict (eval dict)) dont-save)))))
-
-
-
-(defun predictive-auto-dict-save (name)
-  "Save the current buffer's NAME dictionary if associated with a file."
-  (when (buffer-file-name)
-    (dictree-save (eval (intern (concat "predictive-" name "-dict"))))))
+	     (file-name-nondirectory (or ,file (buffer-file-name)))))))
 
 
 
@@ -270,6 +210,61 @@
     (plist-put plist :definitions strings)
     plist))
 
+
+
+(defun predictive-auto-dict-load (name &optional file)
+  "Load/create a NAME dictionary for the current buffer."
+  (let (dictname)
+    (cond
+     ;; if buffer is associated with a file...
+     ((buffer-file-name)
+      (setq dictname (predictive-auto-dict-name name file))
+      (unless file
+	(setq file
+	      (concat (file-name-directory (buffer-file-name))
+		      predictive-auxiliary-file-location
+		      (symbol-name dictname) ".elc")))
+      ;; create directory for dictionary file if necessary
+      (predictive-create-auxiliary-file-location)
+      ;; if dictionary is already loaded, return it
+      (if (condition-case
+	      error (eval (intern-soft dictname))
+	    (void-variable nil))
+	  (eval (intern-soft dictname))
+	;; otherwise, load or create it
+	(if (not (file-exists-p file))
+	    (dictree-create dictname file
+			    predictive-dict-autosave nil
+			    '< '+ 'predictive-dict-rank-function
+			    nil nil nil nil predictive-completion-speed
+			    nil nil nil nil
+			    'predictive-auto-dict-plist-savefun nil)
+	  (load file)
+	  (setf (dictree-filename (eval dictname)) file))
+	(predictive-load-dict dictname)
+	(eval dictname)))  ; return the dictionary
+
+     ;; if buffer is not associated with a file, create a temporary NAME
+     ;; dictionary
+     (t
+      (dictree-create nil nil nil nil
+		      '< '+ 'predictive-dict-rank-function
+		      nil nil nil nil predictive-completion-speed
+		      nil nil nil nil
+		      'predictive-auto-dict-plist-savefun nil))
+     )))
+
+
+(defun predictive-auto-dict-unload (name &optional file dont-save)
+  "Unload and possibly save the current buffer's NAME dictionary."
+  (when (buffer-file-name)
+    (dictree-unload (eval (predictive-auto-dict-name name file)) dont-save)))
+
+
+(defun predictive-auto-dict-save (name &optional file)
+  "Save the current buffer's NAME dictionary if associated with a file."
+  (when (buffer-file-name)
+    (dictree-save (eval (predictive-auto-dict-name name file)))))
 
 
 
