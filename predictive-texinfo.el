@@ -135,12 +135,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ((> arg 0)
     (catch 'load-fail
       ;; save overlays and unload regexp definitions along with buffer
-      (add-hook 'after-save-hook
-		(lambda ()
-		  (auto-overlay-save-overlays
-		   'predictive nil
-		   predictive-auxiliary-file-location))
-		nil t)
+      (add-hook 'after-save-hook 'predictive-texinfo-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
 
       ;; use Texinfo browser menu if first character of prefix is "\"
@@ -211,16 +206,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
     (kill-local-variable 'completion-menu)
     ;; remove hook function that saves overlays
-    (remove-hook 'after-save-hook
-		 (lambda ()
-		   (auto-overlay-save-overlays
-		    'predictive nil
-		    predictive-auxiliary-file-location))
-		 t)
+    (remove-hook 'after-save-hook 'predictive-texinfo-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer t)
 
-    t))  ; indicate successful reversion of changes
-)
+    t)))  ; indicate successful reversion of changes
 
 
 
@@ -746,6 +735,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
   (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
   (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p)))
+
+
+
+(defun predictive-texinfo-after-save ()
+  ;; Function called from `after-save-hook'
+  (auto-overlay-save-overlays 'predictive nil
+			      predictive-auxiliary-file-location)
+  ;; save local dicts
+  (predictive-auto-dict-save "texinfo-node")
+  (predictive-auto-dict-save "texinfo-local-texinfo")
+  (predictive-auto-dict-save "texinfo-local-flag")
+  ;; repeat file save nessage (overwritten by overlay and dict save messages)
+  (message "Wrote %s and saved predictive-mode state" (buffer-file-name)))
 
 
 
