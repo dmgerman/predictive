@@ -1018,20 +1018,19 @@ Usually called after a completion is accepted."
 
     ;; if there is a current dict...
     (unless (eq dict t)
-      (let ((dictlist dict) wordlist)
-	(when (dictree-p dict) (setq dictlist (list dict)))
-	;; if ignoring initial caps, look for uncapitalized word too
-	(if (and predictive-ignore-initial-caps
-		 (predictive-capitalized-p word))
-	    (setq wordlist (list (downcase word) word))
-	  (setq wordlist (list word)))
-	;; look for word in all dictionaries in list
-	(setq found
-	      (catch 'found
-		(while dictlist
-		  (setq dic (pop dictlist))
-		  (dolist (wrd wordlist)
-		    (when (dictree-member-p dic wrd) (throw 'found wrd)))))))
+      (when (dictree-p dict) (setq dict (list dict)))
+      ;; if ignoring initial caps, look for uncapitalized word too
+      (if (and predictive-ignore-initial-caps
+	       (predictive-capitalized-p word))
+	  (setq word (list (downcase word) word))
+	(setq word (list word)))
+      ;; look for word in all dictionaries in list
+      (setq found
+	    (catch 'found
+	      (dolist (d dict)
+		(setq dic d)
+		(dolist (wrd word)
+		  (when (dictree-member-p dic wrd) (throw 'found wrd))))))
 
 
       ;; if the completion was not in the dictionary,
@@ -1066,9 +1065,8 @@ Usually called after a completion is accepted."
 	      ;; if buffer-local dictionaries are not enabled, display an
 	      ;; error message
 	      (if (null predictive-use-buffer-local-dict)
-		  (message "The setting of `predictive-auto-add-to-dict'\
- specifies adding to the buffer-local dictionary, but buffer-local\
- dictionaries are not enabled by `predictive-use-buffer-local-dict'")
+		  (message "`predictive-auto-add-to-dict' trying to add to\
+ buffer-local dictionary, but `predictive-use-buffer-local-dict' is disabled")
 		;; if caching auto-added words, do so
 		(if predictive-use-auto-learn-cache
 		    (push (cons word
