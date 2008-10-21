@@ -2776,9 +2776,8 @@ Most significantly, it provided the clue that ternary search trees are
 the best data structure to use for the dictionaries.
 
 Ternary search trees are described in a very readable article by Jon
-Bentley and Robert Sedgewick in Dr. Dobb's Journal, among other
-places. The article can be found via
-@uref{http://www.ddj.com/articles/1998/9804/}.
+Bentley and Robert Sedgewick. The article can be found via
+@uref{http://www.cs.princeton.edu/~rs/strings/}.
 
 Finally, the English dictionary supplied with the predictive completion
 package was originally based on the British National Corpus frequency
@@ -2821,4 +2820,12 @@ tables, available from
 
 @bye
 
+
+@c  Local Variables:
+@c  mode: latex
+@c  mode: texinfo
+@c  mode: predictive
+@c  End:
+
 @c  LocalWords:  Regexps regexps maths customization
+
