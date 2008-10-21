@@ -117,6 +117,7 @@
 ;;   `completion-browser-menu-iterm'
 ;; * made most anonymous lambda bindings into names functions (lambdas just
 ;;   confuse people, and make it hard to bind other keys to the same thing)
+;; * bug-fix to `completion-select' which triggered infinite recursion trap
 ;;
 ;; Version 0.9.3
 ;; * added 'accept-common option to `completion-resolve-behaviour'
@@ -696,7 +697,7 @@ correct position on different window systems."
 		   (stringp (face-attribute 'menu :foreground))
 		   (list :background (face-attribute 'menu :background)
 			 :foreground (face-attribute 'menu :foreground)))
-	      '(:background "grey" :foreground "black"))))
+	      '(:background "light yellow" :foreground "black"))))
   "*Face used in tooltip. Only :foreground, :background and :family
 attributes are used."
   :group 'completion-ui)
@@ -2706,18 +2707,19 @@ internally. It should *never* be bound in a keymap."
 	 ((null completions)
 	  (when completion-trap-recursion
 	    (error "Recursive call to `completion-select'"))
-	  (let ((restore completion-use-hotkeys))
-	    (setq completion-use-hotkeys nil)
-	    (let ((completion-trap-recursion t))
-	      (unwind-protect
-		  (command-execute (key-binding key t))
-		(setq completion-use-hotkeys restore)))))
+	  (completion-disable-hotkeys overlay)
+	  (let ((completion-trap-recursion t))
+	    (unwind-protect
+		(command-execute (key-binding key t))
+	      (completion-enable-hotkeys overlay))))
 
 	 ;; if there are too few completions, display message
 	 ((>= n (length completions))
 	  (beep)
-	  (message "Only %d completions available"
-		   (length (overlay-get overlay 'completions))))
+	  (if (= (length completions) 1)
+	      (message "Only 1 completion available")
+	    (message "Only %d completions available"
+		     (length (overlay-get overlay 'completions)))))
 
 	 ;; otherwise, replace dynamic completion with selected one
 	 (t
