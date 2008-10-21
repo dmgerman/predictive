@@ -207,7 +207,9 @@
       ;; create directory for dictionary file if necessary
       (predictive-create-auxiliary-file-location)
       ;; if dictionary isn't loaded, load or create it
-      (unless (featurep dictname)
+      (unless (condition-case
+		  error (eval (intern-soft dictname))
+		(void-variable nil))
 	(if (not (file-exists-p filename))
 	    (dictree-create dictname filename
 			    predictive-dict-autosave nil
@@ -227,16 +229,29 @@
 				nil nil nil nil predictive-completion-speed
 				nil nil nil nil
 				'predictive-auto-dict-plist-savefun nil))
-      (setq dict (eval dict))
-      (setf (dictree-name dict) name))
+      (setf (dictree-name (eval dict)) name))
      )))
 
 
 
 (defun predictive-auto-dict-unload (name &optional dont-save)
   "Unload and possibly save the current buffer's NAME dictionary."
-  (let ((dict (eval (intern (concat "predictive-" name "-dict")))))
-    (dictree-unload (if (dictree-p dict) dict (eval dict)) dont-save)))
+  (let ((dict (eval (intern (concat "predictive-" name "-dict"))))
+	dictname)
+    (cond
+     ((buffer-file-name)
+      (setq dictname (predictive-auto-dict-name name))
+      (dictree-unload (eval dictname) dont-save)
+      (set (intern (concat "predictive-" name "-dict")) nil))
+     (t
+      (dictree-unload (if (dictree-p dict) dict (eval dict)) dont-save)))))
+
+
+
+(defun predictive-auto-dict-save (name)
+  "Save the current buffer's NAME dictionary if associated with a file."
+  (when (buffer-file-name)
+    (dictree-save (eval (intern (concat "predictive-" name "-dict"))))))
 
 
 
