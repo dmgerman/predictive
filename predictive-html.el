@@ -120,12 +120,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (setq predictive-main-dict
 	    (append predictive-main-dict '(dict-html dict-html-char-entity)))
 
-      ;; save overlays and unload regexp definitions before killing buffer
-      (add-hook 'kill-buffer-hook
-		(lambda ()
-		  (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		  (auto-overlay-unload-set 'predictive))
-		nil t)
+      ;; save overlays along with buffer
+      (add-hook 'after-save-hook 'predictive-html-after-save nil t)
+      (add-hook 'kill-buffer-hook 'predictive-html-kill-buffer nil t)
 
       ;; use html browser menu if first character of prefix is "<" or "&"
       (make-local-variable 'completion-menu)
@@ -167,17 +164,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-restore-override-syntax-alist)
     ;; remove other local variable settings
     (kill-local-variable 'completion-menu)
-    ;; remove hook function that saves overlays
-    (remove-hook 'kill-buffer-hook
-		 (lambda ()
-		   (auto-overlay-stop 'predictive nil 'save 'leave-overlays)
-		   (auto-overlay-unload-set 'predictive))
-		 t)
+    ;; remove hook functions that save overlays
+    (remove-hook 'after-save-hook 'predictive-html-after-save t)
+    (remove-hook 'kill-buffer-hook 'predictive-html-kill-buffer t)
 
-    t))  ; indicate successful reversion of changes
-)
-
-
+    t)))  ; indicate successful reversion of changes
 
 
 
@@ -388,14 +379,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (">"
 	     :edge end
 	     (priority . 10))
-	    ))
-)
+	    )))
 
 
 
 (defun predictive-html-load-keybindings ()
   "Load the predictive mode html key bindings."
-
   ;; make "<", ">", and "&" do the right thing
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
@@ -404,8 +393,53 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(append '((?< . (accept word))
 		  (?> . (accept none))
 		  (?& . (accept word)))
-		auto-completion-override-syntax-alist))
-)
+		auto-completion-override-syntax-alist)))
+
+
+
+(defun predictive-html-kill-buffer ()
+  ;; Function called from `kill-buffer-hook' to tidy things up
+  ;; save overlays if buffer was saved
+  (unless (buffer-modified-p)
+    (auto-overlay-save-overlays 'predictive nil
+				predictive-auxiliary-file-location)))
+
+
+
+(defun predictive-html-after-save ()
+  ;; Function called from `after-save-hook'
+  (auto-overlay-save-overlays 'predictive nil
+			      predictive-auxiliary-file-location))
+
+
+
+(defun predictive-texinfo-reparse-buffer ()
+  "Clear all auto-overlays, then reparse buffer from scratch."
+  (interactive)
+
+  ;; stop the predictive auto-overlays without saving to file
+  (auto-overlay-stop 'predictive)
+  ;; revert to saved auto-dicts
+  (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
+  (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p))
+  (kill-local-variable 'predictive-texinfo-node-dict)
+  (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
+  (kill-local-variable 'predictive-texinfo-local-flag-dict)
+  (setq predictive-texinfo-node-dict
+	(predictive-auto-dict-load "texinfo-node")
+	predictive-texinfo-local-texinfo-dict
+	(predictive-auto-dict-load "texinfo-local-texinfo")
+	predictive-texinfo-local-flag-dict
+	(predictive-auto-dict-load "texinfo-local-flag"))
+  ;; clear and reload the overlay definitions (have to do this, otherwise some
+  ;; auto-overlays try to add duplicate regexp definitions when reparsed)
+  (setq auto-overlay-regexps nil)
+  (predictive-texinfo-load-regexps)
+  ;; restart the predictive auto-overlays; we let-bind predictive-mode to
+  ;; prevent duplicate definition warnings
+  (let ((predictive-mode nil))
+    (auto-overlay-start 'predictive nil 'ignore-save-file)))
 
 
 
@@ -417,8 +451,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; since we're using the browser as the default menu)
   (let ((menu (completion-construct-browser-menu
 	       prefix completions 'completion-browser-menu-item)))
-    (setq menu (butlast menu 2)))
-)
+    (setq menu (butlast menu 2))))
 
 
 
