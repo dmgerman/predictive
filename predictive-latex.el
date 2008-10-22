@@ -353,7 +353,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ((> arg 0)
     (catch 'load-fail
 
-      ;; save overlays and unload regexp definitions along with buffer
+      ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
 
@@ -547,7 +547,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-map)
     (kill-local-variable 'predictive-latex-previous-filename)
-    ;; remove hook function that saves overlays
+    ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-latex-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
 
@@ -1195,14 +1195,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-latex-kill-buffer ()
   ;; Function called from `kill-buffer-hook' to tidy things up
-  ;; save overlays and local dicts if buffer was saved
-
   ;; save overlays if buffer was saved
   (unless (buffer-modified-p)
     (when (buffer-file-name)
-      (auto-overlay-save-overlays
-       'predictive nil
-       predictive-auxiliary-file-location))
+      (auto-overlay-save-overlays 'predictive nil
+				  predictive-auxiliary-file-location))
     ;; unload local dicts, saving if buffer is saved
     (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
     (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))

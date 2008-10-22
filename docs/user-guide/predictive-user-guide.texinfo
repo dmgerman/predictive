@@ -172,18 +172,19 @@ sentences preceding it.)
 The current version of the predictive completion package can be obtained
 from @uref{http://www.dr-qubit.org/emacs.php}.
 
-If you are upgrading from a previous version of the predictive
-completion package, make sure you first backup dictionaries you use by
-dumping the words and data they contain to files (unless you want to
-start from scratch). To make the backups, use
+If you are upgrading from a previous version, make sure you first backup
+dictionaries you use by dumping the words and data they contain to files
+(unless you want to start from scratch). To make the backups, use
 @command{predictive-dump-dict-to-file}. @xref{Loading and Saving
 Dictionaries}. It is @emph{not} enough to make a copy of the dictionary
 file. Only the plain-text ``dumped'' format is guaranteed to be portable
 across different versions of predictive mode.
 
-@emph{However}, version 0.21 of the predictive completion package uses a
-different format than earlier versions, @emph{even} for the ``dumped''
-files! To port a dictionary, use the following procedure:
+@emph{However}, this version of the predictive completion package
+(version 0.21, or version 0.18 of the @file{predictive.el} library) uses
+a different format than earlier versions, @emph{even} for the ``dumped''
+files! To port a dictionary from older versions to this version, use the
+following procedure:
 
 @enumerate
 @item
@@ -194,9 +195,9 @@ just described, @emph{using the old version of the predictive package};
 start Emacs;
 
 @item
-load the @file{predictive-convert-dump-format} library (included in
-version 0.21 of the predictive completion package) using @kbd{M-x
-load-file /path/to/predictive-convert-dump-format.el};
+load the @file{predictive-convert-dump-format} library (included in this
+version of the predictive completion package) using @kbd{M-x load-file
+/path/to/predictive-convert-dump-format.el};
 
 @item
 open the ``dumped'' dictionary backup file in Emacs;
@@ -209,7 +210,7 @@ recreate the dictionary using the @command{predictive-create-dict}
 command (@pxref{Creating Dictionaries}).
 @end enumerate
 
-Repeat this procedure for each dictionary that you want to port to the
+Repeat this procedure for each dictionary that you want to port to this
 new version.
 
 Older versions of the predictive completion package saved dictionaries
@@ -368,7 +369,7 @@ tab-completion.
 menu item, which brings up the completion browser. This hierarchically
 lists @emph{all} possible completions, not just the most likely
 ones. (It can sometimes take a while to construct the completion
-browser, but you can always hit @kbd{C-g} to cancel
+browser, but you can hit @kbd{C-g} at any time to cancel
 it). @xref{Completion Menu and Browser}, for details.
 @cindex completion menu
 @cindex completion browser
@@ -400,8 +401,8 @@ already been trained on a large body of English text, which means it
 will take a very long time to adapt to your individual writing
 style. Don't expect predictive completion mode to display particularly
 good predictive powers if you stick to the default dictionary! For much
-better results, you should create your own dictionary (possible based on
-the supplied one), and train it on your own
+better results, you should create your own dictionary (based on the
+supplied one if you like), and train it on samples of your own
 writing. @xref{Dictionaries}.
 
 

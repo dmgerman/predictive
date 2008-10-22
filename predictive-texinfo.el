@@ -144,7 +144,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ;; ----- enabling Texinfo setup -----
    ((> arg 0)
     (catch 'load-fail
-      ;; save overlays and unload regexp definitions along with buffer
+      ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-texinfo-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
 
@@ -219,7 +219,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-texinfo-dict)
     (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
     (kill-local-variable 'completion-menu)
-    ;; remove hook function that saves overlays
+    ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-texinfo-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer t)
 
@@ -738,13 +738,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-texinfo-kill-buffer ()
   ;; Function called from `kill-buffer-hook' to tidy things up
-  ;; save overlays and local dicts if buffer was saved
-
   ;; save overlays if buffer was saved
   (unless (buffer-modified-p)
-    (auto-overlay-save-overlays
-     'predictive nil
-     predictive-auxiliary-file-location)
+    (auto-overlay-save-overlays 'predictive nil
+				predictive-auxiliary-file-location)
     ;; unload local dicts, without saving if buffer wasn't saved
     (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
     (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
