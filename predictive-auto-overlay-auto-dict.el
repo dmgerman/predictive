@@ -223,7 +223,7 @@
 	(setq file
 	      (concat (file-name-directory (buffer-file-name))
 		      predictive-auxiliary-file-location
-		      (symbol-name dictname) ".elc")))
+		      (symbol-name dictname))))
       ;; create directory for dictionary file if necessary
       (predictive-create-auxiliary-file-location)
       ;; if dictionary is already loaded, return it
@@ -232,15 +232,14 @@
 	    (void-variable nil))
 	  (eval (intern-soft dictname))
 	;; otherwise, load or create it
-	(if (not (file-exists-p file))
-	    (dictree-create dictname file
-			    predictive-dict-autosave nil
-			    '< '+ 'predictive-dict-rank-function
-			    nil nil nil nil predictive-completion-speed
-			    nil nil nil nil
-			    'predictive-auto-dict-plist-savefun nil)
-	  (load file)
-	  (setf (dictree-filename (eval dictname)) file))
+	(if (load file)
+	    (setf (dictree-filename (eval dictname)) file)
+	  (dictree-create dictname file
+			  predictive-dict-autosave nil
+			  '< '+ 'predictive-dict-rank-function
+			  nil nil nil nil predictive-completion-speed
+			  nil nil nil nil
+			  'predictive-auto-dict-plist-savefun nil))
 	(predictive-load-dict dictname)
 	(eval dictname)))  ; return the dictionary
 
