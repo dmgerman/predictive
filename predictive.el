@@ -590,6 +590,7 @@ See also `predictive-which-dict-mode' and `predictive-which-dict'."
 
 
 
+
 ;;; ==================================================================
 ;;;          Aliases for completion-UI customization options
 ;;;
@@ -1020,17 +1021,18 @@ Usually called after a completion is accepted."
     (unless (eq dict t)
       (when (dictree-p dict) (setq dict (list dict)))
       ;; if ignoring initial caps, look for uncapitalized word too
-      (if (and predictive-ignore-initial-caps
-	       (predictive-capitalized-p word))
-	  (setq word (list (downcase word) word))
-	(setq word (list word)))
-      ;; look for word in all dictionaries in list
-      (setq found
-	    (catch 'found
-	      (dolist (d dict)
-		(setq dic d)
-		(dolist (wrd word)
-		  (when (dictree-member-p dic wrd) (throw 'found wrd))))))
+      (let (wordlist)
+	(if (and predictive-ignore-initial-caps
+		 (predictive-capitalized-p word))
+	    (setq wordlist (list (downcase word) word))
+	  (setq wordlist (list word)))
+	;; look for word in all dictionaries in list
+	(setq found
+	      (catch 'found
+		(dolist (d dict)
+		  (setq dic d)
+		  (dolist (wrd wordlist)
+		    (when (dictree-member-p dic wrd) (throw 'found wrd)))))))
 
 
       ;; if the completion was not in the dictionary,
@@ -1107,7 +1109,7 @@ Usually called after a completion is accepted."
 		;; display error message if not a dictionary
 		(beep)
 		(message
-		 "Wrong type in `predictive-auto-add-to-dict': dictp")))
+		 "Wrong type in `predictive-auto-add-to-dict': dictree-p")))
 	     ))
 
 
@@ -1412,8 +1414,8 @@ respectively."
 
 
 (defun predictive-create-meta-dict
-  (dictname dictlist &optional file autosave speed)
-  "Create a new predictive mode meta-dictionary called DICTNAME,
+  (name dictlist &optional filename autosave speed)
+  "Create a new predictive mode meta-dictionary called NAME,
 based on the dictionaries in DICTLIST.
 
 The other arguments are as for `predictive-create-dict'."
@@ -1431,42 +1433,34 @@ The other arguments are as for `predictive-create-dict'."
 	 (read-file-name "File to save to \(optional): " nil "")))
 
   ;; sort out arguments
-  (when (< (length dictlist) 2)
-    (error "Can't see the point in creating a meta-dictionary based on less\
+  (when (interactive-p)
+    (when (< (length dictlist) 2)
+      (error "Can't see the point in creating a meta-dictionary based on less\
  than two dictionaries"))
-  (when (symbolp dictname) (setq dictname (symbol-name dictname)))
+    (when (symbolp name) (setq name (symbol-name name)))
+    (when (string= filename "") (setq filename nil)))
 
   ;; confirm if overwriting existing dict, then unload existing one
   ;; (Note: we need the condition-case to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead)
   (when (or (and (null (dictree-p (condition-case
-				      error (eval (intern-soft dictname))
+				      error (eval (intern-soft name))
 				    (void-variable nil))))
-		 (setq dictname (intern dictname)))
+		 (setq name (intern name)))
 	    (or (null (interactive-p))
 		(and (y-or-n-p
 		      (format "Dictionary %s already exists. Replace it? "
-			      dictname))
-		     (dictree-unload (eval (intern-soft dictname)))
-		     (setq dictname (intern dictname)))))
+			      name))
+		     (dictree-unload (eval (intern-soft name)))
+		     (setq name (intern name)))))
 
-    (let (dict
-	  (complete-speed (if speed speed predictive-completion-speed))
-	  (autosave (if autosave autosave predictive-dict-autosave))
-	  ;; the combine function sums word weights and takes the union of any
-	  ;; lists of prefices
-	  (combfun '(lambda (a b)
-		      ;; (need nil at end of append so both cdr's are copied)
-		      (cons (cond ((null a) b) ((null b) a) (+ a b))
-			    (delete-dups (append (cdr a) (cdr b) nil))))))
+    (or speed (setq speed predictive-completion-speed))
+    (or autosave (setq autosave autosave predictive-dict-autosave))
 
-      ;; create the new dictionary
-      (setq dict (dictree-meta-dict-create dictlist dictname file autosave
-					   nil combfun nil nil
-					   nil nil complete-speed))
-      ;; return the new dictionary
-      dict)))
+    ;; create and return the new dictionary
+    (dictree-meta-dict-create dictlist name filename autosave nil
+			      '+ nil nil nil nil speed)))
 
 
 

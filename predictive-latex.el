@@ -242,18 +242,29 @@
   :group 'predictive)
 
 
-(defcustom predictive-latex-electric-environments nil
-  "*When enabled, environment names are automatically synchronized
-between \\begin{...} and \\end{...} commands."
-  :group 'predictive-latex
-  :type 'boolean)
-
-
 (defcustom predictive-latex-docclass-alist nil
   "*Alist associating LaTeX document classes with dictionaries.
 When a document class is in the list, "
   :group 'predictive-latex
   :type '(repeat (cons string symbol)))
+
+
+(defcustom predictive-latex-save-section-dict nil
+  "*When non-nil, save the LaTeX section dictionary.
+
+Disabled by default only because saving the section dictionary
+has a tendency to hit an arbitrary hard-coded Emacs limit on
+printing deeply nested structures, which can only be fixed by
+patching and recompiling from source."
+  :group 'predictive-latex
+  :type 'boolean)
+
+
+(defcustom predictive-latex-electric-environments nil
+  "*When enabled, environment names are automatically synchronized
+between \\begin{...} and \\end{...} commands."
+  :group 'predictive-latex
+  :type 'boolean)
 
 
 
@@ -427,6 +438,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (predictive-auto-dict-load "latex-local-env")
 	      predictive-latex-section-dict
 	      (predictive-auto-dict-load "latex-section"))
+	;; disable saving of section dictionary to avoid Emacs "bug"
+	(unless predictive-latex-save-section-dict
+	  (setf (dictree-autosave
+		 (eval (predictive-auto-dict-name "latex-section")))
+		nil))
 
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
@@ -1209,7 +1225,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(predictive-auto-dict-save "latex-local-latex")
 	(predictive-auto-dict-save "latex-local-math")
 	(predictive-auto-dict-save "latex-local-env")
-	(predictive-auto-dict-save "latex-section"))
+	(when predictive-latex-save-section-dict
+	  (predictive-auto-dict-save "latex-section")))
     ;; otherwise, restart predictive-mode to set everything up afresh
     (let ((restore (buffer-file-name)))
       (set-visited-file-name predictive-latex-previous-filename)
@@ -1259,6 +1276,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(predictive-auto-dict-load "latex-local-env")
 	predictive-latex-section-dict
 	(predictive-auto-dict-load "latex-section"))
+  ;; disable saving of section dictionary to avoid Emacs "bug"
+  (unless predictive-latex-save-section-dict
+    (setf (dictree-autosave
+	   (eval (predictive-auto-dict-name "latex-section")))
+	  nil))
   ;; clear and reload the overlay definitions (have to do this, otherwise some
   ;; auto-overlays try to add duplicate regexp definitions when reparsed)
   (setq auto-overlay-regexps nil)
