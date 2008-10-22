@@ -1,5 +1,3 @@
-
-
 ;;; predictive-texinfo.el --- predictive mode Texinfo setup function
 
 
@@ -172,9 +170,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    '(dict-texinfo dict-texinfo-env dict-texinfo-indicating
 			   dict-texinfo-math dict-latex-math))
       ;; load/create the node and local Texinfo dictionaries
-      (predictive-auto-dict-load "texinfo-node")
-      (predictive-auto-dict-load "texinfo-local-texinfo")
-      (predictive-auto-dict-load "texinfo-local-flag")
+      (setq predictive-texinfo-node-dict
+	    (predictive-auto-dict-load "texinfo-node")
+	    predictive-texinfo-local-texinfo-dict
+	    (predictive-auto-dict-load "texinfo-local-texinfo")
+	    predictive-texinfo-local-flag-dict
+	    (predictive-auto-dict-load "texinfo-local-flag"))
 
       ;; add Texinfo dictionaries to main dictionary list
       (make-local-variable 'predictive-main-dict)
@@ -202,7 +203,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
    ((< arg 0)
     ;; stop predictive auto overlays
-    (auto-overlay-stop 'predictive nil predictive-auxiliary-file-location)
+    (auto-overlay-stop 'predictive nil (when (buffer-file-name)
+					 predictive-auxiliary-file-location))
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict to saved setting
     (kill-local-variable 'predictive-main-dict)
@@ -739,14 +741,17 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; save overlays and local dicts if buffer was saved
 
   ;; save overlays if buffer was saved
-  (when (buffer-modified-p)
+  (unless (buffer-modified-p)
     (auto-overlay-save-overlays
      'predictive nil
-     predictive-auxiliary-file-location))
-  ;; unload local dicts, without saving if buffer wasn't saved
-  (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
-  (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
-  (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p)))
+     predictive-auxiliary-file-location)
+    ;; unload local dicts, without saving if buffer wasn't saved
+    (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
+    (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
+    (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p))
+    (kill-local-variable 'predictive-texinfo-node-dict)
+    (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
+    (kill-local-variable 'predictive-texinfo-local-flag-dict)))
 
 
 
@@ -788,9 +793,15 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
   (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
   (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p))
-  (predictive-auto-dict-load "texinfo-node")
-  (predictive-auto-dict-load "texinfo-local-texinfo")
-  (predictive-auto-dict-load "texinfo-local-flag")
+  (kill-local-variable 'predictive-texinfo-node-dict)
+  (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
+  (kill-local-variable 'predictive-texinfo-local-flag-dict)
+  (setq predictive-texinfo-node-dict
+	(predictive-auto-dict-load "texinfo-node")
+	predictive-texinfo-local-texinfo-dict
+	(predictive-auto-dict-load "texinfo-local-texinfo")
+	predictive-texinfo-local-flag-dict
+	(predictive-auto-dict-load "texinfo-local-flag"))
   ;; clear and reload the overlay definitions (have to do this, otherwise some
   ;; auto-overlays try to add duplicate regexp definitions when reparsed)
   (setq auto-overlay-regexps nil)

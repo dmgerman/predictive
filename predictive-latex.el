@@ -1,4 +1,3 @@
-
 ;;; predictive-latex.el --- predictive mode LaTeX setup function
 ;;;                         (assumes AMSmath)
 
@@ -517,7 +516,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (predictive-mode -1)))))
 
     ;; stop predictive auto overlays
-    (auto-overlay-stop 'predictive nil predictive-auxiliary-file-location)
+    (auto-overlay-stop 'predictive nil (when (buffer-file-name)
+					 predictive-auxiliary-file-location))
     (auto-overlay-unload-set 'predictive)
     ;; unload local dicts, without saving if buffer wasn't saved
     (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
@@ -1198,16 +1198,17 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; save overlays and local dicts if buffer was saved
 
   ;; save overlays if buffer was saved
-  (when (buffer-modified-p)
-    (auto-overlay-save-overlays
-     'predictive nil
-     predictive-auxiliary-file-location))
-  ;; unload local dicts, saving if buffer is saved
-  (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p)))
+  (unless (buffer-modified-p)
+    (when (buffer-file-name)
+      (auto-overlay-save-overlays
+       'predictive nil
+       predictive-auxiliary-file-location))
+    ;; unload local dicts, saving if buffer is saved
+    (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+    (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))))
 
 
 
