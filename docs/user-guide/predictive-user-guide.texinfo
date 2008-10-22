@@ -178,8 +178,39 @@ dumping the words and data they contain to files (unless you want to
 start from scratch). To make the backups, use
 @command{predictive-dump-dict-to-file}. @xref{Loading and Saving
 Dictionaries}. It is @emph{not} enough to make a copy of the dictionary
-file. Only the plain-text "dumped" format is guaranteed to be portable
+file. Only the plain-text ``dumped'' format is guaranteed to be portable
 across different versions of predictive mode.
+
+@emph{However}, version 0.21 of the predictive completion package uses a
+different format than earlier versions, @emph{even} for the ``dumped''
+files! To port a dictionary, use the following procedure:
+
+@enumerate
+@item
+backup the dictionay using @command{predictive-dump-dict-to-file} as
+just described, @emph{using the old version of the predictive package};
+
+@item
+start Emacs;
+
+@item
+load the @file{predictive-convert-dump-format} library (included in
+version 0.21 of the predictive completion package) using @kbd{M-x
+load-file /path/to/predictive-convert-dump-format.el};
+
+@item
+open the ``dumped'' dictionary backup file in Emacs;
+
+@item
+run the @command{predictive-convert-dump-format} command;
+
+@item
+recreate the dictionary using the @command{predictive-create-dict}
+command (@pxref{Creating Dictionaries}).
+@end enumerate
+
+Repeat this procedure for each dictionary that you want to port to the
+new version.
 
 Older versions of the predictive completion package saved dictionaries
 in a compiled form that was not portable across different versions of
