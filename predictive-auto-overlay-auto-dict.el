@@ -184,7 +184,7 @@
 
 
 ;;; =================================================================
-;;;    Internal functions for automatically generated dictionaries
+;;;       Functions for automatically generated dictionaries
 
 (defmacro predictive-auto-dict-name (name &optional file)
   ;; Return a dictionary name constructed from NAME and the buffer name
@@ -269,7 +269,7 @@
 
 
 ;;; =================================================================
-;;;    Utility functions for automatically generated dictionaries
+;;;   Navigation functions for automatically generated dictionaries
 
 (defun predictive-auto-dict-jump-to-def (dict key &optional overlay)
   "Jump to definition of KEY from auto-dict DICT.
