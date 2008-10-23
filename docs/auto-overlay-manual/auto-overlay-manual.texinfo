@@ -56,14 +56,14 @@ itself define any new interactive commands or minor modes.
 
 
 @menu
-* Overview::                    
-* Auto-Overlay Functions::      
-* Worked Example::              
-* Extending the Auto-Overlays Package::  
-* To-Do::                       
-* Function Index::               
-* Variable Index::              
-* Concept Index::               
+* Overview::
+* Auto-Overlay Functions::
+* Worked Example::
+* Extending the Auto-Overlays Package::
+* To-Do::
+* Function Index::
+* Variable Index::
+* Concept Index::
 * Copying this Manual::
 
 @detailmenu
@@ -79,22 +79,22 @@ Emacs Auto-Overlays Manual
 
 Auto-Overlay Functions
 
-* Defining Regexps::            
-* Starting and Stopping Auto-Overlays::  
-* Searching for Overlays::      
+* Defining Regexps::
+* Starting and Stopping Auto-Overlays::
+* Searching for Overlays::
 
 Extending the Auto-Overlays Package
 
-* Auto-Overlays in Depth::      
-* Integrating New Overlay Classes::  
-* Functions for Writing New Overlay Classes::  
-* Auto-Overlay Hooks::          
-* Auto-Overlay Modification Pseudo-Hooks::  
+* Auto-Overlays in Depth::
+* Integrating New Overlay Classes::
+* Functions for Writing New Overlay Classes::
+* Auto-Overlay Hooks::
+* Auto-Overlay Modification Pseudo-Hooks::
 
 Functions for Writing New Overlay Classes
 
-* Functions for Modifying Overlays::  
-* Functions for Querying Overlays::  
+* Functions for Modifying Overlays::
+* Functions for Querying Overlays::
 
 Copying this Manual
 
@@ -136,3 +136,9 @@ Copying this Manual
 
 
 @bye
+
+
+@c  Local Variables:
+@c  mode: texinfo
+@c  mode: predictive
+@c  End:

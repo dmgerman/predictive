@@ -1624,3 +1624,8 @@ property. This can end up creating a lot of overlays! A variant of the
 @code{nested} class that avoids this problem is needed.
 @end enumerate
 
+
+@c  Local Variables:
+@c  mode: texinfo
+@c  mode: predictive
+@c  End:

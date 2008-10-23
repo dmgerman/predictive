@@ -2854,7 +2854,6 @@ tables, available from
 
 
 @c  Local Variables:
-@c  mode: latex
 @c  mode: texinfo
 @c  mode: predictive
 @c  End:
