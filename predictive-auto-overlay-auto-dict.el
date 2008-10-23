@@ -232,7 +232,7 @@
 	    (void-variable nil))
 	  (eval (intern-soft dictname))
 	;; otherwise, load or create it
-	(if (load file)
+	(if (load file t)
 	    (setf (dictree-filename (eval dictname)) file)
 	  (dictree-create dictname file
 			  predictive-dict-autosave nil
