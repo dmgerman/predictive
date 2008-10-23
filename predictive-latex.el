@@ -439,9 +439,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (predictive-auto-dict-load "latex-section"))
 	;; disable saving of section dictionary to avoid Emacs "bug"
 	(unless predictive-latex-save-section-dict
-	  (setf (dictree-autosave
-		 (eval (predictive-auto-dict-name "latex-section")))
-		nil))
+	  (setf (dictree-autosave predictive-latex-section-dict) nil))
 
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
