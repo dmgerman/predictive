@@ -2004,11 +2004,15 @@ If WEIGHT is supplied, reset to that value instead of
 	  (message "Resetting word weights in %s...(word 1 of %d)"
 		   (dictree-name dict) count))
 	(dictree-mapc
-	 (lambda (word ignored)
-	   (when (and (interactive-p) (setq i (1+ i)) (= (mod i 10) 0))
-	     (message "Resetting word weights in %s...(word %d of %d)"
-		      (dictree-name dict) i count))
-	   (dictree-insert dict word weight (lambda (a b) a)))
+	 (if (interactive-p)
+	     (lambda (word ignored)
+	       (setq i (1+ i))
+	       (when (= (mod i 10) 0)
+		 (message "Resetting word weights in %s...(word %d of %d)"
+			  (dictree-name dict) i count))
+	       (dictree-insert dict word weight (lambda (a b) a)))
+	   (lambda (word ignored)
+	     (dictree-insert dict word weight (lambda (a b) a))))
 	 dict)
 	(when (interactive-p)
 	  (message "Resetting word weights in %s...done" (dictree-name dict)))
