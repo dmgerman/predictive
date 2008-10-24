@@ -2167,8 +2167,7 @@ LENGTH is the integer prefix argument."
 	      ;; find completions of word, dropping first which is always the
 	      ;; word itself
 	      (setq completion-list
-		    (mapcar (lambda (entry) (concat word (car entry)))
-			    (dictree-complete dict string)))
+		    (mapcar 'car (dictree-complete dict string)))
 	      (setq completion-list
 		    (last completion-list
 			  (1- (length completion-list))))
