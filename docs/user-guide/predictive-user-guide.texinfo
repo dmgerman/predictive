@@ -2320,7 +2320,6 @@ enabled automatically when predictive completion mode is turned on in a
 @end menu
 
 
-
 @node Parsing LaTeX Documents
 @subsubsection Parsing @LaTeX{} Documents
 @cindex parsing @LaTeX{} documents
@@ -2406,7 +2405,6 @@ of certain individual characters, is set up appropriately for @LaTeX{}
 (@pxref{Character Syntax and Key Bindings}). Also, a special @LaTeX{}
 completion browser menu, more appropriate for browsing @LaTeX{}
 commands, is used instead of the default one.
-
 
 
 @node LaTeX Navigation Commands
@@ -2520,9 +2518,9 @@ important@footnote{Dictionaries and Elisp code welcome!}.
 The predictive completion @LaTeX{} support automatically creates and
 updates dictionaries of cross-reference labels, dictionaries of
 locally-defined text-mode and math-mode @LaTeX{} commands (defined using
-@samp{\newcommand}), and a dictionary of locally-defined environments
+@samp{\newcommand}), a dictionary of locally-defined environments
 (defined using @samp{\newenvironment} and @samp{\newtheorem}) for each
-@LaTeX{} buffer.
+@LaTeX{} buffer, and a dictionary of @LaTeX{} section titles.
 
 All these dictionaries are saved to the directory specified by
 @env{predictive-auxiliary-file-location} (@pxref{Miscellaneous
@@ -2536,11 +2534,41 @@ file. Note that these dictionaries are shared across all buffers with
 the same @env{TeX-master}, and the location they are saved to will be
 based on the @env{TeX-master} file's name and directory.
 
+However, the section title dictionary is @emph{not} saved by default,
+because doing so has a tendency to fail badly through hitting an
+internal Emacs limit hard-coded into @file{print.c}. Since the section
+dictionary is only used for navigation, there is little disadvantage in
+recreating it each time the file is loaded. However, if you do want it
+to be saved along with the other automatically generated dictionaries,
+you should first increase this internal limit by applying the
+@file{print.c.diff} patch (included in the predictive package) to the
+file @file{print.c} in the Emacs source, and recompile Emacs from the
+patched source. It is then safe(r) to enable
+@env{predictive-latex-save-section-dict}.
+@cindex print.c, patching
+@cindex patching print.c
+
+@vtable @env
+@item predictive-latex-save-section-dict
+When enabled, save the section dictionary along with the other
+automatically generated @LaTeX{} dictionaries. Disabled by default
+because saving the section dictionary has a tendency to fail badly
+through hitting an internal, hard-coded Emacs limit. @emph{Do not enable
+this without first patching Emacs as described above.}
+@end vtable
+
 To speed up loading of predictive mode's @LaTeX{} support, a file
 containing information about the location of different regions within
 the document is saved to @file{auto-overlays-@var{filename}} also
 located in @env{predictive-auxiliary-file-location}. (Separate files are
 created even for buffers that share the same @env{TeX-master}.)
+
+It is safe to delete any of these files, or even the entire
+@env{predictive-auxiliary-file-location} directory, as long as the
+corresponding @LaTeX{} file is not loaded in Emacs at the time. They
+will be recreated automatically next time the file is loaded. However,
+if you delete the dictionary files, you will lose all learned word
+weights (@pxref{Dictionary Learning}).
 
 
 
@@ -2671,6 +2699,12 @@ containing information about the location of different regions within
 the document is saved to @file{auto-overlays-@var{filename}} also
 located in @env{predictive-auxiliary-file-location}.
 
+It is safe to delete any of these files, or even the entire
+@env{predictive-auxiliary-file-location} directory, as long as the
+corresponding Texinfo file is not loaded in Emacs at the time. They will
+be recreated automatically next time the file is loaded. However, if you
+delete the dictionary files, you will lose all learned word weights
+(@pxref{Dictionary Learning}).
 
 
 
@@ -2699,6 +2733,13 @@ is saved to @file{auto-overlays-@var{filename}} located in
 @env{predictive-auxiliary-file-location} (@pxref{Miscellaneous
 Options}), which by default is a @file{.predictive/} subdirectory of the
 directory containing the HTML file.
+
+It is safe to delete this file, or even the entire
+@env{predictive-auxiliary-file-location} directory, as long as the
+corresponding HTML file is not loaded in Emacs at the time. They will be
+recreated automatically next time the file is loaded. However, if you
+delete the dictionary files, you will lose all learned word weights
+(@pxref{Dictionary Learning}).
 
 
 

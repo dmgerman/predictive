@@ -251,10 +251,17 @@ When a document class is in the list, "
 (defcustom predictive-latex-save-section-dict nil
   "*When non-nil, save the LaTeX section dictionary.
 
-Disabled by default only because saving the section dictionary
-has a tendency to hit an arbitrary hard-coded Emacs limit on
-printing deeply nested structures, which can only be fixed by
-patching and recompiling from source."
+Disabled by default because saving the section dictionary has a
+tendency to fail badly through hitting an internal Emacs limit on
+printing deeply nested structures, hard-coded in
+\"print.c\". Since the section dictionary is only used for
+navigation, there is little disadvantage in leaving this
+disabled.
+
+Do *not* enable this without first applying the \"print.c.diff\"
+patch (included in the Predictive Completion package) to the file
+\"print.c\" in the Emacs source, and recompiling Emacs from the
+patched source."
   :group 'predictive-latex
   :type 'boolean)
 
