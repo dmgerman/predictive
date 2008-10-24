@@ -1546,7 +1546,7 @@ specified by the prefix argument."
     (when defpref
       ;; define new word to be a prefix of all its completions
       (dolist (cmpl (cdr (dictree-complete dict word)))
-	(predictive-define-prefix dict (concat word (car cmpl)) word))
+	(predictive-define-prefix dict (car cmpl) word))
       ;; define all prefixes of new word (note: `predictive-define-prefix'
       ;; does nothing if prefix isn't in dict, so no need to check that here)
       (dotimes (i (1- (length word)))
