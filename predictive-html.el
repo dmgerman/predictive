@@ -413,33 +413,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
 
-(defun predictive-texinfo-reparse-buffer ()
+(defun predictive-html-reparse-buffer ()
   "Clear all auto-overlays, then reparse buffer from scratch."
   (interactive)
 
-  ;; stop the predictive auto-overlays without saving to file
+  ;; restart the predictive auto-overlays without saving to file
   (auto-overlay-stop 'predictive)
-  ;; revert to saved auto-dicts
-  (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
-  (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
-  (predictive-auto-dict-unload "texinfo-local-flag" (buffer-modified-p))
-  (kill-local-variable 'predictive-texinfo-node-dict)
-  (kill-local-variable 'predictive-texinfo-local-texinfo-dict)
-  (kill-local-variable 'predictive-texinfo-local-flag-dict)
-  (setq predictive-texinfo-node-dict
-	(predictive-auto-dict-load "texinfo-node")
-	predictive-texinfo-local-texinfo-dict
-	(predictive-auto-dict-load "texinfo-local-texinfo")
-	predictive-texinfo-local-flag-dict
-	(predictive-auto-dict-load "texinfo-local-flag"))
-  ;; clear and reload the overlay definitions (have to do this, otherwise some
-  ;; auto-overlays try to add duplicate regexp definitions when reparsed)
-  (setq auto-overlay-regexps nil)
-  (predictive-texinfo-load-regexps)
-  ;; restart the predictive auto-overlays; we let-bind predictive-mode to
-  ;; prevent duplicate definition warnings
-  (let ((predictive-mode nil))
-    (auto-overlay-start 'predictive nil 'ignore-save-file)))
+  (auto-overlay-start 'predictive nil 'ignore-save-file))
 
 
 
