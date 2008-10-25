@@ -99,7 +99,7 @@ dict-english: dict-english.elc
 
 # overrides implicit rule for dictionaries, to create it from the .el file
 dict-english.elc: dict-english.el
-	$(EMACS) --batch -L ./ -f batch-byte-compile $<
+	$(EMACS) --batch -L ./ --eval="(progn (setq byte-compile-disable-print-circle t) (byte-compile-file \"$<\"))"
 
 # in case dict-english.el doesn't exist (should be included in package)
 dict-english.el: dict-english.word-list dict-tree.elc
