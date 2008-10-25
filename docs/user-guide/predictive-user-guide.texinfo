@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.21
+0.22
 @c --version--
 
 Copyright @copyright{} 2005--2008 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.21
+@subtitle Version 0.22
 @c --version--
 @author Toby Cubitt
 
@@ -181,7 +181,7 @@ file. Only the plain-text ``dumped'' format is guaranteed to be portable
 across different versions of predictive mode.
 
 @emph{However}, this version of the predictive completion package
-(version 0.21, or version 0.18 of the @file{predictive.el} library) uses
+(version 0.22, or version 0.18 of the @file{predictive.el} library) uses
 a different format than earlier versions, @emph{even} for the ``dumped''
 files! To port a dictionary from older versions to this version, use the
 following procedure:
@@ -2752,8 +2752,8 @@ delete the dictionary files, you will lose all learned word weights
 @cindex feature requests
 @cindex features, requesting
 
-The predictive completion package has been tested on Emacs versions 21.3
-and the multi-tty CVS branch, and is known to work reasonably well. It
+The predictive completion package has been tested on Emacs versions 21.3, 22.x
+and the current CVS version, and is known to work reasonably well. It
 will not work under older versions, and currently doesn't work under any
 version of XEmacs.
 
