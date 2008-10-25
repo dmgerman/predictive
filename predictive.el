@@ -290,11 +290,11 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl))
 (require 'completion-ui)
 (require 'dict-tree)
 (require 'auto-overlays)
 (require 'timerfunctions)
-
 
 ;; use dynamic byte compilation to save memory
 ;;(eval-when-compile (setq byte-compile-dynamic t))
