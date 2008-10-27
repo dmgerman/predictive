@@ -91,6 +91,18 @@ predictive-latex.elc: predictive-latex.el $(latex-dicts)
 predictive-html.elc: predictive-html.el $(html-dicts)
 	$(EMACS) --batch -L ./ -L ./html/ -f batch-byte-compile $<
 
+# overrides implicit rule, to display extra message
+dict-tree.elc: dict-tree.el
+	$(EMACS) --batch -L ./ -f batch-byte-compile $<
+	@echo
+	@echo "The above warning is true, though it's not obvious from the"
+	@echo "source code! Be that as it may, I can't fix this until someone"
+	@echo "explains to me how to define \`dictree--wrap-insfun' without"
+	@echo "using old-style backquotes, whilst still ensuring that the"
+	@echo "\`setf' in the \`dictree--wrap-insfun-2' macro is expanded"
+	@echo "at compile-time rather than run-time."
+	@echo "  -- Toby Cubitt"
+	@echo
 
 
 
