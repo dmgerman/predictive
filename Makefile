@@ -110,11 +110,11 @@ predictive-html.elc: predictive-html.el $(html-dicts)
 dict-english: dict-english.elc
 
 # overrides implicit rule for dictionaries, to create it from the .el file
-dict-english.elc: dict-english.el
+dict-english.elc: dict-english.el #dict-tree.elc
 	$(EMACS) --batch -L ./ --eval="(progn (setq byte-compile-disable-print-circle t) (byte-compile-file \"$<\"))"
 
 # in case dict-english.el doesn't exist (should be included in package)
-dict-english.el: dict-english.word-list dict-tree.elc
+dict-english.el: dict-english.word-list
 	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
 
 
@@ -156,7 +156,7 @@ install-info: predictive-user-guide.info.gz
 
 
 # implicit rule for creating dictionaries
-dict-%.elc: dict-%.word-list dict-tree.elc
+dict-%.elc: dict-%.word-list #dict-tree.elc
 	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
 
 
