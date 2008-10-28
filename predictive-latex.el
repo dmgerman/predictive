@@ -218,6 +218,7 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl))
 (require 'predictive)
 (require 'auto-overlay-word)
 (require 'auto-overlay-line)
