@@ -2,7 +2,7 @@
 # Copyright (C) 2004-2008 Toby Cubitt
 
 # Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-# Version: 0.5
+# Version: 0.6
 # URL: http://www.dr-qubit.org/emacs.php
 
 # This file is part of the Emacs Predictive Completion package.
