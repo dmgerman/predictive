@@ -1,17 +1,17 @@
-"@abbr"
-"@acronym"
-"@asis"
-"@cite"
-"@code"
-"@command"
-"@dfn"
-"@email"
-"@env"
-"@file"
-"@indicateurl"
-"@kbd"
-"@key"
-"@option"
-"@samp"
-"@var"
-"@verb"
+"@abbr" 0
+"@acronym" 0
+"@asis" 0
+"@cite" 0
+"@code" 0
+"@command" 0
+"@dfn" 0
+"@email" 0
+"@env" 0
+"@file" 0
+"@indicateurl" 0
+"@kbd" 0
+"@key" 0
+"@option" 0
+"@samp" 0
+"@var" 0
+"@verb" 0

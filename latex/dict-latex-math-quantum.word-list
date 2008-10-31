@@ -1,79 +1,79 @@
-"\\Abs"
-"\\Anticomm"
-"\\BigAbs"
-"\\BigBra"
-"\\BigExpect"
-"\\BigKet"
-"\\BigMatnorm"
-"\\BiggBra"
-"\\BiggExpect"
-"\\BiggKet"
-"\\BiggMatnorm"
-"\\Biggabs"
-"\\Bra"
-"\\BraKet" nil ("\\Bra")
-"\\Braket" nil ("\\Bra")
-"\\CC"
-"\\Comm"
-"\\EE"
-"\\Expect"
-"\\FF"
-"\\Ket"
-"\\Ketbra" nil ("\\Ket")
-"\\Matnorm"
-"\\MatnormHS" nil ("\\Matnorm")
-"\\MatnormTr" nil ("\\Matnorm")
-"\\NN"
-"\\Order"
-"\\PP"
-"\\Proj"
-"\\QQ"
-"\\RR"
-"\\Span"
-"\\UU"
-"\\Wlog"
-"\\ZZ"
-"\\abs"
-"\\anticomm"
-"\\bigAbs"
-"\\bigBra"
-"\\bigExpect"
-"\\bigKet"
-"\\bigMatnorm"
-"\\biggAbs"
-"\\biggBra"
-"\\biggExpect"
-"\\biggKet"
-"\\biggMatnorm"
-"\\bra"
-"\\braket" nil ("\\bra")
-"\\clap"
-"\\comm"
-"\\dd"
-"\\diag"
-"\\dt"
-"\\ebit"
-"\\expect"
-"\\hc"
-"\\id"
-"\\identity"
-"\\imag"
-"\\ket"
-"\\ketbra" nil ("\\ket")
-"\\mathclap"
-"\\mathllap"
-"\\mathrlap"
-"\\matnorm"
-"\\matnormHS" nil ("\\matnorm")
-"\\matnormTr" nil ("\\matnorm")
-"\\order"
-"\\partition"
-"\\pfaf"
-"\\prj"
-"\\proj"
-"\\rank"
-"\\real"
-"\\schmidt"
-"\\sgn"
-"\\tr"
-"\\vspan"
+"\\Abs" 0
+"\\Anticomm" 0
+"\\BigAbs" 0
+"\\BigBra" 0
+"\\BigExpect" 0
+"\\BigKet" 0
+"\\BigMatnorm" 0
+"\\BiggBra" 0
+"\\BiggExpect" 0
+"\\BiggKet" 0
+"\\BiggMatnorm" 0
+"\\Biggabs" 0
+"\\Bra" 0
+"\\BraKet" 0(:prefixes ("\\Bra"))
+"\\Braket" 0 (:prefixes ("\\Bra"))
+"\\CC" 0
+"\\Comm" 0
+"\\EE" 0
+"\\Expect" 0
+"\\FF" 0
+"\\Ket" 0
+"\\Ketbra" 0 (:prefixes ("\\Ket"))
+"\\Matnorm" 0
+"\\MatnormHS" 0 (:prefixes ("\\Matnorm"))
+"\\MatnormTr" 0 (:prefixes ("\\Matnorm"))
+"\\NN" 0
+"\\Order" 0
+"\\PP" 0
+"\\Proj" 0
+"\\QQ" 0
+"\\RR" 0
+"\\Span" 0
+"\\UU" 0
+"\\Wlog" 0
+"\\ZZ" 0
+"\\abs" 0
+"\\anticomm" 0
+"\\bigAbs" 0
+"\\bigBra" 0
+"\\bigExpect" 0
+"\\bigKet" 0
+"\\bigMatnorm" 0
+"\\biggAbs" 0
+"\\biggBra" 0
+"\\biggExpect" 0
+"\\biggKet" 0
+"\\biggMatnorm" 0
+"\\bra" 0
+"\\braket" 0 (:prefixes ("\\bra"))
+"\\clap" 0
+"\\comm" 0
+"\\dd" 0
+"\\diag" 0
+"\\dt" 0
+"\\ebit" 0
+"\\expect" 0
+"\\hc" 0
+"\\id" 0
+"\\identity" 0
+"\\imag" 0
+"\\ket" 0
+"\\ketbra" 0 (:prefixes ("\\ket"))
+"\\mathclap" 0
+"\\mathllap" 0
+"\\mathrlap" 0
+"\\matnorm" 0
+"\\matnormHS" 0 (:prefixes ("\\matnorm"))
+"\\matnormTr" 0 (:prefixes ("\\matnorm"))
+"\\order" 0
+"\\partition" 0
+"\\pfaf" 0
+"\\prj" 0
+"\\proj" 0
+"\\rank" 0
+"\\real" 0
+"\\schmidt" 0
+"\\sgn" 0
+"\\tr" 0
+"\\vspan" 0

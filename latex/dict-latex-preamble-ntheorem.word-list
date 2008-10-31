@@ -1,15 +1,15 @@
-"\\newframedtheorem"
-"\\newshadedtheorem"
-"\\newtheoremlisttype"
-"\\newtheoremstyle"
-"\\theorembodyfont"
-"\\theoremclass"
-"\\theoremheaderfont"
-"\\theoremindent"
-"\\theoremlisttype"
-"\\theoremnumbering"
-"\\theorempostwork"
-"\\theoremprework"
-"\\theoremseparator"
-"\\theoremstyle"
-"\\theoremsymbol"
+"\\newframedtheorem" 0
+"\\newshadedtheorem" 0
+"\\newtheoremlisttype" 0
+"\\newtheoremstyle" 0
+"\\theorembodyfont" 0
+"\\theoremclass" 0
+"\\theoremheaderfont" 0
+"\\theoremindent" 0
+"\\theoremlisttype" 0
+"\\theoremnumbering" 0
+"\\theorempostwork" 0
+"\\theoremprework" 0
+"\\theoremseparator" 0
+"\\theoremstyle" 0
+"\\theoremsymbol" 0
