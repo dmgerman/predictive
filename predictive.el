@@ -1646,12 +1646,15 @@ See also `predictive-fast-learn-from-buffer'."
 
       ;; loop over all dictionaries in dictionary list
       (dolist (dict dict-list)
-	(message "Learning words for dictionary %s...(dict %d of %d)"
-		 dictname d numdicts)
-	;; initialise counters etc. for messages
+	;; initialise dictionary counters etc. for messages
 	(setq dictname (dictree-name dict))
-	(setq dictsize (dictree-size dict))
 	(setq d (1+ d))  ; counts dictionaries
+	(if (> numdicts 1)
+	    (message "Learning words for dictionary %s...(dict %d of %d)"
+		     dictname d numdicts)
+	  (message "Learning words for dictionary %s..." dictname))
+	;; initialise word counters etc. for messages
+	(setq dictsize (dictree-size dict))
 	(setq i 0)       ; counts words
 	(if (> numdicts 1)
 	    (message "Learning words for dictionary %s...(dict %d of %d,\
@@ -1686,7 +1689,7 @@ See also `predictive-fast-learn-from-buffer'."
 	   (when (= 0 (mod (setq i (1+ i)) 10))
 	     (if (> numdicts 1)
 		 (message "Learning words for dictionary %s...(dict %d of %d,\
- word %d of %d)..." dictname d numdicts i dictsize)
+ word %d of %d)" dictname d numdicts i dictsize)
 	       (message "Learning words for dictionary %s...(word %d of %d)"
 			dictname i dictsize))))
 	 dict 'string)   ; map over all words in dictionary
