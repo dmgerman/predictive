@@ -57,6 +57,7 @@
 ;;; Code:
 
 
+(eval-when-compile (require 'cl))
 (require 'auto-overlays)
 (require 'auto-overlay-word)
 (require 'dict-tree)
