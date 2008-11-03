@@ -1608,10 +1608,13 @@ explicit dictionary is specified, this learns word weights for all
 dictionaries used by the current buffer (@pxref{Loading and Saving
 Dictionaries}). Each occurrence of a word increments its weight in the
 dictionary. By default, only occurrences that occur in a region where
-the dictionary is active are taken into account (@pxref{Region-Local
-Dictionaries}). When an explicit dictionary is specified, this can be
+the dictionary is active are counted (@pxref{Region-Local
+Dictionaries}). If an explicit dictionary is specified, this can be
 overridden by supplying a prefix argument, in which case all occurrences
-are taken into account.
+are counted, irrespective of whether the dictionary is active at the
+word occurrence. Note that you @emph{cannot} use this command to add
+words to a dictionary, only to train the weights of words already in a
+dictionary (see @command{predictive-fast-learn-from-buffer}, below).
 
 @item predictive-learn-from-file
 Like @command{predictive-learn-from-buffer}, but learns from a file
@@ -1626,10 +1629,10 @@ account. Also, unlike @command{predictive-learn-from-buffer}, this
 command takes into account the setting of the
 @env{predictive-auto-add-to-dict} option. If an explicit dictionary is
 specified, words that are not already in the dictionary will be added to
-it if @env{predictive-auto-add-to-dict} has any non-nil
-value. Otherwise, @env{predictive-auto-add-to-dict} has the usual
-effect, as do the other auto-add-related options (@pxref{Automatic
-Learning}).
+it if @env{predictive-auto-add-to-dict} has any non-nil value. If no
+explicit dictionary is specified, @env{predictive-auto-add-to-dict} has
+the usual effect, as do the other auto-add-related options
+(@pxref{Automatic Learning}).
 
 @item predictive-fast-learn-from-file
 Like @command{predictive-fast-learn-from-buffer}, but learns from a file
