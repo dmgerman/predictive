@@ -68,9 +68,6 @@
             :named
             (:constructor nil)
             (:constructor avl-tree--create (cmpfun))
-	    ;; bare constructor takes dummy compare-function argument for
-	    ;; compatability with normal constructor
-	    (:constructor avl-tree--create-bare (compare-function))
             (:predicate avl-tree-p)
             (:copier nil))
   (dummyroot (avl-tree--node-create nil nil nil 0))
@@ -390,20 +387,6 @@ NODE is the node, and BRANCH is the branch.
 COMPARE-FUNCTION is a function which takes two arguments, A and B,
 and returns non-nil if A is less than B, and nil otherwise.")
 
-(defalias 'avl-tree-create-bare 'avl-tree--create-bare
-  "Create an empty, bare avl tree.
-
-Unlike a normal avl tree, a bare tree's comparison function is
-*not* stored along with the tree. Instead, it must be passed as
-an argument to all tree functions, and it is up to you to ensure
-the same comparison function is passed each time.
-
-Bare avl trees should *only* be used when a very large number of
-trees, all with the same comparison function, are going to be
-used as part of a higher-level data structure. Even then, they
-should only be used if the space savings are worth the higher
-risk of introducing bugs.")
-
 
 (defalias 'avl-tree-compare-function 'avl-tree--cmpfun
   "Return the comparison function for the avl tree TREE.")
@@ -412,7 +395,7 @@ risk of introducing bugs.")
   "Return t if avl tree TREE is emtpy, otherwise return nil."
   (null (avl-tree--root tree)))
 
-(defun avl-tree-enter (tree data &optional updatefun cmpfun)
+(defun avl-tree-enter (tree data &optional updatefun)
   "Insert DATA into the avl tree TREE.
 
 If an element that matches DATA (according to the tree's
@@ -425,15 +408,12 @@ the matching element. Its return value replaces the existing
 element. This value *must* itself match DATA (and hence the
 pre-existing data), or an error will occur.
 
-For a 'bare' avl-tree, TREE's comparison function must be
-supplied in CMPFUN (see `avl-tree-create-bare').
-
 Returns the new data."
-  (cdr (avl-tree--do-enter (or (avl-tree--cmpfun tree) cmpfun)
+  (cdr (avl-tree--do-enter (avl-tree--cmpfun tree)
 			   (avl-tree--dummyroot tree)
 			   0 data updatefun)))
 
-(defun avl-tree-delete (tree data &optional test nilflag cmpfun)
+(defun avl-tree-delete (tree data &optional test nilflag)
   "Delete the element matching DATA from the avl tree TREE.
 Matching uses the comparison function previously specified in
 `avl-tree-create' when TREE was created.
@@ -449,16 +429,13 @@ element.
 If supplied, TEST specifies a test that a matching element must
 pass before it is deleted. If a matching element is found, it is
 passed as an argument to TEST, and is deleted only if the return
-value is non-nil.
-
-For a 'bare' avl-tree, TREE's comparison function must be
-supplied in CMPFUN (see `avl-tree-create-bare')."
-  (cdr (avl-tree--do-delete (or (avl-tree--cmpfun tree) cmpfun)
+value is non-nil."
+  (cdr (avl-tree--do-delete (avl-tree--cmpfun tree)
 			    (avl-tree--dummyroot tree)
 			    0 data test nilflag)))
 
 
-(defun avl-tree-member (tree data &optional nilflag cmpfun)
+(defun avl-tree-member (tree data &optional nilflag)
   "Return the element in the avl tree TREE which matches DATA.
 Matching uses the comparison function previously specified in
 `avl-tree-create' when TREE was created.
@@ -467,32 +444,25 @@ If there is no such element in the tree, nil is
 returned. Optional argument NILFLAG specifies a value to return
 instead of nil in this case. This allows non-existent elements to
 be distinguished from a null element. (See also
-`avl-tree-member-p', which does this for you.)
-
-For a 'bare' avl-tree, TREE's comparison function must be
-supplied in CMPFUN (see `avl-tree-create-bare')."
+`avl-tree-member-p', which does this for you.)"
   (let ((node (avl-tree--root tree)))
-    (setq cmpfun (or (avl-tree--cmpfun tree) cmpfun))
     (catch 'found
       (while node
 	(cond
-	 ((funcall cmpfun data (avl-tree--node-data node))
+	 ((funcall (avl-tree--cmpfun tree) data (avl-tree--node-data node))
 	  (setq node (avl-tree--node-left node)))
-	 ((funcall cmpfun (avl-tree--node-data node) data)
+	 ((funcall (avl-tree--cmpfun tree) (avl-tree--node-data node) data)
 	  (setq node (avl-tree--node-right node)))
 	 (t (throw 'found (avl-tree--node-data node)))))
       nilflag)))
 
 
-(defun avl-tree-member-p (tree data &optional cmpfun)
+(defun avl-tree-member-p (tree data)
   "Return t if an element matching DATA exists in the avl tree TREE,
 otherwise return nil. Matching uses the comparison function
-previously specified in `avl-tree-create' when TREE was created.
-
-For a 'bare' avl-tree, the tree's comparison function must be
-supplied in CMPFUN (see `avl-tree-create-bare')."
+previously specified in `avl-tree-create' when TREE was created."
   (let ((flag '(nil)))
-    (not (eq (avl-tree-member tree data flag cmpfun) flag))))
+    (not (eq (avl-tree-member tree data flag) flag))))
 
 
 (defun avl-tree-map (avl-tree-function tree &optional reverse)
@@ -575,10 +545,7 @@ is more efficient."
       (avl-tree--node-data node))))
 
 (defun avl-tree-copy (tree)
-  "Return a copy of the avl tree TREE.
-
-For a 'bare' avl-tree, TREE's comparison function must be
-supplied in CMPFUN (see `avl-tree-create-bare')."
+  "Return a copy of the avl tree TREE."
   (let ((new-tree (avl-tree-create (avl-tree--cmpfun tree))))
     (setf (avl-tree--root new-tree) (avl-tree--do-copy (avl-tree--root tree)))
     new-tree))
