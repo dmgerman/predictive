@@ -1165,9 +1165,7 @@ for uncapitalized version."
       ;; complete the prefix using the current dictionary
       (setq completions
 	    (dictree-complete dict str (if maxnum t nil) maxnum
-			      nil nil filter))
-      (when completions (setq completions (mapcar 'car completions)))
-
+			      nil nil filter 'strip-data))
       ;; return the completions
       completions)))
 
@@ -1545,8 +1543,9 @@ specified by the prefix argument."
     ;; if adding a new word, and we're automatically defining prefixes...
     (when defpref
       ;; define new word to be a prefix of all its completions
-      (dolist (cmpl (cdr (dictree-complete dict word)))
-	(predictive-define-prefix dict (car cmpl) word))
+      (dolist (cmpl (cdr (dictree-complete dict word nil nil nil nil nil
+					   'strip-data)))
+	(predictive-define-prefix dict cmpl word))
       ;; define all prefixes of new word (note: `predictive-define-prefix'
       ;; does nothing if prefix isn't in dict, so no need to check that here)
       (dotimes (i (1- (length word)))
@@ -2170,10 +2169,8 @@ LENGTH is the integer prefix argument."
 	      ;; find completions of word, dropping first which is always the
 	      ;; word itself
 	      (setq completion-list
-		    (mapcar 'car (dictree-complete dict string)))
-	      (setq completion-list
-		    (last completion-list
-			  (1- (length completion-list))))
+		    (cdr (dictree-complete dict string nil nil nil nil nil
+					   'strip-data)))
 	      ;; define the word to  be a prefix for all its completions
 	      (dolist (cmpl completion-list)
 		(predictive-define-prefix dict cmpl word))
