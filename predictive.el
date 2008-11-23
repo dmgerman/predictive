@@ -791,7 +791,7 @@ to the dictionary, nil if it should not. Only used when
 ;; the mode variable
 (defcustom predictive-mode nil
   "Non-nil if Predictive Completion mode is enabled.
-Setting this variable directly will have no effect. Use \\[customize] or
+Setting this variable directly will have no effect. Use
 `predictive-mode' command instead."
   :group 'predictive
   :type 'boolean
