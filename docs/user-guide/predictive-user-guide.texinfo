@@ -918,9 +918,14 @@ that select them, if enabled) is displayed in the echo area.
 
 Calling @command{completion-show-tooltip} when completing, bound to
 @kbd{S-Down}, displays a list of available completions in a tooltip. The
-@kbd{up} and @kbd{down} arrow keys can then be used to select a
+@command{completion-tooltip-cycle} and
+@command{completion-tooltip-cycle-backwards} commands, bound to the
+@kbd{down} and @kbd{up} arrow keys, can then be used to select a
 completion from the list. The following variables affect the completion
 tooltip:
+@findex completion-show-tooltip
+@findex completion-tooltip-cycle
+@findex completion-tooltip-cycle-backwards
 
 The tooltip can also be displayed automatically when completing,
 optionally after a time-delay. @xref{Auto-Show a List of Completions}.
