@@ -32,10 +32,11 @@
 ;;; Commentary:
 ;;
 ;; This package provides user-interfaces for a number of Emacs in-buffer
-;; completion mechanisms. Currently: dabbrevs, etags, elisp, and Semantic are
-;; supported. (Note that, for Semantic support, you will need to install the
-;; Semantic package separately.) It is partly intended as a set of examples
-;; for the completion-UI package, but is also useful in and of itself.
+;; completion mechanisms, currently: dabbrevs, etags, elisp, predictive-mode,
+;; and Semantic are supported. (Note that, for predictive-mode and Semantic
+;; support, you will need to install the corresponding packages separately.)
+;; It is partly intended as a set of examples for the completion-UI package,
+;; but is also useful in and of itself.
 ;;
 ;; See also `predictive-mode' from the Predictive Completion package,
 ;; available separately from the above URL, which provides an advanced
@@ -59,8 +60,8 @@
 ;;   M-x completion-ui-enable-<type>
 ;;
 ;; replacing <type> with the type of completion you want to use, currently one
-;; of: dabbrev, etags, elisp, or semantic. To disable the completion
-;; user-interface, use
+;; of: "dabbrev", "etags", "elisp", "predictive", or "semantic". To disable
+;; the completion user-interface, use
 ;;
 ;;   M-x completion-ui-disable
 ;;
@@ -120,6 +121,17 @@
 (require 'completion-ui)
 (provide 'completion-ui-examples)
 
+;; get rid of compiler warnings
+(eval-when-compile
+  (defvar semanticdb-find-default-throttle)
+  (defun dabbrev--reset-global-variables)
+  (defun dabbrev--find-all-expansions (arg1 arg2))
+  (defun semantic-idle-summary-useful-context-p)
+  (defun semantic-ctxt-current-symbol (arg1))
+  (defun semantic-analyze-current-context)
+  (defun semantic-analyze-possible-completions (arg1)))
+
+
 
 (defun completion-ui-disable ()
   "Disable completion user-interface in current buffer."
@@ -128,7 +140,40 @@
   (setq completion-prefix-function 'completion-prefix)
   (kill-local-variable 'auto-completion-syntax-alist)
   (kill-local-variable 'auto-completion-override-syntax-alist)
-  (auto-completion-mode -1))
+  (auto-completion-mode -1)
+  (when (and (boundp predictive-mode) predictive-mode)
+    (predictive-mode -1)))
+
+
+
+;;;=========================================================
+;;;                     predictive-mode
+
+(defun completion-ui-enable-predictive ()
+  "Enable completion user-interface for predictive completion.
+Requires the predictive package to be installed.
+
+To complete the word at or next to the point, the following key
+bindings can be used:
+\\<completion-map>
+\\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
+
+When completing a word, the following key bindings are available:
+
+\\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
+\\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
+\\<completion-dynamic-map>
+\\[completion-accept] \t Accept the current completion.
+\\[completion-reject] \t Reject the current completion.
+\\[completion-tab-complete] \t\t Insert longest common prefix.
+\\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
+\\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
+\\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
+\\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
+\\[completion-show-menu] \t Display the completion menu.
+\\[completion-popup-frame] \t Display the completion pop-up frame."
+  (interactive)
+  (predictive-mode 1))
 
 
 
@@ -259,7 +304,6 @@ When completing a word, the following key bindings are available:
 ;;;=========================================================
 ;;;                        Semantic
 
-
 (defun completion--semantic-prefix-wrapper ()
   ;; Return prefix at point that Semantic would complete.
   (when (semantic-idle-summary-useful-context-p)
@@ -292,6 +336,7 @@ When completing a word, the following key bindings are available:
 
 (defun completion-ui-enable-semantic ()
   "Enable completion user-interface for Semantic.
+Requires the predictive package to be installed.
 
 To complete the word at or next to the point, the following key
 bindings can be used:
