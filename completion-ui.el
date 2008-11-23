@@ -1746,8 +1746,12 @@ type, using whatever completion method has been set up (either by the
 major mode, or by another minor mode)."
   nil                   ; init-value
   " Complete"           ; lighter
-  auto-completion-map)  ; keymap
-
+  auto-completion-map   ; keymap
+  ;; refuse to enable if no `completion-function' is defined
+  (when (and auto-completion-mode (null completion-function))
+    (setq auto-completion-mode nil)
+    (message (concat "No `completion-function' defined; "
+		     "auto-completion-mode NOT enabled"))))
 
 
 (defun turn-on-auto-completion-mode ()

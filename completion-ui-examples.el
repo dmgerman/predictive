@@ -127,7 +127,8 @@
   (setq completion-function nil)
   (setq completion-prefix-function 'completion-prefix)
   (kill-local-variable 'auto-completion-syntax-alist)
-  (kill-local-variable 'auto-completion-override-syntax-alist))
+  (kill-local-variable 'auto-completion-override-syntax-alist)
+  (auto-completion-mode -1))
 
 
 
