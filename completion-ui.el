@@ -30,31 +30,38 @@
 
 ;;; Commentary:
 ;;
-;; This package provides a user-interface for in-buffer text
-;; completion. It doesn't find completions itself. Instead, a completion
-;; package can simply set the `completion-function' variable to a
-;; function that takes two arguments, a string PREFIX and an integer
-;; MAXNUM, and returns a list of at most MAXNUM completion candidates
-;; for PREFIX. Completion-UI does the rest.
+;; This package is primarily intended for Elisp package writers. It is NOT
+;; intended for Emacs users. Emacs users with no Elisp knowledge who want to
+;; try out the completion-UI features are referred instead to the accompanying
+;; "completion-ui-examples.el" package. You have been warned!
 ;;
-;; That's it! Completion-UI, the auto-completion minor mode, and user
+;; This package provides a user-interface for in-buffer text completion. It
+;; doesn't find completions itself. Instead, a completion package can simply
+;; set the `completion-function' variable to a function that takes two
+;; arguments, a string PREFIX and an integer MAXNUM, and returns a list of at
+;; most MAXNUM completion candidates for PREFIX. Completion-UI does the rest.
+;;
+;; That's it! Completion-UI, the `auto-completion-mode' minor mode, and user
 ;; customizations take care of the rest. (Avoid the temptation to set
 ;; completion-UI customization variables from Elisp code to alter its
 ;; behaviour. The user knows what they want better than you do!)
 ;;
-;; Examples are available on the Emacs wiki, at:
+;; Examples are available in the accompanying "completion-ui-examples.el"
+;; package, and on the Emacs wiki, at:
 ;; www.emacswiki.org/cgi-bin/wiki/CompletionUI
 ;;
-;; Why use completion-UI? Typically, a lot of code in packages providing
-;; some kind of text completion deals with the user interface. The
-;; ultimate goal is that all packages providing in-buffer (and possibly
-;; one day also mini-buffer) completion should use this package to
-;; provide a common user interface, freeing them to concentrate on
-;; finding the completion candidates in the first place. The Elisp
-;; programmer benfits by not having to reinvent the wheel, and the Emacs
-;; user benefits by having a standard yet highly customizable
-;; user-interface that they can customize once and for all to to suit
-;; their preferences, for all completion mechanisms they use.
+;; Why use completion-UI? Typically, a lot of code in packages providing some
+;; kind of text completion deals with the user interface. This is a big waste
+;; of effort, since each package reinvents the wheel by implementing its own
+;; subset of in-buffer completion user-interfaces. The ultimate goal of
+;; completion-UI is that all packages providing in-buffer (and possibly one
+;; day also mini-buffer) completion should use this package to provide a
+;; common user interface, freeing them to concentrate on the more interesting
+;; task of finding the completions in the first place. The Elisp programmer
+;; benfits by not having to reinvent the wheel, and the Emacs user benefits by
+;; having a standard yet highly customizable user-interface that they can
+;; customize once and for all to to suit their preferences, for all completion
+;; mechanisms they want to use.
 ;;
 ;; Various completion user-interfaces are provided, all of which can be
 ;; individually enabled, disabled and extensively tweaked via
@@ -90,12 +97,11 @@
 ;;   point.
 ;;
 ;; Completion-UI also provides a new minor mode, called
-;; auto-completion-mode. When enabled, Emacs will automatically complete
-;; words as they are typed, using the `completion-function' to find
-;; completion candidates. The same customization variables determine how
-;; those candidates are displayed and can be selected. This works
-;; particularly well with dynamic completion (see above), as long as
-;;`completion-function' is fast.
+;; `auto-completion-mode'. When enabled, Emacs will automatically complete
+;; words as they are typed, using the `completion-function' to find completion
+;; candidates. The same customization variables determine how those candidates
+;; are displayed and can be selected. This works particularly well with
+;; dynamic completion (see above), as long as `completion-function' is fast.
 ;;
 ;; This package will work alongside the auto-overlays package if it's
 ;; available, but does not require it.

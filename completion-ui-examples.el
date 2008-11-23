@@ -116,6 +116,16 @@
 ;;
 ;; C-<down>
 ;;    Display the completion pop-up frame.
+;;
+;;
+;; CUSTOMIZING
+;; -----------
+;; The completion user-interface can be heavily customized and tweaked to suit
+;; your every desire, via the `completion-ui' customization group:
+;;
+;;   M-x customize-group <ret> completion-ui <ret>
+;;
+;; All the customization options and settings are documented there.
 
 
 (require 'completion-ui)
@@ -151,7 +161,7 @@
 
 (defun completion-ui-enable-predictive ()
   "Enable completion user-interface for predictive completion.
-Requires the predictive package to be installed.
+Requires the Predictive Completion package to be installed.
 
 To complete the word at or next to the point, the following key
 bindings can be used:
@@ -171,7 +181,16 @@ When completing a word, the following key bindings are available:
 \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
 \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
 \\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour.
+
+See also the Predictive Completion Manual for more extensive
+documentation."
   (interactive)
   (predictive-mode 1))
 
@@ -212,7 +231,13 @@ When completing a word, the following key bindings are available:
 \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
 \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
 \\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour."
   (interactive)
   (require 'dabbrev)
   (setq completion-function 'completion--dabbrev-wrapper))
@@ -253,7 +278,13 @@ When completing a word, the following key bindings are available:
 \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
 \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
 \\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour."
   (interactive)
   (require 'etags)
   (setq completion-function 'completion--etags-wrapper))
@@ -294,7 +325,13 @@ When completing a word, the following key bindings are available:
 \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
 \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
 \\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour."
 
   (interactive)
   (setq completion-function 'completion--elisp-wrapper))
@@ -336,7 +373,8 @@ When completing a word, the following key bindings are available:
 
 (defun completion-ui-enable-semantic ()
   "Enable completion user-interface for Semantic.
-Requires the predictive package to be installed.
+Requires the Semantic package to be installed and enabled in the
+buffer.
 
 To complete the word at or next to the point, the following key
 bindings can be used:
@@ -356,7 +394,16 @@ When completing a word, the following key bindings are available:
 \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
 \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
 \\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour.
+
+See also the Semantic documentation for details of the Semantic
+package."
   (interactive)
   (setq completion-function 'completion--semantic-wrapper)
   (setq completion-prefix-function 'completion--semantic-prefix-wrapper)

@@ -848,25 +848,26 @@ See the `predictive' and `completion-ui' customization groups for
 documentation on the many and various configuration options, and
 the Predictive Completion Manual for fuller information.
 
-To complete the word at or next to the point, the following key
-bindings can be used:
+When `predictive-auto-complete' is enabled, words will
+automatically be completed as you type. Otherwise, to complete
+the word at or next to the point, the following keys can be used:
 \\<completion-map>
-\\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
+  \\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
 
-When completing a word, the following key bindings are available:
+When completing a word, the following keys are available:
 
-\\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
-\\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
-\\<completion-dynamic-map>
-\\[completion-accept] \t Accept the current completion.
-\\[completion-reject] \t Reject the current completion.
-\\[completion-tab-complete] \t\t Insert longest common prefix.
-\\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
-\\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
-\\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
-\\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
-\\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame."
+  \\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
+  \\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
+  \\<completion-dynamic-map>
+  \\[completion-accept] \t Accept the current completion.
+  \\[completion-reject] \t Reject the current completion.
+  \\[completion-tab-complete] \t\t Insert longest common prefix.
+  \\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
+  \\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
+  \\[completion-tooltip-cycle] \t Scroll through completions in the tooltip.
+  \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
+  \\[completion-show-menu] \t Display the completion menu.
+  \\[completion-popup-frame] \t Display the completion pop-up frame."
 
   (interactive "P")
 
