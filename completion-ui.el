@@ -510,17 +510,19 @@ ignore the completions and type normally, since you may
 accidentally accept a completion you didn't want.
 
 If \"word\" is selected, typing a word-constituent character (as
-defined by a buffers' syntax table) will cause the part of the
-word before point to be completed. That is, the completion prefix
-will be all those characters in the word at point that come
-before the point (`completion-word-thing' determines which
-characters form the word). If instead \"string\" is selected,
-typing a word-constituent character will complete the current
-string that has been built up by typing characters. That is, the
-prefix will consist of the characters you've typed sequentially
-in the buffer. The two behaviours usually only differ if you
-insert characters in the middle or at the end of an existing
-word.
+defined by a buffer's syntax table) will cause the part of the
+word before point to be completed. That is,
+`auto-completion-mode' will first find the word at or next to the
+point, and then complete that part of it that comes before the
+point (`completion-word-thing' determines which characters form
+part of a word). If \"string\" is selected, typing a
+word-constituent character will complete the string that has been
+built up by typing consecutive characters. That is, the prefix
+will consist of all the characters you've typed in the buffer
+since the last time you did something other than typing a
+word-constituent character. Although they sound quite different,
+the two behaviours usually only differ if you move the point to
+the middle or end of an existing word and then start typing.
 
 
 Customizing the behaviour for each syntax individually gives more
@@ -531,12 +533,12 @@ syntax descriptors (characters) with behaviours (two-element
 lists).
 
 The first element of the behaviour list must be one of symbols
-'accept, 'reject or 'add. The first two again have the same
-meaning as the predefined behaviours \"punctuation accepts\" and
-\"type normally\", though they now apply only to one syntax
-descriptor, whereas 'add causes characters with that syntax to be
-added to the current completion prefix (this is the usual setting
-for word-constutuent characters).
+'accept, 'reject or 'add. The first two have the same meaning as
+the predefined behaviours \"punctuation accepts\" and \"type
+normally\", though they now apply only to one syntax
+descriptor. 'add causes characters with that syntax to be added
+to the current completion prefix (this is the usual setting for
+word-constutuent characters).
 
 The second element of the list must be one of the symbols 'word,
 'string or 'none. 'word and 'string have the same meaning as the
@@ -546,13 +548,19 @@ from invoking auto-completion.
 
 
 When `auto-completion-syntax-alist' is set from Lisp code, in
-addition to the symbol values described above the list entries
-can also be functions which return one of those symbols. The list
-can also have an additional third entry, which determines whether
-or not the typed character is inserted into the buffer: the
-character is inserted if it is non-nil, not if it is nil. Again
-if the third entry is a function, its return value determines the
-insertion behaviour."
+addition to the symbol values described above the behaviour list
+entries can also be functions which return one of those
+symbols. The list can also have an additional third element,
+which determines whether or not the typed character is inserted
+into the buffer: the character is inserted if it is non-nil, not
+if it is nil. (Note that, perhaps confusingly, a non-existent
+third element is equivalent to setting the third element to
+t). If the third element of the list is a function, its return
+value again determines the insertion behaviour. This allows a
+function to take-over the job of inserting characters (e.g. in
+order to make sure parentheses are inserted in pairs), and is
+probably the only time it makes sense to use a null third
+element."
   :group 'completion-ui
   :type '(choice
           (cons :tag "Predefined"
@@ -613,7 +621,7 @@ mechanisms for selecting completions are still available."
 
 
 (defcustom completion-dynamic-highlight-common-prefix t
-  "*Highlight longest common prefix in dynamic completion."
+  "*Highlight the longest common prefix in dynamic completions."
   :group 'completion-ui
   :type 'boolean)
 
@@ -634,7 +642,7 @@ pop-up frames."
      (:background "dodger blue" :foreground "white"))
     (((class color) (background light))
      (:background "gold" :foreground "black")))
-  "*Face used to highlight common prefix in dynamic completion."
+  "*Face used to highlight the common prefix in dynamic completions."
   :group 'completion-ui)
 
 
@@ -646,17 +654,16 @@ pop-up frames."
 
 If t, enable hotkeys whenever completions are available. If nil,
 disable hotkeys entirely. If set to the symbol 'pop-up, only
-enable hotkeys when a tooltip or pop-up frame is active (the
-completion menu steals keyboard focus, so enabling hotkeys when
-the menu is active is pointless)."
+enable hotkeys when a tooltip or pop-up frame is active. (Note
+that because the completion menu steals keyboard focus, enabling
+hotkeys when the menu is active would be pointless. So don't
+try to request this feature!)"
   :group 'completion-ui
   :type '(choice (const t)
                  (const pop-up)
                  (const nil)))
 
 
-;; not a defcustom, since setting it after loading completion-ui.el (as
-;; defcustom typically will) does not work
 (defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)
   "*List of keys (vectors) to use for selecting completions
 when `completion-use-hotkeys' is enabled."
@@ -679,15 +686,17 @@ when `completion-use-hotkeys' is enabled."
 (defcustom completion-tooltip-timeout 86400
   "*Number of seconds for wihch to display completion tooltip.
 Unfortunately, there is no way to display a tooltip indefinitely
-in Emacs. You can work around this by using a very large number."
+in Emacs. You can work around this by using a very large
+number. (The completion tooltip disapears automatically as soon
+as you do anything other than cycling through completions.)"
   :group 'completion-ui
   :type 'integer)
 
 
 (defcustom completion-tooltip-offset '(0 . 0)
   "Pixel offset for tooltip.
-This sometimes needs to be tweaked manually to get tooltip in
-correct position on different window systems."
+This sometimes needs to be tweaked manually to get the tooltip in
+the correct position under different window systems."
   :group 'completion-ui
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
@@ -709,20 +718,22 @@ attributes are used."
 (defcustom completion-menu-offset '(0 . 0)
   "*Pixel offset for completion menus.
 This sometimes needs to be tweaked manually to get completion
-menus in correct position on different window systems."
+menus in the correct position under different window systems."
   :group 'completion-ui
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
 (defcustom completion-browser-max-items 25
   "*Maximum number of completions to display
-in a completion browser submenu."
+in any one completion browser submenu."
   :group 'predictive
   :type 'integer)
 
 
 (defcustom completion-browser-buckets 'balance
-  "*Policy for choosing number of buckets in completion browser:
+  "*Policy for choosing number of \"buckets\" in completion browser
+when there are more than `completion-browser-max-items' to
+display:
 
 balance:  balance number of buckets and size of content
 maximize: maximize number of buckets, minimize size of contents
@@ -751,7 +762,7 @@ mininize: minimize number of buckets, maximize size of contents"
 (defcustom completion-popup-frame-offset '(0 . 0)
   "Pixel offset for pop-up frame.
 This sometimes needs to be tweaked manually to get the pop-up
-frame in correct position on different window systems."
+frame in the correct position under different window systems."
   :group 'completion-ui
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
@@ -762,15 +773,15 @@ frame in correct position on different window systems."
 ;;;                 Other configuration variables
 
 (defvar completion-function nil
-  "Function that accepts two arguments, PREFIX and MAXNUM,
-and returns a list of at most MAXNUM completion candidates for
-the PREFIX string. If MAXNUM is nil, it should return all
-completion candidates for PREFIX.
+  "Function that returns completions of a prefix.
+It should accept two arguments, PREFIX and MAXNUM, and return a
+list of at most MAXNUM completion candidates. If MAXNUM is nil,
+it should return *all* completion candidates for PREFIX.
 
-By default, the completion candidates that are returned should be
-the entire completed string, including the prefix. If
-`completion-includes-prefix' is set to nil, they should instead
-be the completion minus the prefix. If
+By default, the completion candidate strings that are returned in
+the list should be the entire completed string, including the
+prefix. If `completion-includes-prefix' is set to nil, the
+strings should instead be the completion minus the prefix. If
 `completion-replaces-prefix' is non-nil, then the whole
 completion (which need not be a prefix-completion at all) should
 be returned, and `completion-includes-prefix' is ignored.")
@@ -796,10 +807,10 @@ include the prefix. If t, then they do. Ignored if
 
 
 (defvar completion-replaces-prefix nil
-  "If non-nil, completions replace the \"prefix\"
-that was completed. The characters that were being completed (as
-returned by `completion-prefix-function') will be deleted from
-the buffer when a completion is accepted.
+  "If non-nil, completions completely replace the string that was
+completed, instead of being added to it. The characters that were
+being completed (as returned by `completion-prefix-function')
+will be deleted from the buffer when a completion is accepted.
 
 Setting this to non-nil allows completion-UI to support things
 other than simple prefix-completion. E.g. the \"prefix\" returned
@@ -831,8 +842,11 @@ pre-defined \"things\" in `thing-at-point'.)
 More precisely, `completion-word-thing' is used by the default
 `completion-prefix-function' (`completion-prefix') which is
 called by the above functions to determine the prefix at
-point. So it may be ignored if `completion-prefix-function' is
-set to some other function.")
+point. So it may be ignored if `completion-prefix-function' has
+been changed from the default.
+
+Note: this can be overridden by an \"overlay local\" binding (see
+`auto-overlay-local-binding').")
 (make-variable-buffer-local 'completion-word-thing)
 
 
@@ -850,30 +864,33 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 (defvar completion-menu 'completion-construct-menu
   "The completion menu keymap, or a function to call
-to get a completion menu keymap.
+to get a completion menu keymap. (The latter is more common.)
 
-If a function, that function is called with two arguments, prefix
-and completions, and should return a menu keymap. Note: this can
-be overridden by an \"overlay local\" binding (see
+If a function, that function is called with two arguments, PREFIX
+and COMPLETIONS, and should return a menu keymap.
+
+Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
 (defvar completion-browser-menu-function 'completion-construct-browser-menu
   "Function to call to get a browser menu keymap.
 
-The function is called with two arguments, prefix and
-completions, and should return a menu keymap. Note: this can be
-overridden by an \"overlay local\" binding (see
+The function is called with two arguments, PREFIX and
+COMPLETIONS, and should return a menu keymap.
+
+Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
 (defvar completion-popup-frame-function 'completion-construct-popup-frame-text
   "Function to call to construct pop-up frame text.
 
-The function is called with two arguments, the prefix and
-completions. It should return a list of strings, which are used
-\(in order\) as the lines of text in the pop-up frame. Note: this
-can be overridden by an \"overlay local\" binding (see
+The function is called with two arguments, PREFIX and
+COMPLETIONS. It should return a list of strings, which are used
+\(in order\) as the lines of text in the pop-up frame.
+
+Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
 
 
@@ -883,9 +900,9 @@ can be overridden by an \"overlay local\" binding (see
 Completions are accepted by calling `completion-accept',
 selecting one with a hotkey, or selecting one from a
 menu. Functions are passed three arguments: the prefix, the
-complete string that was accepted \(the concatenation of the
-prefix and the accepted completion string\), and any prefix
-argument supplied to and interactive accept command.")
+complete string that was accepted (including the prefix), and any
+prefix argument supplied by the user if the accept command was
+called interactively.")
 
 
 (defvar completion-reject-functions nil
@@ -893,9 +910,9 @@ argument supplied to and interactive accept command.")
 
 Completions are rejected by calling
 `completion-reject'. Functions are passed three arguments: the
-prefix, the complete string that was rejected \(the concatenation
-of the prefix and the rejected completion string\), and any
-prefix argument supplied to an interactive rejection command.")
+prefix, the complete string that was rejected \(including the of
+the prefix\), and any prefix argument supplied by the user if the
+rejection command was called interactively.")
 
 
 ;; (defvar completion-tab-complete-functions nil
@@ -950,7 +967,10 @@ of tooltip/menu/pop-up frame until there's a pause in typing.")
 
 
 (defvar completion-trap-recursion nil
-  "Used to trap recursive calls to certain completion functions")
+  "Used to trap infinite recursion errors
+in calls to certain completion functions, for which infinite
+recursion can result from incorrectly configured key bindings set
+by the Emacs user.")
 
 
 
