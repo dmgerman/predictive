@@ -836,39 +836,37 @@ mode. Use the command `predictive-mode' instead.
 
 Predictive Completion mode implements predictive text completion,
 in an attempt to save on typing. It looks up completions for the
-word currently being typed in a dictionary. See the `predictive'
-and `completion-ui' customization groups for documentation on the
-various configuration options, and the Predictive Completion mode
-manual for fuller information.
-
-If the `completion-use-dynamic' customization option is enabled,
-typing a character in predictive mode will either add to, accept
-or reject the current dynamic completion, depending on the
-character's syntax.
-
-You can also use the following keys when completing a word:
-\\<completion-dynamic-map>
-\\[completion-accept] \t\t Accept current dynamic completion.
-\\[completion-reject] \t\t Reject current dynamic completion.
-\\[completion-cycle] \t\t Cycle through available completion candidates.
-\\[completion-tab-complete] \t\t Insert longest common prefix.
-\\[completion-show-menu] \t Show the completion menu below the point.
-\\<completion-menu-map>
-If `completion-use-menu' is enabled, you can also display the
-completion menu with M-down.
-
-If the `completion-use-hotkeys' customization option is enabled,
-you can select from a list of completions (displayed in the echo
-area if `completion-use-echo' is enabled) by typing a single key.
-Enabling the `completion-use-tooltip' customization option will
-cause completions to be displayed in a tooltip below the point.
+word currently being typed in a dictionary.
 
 Although the English dictionary supplied with the Predictive
 Completion Mode package gives quite good results \"out of the
 box\", for best results you're strongly encouraged to create your
-own dictionaries and train them on your own text (the recommended
-setup is to create one dictionary for each type of writing you
-do: emails, academic research articles, letters...)"
+own dictionaries and train them on your own text. See the Predictive
+Completion Manual for more information.
+
+See the `predictive' and `completion-ui' customization groups for
+documentation on the many and various configuration options, and
+the Predictive Completion Manual for fuller information.
+
+To complete the word at or next to the point, the following key
+bindings can be used:
+\\<completion-map>
+\\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
+
+When completing a word, the following key bindings are available:
+
+\\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
+\\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
+\\<completion-dynamic-map>
+\\[completion-accept] \t Accept the current completion.
+\\[completion-reject] \t Reject the current completion.
+\\[completion-tab-complete] \t\t Insert longest common prefix.
+\\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
+\\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
+\\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
+\\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
+\\[completion-show-menu] \t Display the completion menu.
+\\[completion-popup-frame] \t Display the completion pop-up frame."
 
   (interactive "P")
 
