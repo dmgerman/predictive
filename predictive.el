@@ -920,11 +920,10 @@ do: emails, academic research articles, letters...)"
       (when modefunc
 	(if (functionp (cdr modefunc))
 	    (unless (funcall (cdr modefunc) 1)
-	      (message "Predictive major-mode setup function failed;\
- %s support disabled"
-		       major-mode)
-	      (setq predictive-disable-major-mode-setup t)
-	      (sit-for 2))
+	      (warn (concat "Predictive major-mode setup function %s "
+			    "failed; %s support disabled")
+		       (cdr modefunc) major-mode)
+	      (setq predictive-disable-major-mode-setup t))
 	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
 		 (prin1-to-string (cdr modefunc))))))
 
@@ -970,10 +969,16 @@ do: emails, academic research articles, letters...)"
       ;; matching function with a negative argument to indicate disabling
       (let ((modefunc (assq major-mode predictive-major-mode-alist)))
 	(when modefunc
-	  (if (functionp (cdr modefunc))
-	      (funcall (cdr modefunc) -1)
-	    (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
-		   (prin1-to-string (cdr modefunc)))))))
+	  (condition-case nil
+	      (if (functionp (cdr modefunc))
+		  (funcall (cdr modefunc) -1)
+		(error (concat "Wrong type in `predictive-major-mode-alist': "
+			       "functionp, %s"
+			       (prin1-to-string (cdr modefunc)))))
+	    (error
+	     (warn (concat "Predictive major-mode setup function failed "
+			   "whilst disabling: %s")
+		   (prin1-to-string (cdr modefunc))))))))
 
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
@@ -2324,7 +2329,9 @@ there's only one."
 	 ;; if element is a function or symbol, evaluate it
 	 (cond
 	  ((functionp dic) (setq dic (funcall dic)))
-	  ((symbolp dic) (setq dic (eval dic))))
+  	  ((symbolp dic) (setq dic (eval dic)))
+;; 	  ((symbolp dic) (setq dic (eval (intern-soft (symbol-name dic)))))
+	  )
 
 	 (cond
 	  ;; if element is a dictionary, return it
