@@ -1533,8 +1533,7 @@ used if the current Emacs version lacks command remapping support."
     ;; <up> and <down> cycle completions, which appears to move selection
     ;; up and down tooltip entries
     (define-key map [down] 'completion-tooltip-cycle)
-    (define-key map [up]
-      (lambda () (interactive) (completion-tooltip-cycle -1)))
+    (define-key map [up] 'completion-tooltip-cycle-backwards)
     (setq completion-tooltip-map map)))
 
 
@@ -2992,6 +2991,17 @@ cow."
   (completion-cycle n overlay t)
   (completion-show-tooltip))
 
+
+(defun completion-tooltip-cycle-backwards (&optional n overlay)
+  "Cycle backwards through N completions and redisplay the tooltip.
+A negative argument cycles backwards.
+
+If OVERLAY is supplied, use that instead of finding one. The
+point had better be within OVERLAY or you'll be attacked by a mad
+sheep."
+  (interactive)
+  (completion-cycle (- n) overlay t)
+  (completion-show-tooltip))
 
 
 (defun completion-tab-complete (&optional overlay)
