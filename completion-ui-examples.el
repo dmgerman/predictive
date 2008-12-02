@@ -50,7 +50,7 @@
 ;; the current `load-path' using "C-h v load-path" within Emacs), then add the
 ;; following line to your .emacs startup file:
 ;;
-;;    (require 'completion-ui)
+;;    (require 'completion-ui-examples)
 ;;
 ;;
 ;; ENABLING
@@ -133,13 +133,15 @@
 
 ;; get rid of compiler warnings
 (eval-when-compile
-  (defvar semanticdb-find-default-throttle)
-  (defun dabbrev--reset-global-variables)
-  (defun dabbrev--find-all-expansions (arg1 arg2))
-  (defun semantic-idle-summary-useful-context-p)
-  (defun semantic-ctxt-current-symbol (arg1))
-  (defun semantic-analyze-current-context)
-  (defun semantic-analyze-possible-completions (arg1)))
+  (defvar semanticdb-find-default-throttle nil)
+  (defun dabbrev--reset-global-variables () nil)
+  (defun dabbrev--find-all-expansions (arg1 arg2) nil)
+  (defun tags-lazy-completion-table () nil)
+  (defun semantic-idle-summary-useful-context-p () nil)
+  (defun semantic-ctxt-current-symbol (arg1) nil)
+  (defun semantic-analyze-current-context () nil)
+  (defun semantic-analyze-possible-completions (arg1) nil)
+  (defun predictive-mode (arg1) nil))
 
 
 
@@ -151,48 +153,8 @@
   (kill-local-variable 'auto-completion-syntax-alist)
   (kill-local-variable 'auto-completion-override-syntax-alist)
   (auto-completion-mode -1)
-  (when (and (boundp predictive-mode) predictive-mode)
-    (predictive-mode -1)))
-
-
-
-;;;=========================================================
-;;;                     predictive-mode
-
-(defun completion-ui-enable-predictive ()
-  "Enable completion user-interface for predictive completion.
-Requires the Predictive Completion package to be installed.
-
-To complete the word at or next to the point, the following key
-bindings can be used:
-\\<completion-map>
-\\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
-
-When completing a word, the following key bindings are available:
-
-\\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
-\\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
-\\<completion-dynamic-map>
-\\[completion-accept] \t Accept the current completion.
-\\[completion-reject] \t Reject the current completion.
-\\[completion-tab-complete] \t\t Insert longest common prefix.
-\\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
-\\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
-\\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
-\\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
-\\[completion-show-menu] \t Display the completion menu.
-\\[completion-popup-frame] \t Display the completion pop-up frame.
-
-The completion user-interface can be customized via the
-`completion-ui' customization group. All the vast array of
-customization options are documented there, and can be used to
-completely change the way the user-interface behaves. Please look
-there if you don't like the default behaviour.
-
-See also the Predictive Completion Manual for more extensive
-documentation."
-  (interactive)
-  (predictive-mode 1))
+  (when (featurep 'predictive) (predictive-mode -1))
+  (message "Completion-UI disabled"))
 
 
 
@@ -239,8 +201,13 @@ customization options are documented there, and can be used to
 completely change the way the user-interface behaves. Please look
 there if you don't like the default behaviour."
   (interactive)
-  (require 'dabbrev)
-  (setq completion-function 'completion--dabbrev-wrapper))
+  (if (not (require 'dabbrev nil t))
+      (error (concat "Failed to load \"dabbrev\" package; "
+		     "completion-UI dabbrev support NOT enabled"))
+    (completion-ui-disable)
+    (setq completion-function 'completion--dabbrev-wrapper)
+    (message "Completion-UI dabbrev support enabled")))
+
 
 
 
@@ -250,7 +217,8 @@ there if you don't like the default behaviour."
 (defun completion--etags-wrapper (prefix maxnum)
   ;; Wrapper around a call to `all-completions' using `tags-complete-tag', to
   ;; use as a `completion-function'.
-  (let ((completions (all-completions prefix 'tags-complete-tag)))
+  (let* ((completions (all-completions prefix
+				       (tags-lazy-completion-table))))
     (when maxnum
       (setq completions
 	    (butlast completions (- (length completions) maxnum))))
@@ -286,8 +254,18 @@ customization options are documented there, and can be used to
 completely change the way the user-interface behaves. Please look
 there if you don't like the default behaviour."
   (interactive)
-  (require 'etags)
-  (setq completion-function 'completion--etags-wrapper))
+  (cond
+   ((not (require 'etags nil t))
+    (error (concat "Failed to load \"etags\" package; "
+		   "completion-UI etags support NOT enabled")))
+   ((not (or tags-table-list tags-file-name))
+    (error (concat "No tags table loaded; completion-UI etags support "
+		   "NOT enabled; try %s")
+	   (substitute-command-keys "\\[visit-tags-table]")))
+   (t
+    (completion-ui-disable)
+    (setq completion-function 'completion--etags-wrapper)
+    (message "Completion-UI etags support enabled"))))
 
 
 
@@ -332,9 +310,54 @@ The completion user-interface can be customized via the
 customization options are documented there, and can be used to
 completely change the way the user-interface behaves. Please look
 there if you don't like the default behaviour."
-
   (interactive)
+  (completion-ui-disable)
   (setq completion-function 'completion--elisp-wrapper))
+
+
+
+;;;=========================================================
+;;;                     predictive-mode
+
+(defun completion-ui-enable-predictive ()
+  "Enable completion user-interface for predictive completion.
+Requires the Predictive Completion package to be installed.
+
+To complete the word at or next to the point, the following key
+bindings can be used:
+\\<completion-map>
+\\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
+
+When completing a word, the following key bindings are available:
+
+\\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
+\\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
+\\<completion-dynamic-map>
+\\[completion-accept] \t Accept the current completion.
+\\[completion-reject] \t Reject the current completion.
+\\[completion-tab-complete] \t\t Insert longest common prefix.
+\\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
+\\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
+\\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
+\\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
+\\[completion-show-menu] \t Display the completion menu.
+\\[completion-popup-frame] \t Display the completion pop-up frame.
+
+The completion user-interface can be customized via the
+`completion-ui' customization group. All the vast array of
+customization options are documented there, and can be used to
+completely change the way the user-interface behaves. Please look
+there if you don't like the default behaviour.
+
+See also the Predictive Completion Manual for more extensive
+documentation."
+  (interactive)
+  (if (not (require 'predictive nil t))
+      (error (concat "Failed to load \"predictive\" package; "
+		     "completion-UI Predictive support NOT enabled"))
+    (completion-ui-disable)
+    (predictive-mode 1)
+    (message "Completion-UI Predictive support enabled")))
 
 
 
@@ -405,8 +428,20 @@ there if you don't like the default behaviour.
 See also the Semantic documentation for details of the Semantic
 package."
   (interactive)
-  (setq completion-function 'completion--semantic-wrapper)
-  (setq completion-prefix-function 'completion--semantic-prefix-wrapper)
-  (make-local-variable 'auto-completion-override-syntax-alist)
-  (setq auto-completion-override-syntax-alist '((?. . (add word))))
-  (define-key completion-map "." 'completion-self-insert))
+  ;; test `completion--semantic-wrapper' before enabling
+  (if (condition-case nil
+	  (progn (completion--semantic-wrapper "a" 10) nil)
+	(error t))
+      (error (concat "Semantic package not loaded and configured; "
+		     "completion-UI Semantic support NOT enabled"))
+    ;; enabling
+    (completion-ui-disable)
+    (setq completion-function 'completion--semantic-wrapper)
+    (setq completion-prefix-function 'completion--semantic-prefix-wrapper)
+    (make-local-variable 'auto-completion-override-syntax-alist)
+    (setq auto-completion-override-syntax-alist '((?. . (add word))))
+    (define-key completion-map "." 'completion-self-insert)
+    (message "Completion-UI Semantic support enabled")))
+
+
+;;; completion-ui-examples.el end here
