@@ -1299,29 +1299,31 @@ Display the number of words in a dictionary.
 @end ftable
 
 The file containing the list of words used to populate a dictionary has
-to conform to a specific format. Each line contains one word, delimited
-by @samp{""}, optionally followed by an integer separated by white-space
-from the word itself, which specifies the word's weight. Any characters
-before the first @samp{"} are ignored. Note that the `words' in a
+to conform to a specific format:
+@lisp
+"@var{word}" @var{weight} [@var{prefix-list}]
+@end lisp
+Each line contains one word @var{word}, delimited by @samp{""}, followed
+by an integer @var{weight} which specifies the word's weight, separated
+by white-space from the word itself. Note that the `words' in a
 dictionary do not have to be words in the usual sense. They can be
 arbitrary sequences of characters, including white-space and punctuation
-characters. The quote character @samp{"} can be included by escaping it:
-@samp{\"}. (@xref{Known Bugs}, however.)
+characters. The quote character @samp{"} can be included in a word by
+escaping it: @samp{\"}. Optionally, a list of words which are prefixes
+of @var{word} can be specified in @var{prefix-list} at the end of the
+line, again separated from the @var{weight} by white-space
+(@pxref{Relationships Between Words}). If present, it should be of the
+form:
+@lisp
+(:prefixes ("@var{prefix1}" "@var{prefix2}" @dots{}))
+@end lisp
 
-To ensure it is as efficiently structured as possible, it is best to
-create a dictionary from a list of words using
-@command{predictive-create-dict}, rather than creating a blank
-dictionary and adding the words manually using
-@command{predictive-add-to-dict}. Also, deleting many words using
-@command{predictive-remove-from-dict} will eventually result in
-inefficient dictionary structures. For small dictionaries it won't make
-much difference, but for larger ones it can be significant. You can
-rebuild an inefficient dictionary by dumping the words to a buffer,
-creating a new dictionary, and populating it from the dumped
-words. @xref{Loading and Saving Dictionaries}.
 
 @noindent
-The following variables set defaults for other dictionary properties:
+The following variables set defaults for other dictionary properties. To
+change their values for a single dictionary, set the variable to the
+desired value before creating the dictionary, resetting the value
+afterwards.
 
 @vtable @env
 @item predictive-completion-speed
