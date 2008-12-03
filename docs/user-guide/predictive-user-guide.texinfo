@@ -1369,17 +1369,29 @@ same as the file name, with the extension removed. This will not add it
 to the list of dictionaries used by the current buffer (see
 @command{predictive-load-dict}, above).
 
-@item predictive-unload-dict
+@item predictive-unlist-dict
 Remove a dictionary from the list of dictionaries used by the current
 buffer. The dictionary will no longer be included when learning from the
 buffer, see @ref{Learning from Buffers and Files}, and it will not be
 saved when the buffer is killed. Note that this doesn't actually unload
 the dictionary from Emacs (see @command{dictree-unload}, below).
 
+@item predictive-unload-dict
+You probably don't want to do this! See @command{predictive-unlist-dict}
+instead. Unload a dictionary from the current buffer and from Emacs. If
+the dictionary's autosave flag is set, this will also save it
+(@pxref{Creating Dictionaries}), unless overridden by supplying a prefix
+argument. If the dictionary is still used anywhere in the buffer (and it
+is, since it's in the list of dictionaries used by the buffer), then you
+will cripple predictive mode in the current buffer. If you unload the
+main dictionary (@pxref{Basic Dictionary Usage}), you will probably
+cripple predictive mode in all buffers.
+
 @item dictree-unload
-Unload a dictionary. If the dictionary's autosave flag is set, this will
-also save it (@pxref{Creating Dictionaries}), unless overridden by
-supplying a prefix argument.
+Warning: unloading a dictionary that's still in use will cripple
+predictive mode! Unload a dictionary. If the dictionary's autosave flag
+is set, this will also save it (@pxref{Creating Dictionaries}), unless
+overridden by supplying a prefix argument.
 
 @item predictive-save-dict
 Save a dictionary to its associated file. Prompt for a file name if

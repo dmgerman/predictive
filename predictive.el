@@ -1286,18 +1286,19 @@ load. Interactively, it is read from the mini-buffer."
 
 
 
-(defun predictive-unload-dict (dict)
+(defun predictive-unlist-dict (dict)
   "Remove DICT from the list of dictionaries used by the current buffer.
 Interactively, DICT is read from the mini-buffer.
 
 Note that this does not unload the dictionary from Emacs (see
-`dictree-unload'), nor does it prevent the dictionary being used
-in the buffer. It only affects which dictionaries are included
-when learning from the buffer (see `predictive-learn-from-buffer'
-and `predictive-fast-learn-from-buffer'), and which dictionaries
-are auto-saved when the buffer is killed or predictive mode is
+`predictive-unload-dict'), nor does it prevent the dictionary
+being used in the buffer. It only affects which dictionaries are
+included when learning from the buffer (see
+`predictive-learn-from-buffer' and
+`predictive-fast-learn-from-buffer'), and which dictionaries are
+auto-saved when the buffer is killed or predictive mode is
 disabled (see `predictive-dict-autosave-on-kill-buffer' and
-`predictive-dict-autosave-on-disable-mode')."
+`predictive-dict-autosave-on-mode-disable')."
 
   (interactive (list (read-dict "Dictionary: "
 				nil predictive-used-dict-list)))
@@ -1308,6 +1309,30 @@ disabled (see `predictive-dict-autosave-on-kill-buffer' and
   (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
   (message "Dictionary %s unloaded from buffer %s"
 	   (dictree-name dict) (buffer-name (current-buffer))))
+
+
+
+(defun predictive-unload-dict (dict &optional dont-save)
+  "Unload dictionary DICT.
+
+Warning: if the dictionary is currently in use in the buffer,
+predictive-mode will start throwing horrible errors when you try
+to complete words!"
+  (interactive (list (read-dict "Dictionary: "
+				nil predictive-used-dict-list)))
+  ;; sort out argument
+  (when (symbolp dict) (setq dict (eval dict)))
+  ;; warn if unloading main dict
+  (unless (and (interactive-p)
+	       (or (eq dict (eval predictive-main-dict))
+		   (eq dict (eval (default-value 'predictive-main-dict))))
+	       (not (yes-or-no-p (concat
+				  "Unloading the main dictionary will "
+				  "cripple predictive-mode; continue "
+				  "anyway? "))))
+    ;; unlist and unload dictionary
+    (predictive-unlist-dict dict)
+    (dictree-unload dict dont-save)))
 
 
 
