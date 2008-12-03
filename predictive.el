@@ -1414,8 +1414,11 @@ respectively."
 		 (setq dictname (intern dictname)))
 	    (and (or (null (interactive-p))
 		     (and (y-or-n-p
-			   (format "Dictionary %s already exists. Replace it? "
-			      dictname))
+			   (format (concat
+				    "Dictionary %s already exists. Replace "
+				    "it? (you'll be prompted to save the old "
+				    "version) ")
+				   dictname))
 			  (dictree-unload (eval (intern-soft dictname)))))
 		 (setq dictname (intern dictname))))
 
