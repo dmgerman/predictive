@@ -1374,14 +1374,14 @@ respectively."
     (setq populate nil))
   (unless (or (null populate) (file-regular-p populate))
     (setq populate nil)
-    (message "File %s does not exist; creating blank dictionary" populate))
+    (message "File %s does not exist; creating empty dictionary" populate))
   (when (and dictname (symbolp dictname))
     (setq dictname (symbol-name dictname)))
 
   ;; confirm if overwriting existing dict, then unload existing one
-  ;; (Note: we need the condition-case to work around bug in intern-soft. It
+  ;; (Note: the condition-case is there to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
-  ;;        return the symbol instead)
+  ;;        return the symbol instead in some Emacs versions)
   (when (or (null dictname)
 	    (and (null (dictree-p (condition-case
 				      error (eval (intern-soft dictname))
@@ -1405,7 +1405,8 @@ respectively."
       ;; populate it
       (if (null populate)
 	  (when (interactive-p) (message "Created dictionary %s" dictname))
-	(dictree-populate-from-file dict populate)
+	(dictree-populate-from-file dict populate nil nil
+				    (lambda (data) (or data 0)))
 	(when (interactive-p)
 	  (message "Created dictionary %s and populated it from file %s"
 		   dictname populate)))
