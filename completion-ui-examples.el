@@ -161,12 +161,12 @@
 ;;;=========================================================
 ;;;                     dabbrevs
 
-(defun completion--dabbrev-wrapper (prefix maxnum)
+(defun completion--dabbrev-wrapper (prefix &optional maxnum)
   ;; Wrapper around `dabbrev--find-all-completions', to use as a
   ;; `completion-function'.
   (dabbrev--reset-global-variables)
   (let ((completions (dabbrev--find-all-expansions prefix nil)))
-    (when maxnum
+    (when (and maxnum (> (length completions) maxnum))
       (setq completions
 	    (butlast completions (- (length completions) maxnum))))
     completions))
@@ -214,12 +214,12 @@ there if you don't like the default behaviour."
 ;;;=========================================================
 ;;;                        etags
 
-(defun completion--etags-wrapper (prefix maxnum)
+(defun completion--etags-wrapper (prefix &optional maxnum)
   ;; Wrapper around a call to `all-completions' using `tags-complete-tag', to
   ;; use as a `completion-function'.
   (let* ((completions (all-completions prefix
 				       (tags-lazy-completion-table))))
-    (when maxnum
+    (when (and maxnum (> (length completions) maxnum))
       (setq completions
 	    (butlast completions (- (length completions) maxnum))))
     completions))
@@ -272,11 +272,11 @@ there if you don't like the default behaviour."
 ;;;=========================================================
 ;;;                        Elisp
 
-(defun completion--elisp-wrapper (prefix maxnum)
+(defun completion--elisp-wrapper (prefix &optional maxnum)
   ;; Wrapper around a call to `all-completions' using `obarray', to use as a
   ;; `completion-function'.
   (let ((completions (all-completions prefix obarray)))
-    (when maxnum
+    (when (and maxnum (> (length completions) maxnum))
       (setq completions
 	    (butlast completions (- (length completions) maxnum))))
     completions))
@@ -373,7 +373,7 @@ documentation."
       prefix)))
 
 
-(defun completion--semantic-wrapper (prefix maxnum)
+(defun completion--semantic-wrapper (prefix &optional maxnum)
   ;; Return list of Semantic completions for PREFIX at point. Optional
   ;; argument MAXNUM is the maximum number of completions to return.
   (when (semantic-idle-summary-useful-context-p)
