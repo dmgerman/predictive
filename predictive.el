@@ -49,6 +49,8 @@
 ;; Version 0.18
 ;; * updated for compatibility with new dict-tree.el
 ;; * simplified `predictive-update-which-dict' a bit
+;; * updated for compatibility with removal of `completion-includes-prefix'
+;;   and related changes in completion-UI.el
 ;;
 ;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
@@ -889,7 +891,6 @@ When completing a word, the following keys are available:
    ((not predictive-mode)
     ;; set the completion function
     (setq completion-function 'predictive-complete)
-    (setq completion-includes-prefix t)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)
