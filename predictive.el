@@ -741,7 +741,7 @@ to the dictionary, nil if it should not. Only used when
 
 
 ;;; ================================================================
-;;;                       Convenience macros
+;;;                  Convenience macros and functions
 
 (defun predictive-capitalized-p (string)
   ;; Return t if string is capitalized (only first letter upper case), nil
@@ -752,6 +752,14 @@ to the dictionary, nil if it should not. Only used when
        (or (= 1 (length string))
 	   (string= (substring string 1) (downcase (substring string 1))))))
 
+
+(defun predictive-expand-prefix (prefix)
+  ;; Return expanded list of prefixes to complete, based on settings of
+  ;; `predictive-ignore-initial-caps' and...
+  (if (and predictive-ignore-initial-caps
+	   (predictive-capitalized-p prefix))
+      (list prefix (downcase prefix))
+    prefix))
 
 
 (defmacro predictive-create-auxiliary-file-location ()
@@ -1162,14 +1170,16 @@ for uncapitalized version."
 
     ;; if there is a current dictionary...
     (when dict
+      (setq str (predictive-expand-prefix prefix))
       ;; sort out capitalisation
-      (when (and predictive-ignore-initial-caps
-		 (predictive-capitalized-p prefix))
-	(setq str (list prefix (downcase prefix))))
       ;; complete the prefix using the current dictionary
       (setq completions
 	    (dictree-complete dict str (if maxnum t nil) maxnum
 			      nil nil filter 'strip-data))
+      ;; sort out capitalization of completions
+      (when (and predictive-ignore-initial-caps
+		 (predictive-capitalized-p prefix))
+	(setq completions (mapcar 'upcase-initials completions)))
       ;; return the completions
       completions)))
 
