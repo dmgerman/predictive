@@ -1887,11 +1887,16 @@ cauliflower will start growing out of your ears."
         (overlay-put overlay 'completion-num 0)
         ;; highlight common prefix, if enabled
         (when completion-dynamic-highlight-common-prefix
-          (setq str (try-completion prefix completions))
+          (setq str (try-completion
+		     "" (mapcar
+			 (lambda (cmpl) (substring cmpl (length prefix)))
+			 completions)))
 	  ;; (try-completion returns t if there's only one completion)
-	  (when (eq str t) (setq str (car completions)))
 	  (move-overlay (overlay-get overlay 'common-prefix)
-			pos (+ pos (- (length str) (length prefix))))))
+			pos (if (eq str t)
+				(+ pos (- (length (car completions))
+					  (length prefix)))
+			      (+ pos (length str))))))
 
       ;; move point to appropriate position in the overlay
       (completion-position-point-in-overlay overlay))
@@ -2762,13 +2767,13 @@ internally. It should *never* be bound in a keymap."
 	 (t
 	  ;; delete old provisional completion, including prefix if
 	  ;; `completion-replaces-prefix' is non-nil
-	  (delete-region (- (overlay-start overlay)
-			    (if (and completion-replaces-prefix
-				     (not (overlay-get overlay
-						       'prefix-replaced)))
-				(length (overlay-get overlay 'prefix))
-			      0))
-			 (overlay-end overlay))
+	  (delete-region
+	   (- (overlay-start overlay)
+	      (if (or (null completion-replaces-prefix)
+		      (not (overlay-get overlay 'prefix-replaced)))
+		  (length (overlay-get overlay 'prefix))
+		0))
+	   (overlay-end overlay))
 	  (let ((overwrite-mode nil)) (insert (nth n completions)))
 	  ;; run accept hooks
 	  (run-hook-with-args 'completion-accept-functions
