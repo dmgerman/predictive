@@ -50,7 +50,7 @@
 ;; * updated for compatibility with new dict-tree.el
 ;; * simplified `predictive-update-which-dict' a bit
 ;; * updated for compatibility with removal of `completion-includes-prefix'
-;;   and related changes in completion-UI.el
+;;   and related changes in completion-UI
 ;;
 ;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
@@ -407,6 +407,15 @@ typing \"a\" would only find \"and\"."
   :type 'boolean)
 
 
+(defcustom predictive-prefix-expansions nil
+  "*Alist of expansions to apply to a prefix before completing it.
+The alist should associate regexps with their replacements. They
+are applied one-by-one and in-order to the completion prefix, by
+passing the regexp and replacement to `replace-regexp-in-string'."
+  :group 'predictive
+  :type '(alist :key-type regexp :value-type string))
+
+
 (defcustom predictive-auto-complete t
   "*Enable and disable auto-completion-mode along with predictive mode."
   :group 'predictive
@@ -600,8 +609,8 @@ See also `predictive-which-dict-mode' and `predictive-which-dict'."
 (when (fboundp 'defvaralias)
   (defvaralias 'predictive-completion-max-candidates
     'completion-max-candidates)
-  (defalias 'predictive-completion-resolve-old-method
-    'completion-resolve-old-method)
+  (defvaralias 'predictive-completion-resolve-behaviour
+    'completion-resolve-behaviour)
   (defvaralias 'predictive-auto-completion-min-chars
     'auto-completion-min-chars)
   (defvaralias 'predictive-auto-completion-delay
@@ -757,11 +766,53 @@ to the dictionary, nil if it should not. Only used when
 
 (defun predictive-expand-prefix (prefix)
   ;; Return expanded list of prefixes to complete, based on settings of
-  ;; `predictive-ignore-initial-caps' and...
-  (if (and predictive-ignore-initial-caps
-	   (predictive-capitalized-p prefix))
-      (list prefix (downcase prefix))
-    prefix))
+  ;; `predictive-ignore-initial-caps' and `predictive-prefix-expansions'
+
+  ;; if there are no prefix expansions...
+  (if (null predictive-prefix-expansions)
+      ;; if ignoring initial caps, expand a capitalized prefix into a list of
+      ;; lower-case and capitalized prefixes
+      (if (and predictive-ignore-initial-caps
+	       (predictive-capitalized-p prefix))
+	  (cons 'complete (list prefix (downcase prefix)))
+	(cons 'complete prefix))
+
+    ;; if there are prefix expansions...
+    ;; quote any special characters in prefix, and apply expansions
+    (dolist (expansion (append '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
+				 ("\\[" . "\\\\[") ("\\]" . "\\\\]")
+				 ("\\\\" . "\\\\\\\\"))
+			       predictive-prefix-expansions))
+      (let ((case-fold-search nil))
+	(setq prefix (replace-regexp-in-string
+		      (car expansion) (cdr expansion) prefix t))))
+    ;; if ignoring initial caps...
+    (when predictive-ignore-initial-caps
+      (let ((c (aref prefix 0)))
+	(cond
+	 ;; if initial character is a non-negated character alternative, add
+	 ;; lower-case letters to the alternative
+	 ((and (eq c ?\[) (not (eq (aref prefix 1) ?^)))
+	  (let ((case-fold-search nil)
+		char-alt)
+	    (string-match "^\\[.*?\\]" prefix)
+	    (setq char-alt (substring (match-string 0 prefix) 1 -1))
+	    (dolist (c (append char-alt nil))
+	      (unless (eq c (downcase c))
+		(setq char-alt
+		      (concat char-alt (char-to-string (downcase c))))))
+	    (setq prefix (concat "[" char-alt "]"
+				 (replace-match "" nil nil prefix)))))
+	 ;; if initial character is a literal upper-case character, expand it
+	 ;; into a character alternative including lower-case version
+	 ((not (or (eq c ?*) (eq c ??) (eq c ?\[) (eq c ?\]) (eq c ?\\)))
+	  (when (predictive-capitalized-p prefix)
+	    (setq prefix (concat "[" (char-to-string c)
+				 (char-to-string (downcase c)) "]"
+				 (substring prefix 1)))))
+	 )))
+    (cons 'wildcard (concat prefix "*"))))
+
 
 
 (defmacro predictive-create-auxiliary-file-location ()
@@ -1156,9 +1207,8 @@ If `predictive-ignore-initial-caps' is enabled and first
 character of string is capitalized, also search for completions
 for uncapitalized version."
 
-  (let ((str prefix)
-	(dict (predictive-current-dict))
-	filter completions)
+  (let ((dict (predictive-current-dict))
+	pfx filter completions)
 
     ;; construct the completion filter
     (let ((completion-filter predictive-completion-filter))
@@ -1171,12 +1221,17 @@ for uncapitalized version."
 
     ;; if there is a current dictionary...
     (when dict
-      (setq str (predictive-expand-prefix prefix))
-      ;; sort out capitalisation
-      ;; complete the prefix using the current dictionary
-      (setq completions
-	    (dictree-complete dict str (if maxnum t nil) maxnum
-			      nil nil filter 'strip-data))
+      ;; expand prefix
+      (setq pfx (predictive-expand-prefix prefix))
+      ;; if expanded prefix is a wildcard pattern, do a wildcard search
+      (if (eq (car pfx) 'wildcard)
+	  (setq completions
+		(dictree-wildcard-search dict (cdr pfx) (if maxnum t nil)
+					 maxnum nil nil filter 'strip-data))
+	;; otherwise, complete the prefix
+	(setq completions
+	      (dictree-complete dict (cdr pfx) (if maxnum t nil) maxnum
+				nil nil filter 'strip-data)))
       ;; sort out capitalization of completions
       (when (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p prefix))
@@ -1440,7 +1495,7 @@ respectively."
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave nil
 				 '< '+ 'predictive-dict-rank-function nil nil
-				 nil nil complete-speed))
+				 nil nil complete-speed nil complete-speed))
       ;; populate it
       (if (null populate)
 	  (when (interactive-p) (message "Created dictionary %s" dictname))
@@ -2449,8 +2504,9 @@ there's only one."
       (setq buffer-dict
 	    (dictree-create (predictive-buffer-local-dict-name)
 			    filename (when filename t) nil
-			    '< insfun rankfun nil nil
-			    nil nil predictive-completion-speed)))
+			    '< insfun rankfun nil
+			    nil nil nil predictive-completion-speed
+			    nil predictive-completion-speed)))
 
 
     ;; ----- meta-dictionary -----
