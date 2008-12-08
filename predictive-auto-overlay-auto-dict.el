@@ -6,7 +6,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3
+;; Version: 0.3.1
 ;; Keywords: predictive, automatic, overlays, dictionary, auto-dict
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.1
+;; * updated for compatibility with new dict-tree.el
 ;;
 ;; Version 0.3
 ;; * fixed bug causing two duplicate deletions from dict by removing
@@ -238,7 +241,9 @@
 	  (dictree-create dictname file
 			  predictive-dict-autosave nil
 			  '< '+ 'predictive-dict-rank-function
-			  nil nil nil nil predictive-completion-speed
+			  nil nil nil
+			  nil predictive-completion-speed
+			  nil predictive-completion-speed
 			  nil nil nil nil
 			  'predictive-auto-dict-plist-savefun nil))
 	(predictive-load-dict dictname)
@@ -249,7 +254,9 @@
      (t
       (dictree-create nil nil nil nil
 		      '< '+ 'predictive-dict-rank-function
-		      nil nil nil nil predictive-completion-speed
+		      nil nil nil
+		      nil predictive-completion-speed
+		      nil predictive-completion-speed
 		      nil nil nil nil
 		      'predictive-auto-dict-plist-savefun nil))
      )))
