@@ -411,9 +411,60 @@ typing \"a\" would only find \"and\"."
   "*Alist of expansions to apply to a prefix before completing it.
 The alist should associate regexps with their replacements. They
 are applied one-by-one and in-order to the completion prefix, by
-passing the regexp and replacement to `replace-regexp-in-string'."
+passing the regexp, replacement and prefix to
+`replace-regexp-in-string'. Case is always sensitive.
+
+The expanded prefix can contain certain shell-glob-like
+wildcards, to form a pattern that is used to match prefixes for
+completion. However, the pattern must *only* match prefixes of
+the same length as the original one, whether it contains
+wildcards or not.
+
+  ?  wildcard
+    Matches any single character.
+
+  [...]  character alternative
+    Matches any of the characters listed between the square
+    brackets.
+
+  [^...]  negated character alternative
+    Matches any character *other* then those listed between the
+    square brackets.
+
+  []..]  character alternative including `]'
+    Matches any of the listed characters, including `]'.
+
+  \\  quote literal
+    Causes the next element of the pattern sequence to be treated
+    literally; special characters lose their special meaning, for
+    anything else it has no effect.
+
+To include a `]' in a character alternative, place it immediately
+after the opening `['. To include a literal `\\', quote it with
+another `\\' (remember that `\\' also has to be quoted within
+elisp strings, so as a string this would be \"\\\\\\\\\").
+
+If the original prefix contains any of the above special
+characters, they are quoted using `\\' *before* the prefix
+expansions are applied."
   :group 'predictive
   :type '(alist :key-type regexp :value-type string))
+
+
+(defcustom predictive-auto-correction-no-completion nil
+  "*When non-nil, predictive mode will only auto-correct typed words,
+not complete them. This is only useful when one or more
+`predictive-prefix-expansions' are defined.
+
+Setting this option disables completion entirely. Predictive mode
+will only auto-correct typed words, using the definitions in
+`predictive-prefix-expansions'. For example, if the latter
+expands characters into character alternatives containing all
+accented variants of that character, then predictive mode will
+auto-correct accents, but without offering completions of the
+words."
+  :group 'predictive
+  :type 'boolean)
 
 
 (defcustom predictive-auto-complete t
@@ -769,7 +820,8 @@ to the dictionary, nil if it should not. Only used when
   ;; `predictive-ignore-initial-caps' and `predictive-prefix-expansions'
 
   ;; if there are no prefix expansions...
-  (if (null predictive-prefix-expansions)
+  (if (and (null predictive-prefix-expansions)
+	   (not predictive-auto-correction-no-completion))
       ;; if ignoring initial caps, expand a capitalized prefix into a list of
       ;; lower-case and capitalized prefixes
       (if (and predictive-ignore-initial-caps
@@ -777,7 +829,8 @@ to the dictionary, nil if it should not. Only used when
 	  (cons 'complete (list prefix (downcase prefix)))
 	(cons 'complete prefix))
 
-    ;; if there are prefix expansions...
+    ;; if there are prefix expansions, or
+    ;; `predictive-auto-correction-no-completion' is set...
     ;; quote any special characters in prefix, and apply expansions
     (dolist (expansion (append '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
 				 ("\\[" . "\\\\[") ("\\]" . "\\\\]")
@@ -811,7 +864,8 @@ to the dictionary, nil if it should not. Only used when
 				 (char-to-string (downcase c)) "]"
 				 (substring prefix 1)))))
 	 )))
-    (cons 'wildcard (concat prefix "*"))))
+    (unless predictive-auto-correction-no-completion
+      (cons 'wildcard (concat prefix "*")))))
 
 
 
@@ -1235,7 +1289,11 @@ for uncapitalized version."
       ;; sort out capitalization of completions
       (when (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p prefix))
-	(setq completions (mapcar 'upcase-initials completions)))
+	(setq completions
+	      (mapcar (lambda (cmpl)
+			(concat (char-to-string (upcase (aref cmpl 0)))
+				(substring cmpl 1)))
+		      completions)))
       ;; return the completions
       completions)))
 
