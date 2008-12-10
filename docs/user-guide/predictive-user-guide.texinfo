@@ -1302,7 +1302,13 @@ characters, e.g. the same character with and without diacritics,
 equivalent as far as completion is concerned. For example, if
 @env{predictive-prefix-expansions} was set to
 @lisp
-(("e" . "[e@'e@^e@`e]") ("a" . "[a@'a@^a@`a]"))
+(("e" . "[e@'e@^e@`e]")   ("@'e" . "[e@'e@^e@`e]")
+ ("@^e" . "[e@'e@^e@`e]") ("@`e" . "[e@'e@^e@`e]")
+ ("E" . "[E@'E@^E@`E]")   ("@'E" . "[E@'E@^E@`E]")
+ ("@^E" . "[E@'E@^E@`E]") ("@`E" . "[E@'E@^E@`E]")
+ ("a" . "[a@^a@`a]")      ("@^a" . "[a@^a@`a]")
+ ("@`a" . "[a@^a@`a]")    ("A" . "[A@^A@`A]")
+ ("@^A" . "[A@^A@`A]")    ("@`A" . "[A@^A@`A]"))
 @end lisp
 @noindent
 then all accented and unaccented versions of @samp{e} will be treated as

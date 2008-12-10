@@ -460,9 +460,9 @@ Setting this option disables completion entirely. Predictive mode
 will only auto-correct typed words, using the definitions in
 `predictive-prefix-expansions'. For example, if the latter
 expands characters into character alternatives containing all
-accented variants of that character, then predictive mode will
-auto-correct accents, but without offering completions of the
-words."
+accented and unaccented variants of that character, then
+predictive mode will auto-correct accents, but without offering
+completions of the words."
   :group 'predictive
   :type 'boolean)
 
