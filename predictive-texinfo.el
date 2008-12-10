@@ -429,20 +429,28 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; overlays that have to extend to the end of the line)
     (auto-overlay-load-definition
      'predictive
-     `(word
+     `(line
        :id environment
-       (("@end \\([[:alpha:]]*\\)[^[:alpha:]]" . 1)
+       ("@end "
 	(priority . 10)
 	(dict . dict-texinfo-env)
 	(face . (background-color . ,predictive-overlay-debug-colour)))))
-    (auto-overlay-load-definition
-     'predictive
-     `(word
-       :id environment-eol
-       (("@end \\([[:alpha:]]*\\)$" . 1)
-	(priority . 10)
-	(dict . dict-texinfo-env)
-	(face . (background-color . ,predictive-overlay-debug-colour)))))
+;;;     (auto-overlay-load-definition
+;;;      'predictive
+;;;      `(word
+;;;        :id environment
+;;;        (("@end \\([[:alpha:]]*\\)[^[:alpha:]]" . 1)
+;;; 	(priority . 10)
+;;; 	(dict . dict-texinfo-env)
+;;; 	(face . (background-color . ,predictive-overlay-debug-colour)))))
+;;;     (auto-overlay-load-definition
+;;;      'predictive
+;;;      `(word
+;;;        :id environment-eol
+;;;        (("@end \\([[:alpha:]]*\\)$" . 1)
+;;; 	(priority . 10)
+;;; 	(dict . dict-texinfo-env)
+;;; 	(face . (background-color . ,predictive-overlay-debug-colour)))))
 
 
     ;; @table, @vtable and @ftable define two-column tables, and should be
@@ -884,7 +892,7 @@ definition of the same thing."
       (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
       (cond
        ;; we only find out here whether a command or environment was defined
-       ;; or preamble or globally, so might have jumped no where
+       ;; in the preamble or globally, so might have jumped no where
        ((null o-def) (message "Nothing to jump to"))
        ;; display warning if multiply defined
        ((> (length o-def) 1)
