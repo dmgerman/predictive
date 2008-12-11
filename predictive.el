@@ -887,13 +887,14 @@ to the dictionary, nil if it should not. Only used when
 	    (expanded (make-vector (length prefix) nil))
 	    i)
 	(dolist (expansion expansion-list)
-	  (when (and (setq i (string-match (car expansion) prefix))
-		     (not (aref expanded i)))
+	  (setq i (string-match (car expansion) prefix 0))
+	  (while (and i (not (aref expanded i)))
 	    (setf (nth i chars) (cdr expansion))
 	    (aset expanded i t)
 	    (dotimes (i (- (match-end 0) (match-beginning 0) 1))
 	      (setf (nth (+ (match-beginning 0) i 1) chars) nil)
-	      (aset expanded (+ (match-beginning 0) i 1) t))))
+	      (aset expanded (+ (match-beginning 0) i 1) t))
+	    (setq i (string-match (car expansion) prefix (match-end 0)))))
 	(setq prefix (apply 'concat chars)))
       ;; if ignoring initial caps...
       (when (and predictive-ignore-initial-caps
