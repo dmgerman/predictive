@@ -1788,11 +1788,11 @@ Interactively, SECTION is read from the mini-buffer."
 			 (unless (predictive-load-dict dic)
 			   (throw 'failed nil)))
 		       dict-list)))
-	  (mapc 'predictive-unload-dict dict-list)
+	  (mapc 'predictive-unlist-dict dict-list)
 	;; otherwise, unload the old main dictionary and change to the new one
 	(let ((old-dict predictive-restore-main-dict))
 	  (when (atom old-dict) (setq old-dict (list old-dict)))
-	  (mapc 'predictive-unload-dict old-dict))
+	  (mapc 'predictive-unlist-dict old-dict))
 	(setq predictive-main-dict (append dict-list predictive-latex-dict))
 	)))
 )
@@ -1806,7 +1806,7 @@ Interactively, SECTION is read from the mini-buffer."
     (when dict-list
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
-      (mapc 'predictive-unload-dict dict-list)
+      (mapc 'predictive-unlist-dict dict-list)
       (setq dict-list predictive-restore-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (setq predictive-main-dict
@@ -1952,7 +1952,7 @@ they exist."
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
       (when (setq dict (intern-soft (concat (cdr dic) package)))
-	(predictive-unload-dict (eval dict))
+	(predictive-unlist-dict (eval dict))
 	(when (and (listp (eval (car dic)))
 		   (not (dictree-p (eval (car dic)))))
 	  ;; we don't use "(set ... (delq ..." here because other variables
