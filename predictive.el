@@ -409,16 +409,17 @@ typing \"a\" would only find \"and\"."
 
 (defcustom predictive-prefix-expansions nil
   "*Alist of expansions to apply to a prefix before completing it.
-The alist should associate regexps with their replacements. They
-are applied one-by-one and in-order to the completion prefix, by
-passing the regexp, replacement and prefix to
-`replace-regexp-in-string'. Case is always sensitive.
+The alist should associate regexps with their replacements. The
+expansions are applied in-order to the completion
+prefix. Characters matching a regexp are only expanded once,
+i.e. later expansions are *not* applied to the replacement text
+of previous expansions. Case is always significant.
 
 The expanded prefix can contain certain shell-glob-like
 wildcards, to form a pattern that is used to match prefixes for
-completion. However, the pattern must *only* match prefixes of
-the same length as the original one, whether it contains
-wildcards or not.
+completion. However, whether it contains wildcards or not, the
+pattern must *only* match prefixes of the same length as the
+original one.
 
   ?  wildcard
     Matches any single character.
@@ -831,40 +832,56 @@ to the dictionary, nil if it should not. Only used when
 
     ;; if there are prefix expansions, or
     ;; `predictive-auto-correction-no-completion' is set...
-    ;; quote any special characters in prefix, and apply expansions
-    (dolist (expansion (append '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
-				 ("\\[" . "\\\\[") ("\\]" . "\\\\]")
-				 ("\\\\" . "\\\\\\\\"))
-			       predictive-prefix-expansions))
-      (let ((case-fold-search nil))
-	(setq prefix (replace-regexp-in-string
-		      (car expansion) (cdr expansion) prefix t))))
-    ;; if ignoring initial caps...
-    (when predictive-ignore-initial-caps
-      (let ((c (aref prefix 0)))
-	(cond
-	 ;; if initial character is a non-negated character alternative, add
-	 ;; lower-case letters to the alternative
-	 ((and (eq c ?\[) (not (eq (aref prefix 1) ?^)))
-	  (let ((case-fold-search nil)
-		char-alt)
-	    (string-match "^\\[.*?\\]" prefix)
-	    (setq char-alt (substring (match-string 0 prefix) 1 -1))
-	    (dolist (c (append char-alt nil))
-	      (unless (eq c (downcase c))
-		(setq char-alt
-		      (concat char-alt (char-to-string (downcase c))))))
-	    (setq prefix (concat "[" char-alt "]"
-				 (replace-match "" nil nil prefix)))))
-	 ;; if initial character is a literal upper-case character, expand it
-	 ;; into a character alternative including lower-case version
-	 ((not (or (eq c ?*) (eq c ??) (eq c ?\[) (eq c ?\]) (eq c ?\\)))
-	  (when (predictive-capitalized-p prefix)
-	    (setq prefix (concat "[" (char-to-string c)
-				 (char-to-string (downcase c)) "]"
-				 (substring prefix 1)))))
-	 )))
-    (unless predictive-auto-correction-no-completion
+    ;; quote any special characters in prefix
+    (let ((original-prefix prefix))
+      (dolist (expansion '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
+			   ("\\[" . "\\\\[") ("\\]" . "\\\\]")))
+	(setq prefix (replace-regexp-in-string (car expansion) (cdr expansion)
+					       prefix)))
+      (setq prefix (replace-regexp-in-string "\\(\\\\\\)\\([^][*?\\]\\|$\\)"
+					     "\\\\\\\\" prefix nil nil 1))
+      ;; apply `predictive-prefix-expansions'
+      (let ((case-fold-search nil)
+	    (chars (mapcar 'char-to-string (append prefix nil)))
+	    (expanded (make-vector (length prefix) nil))
+	    i)
+	(dolist (expansion predictive-prefix-expansions)
+	  (when (and (setq i (string-match (car expansion) prefix))
+		     (not (aref expanded i)))
+	    (setf (nth i chars) (cdr expansion))
+	    (aset expanded i t)
+	    (dotimes (i (- (match-end 0) (match-beginning 0) 1))
+	      (setf (nth (+ (match-beginning 0) i 1) chars) nil)
+	      (aset expanded (+ (match-beginning 0) i 1) t))))
+	(setq prefix (apply 'concat chars)))
+      ;; if ignoring initial caps...
+      (when (and predictive-ignore-initial-caps
+		 (predictive-capitalized-p original-prefix))
+	(let ((c (aref prefix 0)))
+	  (cond
+	   ;; if initial character is a non-negated character alternative, add
+	   ;; lower-case letters to the alternative
+	   ((and (eq c ?\[) (not (eq (aref prefix 1) ?^)))
+	    (let ((case-fold-search nil)
+		  char-alt)
+	      (string-match "^\\[.*?\\]" prefix)
+	      (setq char-alt (substring (match-string 0 prefix) 1 -1))
+	      (dolist (c (append char-alt nil))
+		(unless (eq c (downcase c))
+		  (setq char-alt
+			(concat char-alt (char-to-string (downcase c))))))
+	      (setq prefix (concat "[" char-alt "]"
+				   (replace-match "" nil nil prefix)))))
+	   ;; if initial character is a literal upper-case character, expand
+	   ;; it into a character alternative including lower-case version
+	   ((not (or (eq c ?*) (eq c ??) (eq c ?\[) (eq c ?\]) (eq c ?\\)))
+	    (when (predictive-capitalized-p prefix)
+	      (setq prefix (concat "[" (char-to-string c)
+				   (char-to-string (downcase c)) "]"
+				   (substring prefix 1)))))
+	   ))))
+    (if predictive-auto-correction-no-completion
+	(cons 'wildcard prefix)
       (cons 'wildcard (concat prefix "*")))))
 
 

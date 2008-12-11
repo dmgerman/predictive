@@ -1239,15 +1239,17 @@ for the uncapitalised string are also found.
 
 @item predictive-prefix-expansions
 An alist of expansions to apply to a prefix before completing it. The
-alist should associate regexps with their replacements. They are applied
-one-by-one and in-order to the completion prefix. Case is always
-sensitive.
+alist should associate regexps with their replacements. The expansions
+are applied in-order to the completion prefix. Characters matching a
+regexp are only expanded once, i.e. later expansions are @emph{not}
+applied to the replacement text of previous expansions. Case is always
+significant.
 
 The expanded prefix can contain certain shell-glob-like wildcards
 (described below), to form a pattern used to match prefixes that should
-be considered equivalent for completion. However, the pattern must
-@emph{only} match prefixes of the same length as the original one,
-whether it contains wildcards or not.
+be considered equivalent for completion. However, whether it contains
+wildcards or not, the pattern must @emph{only} match prefixes of the
+same length as the original one.
 @end vtable
 
 When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
