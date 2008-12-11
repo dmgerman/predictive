@@ -407,6 +407,31 @@ typing \"a\" would only find \"and\"."
   :type 'boolean)
 
 
+(defcustom predictive-equivalent-characters nil
+  "*List of characters to be treated as equivalent.
+Each element of the list should be a string, and all characters
+appearing in the same string will be treated as equivalent when
+completing words. Predictive mode will then not only find
+completions for the prefix you typed, but also for all equivalent
+prefixes. Note that case is significant.
+
+A typical use of this is to define all variants of a particular
+character, regardless of accents or other diacritics, to be
+equivalent. See also `predictive-auto-correction-no-completion'
+and `completion-highlight-prefix-alterations'.
+
+`predictive-equivalent-characters' works by substituting a
+character alternative pattern listing all the equivalent
+characters whenever those characters appear in the prefix. It
+merely provides a more convenient way of defining these commonly
+used expansions, and is exactly the same as adding those
+expansions on to the very *end* of
+`predictive-prefix-expansions' (which see)."
+  :group 'predictive
+  :type '(repeat string))
+
+
+
 (defcustom predictive-prefix-expansions nil
   "*Alist of expansions to apply to a prefix before completing it.
 The alist should associate regexps with their replacements. The
@@ -447,7 +472,12 @@ elisp strings, so as a string this would be \"\\\\\\\\\").
 
 If the original prefix contains any of the above special
 characters, they are quoted using `\\' *before* the prefix
-expansions are applied."
+expansions are applied.
+
+Expansions produced by `predictive-equivalent-characters' are
+effectively added on to the end of
+`predictive-prefix-expansions', so any expansions defined in the
+latter take precedence."
   :group 'predictive
   :type '(alist :key-type regexp :value-type string))
 
@@ -822,6 +852,7 @@ to the dictionary, nil if it should not. Only used when
 
   ;; if there are no prefix expansions...
   (if (and (null predictive-prefix-expansions)
+	   (null predictive-equivalent-characters)
 	   (not predictive-auto-correction-no-completion))
       ;; if ignoring initial caps, expand a capitalized prefix into a list of
       ;; lower-case and capitalized prefixes
@@ -832,20 +863,30 @@ to the dictionary, nil if it should not. Only used when
 
     ;; if there are prefix expansions, or
     ;; `predictive-auto-correction-no-completion' is set...
-    ;; quote any special characters in prefix
-    (let ((original-prefix prefix))
+    (let ((original-prefix prefix)
+	  expansion-list)
+      ;; quote any special characters in prefix
       (dolist (expansion '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
 			   ("\\[" . "\\\\[") ("\\]" . "\\\\]")))
 	(setq prefix (replace-regexp-in-string (car expansion) (cdr expansion)
 					       prefix)))
       (setq prefix (replace-regexp-in-string "\\(\\\\\\)\\([^][*?\\]\\|$\\)"
 					     "\\\\\\\\" prefix nil nil 1))
-      ;; apply `predictive-prefix-expansions'
+
+      ;; convert `predictive-equivalent-characters' into expansions
+      (dolist (equiv (reverse predictive-equivalent-characters))
+	(dotimes (i (length equiv))
+	  (push (cons (char-to-string (aref equiv i)) (concat "[" equiv "]"))
+		expansion-list)))
+      (setq expansion-list (append predictive-prefix-expansions
+				   expansion-list))
+      ;; apply `predictive-prefix-expansions' and
+      ;; `predictive-equivalent-characters' expansions
       (let ((case-fold-search nil)
 	    (chars (mapcar 'char-to-string (append prefix nil)))
 	    (expanded (make-vector (length prefix) nil))
 	    i)
-	(dolist (expansion predictive-prefix-expansions)
+	(dolist (expansion expansion-list)
 	  (when (and (setq i (string-match (car expansion) prefix))
 		     (not (aref expanded i)))
 	    (setf (nth i chars) (cdr expansion))

@@ -1201,18 +1201,21 @@ it.
 @item predictive-auto-correction-no-completion
 When non-nil, predictive mode won't complete words at all! Instead, it
 will only auto-correct the words you type, using the definitions in
+@env{predictive-equivalent-characters} and
 @env{predictive-prefix-expansions} (see below). This is only useful if
-one or more @env{predictive-prefix-expansions} are defined.
+one or both of those variables have been set.
 @end vtable
 
 Setting @env{predictive-auto-correction-no-completion} changes
 predictive mode from being a completion mode to being an auto-correction
-mode. It relies on you defining useful prefix expansions in
-@env{predictive-prefix-expansions}. For example, if the latter expands
-characters into character alternatives containing all accented variants
-of that character, then predictive mode will auto-correct accents,
-without offering completions of the words. If you enable this, you will
-almost certainly want to enable @command{auto-completion-mode}
+mode. It relies on you defining equivalent characters in
+@env{predictive-equivalent-characters} or useful prefix expansions in
+@env{predictive-prefix-expansions}. For example, if the former defines
+all accented variants of characters to be equivalent, then predictive
+mode will auto-correct accents for you, but without offering completions
+of the words. If you enable
+@env{predictive-auto-correction-no-completion}, you will almost
+certainly want to enable @command{auto-completion-mode}
 (@pxref{Auto-Completion Mode}, change the default
 @env{auto-completion-syntax-alist} @samp{Acceptance behaviour} to
 @samp{punctuation accepts} (@pxref{Syntax}), and set
@@ -1237,6 +1240,13 @@ Controls whether predictive mode should ignore initial capital letters
 when searching for completions. If non-nil (the default), completions
 for the uncapitalised string are also found.
 
+@item predictive-equivalent-characters
+A list of characters to be treated as equivalent. Each element of the
+list should be a string, and all characters appearing in the same string
+will be treated as equivalent when completing words. Predictive mode
+will then not only find completions for the prefix you typed, but also
+for all equivalent prefixes. Note that case is significant.
+
 @item predictive-prefix-expansions
 An alist of expansions to apply to a prefix before completing it. The
 alist should associate regexps with their replacements. The expansions
@@ -1257,6 +1267,16 @@ capital letter of a string is ignored. Thus typing @kbd{A} would find
 @samp{and} (which would complete to @samp{And}), @samp{Alaska} and
 @samp{ANSI}, but typing @kbd{AN} would only find @samp{ANSI}, whilst
 typing @kbd{a} would only find @samp{and}.
+
+@env{predictive-equivalent-characters} works by substituting a character
+alternative pattern (see below) listing all the equivalent characters
+whenever those characters appear in the prefix. It merely provides a
+more convenient way of defining these commonly used expansions, and is
+exactly the same as adding those expansions on to the very @emph{end} of
+@env{predictive-prefix-expansions}. Any expansions defined in
+@env{predictive-predix-expansions} therefore take precedence over
+character equivalences defined in
+@env{predictive-equivalent-characters}.
 
 The result of applying the expansions defined in
 @env{predictive-prefix-expansions} will usually contain one or more of
