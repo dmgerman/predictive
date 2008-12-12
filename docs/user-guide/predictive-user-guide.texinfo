@@ -1297,6 +1297,9 @@ the following wildcard patterns:
   @item @samp{[]@dots{}]}  character alternative including @samp{]}
   Matches any of the listed characters, including `]'.
 
+  @item @samp{[]@dots{}]}  character alternative including @samp{]}
+  Matches any character other than `]' and any others listed.
+
   @samp{\}  quote literal
   Causes the next element of the pattern sequence to be treated
   literally; special characters lose their special meaning, for anything
@@ -1304,14 +1307,18 @@ the following wildcard patterns:
 @end table
 
 To include a @samp{]} in a character alternative, place it immediately
-after the opening @samp{[}. To include a literal @samp{\}, quote it with
-another @samp{\} giving @samp{\\}@footnote{Remember that @samp{\} also
-has to be quoted within Elisp strings, so, as a string in Elisp, a
-literal @samp{\} becomes @samp{\\\\}, just as in regexps.}). If the
-original prefix contains any of the above special characters, they are
-quoted using @samp{\} @emph{before} the prefix expansions are
-applied. The expansions are applied by passing the regexp, replacement
-and prefix to Emacs' @command{replace-regexp-in-string} function.
+after the opening @samp{[}, or the opening @samp{[^} in a negated
+character alternative.  To include a @samp{^} in a character
+alternative, negated or otherwise, place it anywhere other than
+immediately after the opening @samp{[}. To include a literal @samp{\} in
+the pattern, quote it with another @samp{\} giving
+@samp{\\}@footnote{Remember that @samp{\} also has to be quoted within
+Elisp strings, so, as a string in Elisp, a literal @samp{\} becomes
+@samp{\\\\}, just as in regexps.}). If the original prefix contains any
+of the above special characters, they are quoted using @samp{\}
+@emph{before} the prefix expansions are applied. The expansions are
+applied by passing the regexp, replacement and prefix to Emacs'
+@command{replace-regexp-in-string} function.
 
 The expanded prefix pattern is used to match prefixes that are
 considered equivalent to the one actually typed. The pattern must

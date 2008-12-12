@@ -434,7 +434,11 @@ expansions on to the very *end* of `predictive-prefix-expansions'
 \(which see\), in the same order in which the characters are
 listed in the string."
   :group 'predictive
-  :type '(repeat string))
+  :type '(choice (const :tag "French"
+			("aâà" "eéêè" "iî" "oô" "uû" "cç"
+			 "AÂÀ" "EÉÊÈ" "IÎ" "OÔ" "UÛ" "CÇ"))
+		 (const :tag "German" ("aä" "oö" "uü" "sß"))
+		 (repeat :tag "custom" string)))
 
 
 
@@ -463,8 +467,11 @@ original one.
     Matches any character *other* then those listed between the
     square brackets.
 
-  []..]  character alternative including `]'
+  []...]  character alternative including `]'
     Matches any of the listed characters, including `]'.
+
+  [^]...]  negated character alternative including `]'
+    Matches any character other than `]' and any others listed.
 
   \\  quote literal
     Causes the next element of the pattern sequence to be treated
@@ -472,9 +479,12 @@ original one.
     anything else it has no effect.
 
 To include a `]' in a character alternative, place it immediately
-after the opening `['. To include a literal `\\', quote it with
-another `\\' (remember that `\\' also has to be quoted within
-elisp strings, so as a string this would be \"\\\\\\\\\").
+after the opening `[', or the opening `[^' in a negated character
+alternative. To include a `^' in a character alternative, negated
+or otherwise, place it anywhere other than immediately after the
+opening `['. To include a literal `\\' in the pattern, quote it
+with another `\\' (remember that `\\' also has to be quoted
+within Elisp strings, so as a string this would be \"\\\\\\\\\").
 
 If the original prefix contains any of the above special
 characters, they are quoted using `\\' *before* the prefix
