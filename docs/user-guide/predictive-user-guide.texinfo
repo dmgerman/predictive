@@ -1273,7 +1273,8 @@ alternative pattern (see below) listing all the equivalent characters
 whenever those characters appear in the prefix. It merely provides a
 more convenient way of defining these commonly used expansions, and is
 exactly the same as adding those expansions on to the very @emph{end} of
-@env{predictive-prefix-expansions}. Any expansions defined in
+@env{predictive-prefix-expansions}, in the same order in which the
+characters are listed in the string. Any expansions defined in
 @env{predictive-predix-expansions} therefore take precedence over
 character equivalences defined in
 @env{predictive-equivalent-characters}.
