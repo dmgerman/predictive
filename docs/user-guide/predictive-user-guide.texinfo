@@ -1259,7 +1259,7 @@ The expanded prefix can contain certain shell-glob-like wildcards
 (described below), to form a pattern used to match prefixes that should
 be considered equivalent for completion. However, whether it contains
 wildcards or not, the pattern must @emph{only} match prefixes of the
-same length as the original one.
+same length as the original one (@pxref{Bugs and Future Improvements}).
 @end vtable
 
 When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
@@ -1278,6 +1278,27 @@ characters are listed in the string. Any expansions defined in
 @env{predictive-predix-expansions} therefore take precedence over
 character equivalences defined in
 @env{predictive-equivalent-characters}.
+
+The main use of @env{predictive-equivalent-characters} is to make
+certain characters, e.g. the same character with and without diacritics,
+equivalent as far as completion is concerned. For example, if
+@env{predictive-equivalent-expansions} was set to
+@lisp
+("[e@'e@^e@`e]" "[E@'E@^E@`E]" "[a@^a@`a]" "[A@^A@`A]")
+@end lisp
+@noindent
+then all accented and unaccented versions of @samp{e} will be treated as
+equivalent, and similarly for @samp{a}. So typing @samp{et} would offer
+@samp{@^etre} and @samp{@'etait} as completions, as well as
+@samp{et}. In this way, predictive mode can automatically correct
+accents and other diacritics as you type words. As with any
+auto-correction or spell-checker, be careful when using this: if there
+are two words that are identical up to diacritics, such as @samp{a} and
+@samp{@`a}, then predictive mode can't telepathically know which one you
+want@footnote{Telepathy support is slated for inclusion in version 1.0},
+and will insert whichever is the most likely. Since this is such a
+common usage, pre-defined settings appropriate for some languages can be
+selected when customizing this variable.
 
 The result of applying the expansions defined in
 @env{predictive-prefix-expansions} will usually contain one or more of
@@ -1326,31 +1347,6 @@ considered equivalent to the one actually typed. The pattern must
 easiest way to ensure this is the case is to make sure each expansion
 expands @math{n} characters into a pattern that also matches @math{n}
 characters.
-
-The main use of @env{predictive-prefix-expansions} is to make certain
-characters, e.g. the same character with and without diacritics,
-equivalent as far as completion is concerned. For example, if
-@env{predictive-prefix-expansions} was set to
-@lisp
-(("e" . "[e@'e@^e@`e]")   ("@'e" . "[e@'e@^e@`e]")
- ("@^e" . "[e@'e@^e@`e]") ("@`e" . "[e@'e@^e@`e]")
- ("E" . "[E@'E@^E@`E]")   ("@'E" . "[E@'E@^E@`E]")
- ("@^E" . "[E@'E@^E@`E]") ("@`E" . "[E@'E@^E@`E]")
- ("a" . "[a@^a@`a]")      ("@^a" . "[a@^a@`a]")
- ("@`a" . "[a@^a@`a]")    ("A" . "[A@^A@`A]")
- ("@^A" . "[A@^A@`A]")    ("@`A" . "[A@^A@`A]"))
-@end lisp
-@noindent
-then all accented and unaccented versions of @samp{e} will be treated as
-equivalent, and similarly for @samp{a}. So typing @samp{et} would offer
-@samp{@^etre} and @samp{@'etait} as completions, as well as
-@samp{et}. In this way, predictive mode can automatically correct
-accents and other diacritics as you type words. As with any
-auto-correction or spell-checker, be careful when using this: if there
-are two words that are identical up to diacritics, such as @samp{a} and
-@samp{@`a}, then predictive mode can't telepathically know which one you
-want@footnote{Telepathy support is slated for inclusion in version 1.0},
-and will insert whichever is the most likely.
 
 
 @vtable @env
@@ -3032,6 +3028,11 @@ order):
 
 @enumerate
 @item
+Remove restriction on prefix wildcard patterns produced by applying
+@env{predictive-prefix-expansions} having to match prefixes of the same
+length as the original prefix.
+
+@item
 Allow the learning rate (i.e. increment added each time a word is
 learnt) to be set buffer-locally and/or separately for each dictionary?
 
@@ -3043,7 +3044,7 @@ mode setup functions!)
 @item
 More predictive mode configuration variables could be allowed to have
 ``overlay-local'' bindings, not just the active dictionary,
-completion-menu function, and @env{completion-word-thing}.
+@env{completion-menu} function, and @env{completion-word-thing}.
 
 @item
 Predictive mode should be integrated with the @dfn{semantic} or similar
