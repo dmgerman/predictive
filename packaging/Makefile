@@ -2,6 +2,8 @@
 all: predictive.tar.gz auto-overlays.tar.gz
 
 
+.PHONY: predictive.tar.gz auto-overlays.tar.gz completion-ui.tar.gz
+
 predictive.tar.gz: predictive
 	tar --exclude '*/.svn*' -cvzhf predictive.tar.gz predictive/
 

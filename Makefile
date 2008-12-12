@@ -35,6 +35,7 @@ all: core dict-english dicts info
 docs: info pdf dvi txt ps html
 
 
+.PHONY: clean
 clean:
 	find . -name '*.elc' -delete
 	[ ! -e dict-english.el ] || rm dict-english.el
@@ -47,7 +48,6 @@ clean:
 
 
 .PHONY : install
-
 install: all
 	mkdir -p $(DESTDIR)
 	find . \( -name '*.el' -o -name '*.elc' \) -a \( -name dict-tree.el -o -name dict-tree.elc -o \! -name 'dict-*' \) -execdir cp {} $(DESTDIR) \;
