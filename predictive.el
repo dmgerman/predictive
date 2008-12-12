@@ -51,6 +51,11 @@
 ;; * simplified `predictive-update-which-dict' a bit
 ;; * updated for compatibility with removal of `completion-includes-prefix'
 ;;   and related changes in completion-UI
+;; * added `predictive-prefix-expansions' and
+;;   `predictive-equivalent-characters' to allow prefixes to be expanded into
+;;   wildcard pattern searches
+;; * added `predictive-auto-correction-no-completion' customization option to
+;;   disable completion so that predictive-mode only auto-corrects
 ;;
 ;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
@@ -425,8 +430,9 @@ character alternative pattern listing all the equivalent
 characters whenever those characters appear in the prefix. It
 merely provides a more convenient way of defining these commonly
 used expansions, and is exactly the same as adding those
-expansions on to the very *end* of
-`predictive-prefix-expansions' (which see)."
+expansions on to the very *end* of `predictive-prefix-expansions'
+\(which see\), in the same order in which the characters are
+listed in the string."
   :group 'predictive
   :type '(repeat string))
 
@@ -876,7 +882,8 @@ to the dictionary, nil if it should not. Only used when
       ;; convert `predictive-equivalent-characters' into expansions
       (dolist (equiv (reverse predictive-equivalent-characters))
 	(dotimes (i (length equiv))
-	  (push (cons (char-to-string (aref equiv i)) (concat "[" equiv "]"))
+	  (push (cons (char-to-string (aref equiv (- (length equiv) i 1)))
+		      (concat "[" equiv "]"))
 		expansion-list)))
       (setq expansion-list (append predictive-prefix-expansions
 				   expansion-list))
@@ -1769,10 +1776,19 @@ specified by the prefix argument."
 
     ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
-    (dolist (prefix (dictree-get-property dict word :prefixes))
-      (setq pweight (dictree-lookup dict prefix))
-      (when (and pweight (< pweight newweight))
-	(dictree-insert dict prefix newweight (lambda (a b) a)))))
+    (let ((prefixes (dictree-get-property dict word :prefixes)))
+      (dolist (prefix prefixes)
+	(setq pweight (dictree-lookup dict prefix))
+	(cond
+	 ;; prefix has been deleted from dictionary
+	 ((null pweight)
+	  ;; confirm prefix really has been deleted
+	  (unless (dictree-member-p dict prefix)
+	    (dictree-put-property dict word :prefixes
+				  (delete prefix prefixes))))
+	 ;; prefix weight needs incrementing
+	 ((< pweight newweight)
+	  (dictree-insert dict prefix newweight (lambda (a b) a)))))))
 
   (when (interactive-p)
     (message "\"%s\" added to dictionary %s" word (dictree-name dict))))
