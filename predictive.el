@@ -939,9 +939,12 @@ to the dictionary, nil if it should not. Only used when
 				   (char-to-string (downcase c)) "]"
 				   (substring prefix 1)))))
 	   ))))
+    ;; quote any ('s and )'s
+    (setq prefix (replace-regexp-in-string "(" "\\\\(" prefix))
+    (setq prefix (replace-regexp-in-string ")" "\\\\)" prefix))
     (if predictive-auto-correction-no-completion
 	(cons 'wildcard prefix)
-      (cons 'wildcard (concat prefix "*")))))
+      (cons 'wildcard (concat prefix "(*)")))))
 
 
 
@@ -1355,9 +1358,20 @@ for uncapitalized version."
       (setq pfx (predictive-expand-prefix prefix))
       ;; if expanded prefix is a wildcard pattern, do a wildcard search
       (if (eq (car pfx) 'wildcard)
-	  (setq completions
-		(dictree-wildcard-search dict (cdr pfx) (if maxnum t nil)
-					 maxnum nil nil filter 'strip-data))
+	  (progn
+	    (setq completions
+		  (dictree-wildcard-search dict (cdr pfx) (if maxnum t nil)
+					   maxnum nil nil filter 'strip-data))
+	    ;; use grouping data to determine length of prefix
+	    (unless predictive-auto-correction-no-completion
+	      (setq completions
+		    (mapcar (lambda (cmpl)
+			      (cons (car cmpl)
+				    (- (length (car cmpl))
+				       (- (cdr (cadr cmpl))
+					  (car (cadr cmpl))))))
+			    completions))))
+
 	;; otherwise, complete the prefix
 	(setq completions
 	      (dictree-complete dict (cdr pfx) (if maxnum t nil) maxnum
