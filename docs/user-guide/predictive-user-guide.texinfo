@@ -1253,13 +1253,9 @@ alist should associate regexps with their replacements. The expansions
 are applied in-order to the completion prefix. Characters matching a
 regexp are only expanded once, i.e. later expansions are @emph{not}
 applied to the replacement text of previous expansions. Case is always
-significant.
-
-The expanded prefix can contain certain shell-glob-like wildcards
-(described below), to form a pattern used to match prefixes that should
-be considered equivalent for completion. However, whether it contains
-wildcards or not, the pattern must @emph{only} match prefixes of the
-same length as the original one (@pxref{Bugs and Future Improvements}).
+significant. The expanded prefix can contain certain shell-glob-like
+wildcards (described below), to form a pattern used to match prefixes
+that should be considered equivalent for completion.
 @end vtable
 
 When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
@@ -3027,11 +3023,6 @@ Possible future improvements to predictive completion (in no particular
 order):
 
 @enumerate
-@item
-Remove restriction on prefix wildcard patterns produced by applying
-@env{predictive-prefix-expansions} having to match prefixes of the same
-length as the original prefix.
-
 @item
 Allow the learning rate (i.e. increment added each time a word is
 learnt) to be set buffer-locally and/or separately for each dictionary?

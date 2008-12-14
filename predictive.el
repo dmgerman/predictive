@@ -452,9 +452,7 @@ of previous expansions. Case is always significant.
 
 The expanded prefix can contain certain shell-glob-like
 wildcards, to form a pattern that is used to match prefixes for
-completion. However, whether it contains wildcards or not, the
-pattern must *only* match prefixes of the same length as the
-original one.
+completion.
 
   ?  wildcard
     Matches any single character.
