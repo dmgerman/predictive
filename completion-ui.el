@@ -2166,32 +2166,28 @@ there is none."
           ;; convert result to a vector for key lookup
           (setq result (apply 'vector result))
 
-	  ;; FIXME: the following fails if prefix length was altered
           (cond
            ;; if they selected a completion from the menu...
            ((string-match "^completion-insert"
                           (symbol-name (aref result (1- (length result)))))
-            ;; run accept hooks
-            (run-hook-with-args
-             'completion-accept-functions
-             (overlay-get overlay 'prefix)
-             (concat (if (overlay-get overlay 'completion-replaces-prefix)
-                         "" (overlay-get overlay 'prefix))
-                     (buffer-substring-no-properties
-                      (overlay-start overlay)
-                      (overlay-end overlay))))
-            ;; delete old provisional completion, including prefix unless it's
-	    ;; already been deleted
-            (delete-region
-	     (- (overlay-start overlay)
-		(if (and (overlay-get overlay 'completion-replaces-prefix)
-			 (overlay-get overlay 'prefix-replaced))
-		    0 (length (overlay-get overlay 'prefix))))
-	     (overlay-end overlay))
-            (completion-delete-overlay overlay)
             ;; insert selected completion
-            (let ((overwrite-mode nil))
-              (funcall (lookup-key keymap result))))
+	    (destructuring-bind (cmpl len)
+		(funcall (lookup-key keymap result))
+	      ;; run accept hooks
+	      (run-hook-with-args
+	       'completion-accept-functions
+	       (overlay-get overlay 'prefix)
+	       cmpl)
+	      ;; delete old provisional completion, including prefix unless
+	      ;; it's already been deleted
+	      (delete-region
+	       (- (overlay-start overlay)
+		  (if (and (overlay-get overlay 'completion-replaces-prefix)
+			   (overlay-get overlay 'prefix-replaced))
+		      0 len))
+	       (overlay-end overlay))
+	      (let ((overwrite-mode nil)) (insert cmpl)))
+            (completion-delete-overlay overlay))
 
            ;; otherwise, run whatever they did select
            (t (funcall (lookup-key keymap result))))
@@ -4219,20 +4215,21 @@ called from `completion-show-menu'.\)"
     (dotimes (i num)
       (setq n (- num i 1))
       (define-key menu
-        (vector (intern (concat "completion-insert-"
-                                (number-to-string n))))
+        (vector (intern (concat "completion-insert-" (number-to-string n))))
         (list 'menu-item
-	      (let ((str (nth n completions)))
-		(if (stringp str) str (car str)))
-              `(lambda () (insert ,(if (stringp (nth n completions))
-				       (nth n completions)
-				     (car (nth n completions)))))
-              ;; if a hotkeys is associated with completion, show it
-              ;; in menu
-              :keys (when (and completion-use-hotkeys
-                               (< n (length completion-hotkey-list)))
-                      (key-description
-                       (vector (nth n completion-hotkey-list)))))))
+	      (if (stringp (nth n completions))
+		  (nth n completions)
+		(car (nth n completions)))
+	      `(lambda ()
+		 (list ,(if (stringp (nth n completions))
+			    (nth n completions) (car (nth n completions)))
+		       ,(if (stringp (nth n completions))
+			    (length prefix) (cdr (nth n completions)))))
+	      ;; if a hotkey is associated with completion, show it in menu
+	      :keys (when (and completion-use-hotkeys
+			       (< n (length completion-hotkey-list)))
+		      (key-description
+		       (vector (nth n completion-hotkey-list)))))))
 
     ;; add entry to switch to completion browser
     (define-key-after menu [separator-browser] '(menu-item "--"))
@@ -4251,7 +4248,8 @@ called from `completion-show-menu'.\)"
 
 
 (defun completion-construct-browser-menu
-  (prefix completions cmpl-function &optional menu-item-func sub-menu-func)
+  (prefix completions cmpl-function cmpl-replaces-prefix
+	  &optional menu-item-func sub-menu-func)
   "Construct the completion browser menu keymap
 from the supplied PREFIX (COMPLETIONS is ignored and replaced by
 all completions of PREFIX in the current dictionary), using
@@ -4274,15 +4272,14 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
   (unless sub-menu-func
     (setq sub-menu-func 'completion-browser-sub-menu))
 
-  ;; find all completions of prefix, dropping unneeded prefix length data
-  (setq completions
-	(mapcar (lambda (cmpl) (if (stringp cmpl) cmpl (car cmpl)))
-		(funcall cmpl-function prefix)))
+  ;; find all completions of prefix
+  (setq completions (funcall cmpl-function prefix))
 
   ;; main browser menu is just a browser submenu...
   (let ((menu (funcall sub-menu-func
                        prefix completions
-                       cmpl-function menu-item-func sub-menu-func)))
+                       cmpl-function cmpl-replaces-prefix
+		       menu-item-func sub-menu-func)))
     ;; ... with an item added for switching to the basic completion
     ;; menu
     (define-key-after menu [separator-basic] '(menu-item "--"))
@@ -4323,15 +4320,18 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     (if (<= num-completions completion-browser-max-items)
         (dotimes (i num-completions)
           (define-key-after menu
-            (vector (intern (concat "completion-insert-"
-                                    (number-to-string i))))
-            (list 'menu-item
-		  (nth i completions)
-                  ;; call function to generate menu item
-                  (funcall menu-item-func
-                           prefix (nth i completions)
-                           cmpl-function cmpl-replaces-prefix
-			   menu-item-func sub-menu-func))))
+	    (vector (intern (concat "completion-insert-"
+				    (number-to-string i))))
+	    (list 'menu-item
+		  (if (stringp (nth i completions))
+		      (nth i completions)
+		    (car (nth i completions)))
+		  `(lambda ()
+		     (list ,(if (stringp (nth i completions))
+				(nth i completions) (car (nth i completions)))
+			   ,(if (stringp (nth i completions))
+				(length prefix) (cdr (nth i completions))))))
+	    ))
 
 
       ;; if menu needs to be divided into buckets, construct a menu
@@ -4362,15 +4362,19 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
           ;; menu, just add completion itself to keymap
           (if (and (= 1 num-per-bucket) (< b num-small-buckets))
               (define-key-after menu
-                (vector (intern (concat "completion-insert-"
-                                        (number-to-string b))))
-                (list 'menu-item
-		      (nth b completions)
-                      ;; call function to generate menu item
-                      (funcall menu-item-func
-                               prefix (nth b completions)
-                               cmpl-function cmpl-replaces-prefix
-			       menu-item-func sub-menu-func)))
+		(vector (intern (concat "completion-insert-"
+					(number-to-string i))))
+		(list 'menu-item
+		      (if (stringp (nth i completions))
+			  (nth i completions)
+			(car (nth i completions)))
+		      `(lambda ()
+			 (list ,(if (stringp (nth i completions))
+				    (nth i completions)
+				  (car (nth i completions)))
+			       ,(if (stringp (nth i completions))
+				    (length prefix)
+				  (cdr (nth i completions)))))))
 
             ;; if bucket has more than 1 entry...
             ;; index of first completion in bucket
@@ -4415,23 +4419,31 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                (not cmpl-replaces-prefix))
       ;; don't list completions of original prefix again
       (unless (string= cmpl "")
-	(setq completions
-	      (funcall cmpl-function (concat prefix cmpl))))
+	(setq completions (funcall cmpl-function (concat prefix cmpl))))
       (setq completions
-            (mapcar (lambda (c) (concat cmpl (if (stringp c) c (car c))))
+            (mapcar (lambda (c)
+		      (if (stringp c)
+			  (cons (concat cmpl c) (length prefix))
+			(cons (concat cmpl (car c)) (cdr c))))
 		    completions))
       (setq completions (cdr completions)))
 
     ;; if there are no completions (other than the entry itself),
     ;; create a selectable completion item
     (if (null completions)
-        `(lambda () (insert ,cmpl))
+        `(lambda ()
+	   (list ,(if (stringp cmpl) cmpl (car cmpl))
+		 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))
       (let ((menu (funcall sub-menu-func prefix completions
                            cmpl-function menu-item-func sub-menu-func)))
         ;; otherwise, create a sub-menu containing them
         (define-key menu [separator-item-sub-menu] '(menu-item "--"))
         (define-key menu [completion-insert-root]
-          (list 'menu-item cmpl `(lambda () (insert ,cmpl))))
+          (list 'menu-item
+		cmpl
+		`(lambda ()
+		   (list ,(if (stringp cmpl) cmpl (car cmpl))
+			 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
         ;; return the menu keymap
         menu))))
 
