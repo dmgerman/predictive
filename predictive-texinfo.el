@@ -35,6 +35,8 @@
 ;;   new auto-dict features for tracking definitions
 ;; * added `predictive-texinfo-after-save' and
 ;;   `predictive-texinfo-kill-buffer' hook functions
+;; * updated for compatibility with new `completion-browser-menu-function'
+;;   spec
 ;;
 ;; Version 0,1
 ;; * initial release, borrowing heavily from predictive-latex.el
@@ -148,14 +150,18 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (add-hook 'after-save-hook 'predictive-texinfo-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
 
-      ;; use Texinfo browser menu if first character of prefix is "\"
+      ;; use Texinfo browser menu if first character of prefix is "@"
       (make-local-variable 'completion-menu)
       (setq completion-menu
-	    (lambda (prefix completions)
+	    (lambda (prefix completions
+		     cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
 	      (if (string= (substring prefix 0 1) "@")
 		  (predictive-texinfo-construct-browser-menu
-		   prefix completions)
-		(completion-construct-menu prefix completions))
+		   prefix completions
+		   cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
+		(completion-construct-menu
+		 prefix completions
+		 cmpl-function cmpl-prefix-function cmpl-replaces-prefix))
 	      ))
       ;; save predictive-main-dict; restored when predictive mode is disabled
       (setq predictive-restore-main-dict predictive-main-dict)
@@ -1075,41 +1081,52 @@ the flag at point (if any)."
 ;;;=============================================================
 ;;;                Completion-browser functions
 
-(defun predictive-texinfo-construct-browser-menu (prefix completions)
+(defun predictive-texinfo-construct-browser-menu
+  (prefix completions cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
   "Construct the Texinfo browser menu keymap."
 
   ;; construct menu, dropping the last two entries which are a separator and a
   ;; link back to the basic completion menu (would just redisplay this menu,
   ;; since we're using the browser as the default menu)
   (let ((menu (completion-construct-browser-menu
-	       prefix completions 'predictive-texinfo-browser-menu-item)))
+	       prefix completions
+	       cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+	       'predictive-texinfo-browser-menu-item)))
     (setq menu (butlast menu 2))))
 
 
 
-(defun predictive-texinfo-browser-menu-item (prefix completion &rest ignore)
+(defun predictive-texinfo-browser-menu-item
+  (prefix cmpl cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+	  &rest ignore)
   "Construct predictive Texinfo completion browser menu item."
 
   ;; if entry is @end, create sub-menu containing environment completions
-  (if (string= (concat prefix completion) "@end")
+  (if (string= (concat prefix cmpl) "@end")
       ;; find all Texinfo environments
       (let ((envs (dictree-complete dict-texinfo-env ""))
 	    (menu (make-sparse-keymap)))
-	(setq envs (mapcar (lambda (e) (concat completion " " (car e))) envs))
+	(setq envs (mapcar (lambda (e) (concat cmpl " " (car e))) envs))
 	;; create sub-menu keymap
 	(setq menu (completion-browser-sub-menu
-		    prefix envs 'predictive-texinfo-browser-menu-item
+		    prefix envs
+		    cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+		    'predictive-texinfo-browser-menu-item
 		    'completion-browser-sub-menu))
 	;; add completion itself (@end) to the menu
 	(define-key menu [separator-item-sub-menu] '(menu-item "--"))
 	(define-key menu [completion-insert-root]
-	  (list 'menu-item (concat prefix completion)
-		`(lambda () (insert ,completion))))
+	  (list 'menu-item (concat prefix cmpl)
+		`(lambda ()
+		   (list ,(if (stringp cmpl) cmpl (car cmpl))
+			 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
 	;; return the menu keymap
 	menu)
 
     ;; otherwise, create a selectable completion item
-    `(lambda () (insert ,completion))))
+    `(lambda ()
+       (list ,(if (stringp cmpl) cmpl (car cmpl))
+	     ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
 
 
 

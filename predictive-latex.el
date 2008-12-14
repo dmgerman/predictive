@@ -41,6 +41,8 @@
 ;; * added `predictive-latex-jump-to-*-definition' commands
 ;; * added `predictive-latex-after-save' and `predictive-latex-kill-buffer'
 ;;   hook functions
+;; * updated for compatibility with new `completion-browser-menu-function'
+;;   spec
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -368,10 +370,15 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       ;; use latex browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
       (setq completion-menu
-	    (lambda (prefix completions)
+	    (lambda (prefix completions cmpl-function cmpl-prefix-function
+			    cmpl-replaces-prefix)
 	      (if (string= (substring prefix 0 1) "\\")
-		  (predictive-latex-construct-browser-menu prefix completions)
-		(completion-construct-menu prefix completions))))
+		  (predictive-latex-construct-browser-menu
+		   prefix completions
+		   cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
+		(completion-construct-menu
+		 prefix completions
+		 cmpl-function cmpl-prefix-function cmpl-replaces-prefix))))
       ;; save predictive-main-dict; restored when predictive mode is disabled
       (setq predictive-restore-main-dict predictive-main-dict)
       ;; store filename for comparison when saving (see
@@ -2198,94 +2205,115 @@ they exist."
 ;;;=============================================================
 ;;;                Completion-browser functions
 
-(defun predictive-latex-construct-browser-menu (prefix completions)
+(defun predictive-latex-construct-browser-menu
+  (prefix completions cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
   "Construct the LaTeX browser menu keymap."
 
   ;; construct menu, dropping the last two entries which are a separator and a
   ;; link back to the basic completion menu (would just redisplay this menu,
-  ;; since we're using the browser as the default menu)
+  ;; since we're using the browser as the default menu for LaTeX commands)
   (let ((menu (completion-construct-browser-menu
-	       prefix completions 'predictive-latex-browser-menu-item)))
+	       prefix completions
+	       cmpl-function
+	       cmpl-prefix-function
+	       cmpl-replaces-prefix
+	       'predictive-latex-browser-menu-item)))
     (setq menu (butlast menu 2)))
 )
 
 
 
-(defun predictive-latex-browser-menu-item (prefix completion &rest ignore)
+(defun predictive-latex-browser-menu-item
+  (prefix cmpl
+   cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+   &rest ignore)
   "Construct predictive LaTeX completion browser menu item."
 
   (cond
    ;; if entry is \begin or \end, create sub-menu containing environment
    ;; completions
-   ((or (string= (concat prefix completion) "\\begin")
-	(string= (concat prefix completion) "\\end"))
+   ((or (string= (concat prefix cmpl) "\\begin")
+	(string= (concat prefix cmpl) "\\end"))
     ;; find all latex environments
     (let ((envs (dictree-complete
 		 (mapcar (lambda (dic) (if (dictree-p dic) dic (eval dic)))
 			 predictive-latex-env-dict)
 		 ""))
 	  (menu (make-sparse-keymap)))
-      (setq envs (mapcar (lambda (e) (concat completion "{" (car e) "}"))
+      (setq envs (mapcar (lambda (e) (concat cmpl "{" (car e) "}"))
 			 envs))
       ;; create sub-menu keymap
       (setq menu (completion-browser-sub-menu
-		  prefix envs 'predictive-latex-browser-menu-item
+		  prefix envs
+		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+		  'predictive-latex-browser-menu-item
 		  'completion-browser-sub-menu))
       ;; add completion itself (\begin or \end) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
-	(list 'menu-item (concat prefix completion)
-	      `(lambda () (insert ,completion))))
+	(list 'menu-item cmpl
+	      `(lambda ()
+		 (list ,(if (stringp cmpl) cmpl (car cmpl))
+		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
       ;; return the menu keymap
       menu))
 
 
    ;; if entry is \documentclass, create sub-menu containing environment
    ;; completions
-   ((string= (concat prefix completion) "\\documentclass")
+   ((string= (concat prefix cmpl) "\\documentclass")
     ;; find all latex docclasses
     (let ((classes
 	   (dictree-mapcar (lambda (word entry) word) dict-latex-docclass))
 	  (menu (make-sparse-keymap)))
       (setq classes
-	    (mapcar (lambda (e) (concat completion "{" e "}")) classes))
+	    (mapcar (lambda (e) (concat cmpl "{" e "}")) classes))
       ;; create sub-menu keymap
       (setq menu (completion-browser-sub-menu
-		  prefix classes 'predictive-latex-browser-menu-item
+		  prefix classes
+		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+		  'predictive-latex-browser-menu-item
 		  'completion-browser-sub-menu))
       ;; add completion itself (i.e. \documentclass) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
-	(list 'menu-item (concat prefix completion)
-	      `(lambda () (insert ,completion))))
+	(list 'menu-item (concat prefix cmpl)
+	      `(lambda ()
+		 (list ,(if (stringp cmpl) cmpl (car cmpl))
+		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
       ;; return the menu keymap
       menu))
 
 
    ;; if entry is \bibliographystyle, create sub-menu containing bib styles
-   ((string= (concat prefix completion) "\\bibliographystyle")
+   ((string= (concat prefix cmpl) "\\bibliographystyle")
     ;; find all bib styles
     (let ((styles
 	   (dictree-mapcar (lambda (word entry) word) dict-latex-bibstyle))
 	  (menu (make-sparse-keymap)))
       (setq styles
-	    (mapcar (lambda (e) (concat completion "{" e "}")) styles))
+	    (mapcar (lambda (e) (concat cmpl "{" e "}")) styles))
       ;; create sub-menu keymap
       (setq menu (completion-browser-sub-menu
-		  prefix styles 'predictive-latex-browser-menu-item
+		  prefix styles
+		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+		  'predictive-latex-browser-menu-item
 		  'completion-browser-sub-menu))
       ;; add completion itself (i.e. \bibliographystyle) to the menu
       (define-key menu [separator-item-sub-menu] '(menu-item "--"))
       (define-key menu [completion-insert-root]
-	(list 'menu-item (concat prefix completion)
-	      `(lambda () (insert ,completion))))
+	(list 'menu-item (concat prefix cmpl)
+	      `(lambda ()
+		 (list ,(if (stringp cmpl) cmpl (car cmpl))
+		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
       ;; return the menu keymap
       menu))
 
 
    ;; otherwise, create a selectable completion item
-   (t `(lambda () (insert ,completion))))
-)
+   (t `(lambda ()
+	 (list ,(if (stringp cmpl) cmpl (car cmpl))
+	       ,(if (stringp cmpl) (length prefix) (cdr cmpl)))))))
 
 
 
