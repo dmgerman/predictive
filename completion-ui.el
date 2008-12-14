@@ -116,6 +116,14 @@
 ;; * prefix is now deleted along with provisional completion when a completion
 ;;   accepted, and the entire completion is inserted; this allows completions
 ;;   to modify the prefix when they're accepted
+;; * completions can now include data about length of prefix, in case it is
+;;   not the same length as the original
+;; * `complete-in-buffer' and `complete-word-at-point' can now take arguments
+;;   that override the global values for `completion-function',
+;;   `completion-prefix-function' and `completion-replaces-prefix'
+;; * `completion-construct-menu', `completion-construct-browser-menu' and the
+;;   other browser functions now take completion-function, prefix-function and
+;;   completion-replaces-prefix arguments
 ;;
 ;; Version 0.9.4
 ;; * modified `completion-run-if-condition' and `completion-select' to get key
@@ -888,20 +896,30 @@ Note: this can be overridden by an \"overlay local\" binding (see
 
 (defvar completion-menu 'completion-construct-menu
   "The completion menu keymap, or a function to call
-to get a completion menu keymap. (The latter is more common.)
+to get a completion menu keymap (the latter is more usual).
 
-If a function, that function is called with two arguments, PREFIX
-and COMPLETIONS, and should return a menu keymap.
+If a function, that function is called with five arguments:
+PREFIX, COMPLETIONS, CMPL-FUNCTION, CMPL-PREFIX-FUNCTION and
+CMPL-REPLACES-PREFIX It should return a menu keymap. The first
+two arguments are self-explanatory. CMPL-FUNCTION,
+CMPL-PREFIX-FUNCTION and CMPL-REPLACES-PREFIX and the values of
+`completion-function', `completion-prefix-function', and
+`completion-replaces-prefix' for the currenct completion.
 
-Note: this can be overridden by an \"overlay local\" binding (see
-`auto-overlay-local-binding').")
+Note: the value of `completion-menu' can be overridden by an
+\"overlay local\" binding (see `auto-overlay-local-binding').")
 
 
 (defvar completion-browser-menu-function 'completion-construct-browser-menu
   "Function to call to get a browser menu keymap.
 
-The function is called with two arguments, PREFIX and
-COMPLETIONS, and should return a menu keymap.
+The function is called with five arguments: PREFIX, COMPLETIONS,
+CMPL-FUNCTION, CMPL-PREFIX-FUNCTION and CMPL-REPLACES-PREFIX It
+should return a menu keymap. The first two arguments are
+self-explanatory. CMPL-FUNCTION, CMPL-PREFIX-FUNCTION and
+CMPL-REPLACES-PREFIX and the values of `completion-function',
+`completion-prefix-function', and `completion-replaces-prefix'
+for the currenct completion.
 
 Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
@@ -2131,11 +2149,13 @@ there is none."
       (cond
        ;; if `menu' is a function, evaluate it to get menu
        ((functionp menu)
-        (setq keymap (funcall menu (overlay-get overlay 'prefix)
-                              (overlay-get overlay 'completions)
-			      (overlay-get overlay 'completion-function)
-			      (overlay-get overlay
-					   'completion-replaces-prefix)))
+        (setq keymap
+	      (funcall menu
+		       (overlay-get overlay 'prefix)
+		       (overlay-get overlay 'completions)
+		       (overlay-get overlay 'completion-function)
+		       (overlay-get overlay 'completion-prefix-function)
+		       (overlay-get overlay 'completion-replaces-prefix)))
         ;; throw error if return value has wrong type
         (unless (or (null keymap) (keymapp keymap))
           (error "`completion-menu' returned wrong type:null or keymapp, %s"
@@ -4248,8 +4268,9 @@ called from `completion-show-menu'.\)"
 
 
 (defun completion-construct-browser-menu
-  (prefix completions cmpl-function cmpl-replaces-prefix
-	  &optional menu-item-func sub-menu-func)
+  (prefix completions
+   cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+   &optional menu-item-func sub-menu-func)
   "Construct the completion browser menu keymap
 from the supplied PREFIX (COMPLETIONS is ignored and replaced by
 all completions of PREFIX in the current dictionary), using
@@ -4278,7 +4299,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
   ;; main browser menu is just a browser submenu...
   (let ((menu (funcall sub-menu-func
                        prefix completions
-                       cmpl-function cmpl-replaces-prefix
+                       cmpl-function
+		       cmpl-prefix-function
+		       cmpl-replaces-prefix
 		       menu-item-func sub-menu-func)))
     ;; ... with an item added for switching to the basic completion
     ;; menu
@@ -4308,8 +4331,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 ;; `imenu' here instead. Don't hold your breath.
 
 (defun completion-browser-sub-menu
-  (prefix completions cmpl-function cmpl-replaces-prefix
-	  menu-item-func sub-menu-func)
+  (prefix completions
+   cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+   menu-item-func sub-menu-func)
   "Construct a predictive completion browser sub-menu keymap."
 
   (let* ((menu (make-sparse-keymap))
@@ -4395,7 +4419,10 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                     ;; call function to generate sub-menu
                     (funcall sub-menu-func
                              prefix (completion--sublist completions i j)
-                             cmpl-function menu-item-func sub-menu-func))))
+                             cmpl-function
+			     cmpl-prefix-function
+			     cmpl-replaces-prefix
+			     menu-item-func sub-menu-func))))
           )))
 
     ;; return constructed menu
@@ -4403,9 +4430,10 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 
 
 
-(defun completion-browser-menu-item (prefix cmpl
-				     cmpl-function cmpl-replaces-prefix
-				     menu-item-func sub-menu-func)
+(defun completion-browser-menu-item
+  (prefix cmpl
+   cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+   menu-item-func sub-menu-func)
   "Construct predictive completion browser menu item."
 
   (let (completions)
@@ -4435,7 +4463,10 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 	   (list ,(if (stringp cmpl) cmpl (car cmpl))
 		 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))
       (let ((menu (funcall sub-menu-func prefix completions
-                           cmpl-function menu-item-func sub-menu-func)))
+                           cmpl-function
+			   cmpl-prefix-function
+			   cmpl-replaces-prefix
+			   menu-item-func sub-menu-func)))
         ;; otherwise, create a sub-menu containing them
         (define-key menu [separator-item-sub-menu] '(menu-item "--"))
         (define-key menu [completion-insert-root]
