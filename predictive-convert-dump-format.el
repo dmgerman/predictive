@@ -10,7 +10,7 @@ and earlier of the \"predictive.el\" library to version 0.18)."
     (unless (eolp) (forward-sexp))
     ;; convert null weight to 0
     (cond
-     ((eolp) (insert " 0"))
+     ((eolp)) ; (insert " 0"))
      ((looking-at "[[:space:]]+[[:digit:]]+\\([[:space:]]\\|$\\)")
       (forward-sexp))
      ((looking-at "[[:space:]]+\\(nil\\)\\([[:space:]]\\|$\\)")
