@@ -942,7 +942,7 @@ to the dictionary, nil if it should not. Only used when
     (setq prefix (replace-regexp-in-string ")" "\\\\)" prefix))
     (if predictive-auto-correction-no-completion
 	(cons 'wildcard prefix)
-      (cons 'wildcard (concat prefix "(*)")))))
+      (cons 'wildcard (concat "(" prefix ")*")))))
 
 
 
@@ -1354,26 +1354,23 @@ for uncapitalized version."
     (when dict
       ;; expand prefix
       (setq pfx (predictive-expand-prefix prefix))
-      ;; if expanded prefix is a wildcard pattern, do a wildcard search
+      ;; if expanded prefix is a wildcard pattern, do a wildcard search, using
+      ;; RESULTFUN argument of `dictree-wildcard-search' to convert dump word
+      ;; weights and convert wildcard group data into prefix length
       (if (eq (car pfx) 'wildcard)
-	  (progn
-	    (setq completions
-		  (dictree-wildcard-search dict (cdr pfx) (if maxnum t nil)
-					   maxnum nil nil filter 'strip-data))
-	    ;; use grouping data to determine length of prefix
-	    (unless predictive-auto-correction-no-completion
-	      (setq completions
-		    (mapcar (lambda (cmpl)
-			      (cons (car cmpl)
-				    (- (length (car cmpl))
-				       (- (cdr (cadr cmpl))
-					  (car (cadr cmpl))))))
-			    completions))))
+	  (setq completions
+		(dictree-wildcard-search
+		 dict (cdr pfx) (if maxnum t nil)
+		 maxnum nil nil filter
+		 (unless predictive-auto-correction-no-completion
+		   (lambda (key data)
+		     (cons (car key)
+			   (- (cdr (cadr key)) (car (cadr key))))))))
 
 	;; otherwise, complete the prefix
 	(setq completions
 	      (dictree-complete dict (cdr pfx) (if maxnum t nil) maxnum
-				nil nil filter 'strip-data)))
+				nil nil filter (lambda (key data) key))))
       ;; sort out capitalization of completions
       (when (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p prefix))
