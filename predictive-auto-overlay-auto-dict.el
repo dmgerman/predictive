@@ -33,6 +33,8 @@
 ;;
 ;; Version 0.3.1
 ;; * updated for compatibility with new dict-tree.el
+;; * reinstate fixed `predictive-auto-dict-suicide' function, since it's
+;;   necessary in circumstances when `predictive-auto-dict-update' *isn't* called
 ;;
 ;; Version 0.3
 ;; * fixed bug causing two duplicate deletions from dict by removing
@@ -76,7 +78,7 @@
 (put 'predictive-auto-dict 'auto-overlay-parse-function
      'predictive-parse-auto-dict-match)
 (put 'predictive-auto-dict 'auto-overlay-suicide-function
-     (lambda (o) (auto-o-delete-overlay (overlay-get o 'parent))))
+     'predictive-auto-dict-suicide)
 
 
 
@@ -125,17 +127,23 @@
 
 
 
-;; (defun predictive-auto-dict-suicide (o-match)
-;;   ;; Delete the word overlay, and delete the word from the dictionary
+(defun predictive-auto-dict-suicide (o-match)
+  ;; Delete the word overlay, delete the definition, and delete the word from
+  ;; the dictionary if there are no more definitions
 
-;;   (let ((word (overlay-get o-match 'word))
-;; 	(dict (overlay-get o-match 'auto-dict)))
-;;     ;; delete the overlay
-;;     (auto-o-delete-overlay (overlay-get o-match 'parent))
-;;     ;; delete the word from the dictionary
-;;     (unless (dictree-p dict) (setq dict (eval dict)))
-;;     (dictree-delete dict word))
-;; )
+  (let ((word (overlay-get o-match 'word))
+	(dict (overlay-get o-match 'auto-dict))
+	(parent (overlay-get o-match 'parent)))
+    ;; delete the overlay
+    (auto-o-delete-overlay parent)
+    (unless (dictree-p dict) (setq dict (eval dict)))
+    ;; delete overlay from definition list
+    (unless (dictree-put-property
+	     dict word :definitions
+	     (delq parent (dictree-get-property dict word :definitions)))
+      ;; schedule word deletion
+      (add-to-list 'auto-o-pending-post-update
+		   (list 'predictive-auto-dict-delete-word dict word)))))
 
 
 
@@ -149,6 +157,12 @@
 		 (list 'predictive-auto-dict-update o-self))))
 
 
+(defun predictive-auto-dict-delete-word (dict word)
+  ;; delete WORD from DICT if its definition list is empty
+  (unless (dictree-get-property dict word :definitions)
+    (dictree-delete dict word)))
+
+
 
 (defun predictive-auto-dict-update (o-self)
   ;; Update the auto-dict with new word. Runs after modifications.
@@ -156,8 +170,7 @@
   (let ((dict (overlay-get (overlay-get o-self 'start) 'auto-dict))
 	(word (overlay-get (overlay-get o-self 'start) 'word))
 	defs)
-    (unless (dictree-p dict)
-      (setq dict (eval dict)))
+    (unless (dictree-p dict) (setq dict (eval dict)))
     ;; delete definition overlay from :definitions property of word in
     ;; auto-dict, deleting word entirely if this was last definition overlay
     (when (null (dictree-put-property
