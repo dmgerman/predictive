@@ -34,7 +34,8 @@
 ;; Version 0.3.1
 ;; * updated for compatibility with new dict-tree.el
 ;; * reinstate fixed `predictive-auto-dict-suicide' function, since it's
-;;   necessary in circumstances when `predictive-auto-dict-update' *isn't* called
+;;   necessary in circumstances when `predictive-auto-dict-update' *isn't*
+;;   called
 ;;
 ;; Version 0.3
 ;; * fixed bug causing two duplicate deletions from dict by removing
@@ -112,7 +113,8 @@
 		    ;; no duplicate definition warning if starting
 		    ;; predictive-mode (all auto-dict entries get re-added at
 		    ;; that stage)
-		    (when predictive-mode
+		    (when (and predictive-mode
+			       (dictree-get-property dict word :definitions))
 		      (lambda (new old)
 			(message "Warning: duplicate definition of \"%s\""
 				 word)
