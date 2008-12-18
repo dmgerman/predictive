@@ -1093,14 +1093,16 @@ SYNTAX."
           'completion-kill-word)
         (define-key map [remap backward-kill-word]
           'completion-backward-kill-word)
-        (define-key map [remap kill-sentenve]
-          'completion-kill-sentenve)
-        (define-key map [remap backward-kill-sentenve]
-          'completion-backward-kill-sentenve)
+        (define-key map [remap kill-sentence]
+          'completion-kill-sentence)
+        (define-key map [remap backward-kill-sentence]
+          'completion-backward-kill-sentence)
         (define-key map [remap kill-sexp]
           'completion-kill-sexp)
         (define-key map [remap backward-kill-sexp]
           'completion-backward-kill-sexp)
+        (define-key map [remap kill-line]
+          'completion-kill-line)
         (define-key map [remap kill-paragraphs]
           'completion-kill-paragraph)
         (define-key map [remap backward-kill-paragraph]
@@ -1117,6 +1119,7 @@ SYNTAX."
                            (kill-word . completion-kill-word)
                            (kill-sentence . completion-kill-sentence)
                            (kill-sexp . completion-kill-sexp)
+			   (kill-line . completion-kill-line)
                            (kill-paragraph . completion-kill-paragraph)
                            (backward-delete-char
                             . completion-backward-delete-char)
@@ -1403,6 +1406,9 @@ used if the current Emacs version lacks command remapping support."
   ;;       because it's easier to disable this keymap.
   (dolist (key '("\r" "\n" [return]))
     (define-key completion-map key 'completion-resolve-then-run-command))
+
+  ;; remap the deletion commands
+  (completion-remap-delete-commands completion-map)
 
 
   ;; ----- Simulated overlay keybindings -----
@@ -3405,7 +3411,7 @@ KILLFLAG is set if n was explicitly specified."
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
-      (completion-backward-delete 'backward-delete-char n killflag)
+      (completion-backward-delete 'backward-delete-char (- n) killflag)
     (completion-delete 'delete-char n killflag)))
 
 
@@ -3426,7 +3432,7 @@ KILLFLAG is set if N was explicitly specified."
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'delete-char n killflag)
+      (completion-delete 'delete-char (- n) killflag)
     (completion-backward-delete 'backward-delete-char n killflag)))
 
 
@@ -3449,7 +3455,7 @@ The exact behavior depends on `backward-delete-char-untabify-method'."
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'delete-char n killflag)
+      (completion-delete 'delete-char (- n) killflag)
     (completion-backward-delete 'backward-delete-char-untabify
                                 n killflag)))
 
@@ -3465,7 +3471,7 @@ negative, behaviour is instead as for
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
-      (completion-backward-delete 'backward-kill-word n)
+      (completion-backward-delete 'backward-kill-word (- n))
     (completion-delete 'kill-word n)))
 
 
@@ -3481,7 +3487,7 @@ as for `completion-kill-word'.\)"
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'kill-word n)
+      (completion-delete 'kill-word (- n))
     (completion-backward-delete 'backward-kill-word n)))
 
 
@@ -3496,7 +3502,7 @@ negative, behaviour is instead as for
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
-      (completion-backward-delete 'backward-kill-sentence n)
+      (completion-backward-delete 'backward-kill-sentence (- n))
     (completion-delete 'kill-sentence n)))
 
 
@@ -3512,7 +3518,7 @@ as for `completion-kill-sentence'.\)"
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'kill-sentence n)
+      (completion-delete 'kill-sentence (- n))
     (completion-backward-delete 'backward-kill-sentence n)))
 
 
@@ -3527,7 +3533,7 @@ negative, behaviour is instead as for
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
-      (completion-backward-delete 'backward-kill-sexp n)
+      (completion-backward-delete 'backward-kill-sexp (- n))
     (completion-delete 'kill-sexp n)))
 
 
@@ -3543,8 +3549,39 @@ as for `completion-kill-sexp'.\)"
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'kill-sexp n)
+      (completion-delete 'kill-sexp (- n))
     (completion-backward-delete 'backward-kill-sexp n)))
+
+
+
+(defun completion-kill-line (&optional n)
+  "Kill the line following point.
+With argument, do this that many times. If there is a provisional
+completion at point after deleting, reject it. \(If N is
+negative, behaviour is instead as for
+`completion-backward-kill-line'.\)"
+  (interactive "P")
+
+  ;; if deleting backwards, call `completion-backward-delete' instead
+  (if (and (integerp n) (< n 0))
+      (completion-backward-delete 'kill-line (- n))
+    (completion-delete 'kill-line n)))
+
+
+
+(defun completion-backward-kill-line (&optional n)
+  "Kill the line before point.
+With argument, do this that many times. Any provisional
+completion at point is first rejected. If deleting backwards into
+a word, and `auto-completion-mode' is enabled, complete what
+remains of that word.  \(If N is negative, behaviour is instead
+as for `completion-kill-line'.\)"
+  (interactive "p")
+
+  ;; if deleting forwards, call `completion-delete' instead
+  (if (< n 0)
+      (completion-delete 'kill-line (- n))
+    (completion-backward-delete 'kill-line n)))
 
 
 
@@ -3558,9 +3595,8 @@ negative, behaviour is instead as for
 
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
-      (completion-backward-delete 'backward-kill-paragraph n)
+      (completion-backward-delete 'backward-kill-paragraph (- n))
     (completion-delete 'kill-paragraph n)))
-
 
 
 
@@ -3575,7 +3611,7 @@ as for `completion-kill-paragraph'.\)"
 
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
-      (completion-delete 'kill-paragraph n)
+      (completion-delete 'kill-paragraph (- n))
     (completion-backward-delete 'backward-kill-paragraph n)))
 
 
