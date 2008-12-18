@@ -58,7 +58,7 @@
   (predictive-load-dict 'dict-latex-colours)
   ;; add new browser sub-menu definition
   (make-local-variable 'predictive-latex-browser-submenu-alist)
-  (push (cons "\\\\\\(text\\|page\\|\\)color" 'predictive-latex-label-dict)
+  (push (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)
 	predictive-latex-browser-submenu-alist)
   ;; Load regexps
   (auto-overlay-load-regexp
