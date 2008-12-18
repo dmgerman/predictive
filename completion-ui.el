@@ -4250,15 +4250,7 @@ called from `completion-show-menu'.\)"
     ;; add entry to switch to completion browser
     (define-key-after menu [separator-browser] '(menu-item "--"))
     (define-key-after menu [completion-browser-menu-function]
-      (list 'menu-item "Browser..."
-            (lambda ()
-              (completion-show-menu
-               nil (or (and (fboundp 'auto-overlay-local-binding)
-                            (auto-overlay-local-binding
-                             'completion-browser-menu-function))
-		       completion-browser-menu-function
-		       'completion-show-browser-menu))
-              )))
+      (list 'menu-item "Browser..." 'completion-show-browser-menu))
 
     ;; return the menu keymap
     menu))
@@ -4481,17 +4473,9 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
     ;; doing something other than prefix-completion, so the entry is just the
     ;; original completion itself if `completion-replaces-prefix' is non-nil.
     (when (and completion-browser-recurse-on-completions
-               (not cmpl-replaces-prefix))
-      ;; don't list completions of original prefix again
-      (unless (string= cmpl "")
-	(setq completions (funcall cmpl-function (concat prefix cmpl))))
-      (setq completions
-            (mapcar (lambda (c)
-		      (if (stringp c)
-			  (cons (concat cmpl c) (length prefix))
-			(cons (concat cmpl (car c)) (cdr c))))
-		    completions))
-      (setq completions (cdr completions)))
+               (not cmpl-replaces-prefix)
+	       (not (string= cmpl "")))
+      (setq completions (cdr (funcall cmpl-function cmpl))))
 
     ;; if there are no completions (other than the entry itself),
     ;; create a selectable completion item
@@ -4499,12 +4483,13 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
         `(lambda ()
 	   (list ,(if (stringp cmpl) cmpl (car cmpl))
 		 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))
+      ;; otherwise, create a sub-menu containing them
       (let ((menu (funcall sub-menu-func prefix completions
                            cmpl-function
 			   cmpl-prefix-function
 			   cmpl-replaces-prefix
 			   menu-item-func sub-menu-func)))
-        ;; otherwise, create a sub-menu containing them
+	;; add completion itself to the menu
         (define-key menu [separator-item-sub-menu] '(menu-item "--"))
         (define-key menu [completion-insert-root]
           (list 'menu-item
