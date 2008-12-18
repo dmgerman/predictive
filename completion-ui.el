@@ -4337,27 +4337,65 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
   (let* ((menu (make-sparse-keymap))
          (num-completions (length completions)))
 
-    ;; if menu does not need to be divided into buckets, just add the
-    ;; completions themselves to the keymap
-    (if (<= num-completions completion-browser-max-items)
-        (dotimes (i num-completions)
-          (define-key-after menu
-	    (vector (intern (concat "completion-insert-"
-				    (number-to-string i))))
-	    (list 'menu-item
-		  (if (stringp (nth i completions))
-		      (nth i completions)
-		    (car (nth i completions)))
-		  `(lambda ()
-		     (list ,(if (stringp (nth i completions))
-				(nth i completions) (car (nth i completions)))
-			   ,(if (stringp (nth i completions))
-				(length prefix) (cdr (nth i completions))))))
-	    ))
+    (cond
+
+     ;; if there's only 1 entry, don't bother with sub-menu, just set keymap
+     ;; to be the item itself
+     ((= num-completions 1)
+      (let* ((cmpl (car completions))
+	     (entry (funcall menu-item-func
+			     prefix cmpl
+			     cmpl-function
+			     cmpl-prefix-function
+			     cmpl-replaces-prefix
+			     menu-item-func sub-menu-func)))
+	(cond
+	 ;; if entry is a menu keymap, use it as the menu, adding completion
+	 ;; itself to the top
+	 ((keymapp entry)
+	  (define-key entry [separator-item-sub-menu] '(menu-item "--"))
+	  (define-key entry [completion-insert-root]
+	    (list
+	     'menu-item cmpl
+	     `(lambda ()
+		(list ,(if (stringp cmpl) cmpl (car cmpl))
+		      ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
+	  (setq menu entry))
+
+	 (t  ;; if entry is a single item, add it to the menu
+	  (define-key menu [completion-insert-0]
+	    (list
+	     'menu-item cmpl
+	     `(lambda ()
+		(list ,(if (stringp cmpl) cmpl (car cmpl))
+		      ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))))
+	))
 
 
-      ;; if menu needs to be divided into buckets, construct a menu
-      ;; keymap containing the bucket menus
+     ;; if menu does not need to be divided into buckets, just add the
+     ;; completions themselves to the keymap
+     ((<= num-completions completion-browser-max-items)
+      (dotimes (i num-completions)
+	(define-key-after menu
+	  (vector (intern (concat "completion-insert-"
+				  (number-to-string i))))
+	  (list 'menu-item
+		(if (stringp (nth i completions))
+		    (nth i completions)
+		  (car (nth i completions)))
+		(funcall menu-item-func
+			 prefix
+			 (nth i completions)
+			 cmpl-function
+			 cmpl-prefix-function
+			 cmpl-replaces-prefix
+			 menu-item-func sub-menu-func))
+	  )))
+
+
+     ;; if menu needs to be divided into buckets, construct a menu keymap
+     ;; containing the bucket menus
+     (t
       (let* ((num-buckets
               (cond
                ;; maximize number of buckets, minimize size of
@@ -4378,8 +4416,8 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
              (num-large-buckets (% num-completions num-buckets))
              (num-small-buckets (- num-buckets num-large-buckets))
              i j)
-        (dotimes (b num-buckets)
 
+        (dotimes (b num-buckets)
           ;; if bucket has only 1 entry, don't bother with bucket
           ;; menu, just add completion itself to keymap
           (if (and (= 1 num-per-bucket) (< b num-small-buckets))
@@ -4390,22 +4428,22 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
 		      (if (stringp (nth i completions))
 			  (nth i completions)
 			(car (nth i completions)))
-		      `(lambda ()
-			 (list ,(if (stringp (nth i completions))
-				    (nth i completions)
-				  (car (nth i completions)))
-			       ,(if (stringp (nth i completions))
-				    (length prefix)
-				  (cdr (nth i completions)))))))
+		      (funcall menu-item-func
+			   prefix
+			   (nth i completions)
+			   cmpl-function
+			   cmpl-prefix-function
+			   cmpl-replaces-prefix
+			   menu-item-func sub-menu-func)))
 
             ;; if bucket has more than 1 entry...
-            ;; index of first completion in bucket
+            ;; get index of first completion in bucket
             (setq i (+ (* (min b num-small-buckets) num-per-bucket)
                        (* (max 0 (- b num-small-buckets))
                           (1+ num-per-bucket))))
-            ;; index of last completion in bucket
-            (setq j (+ i num-per-bucket
-                       (if (< b num-small-buckets) 0 1)))
+            ;; get index of last completion in bucket
+            (setq j (1- (+ i num-per-bucket
+			   (if (< b num-small-buckets) 0 1))))
             ;; add bucket menu to keymap
             (define-key-after menu
               (vector (intern (concat "bucket-" (number-to-string b))))
@@ -4416,12 +4454,13 @@ PREFIX, MENU-ITEM-FUNC and SUB-MENU-FUNC."
                             (nth j completions) "\"")
                     ;; call function to generate sub-menu
                     (funcall sub-menu-func
-                             prefix (completion--sublist completions i j)
+                             prefix
+			     (completion--sublist completions i (1+ j))
                              cmpl-function
 			     cmpl-prefix-function
 			     cmpl-replaces-prefix
 			     menu-item-func sub-menu-func))))
-          )))
+          ))))
 
     ;; return constructed menu
     menu))
