@@ -118,99 +118,18 @@
 	 (whitesp-resolve (completion-get-resolve-behaviour
 			   whitesp-behaviour)))
 
+    ;; add new browser sub-menu definition
+    (make-local-variable 'predictive-latex-browser-submenu-alist)
+    (push (cons "\\\\[cC]ref\\(range\\|\\)" 'predictive-latex-label-dict)
+	  predictive-latex-browser-submenu-alist)
+
+    ;; load regexps
     ;; \cref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cref{\\)" . 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[Cc]ref\\(\\|range\\){\\)" . 3)
        :edge start
        :id cref
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (,whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
-       (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
-
-    ;; \Cref
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\Cref{\\)" . 3)
-       :edge start
-       :id Cref
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (,whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
-       (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
-
-    ;; \crefrange
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\crefrange{\\)" . 3)
-       :edge start
-       :id crefrange
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (,whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
-       (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
-
-    ;; \Crefrange
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\Crefrange{\\)" . 3)
-       :edge start
-       :id Crefrange
        (dict . predictive-latex-label-dict)
        (priority . 40)
        (completion-menu . predictive-latex-construct-browser-menu)
@@ -246,7 +165,6 @@
        (priority . 40)
        (face . (background-color . ,predictive-overlay-debug-color)))
      t)
-
     (setq predictive-latex-cleveref-restore-label-definition
 	  (auto-overlay-unload-definition 'predictive 'label))
     (auto-overlay-load-definition
@@ -256,13 +174,15 @@
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}"
 	 . 4)
        (auto-dict . predictive-latex-label-dict)))
-     t)
-    )
-)
+     t)))
 
 
 
 (defun predictive-latex-unload-cleveref ()
+  ;; remove browser sub-menu definition
+  (setq predictive-latex-browser-submenu-alist
+	(predictive-assoc-delete-all "\\\\[cC]ref\\(range\\|\\)"
+				     predictive-latex-browser-submenu-alist))
   ;; Unload cleveref regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'cref)
   (auto-overlay-unload-regexp 'predictive 'brace 'Cref)
@@ -275,8 +195,7 @@
   (auto-overlay-load-definition
    'predictive predictive-latex-cleveref-restore-label-definition)
   (kill-local-variable 'predictive-latex-cleveref-restore-label-regexp)
-  (kill-local-variable 'predictive-latex-cleveref-restore-label-definition)
-)
+  (kill-local-variable 'predictive-latex-cleveref-restore-label-definition))
 
 
 

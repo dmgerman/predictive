@@ -304,8 +304,41 @@ between \\begin{...} and \\end{...} commands."
 (make-variable-buffer-local 'predictive-latex-section-dict)
 
 
-;; alist holding functions called when loading and unloading latex packages
-(defvar predictive-latex-usepackage-functions nil)
+(defvar predictive-latex-usepackage-functions nil
+  "List of LaTeX package functions.
+Each entry should be a list of three elements, the first being
+the package name (a string), the next two being the functions to
+call when loading and unloading the package.")
+
+
+(defvar predictive-latex-browser-submenu-alist
+  '(("\\\\begin" . dict-latex-env)
+    ("\\\\documentclass" . dict-latex-docclass)
+    ("\\\\bibliographystyle" . dict-latex-bibstyle)
+    ("\\\\\\(eq\\|\\)ref" . predictive-latex-label-dict))
+"Alist associating regexps with sub-menu definitions.
+When a browser menu item matches a regexp in the alist, the
+associated definition is used to construct a sub-menu for that
+browser item.
+
+The sub-menu definition can be a function, symbol, dictionary, or
+list of strings.
+
+If it is a function, that function is called with two arguments:
+the prefix being completed, and the menu item in question.  It's
+return value should be a symbol, dictionary, or list of strings
+to use as the sub-menu defition.
+
+If the sub-menu definition is a symbol, the result of evaluating
+the symbol should be a dictionary or list of strings, and is used
+as the sub-menu definition.
+
+If the sub-menu definition is a dictionary, the sub-menu is built
+by surrounding every word in the dictionary with \"{\" \"}\", and
+appending this to the end of the original item.
+
+Finally, if the sub-menu definition is a list of strings, those
+strings become the sub-menu entries.")
 
 
 ;; set up 'predictive-latex-word to be a `thing-at-point' symbol
@@ -372,7 +405,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (setq completion-menu
 	    (lambda (prefix completions cmpl-function cmpl-prefix-function
 			    cmpl-replaces-prefix)
-	      (if (string= (substring prefix 0 1) "\\")
+	      (if (eq (aref prefix 0) ?\\)
 		  (predictive-latex-construct-browser-menu
 		   prefix completions
 		   cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
@@ -2218,8 +2251,7 @@ they exist."
 	       cmpl-prefix-function
 	       cmpl-replaces-prefix
 	       'predictive-latex-browser-menu-item)))
-    (setq menu (butlast menu 2)))
-)
+    (setq menu (butlast menu 2))))
 
 
 
@@ -2229,91 +2261,66 @@ they exist."
    &rest ignore)
   "Construct predictive LaTeX completion browser menu item."
 
-  (cond
-   ;; if entry is \begin or \end, create sub-menu containing environment
-   ;; completions
-   ((or (string= (concat prefix cmpl) "\\begin")
-	(string= (concat prefix cmpl) "\\end"))
-    ;; find all latex environments
-    (let ((envs (dictree-complete
-		 (mapcar (lambda (dic) (if (dictree-p dic) dic (eval dic)))
-			 predictive-latex-env-dict)
-		 ""))
-	  (menu (make-sparse-keymap)))
-      (setq envs (mapcar (lambda (e) (concat cmpl "{" (car e) "}"))
-			 envs))
+  (let (submenu)
+    ;; search for a match
+    (catch 'match
+      (dolist (def predictive-latex-browser-submenu-alist)
+	(when (and (string-match (car def) cmpl)
+		   (= (match-beginning 0) 0)
+		   (= (match-end 0) (length cmpl)))
+	  (setq submenu (cdr def))
+	  (throw 'match t))))
+
+    (cond
+     ;;  if entry has a submenu definition, construct sub-menu for it
+     (submenu
+      ;; if submenu definition is a function, call it
+      (when (functionp submenu)
+	(setq submenu (funcall submenu prefix cmpl)))
+      ;; if submenu definition is a symbol, evaluate it
+      (when (symbolp submenu) (setq submenu (eval submenu)))
+      ;; if submenu definition is a dictionary or list of dictionaries,
+      ;; construct submenu entries from dictionary words
+      (cond
+       ;; dictionary, get all words in dict
+       ((dictree-p submenu)
+	(setq submenu
+	      (dictree-mapcar (lambda (word data)
+				(concat cmpl "{" word "}"))
+			      submenu)))
+       ;; if submenu definition is a list of dictionaries or symbols, expand
+       ;; all symbols in list to get list of dictionaries, then complete empty
+       ;; string to get all words in dicts
+       ((and (listp submenu)
+	     (or (dictree-p (car submenu)) (symbolp (car submenu))))
+	(dictree-complete
+	 (mapcar (lambda (dic) (if (dictree-p dic) dic (eval dic)))
+		 submenu)
+	 "" nil nil nil nil nil
+	 (lambda (word data) (concat cmpl "{" word "}")))))
+
       ;; create sub-menu keymap
-      (setq menu (completion-browser-sub-menu
-		  prefix envs
-		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
-		  'predictive-latex-browser-menu-item
-		  'completion-browser-sub-menu))
-      ;; add completion itself (\begin or \end) to the menu
-      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
-      (define-key menu [completion-insert-root]
+      (setq submenu (completion-browser-sub-menu
+		     prefix submenu
+		     cmpl-function cmpl-prefix-function cmpl-replaces-prefix
+		     'predictive-latex-browser-menu-item
+		     'completion-browser-sub-menu))
+      ;; add completion itself (i.e. \documentclass) to the menu
+      (define-key submenu [separator-item-sub-menu] '(menu-item "--"))
+      (define-key submenu [completion-insert-root]
 	(list 'menu-item cmpl
 	      `(lambda ()
 		 (list ,(if (stringp cmpl) cmpl (car cmpl))
 		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
       ;; return the menu keymap
-      menu))
+      submenu)
 
 
-   ;; if entry is \documentclass, create sub-menu containing environment
-   ;; completions
-   ((string= (concat prefix cmpl) "\\documentclass")
-    ;; find all latex docclasses
-    (let ((classes
-	   (dictree-mapcar (lambda (word entry) word) dict-latex-docclass))
-	  (menu (make-sparse-keymap)))
-      (setq classes
-	    (mapcar (lambda (e) (concat cmpl "{" e "}")) classes))
-      ;; create sub-menu keymap
-      (setq menu (completion-browser-sub-menu
-		  prefix classes
-		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
-		  'predictive-latex-browser-menu-item
-		  'completion-browser-sub-menu))
-      ;; add completion itself (i.e. \documentclass) to the menu
-      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
-      (define-key menu [completion-insert-root]
-	(list 'menu-item (concat prefix cmpl)
-	      `(lambda ()
-		 (list ,(if (stringp cmpl) cmpl (car cmpl))
-		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
-      ;; return the menu keymap
-      menu))
-
-
-   ;; if entry is \bibliographystyle, create sub-menu containing bib styles
-   ((string= (concat prefix cmpl) "\\bibliographystyle")
-    ;; find all bib styles
-    (let ((styles
-	   (dictree-mapcar (lambda (word entry) word) dict-latex-bibstyle))
-	  (menu (make-sparse-keymap)))
-      (setq styles
-	    (mapcar (lambda (e) (concat cmpl "{" e "}")) styles))
-      ;; create sub-menu keymap
-      (setq menu (completion-browser-sub-menu
-		  prefix styles
-		  cmpl-function cmpl-prefix-function cmpl-replaces-prefix
-		  'predictive-latex-browser-menu-item
-		  'completion-browser-sub-menu))
-      ;; add completion itself (i.e. \bibliographystyle) to the menu
-      (define-key menu [separator-item-sub-menu] '(menu-item "--"))
-      (define-key menu [completion-insert-root]
-	(list 'menu-item (concat prefix cmpl)
-	      `(lambda ()
-		 (list ,(if (stringp cmpl) cmpl (car cmpl))
-		       ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))
-      ;; return the menu keymap
-      menu))
-
-
-   ;; otherwise, create a selectable completion item
-   (t `(lambda ()
-	 (list ,(if (stringp cmpl) cmpl (car cmpl))
-	       ,(if (stringp cmpl) (length prefix) (cdr cmpl)))))))
+     ;; if entry does not match any submenu definition, create a selectable
+     ;; completion item
+     (t `(lambda ()
+	   (list ,(if (stringp cmpl) cmpl (car cmpl))
+		 ,(if (stringp cmpl) (length prefix) (cdr cmpl))))))))
 
 
 

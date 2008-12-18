@@ -52,47 +52,34 @@
 (defun predictive-latex-load-color ()
   ;; Load colour dictionary
   (predictive-load-dict 'dict-latex-colours)
+  ;; add new browser sub-menu definition
+  (make-local-variable 'predictive-latex-browser-submenu-alist)
+  (push (cons "\\\\\\(text\\|page\\|\\)color" 'predictive-latex-label-dict)
+	predictive-latex-browser-submenu-alist)
   ;; Load regexps
   (auto-overlay-load-regexp
    'predictive 'brace
-   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\color\\(\\[.*?\\]\\)?{\\)" . 3)
+   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{\\)" . 3)
      :edge start
      :id color
      (dict . dict-latex-colours)
      (priority . 40)
      (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\textcolor\\(\\[.*?\\]\\)?{\\)"
-      . 3)
-     :edge start
-     :id textcolor
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\pagecolor\\(\\[.*?\\]\\)?{\\)"
-      . 3)
-     :edge start
-     :id pagecolor
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-)
+   t))
 
 
 
 (defun predictive-latex-unload-color ()
+  ;; remove browser sub-menu definition
+  (setq predictive-latex-browser-submenu-alist
+	(predictive-assoc-delete-all "\\\\\\(text\\|page\\|\\)color"
+				     predictive-latex-browser-submenu-alist))
   ;; unload regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'color)
-  (auto-overlay-unload-regexp 'predictive 'brace 'textcolor)
-  (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor)
+;;;   (auto-overlay-unload-regexp 'predictive 'brace 'textcolor)
+;;;   (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor)
   ;; unload colour dictionary
-  (predictive-unload-dict 'dict-latex-colours)
-)
+  (predictive-unload-dict 'dict-latex-colours))
+
 
 ;;; predictive-latex-color ends here

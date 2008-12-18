@@ -952,7 +952,6 @@ to the dictionary, nil if it should not. Only used when
   '(make-directory predictive-auxiliary-file-location t))
 
 
-
 (defmacro predictive-buffer-local-dict-name ()
   ;; Return the buffer-local dictionary name
   '(intern
@@ -961,7 +960,6 @@ to the dictionary, nil if it should not. Only used when
 	     "\\." "-"
 	     (file-name-nondirectory
 	      (or (buffer-file-name) (buffer-name)))))))
-
 
 
 (defmacro predictive-buffer-local-meta-dict-name ()
@@ -974,6 +972,20 @@ to the dictionary, nil if it should not. Only used when
 	      (or (buffer-file-name)
 		  (buffer-name)))))))
 
+
+(defun predictive-assoc-delete-all (key alist)
+  "Delete from ALIST all elements whose car is `equal' to KEY.
+Return modified alist."
+  (while (and (consp (car alist))
+	      (equal (car (car alist)) key))
+    (setq alist (cdr alist)))
+  (let ((tail alist) tail-cdr)
+    (while (setq tail-cdr (cdr tail))
+      (if (and (consp (car tail-cdr))
+	       (equal (car (car tail-cdr)) key))
+	  (setcdr tail (cdr tail-cdr))
+	(setq tail tail-cdr))))
+  alist)
 
 
 
