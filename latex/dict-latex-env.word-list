@@ -3,8 +3,8 @@
 "abstract" 0
 "align" 0
 "align*" 0 (:prefixes ("align"))
-"alignat" 0 (:prefixes ("align"))
-"alignat*" 0 (:prefixes ("align" "alignat"))
+"alignat" 0 (:prefixes ("align") :help #("\\begin{alignat}{<#cols>}" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 14 (face (font-lock-function-name-face)) 16 23 (face (font-lock-variable-name-face))))
+"alignat*" 0 (:prefixes ("align" "alignat") :help #("\\begin{alignat*}{<#cols>}" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 15 (face (font-lock-function-name-face)) 17 24 (face (font-lock-variable-name-face))))
 "aligned" 0 (:prefixes ("align"))
 "alignedat" 0 (:prefixes ("align" "aligned"))
 "array" 0

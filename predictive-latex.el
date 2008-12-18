@@ -254,6 +254,12 @@ When a document class is in the list, "
   :type '(repeat (cons string symbol)))
 
 
+(defcustom predictive-latex-display-help t
+  "*When non-nil, display help on LaTeX commands."
+  :group 'predictive-latex
+  :type 'boolean)
+
+
 (defcustom predictive-latex-save-section-dict nil
   "*When non-nil, save the LaTeX section dictionary.
 
@@ -402,6 +408,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
+
+      ;; display help if first character of accepted completion is "\"
+      (when predictive-latex-display-help
+	(add-hook 'completion-accept-functions
+		  'predictive-display-help nil t))
 
       ;; use latex browser menu if first character of prefix is "\"
       (make-local-variable 'completion-menu)
@@ -596,6 +607,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-map)
     (kill-local-variable 'predictive-latex-previous-filename)
+    ;; remove hook that displays help
+    (when predictive-latex-display-help
+      (remove-hook 'completion-accept-functions 'predictive-display-help t))
     ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-latex-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
@@ -2232,8 +2246,7 @@ they exist."
 		     (not (string= env (match-string-no-properties 1))))
 	    (let ((predictive-latex-disable-env-synchronize t))
 	      (replace-match env t t nil 1)))
-	  ))))
-)
+	  )))))
 
 
 
@@ -2308,7 +2321,7 @@ they exist."
 		     cmpl-function cmpl-prefix-function cmpl-replaces-prefix
 		     'predictive-latex-browser-menu-item
 		     'completion-browser-sub-menu))
-      ;; add completion itself (i.e. \documentclass) to the menu
+      ;; add completion itself to the menu
       (define-key submenu [separator-item-sub-menu] '(menu-item "--"))
       (define-key submenu [completion-insert-root]
 	(list 'menu-item cmpl
