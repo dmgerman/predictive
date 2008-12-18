@@ -5,7 +5,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.2
 ;; Keywords: predictive, latex, package, color
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2
+;; * added completion browser sub-menu definition
+;; * improved regexp definitions
 ;;
 ;; Version 0.1.1
 ;; * improved regexp definitions

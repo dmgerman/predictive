@@ -43,6 +43,9 @@
 ;;   hook functions
 ;; * updated for compatibility with new `completion-browser-menu-function'
 ;;   spec
+;; * implemented flexible completion browser sub-menu definitions, via
+;;   `predictive-latex-browser-submenu-alist' variable and modified
+;;   `predictive-latex-browser-menu-item' function
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug

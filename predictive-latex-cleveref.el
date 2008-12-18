@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.6.5
+;; Version: 0.7
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.7
+;; * added completion browser sub-menu definition
+;; * improved regexp definitions
 ;;
 ;; Version 0.6.5
 ;; * honour user's choices in `auto-completion-syntax-alist' and

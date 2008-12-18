@@ -56,6 +56,8 @@
 ;;   wildcard pattern searches
 ;; * added `predictive-auto-correction-no-completion' customization option to
 ;;   disable completion so that predictive-mode only auto-corrects
+;; * added `predictive-assoc-delete-all' utility function, used by
+;;   predictive-latex.el and related packages
 ;;
 ;; Version 0.17.8
 ;; * completion-UI v0.9.2 removed `completion-tooltip-map', so no longer need
