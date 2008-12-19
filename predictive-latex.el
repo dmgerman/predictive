@@ -697,32 +697,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		   (?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
-;;; 	      ("^\\\\\\(eq\\)?ref{"
-;;; 	       :edge start
-;;; 	       (dict . predictive-latex-label-dict)
-;;; 	       (priority . 40)
-;;; 	       (completion-menu
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (completion-word-thing . predictive-latex-label-word)
-;;; 	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-;;; 						(?_ . (add ,word-complete))
-;;; 						(?  . (,whitesp-resolve none))
-;;; 						(?. . (add ,word-complete))
-;;; 						(t  . (reject none))))
-;;; 	       (auto-completion-override-syntax-alist
-;;; 		. ((?:
-;;; 		    . ((lambda ()
-;;; 			 (predictive-latex-completion-add-till-regexp ":")
-;;; 			 nil)
-;;; 		       ,word-complete))
-;;; 		   (?_
-;;; 		    . ((lambda ()
-;;; 			 (predictive-latex-completion-add-till-regexp "\\W")
-;;; 			 nil)
-;;; 		       ,word-complete))
-;;; 		   (?} . (,punct-resolve none))))
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cite{\\)" . 3)
 	       :edge start
 	       (dict . t) (priority . 40)
@@ -734,6 +708,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
+	       ;; (auto-completion-override-syntax-alist
+	       ;;  . ((?* . (add ,word-complete t))))
 	       (completion-menu
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1128,7 +1104,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 				 (or (eq dic 'predictive-latex-env-dict)
 				     (eq dic 'dict-latex-docclass)))
 			       dict))
-			(complete-in-buffer "" 'auto) 'none)
+			(complete-in-buffer "" nil nil nil 'auto) 'none)
 		       ((and (char-before) (= (char-before) ?\\))
 			',word-complete)
 		       (t 'none)))))

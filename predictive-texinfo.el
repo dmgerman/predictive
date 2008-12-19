@@ -616,7 +616,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       ((auto-overlays-at-point
 			 nil '((lambda (dic) (eq dic 'dict-texinfo-env))
 			       dict))
-			(complete-in-buffer "" 'auto)
+			(complete-in-buffer "" nil nil nil 'auto)
 			'none)
 		       ((and (char-before) (= (char-before) ?\\))
 			',word-complete)
