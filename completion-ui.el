@@ -2956,8 +2956,13 @@ the prefix and the completion string\). Otherwise returns nil."
     (completion-resolve-old overlay)
     (completion-cancel-tooltip)
 
-    ;; if point is in a completion overlay...
-    (when (and overlay (overlay-get overlay 'completions))
+    (cond
+     ;; if there are no completions, just delete the overlay
+     ((and overlay (null (overlay-get overlay 'completions)))
+      (completion-delete-overlay overlay))
+
+     ;; if there are completions...
+     ((and overlay (overlay-get overlay 'completions))
       (setq prefix (overlay-get overlay 'prefix))
       (setq cmpl (nth (overlay-get overlay 'completion-num)
 		      (overlay-get overlay 'completions))
@@ -2982,7 +2987,7 @@ the prefix and the completion string\). Otherwise returns nil."
         (delete-frame frame))
       ;; delete overlay
       (completion-delete-overlay overlay)
-      (cons prefix cmpl))))
+      (cons prefix cmpl)))))
 
 
 
