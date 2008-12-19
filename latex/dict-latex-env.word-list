@@ -1,12 +1,12 @@
 "Bmatrix" 0
 "Vmatrix" 0
 "abstract" 0
-"align" 0
-"align*" 0 (:prefixes ("align"))
-"alignat" 0 (:prefixes ("align") :help #("\\begin{alignat}{<#cols>}" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 14 (face (font-lock-function-name-face)) 16 23 (face (font-lock-variable-name-face))))
-"alignat*" 0 (:prefixes ("align" "alignat") :help #("\\begin{alignat*}{<#cols>}" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 15 (face (font-lock-function-name-face)) 17 24 (face (font-lock-variable-name-face))))
-"aligned" 0 (:prefixes ("align"))
-"alignedat" 0 (:prefixes ("align" "aligned"))
+"align" 0 (:help #("\\begin{align}  Begin aligned equation group" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 12 (face (font-lock-function-name-face))))
+"align*" 0 (:prefixes ("align") :help #("\\begin{align*}  Begin unnumbered aligned equation group" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 13 (face (font-lock-function-name-face))))
+"alignat" 0 (:prefixes ("align") :help #("\\begin{alignat}{<#cols>}  Begin aligned equation group with explicit spacing between columns" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 14 (face (font-lock-function-name-face)) 16 23 (face (font-lock-variable-name-face))))
+"alignat*" 0 (:prefixes ("align" "alignat") :help #("\\begin{alignat*}{<#cols>}  Begin unnumbered aligned equation group with explicit column spacing" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 15 (face (font-lock-function-name-face)) 17 24 (face (font-lock-variable-name-face))))
+"aligned" 0 (:prefixes ("align") :help #("\\begin{aligned}  Begin aligned equation building block" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 12 (face (font-lock-function-name-face))))
+"alignedat" 0 (:prefixes ("align" "aligned") :help #("\\begin{alignedat}  Begin aligned equation building block with explicit column spacing" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 12 (face (font-lock-function-name-face))))
 "array" 0
 "bmatrix" 0
 "center" 0
