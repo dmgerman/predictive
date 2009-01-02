@@ -3,8 +3,9 @@
 ;; Copyright (C) 1995, 2007, 2008  Free Software Foundation, Inc.
 
 ;; Author: Per Cederqvist <ceder@lysator.liu.se>
-;;	Inge Wallin <inge@lysator.liu.se>
-;;	Thomas Bellman <bellman@lysator.liu.se>
+;;         Inge Wallin <inge@lysator.liu.se>
+;;         Thomas Bellman <bellman@lysator.liu.se>
+;;         modified by Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Maintainer: FSF
 ;; Created: 10 May 1991
 ;; Keywords: extensions, data structures
@@ -26,18 +27,19 @@
 
 
 ;;; Commentary:
-
+;;
 ;; An AVL tree is a self-balancing binary tree. As such, inserting,
 ;; deleting, and retrieving data from an AVL tree containing n elements
 ;; is O(log n). It is somewhat more rigidly balanced than other
 ;; self-balancing binary trees (such as red-black trees and AA trees),
-;; making insertion is slighty slower, deletion somewhat slower, and
-;; retrieval somewhat faster. Thus it is a good choice if the tree will
+;; making insertion slighty slower, deletion somewhat slower, and
+;; retrieval somewhat faster (the asymptotic scaling is of course the
+;; same for all types). Thus it may be a good choice when the tree will
 ;; be relatively static, i.e. data will be retrieved more often than they
 ;; are modified.
 ;;
 ;; Internally, a tree consists of two elements, the root node and the
-;; compare function. The actual tree has a dummy node as its root with
+;; comparison function. The actual tree has a dummy node as its root with
 ;; the real root in the left pointer, which allows the root node to be
 ;; treated on a par with all other nodes.
 ;;
