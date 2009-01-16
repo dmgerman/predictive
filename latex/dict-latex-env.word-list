@@ -41,8 +41,8 @@
 "tabbing" 0
 "table" 0
 "table*" 0 (:prefixes ("table"))
-"tabular" 0
-"tabular*" 0 (:prefixes ("tabular"))
+"tabular" 0 (:help #("\\begin{tabular}[pos]{cols}  Begin tabular material" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 14 (face (font-lock-function-name-face)) 16 19 (face (font-lock-variable-name-face)) 21 25 (face (font-lock-variable-name-face))))
+"tabular*" 0 (:prefixes ("tabular") :help #("\\begin{tabular}{width}[pos]{cols}  Begin fixed-width tabular material" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 14 (face (font-lock-function-name-face)) 16 19 (face (font-lock-variable-name-face)) 21 25 (face (font-lock-variable-name-face))))
 "thebibliography" 0
 "theorem" 0
 "titlepage" 0
