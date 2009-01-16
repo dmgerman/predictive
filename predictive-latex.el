@@ -1821,11 +1821,11 @@ Interactively, SECTION is read from the mini-buffer."
 			 (unless (predictive-load-dict dic)
 			   (throw 'failed nil)))
 		       dict-list)))
-	  (mapc 'predictive-unlist-dict dict-list)
+	  (mapc 'predictive-unload-dict dict-list)
 	;; otherwise, unload the old main dictionary and change to the new one
 	(let ((old-dict predictive-restore-main-dict))
 	  (when (atom old-dict) (setq old-dict (list old-dict)))
-	  (mapc 'predictive-unlist-dict old-dict))
+	  (mapc 'predictive-unload-dict old-dict))
 	(setq predictive-main-dict (append dict-list predictive-latex-dict))
 	)))
 )
@@ -1839,7 +1839,7 @@ Interactively, SECTION is read from the mini-buffer."
     (when dict-list
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
-      (mapc 'predictive-unlist-dict dict-list)
+      (mapc 'predictive-unload-dict dict-list)
       (setq dict-list predictive-restore-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (setq predictive-main-dict
@@ -1935,8 +1935,7 @@ Interactively, SECTION is read from the mini-buffer."
 		     (overlay-end o-self)))
       ;; load new package dictionaries and run load function
       (overlay-put (overlay-get o-self 'start) 'package-name package)
-      (predictive-latex-load-package package)))
-)
+      (predictive-latex-load-package package))))
 
 
 
@@ -1968,8 +1967,7 @@ the package, if they exist."
       (setq loaded t))
     ;; display message if we've loaded something
     (when loaded
-      (message (format "LaTeX package \"%s\" loaded" package))))
-)
+      (message (format "LaTeX package \"%s\" loaded" package)))))
 
 
 
@@ -1985,7 +1983,7 @@ they exist."
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
       (when (setq dict (intern-soft (concat (cdr dic) package)))
-	(predictive-unlist-dict (eval dict))
+	(predictive-unload-dict (eval dict))
 	(when (and (listp (eval (car dic)))
 		   (not (dictree-p (eval (car dic)))))
 	  ;; we don't use "(set ... (delq ..." here because other variables
@@ -2000,8 +1998,7 @@ they exist."
   (let ((func (nth 2 (assoc package predictive-latex-usepackage-functions))))
     (when func (funcall func)))
   ;; display informative message
-  (message (format "LaTeX package \"%s\" unloaded" package))
-)
+  (message (format "LaTeX package \"%s\" unloaded" package)))
 
 
 

@@ -1530,35 +1530,33 @@ autosave flag is set (@pxref{Creating Dictionaries}), it will
 automatically be saved when the buffer is killed. The dictionary file
 must be in your @env{load-path}.
 
+You should never normally need to use this command interactively, since
+predictive mode loads and unloads dictionaries automatically, as needed.
+
 @item dictree-load
 Load a dictionary from file. The name of the loaded dictionary is the
 same as the file name, with the extension removed. This will not add it
 to the list of dictionaries used by the current buffer (see
 @command{predictive-load-dict}, above).
 
-@item predictive-unlist-dict
-Remove a dictionary from the list of dictionaries used by the current
-buffer. The dictionary will no longer be included when learning from the
-buffer, see @ref{Learning from Buffers and Files}, and it will not be
-saved when the buffer is killed. Note that this doesn't actually unload
-the dictionary from Emacs (see @command{dictree-unload}, below).
-
 @item predictive-unload-dict
-You probably don't want to do this! See @command{predictive-unlist-dict}
-instead. Unload a dictionary from the current buffer and from Emacs. If
-the dictionary's autosave flag is set, this will also save it
-(@pxref{Creating Dictionaries}), unless overridden by supplying a prefix
-argument. If the dictionary is still used anywhere in the buffer (and it
-is, since it's in the list of dictionaries used by the buffer), then you
-will cripple predictive mode in the current buffer. If you unload the
-main dictionary (@pxref{Basic Dictionary Usage}), you will probably
-cripple predictive mode in all buffers.
+Remove a dictionary from the list of dictionaries used by the current
+buffer. If the dictionary is no longer used by any other buffer, this
+also unloads it from Emacs. In that case, if its autosave flag is set,
+the dictionary will be saved before being unloaded (@pxref{Creating
+Dictionaries}), unless this is overridden by supplying a prefix
+argument.
+
+You should never normally need to use this command interactively, since
+predictive mode loads and unloads dictionaries automatically, as needed.
 
 @item dictree-unload
-Warning: unloading a dictionary that's still in use will cripple
-predictive mode! Unload a dictionary. If the dictionary's autosave flag
-is set, this will also save it (@pxref{Creating Dictionaries}), unless
-overridden by supplying a prefix argument.
+You probably don't want to do this! Unloading a dictionary that's still
+in use will cripple predictive mode, resulting in it spewing out
+incomprehensible Lisp errors. This command unconditionally unloads a
+dictionary. If the dictionary's autosave flag is set, this will also
+save it (@pxref{Creating Dictionaries}), unless overridden by supplying
+a prefix argument.
 
 @item predictive-save-dict
 Save a dictionary to its associated file. Prompt for a file name if
@@ -1604,6 +1602,10 @@ forms (the default). A compiled dictionary can be loaded a lot faster,
 and is always used in preference to the uncompiled form if it
 exists. However, compiled dictionaries are not portable between
 different Emacs versions, whereas uncompiled ones are.
+
+@item predictive-dict-lock-loaded-list
+List of dictionaries that should never be automatically unloaded, in
+addition to @env{predictive-main-dict} (@pxref{Basic Dictionary Usage}).
 @end vtable
 
 

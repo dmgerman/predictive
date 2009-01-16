@@ -46,6 +46,12 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.18.1
+;; * rewrote `predictive-load-dict' and `predictive-unload-dict', and added
+;;   `predictive-dict-lock-loaded-list' customization option, so that
+;;   predictive mode can now automatically manage loading and unloading of
+;;   dictionaries
+;;
 ;; Version 0.18
 ;; * updated for compatibility with new dict-tree.el
 ;; * simplified `predictive-update-which-dict' a bit
@@ -336,6 +342,13 @@ is set to t, words will be added to the first dictionary in the list \(see
 `predictive-auto-add-to-dict'\)."
   :group 'predictive
   :type 'symbol)
+
+
+(defcustom predictive-dict-lock-loaded-list nil
+  "*List of dictionaries that should never be automatically unloaded,
+in addition to `predictive-main-dict'."
+  :group 'predictive
+  :type '(repeat symbol))
 
 
 (defcustom predictive-completion-speed 0.1
@@ -828,7 +841,8 @@ to the dictionary, nil if it should not. Only used when
 (defvar predictive-buffer-dict nil)
 (make-variable-buffer-local 'predictive-buffer-dict)
 
-;; stores list of dictionaries used by buffer
+;; variables storing lists of used dictionaries
+(defvar predictive-global-used-dict-list nil)
 (defvar predictive-used-dict-list nil)
 (make-variable-buffer-local 'predictive-used-dict-list)
 
@@ -1160,13 +1174,16 @@ Remaining arguments are ignored (they are there to allow
   "Set the main dictionary for the current buffer.
 To set it permanently, you should customize
 `predictive-main-dict' instead."
-  (interactive (list (read-dict "Dictionary: ")))
-
-  ;; sort out arguments
-  (cond
-   ((stringp dict) (setq dict (intern-soft dict)))
-   ((dictree-p dict) (setq dict (intern-soft (dictree-name dict)))))
+  (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
   ;; set main dictionary in current buffer
+  (predictive-unload-dict predictive-main-dict)
+  ;; if DICT is a string, load DICT
+  (when (stringp dict)
+    (let ((dic (predictive-load-dict dict)))
+      (if (dictree-p dic)
+	  (setq dict dic)
+	(error "Dictionary %s could not be loaded" dict))))
+  (setq dict (intern-soft (dictree-name dict)))
   (make-local-variable 'predictive-main-dict)
   (setq predictive-main-dict dict))
 
@@ -1176,87 +1193,93 @@ To set it permanently, you should customize
   "Load the dictionary DICT into the current buffer.
 
 DICT must be the name of a dictionary to be found somewhere in
-the load path. Returns nil if dictionary fails to
-load. Interactively, it is read from the mini-buffer."
-  (interactive "sDictionary to load: \n")
-  (unless (stringp dict) (setq dict (symbol-name dict)))
+the load path. Returns the dictionary, or nil if dictionary fails
+to load. Interactively, it is read from the mini-buffer."
+  (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
+  ;; sort out argument
+  (when (symbolp dict) (setq dict (symbol-name dict)))
+  (cond
+   ;; DICT is already a dictionary
+   ((dictree-p dict))
+   ;; DICT is the name of a loaded dictionary
+   ((condition-case nil
+	(eval (intern-soft dict))
+      (void-variable nil))
+    (let ((dic (eval (intern-soft dict))))
+      (if (dictree-p dic)
+	  (setq dict dic)
+	(error "%s is not a dictionary" dict))))
+   ;; DICT is the name of an unloaded dictionary
+   (t (setq dict (dictree-load dict))))
 
-  ;; load dictionary if not already loaded
-  (if (not (or (dictree-p (condition-case
-			      error (eval (intern-soft dict))
-			    (void-variable nil)))
-	       (and (load dict t)
-		    (dictree-p (condition-case
-				   error (eval (intern-soft dict))
-				 (void-variable nil))))))
-      ;; if we failed to load dictionary, throw an error if called
-      ;; interactively, otherwise just return nil
+  ;; if we failed to load dict, throw error interactively, non-interactively
+  ;; just return nil
+  (if (null dict)
       (if (interactive-p)
-	  (error "Could not load dictionary %s" (prin1-to-string dict))
+	  (error "Dictionary %s could not be loaded" dict)
 	nil)
 
-    ;; if we successfully loaded the dictionary, add it to buffer's used
-    ;; dictionary list (note: can't use add-to-list because we want comparison
-    ;; with eq, not equal)
-    (setq dict (eval (intern-soft dict)))
+    ;; if we successfully loaded the dictionary, add it to global and buffer's
+    ;; used dictionary lists (note: can't use add-to-list because we want
+    ;; comparison with eq, not equal)
     (unless (memq dict predictive-used-dict-list)
-      (setq predictive-used-dict-list
-	    (cons dict predictive-used-dict-list)))
+      (push dict predictive-used-dict-list))
+    (let ((entry (assq dict predictive-global-used-dict-list)))
+      (if (and entry
+	       (not (memq (current-buffer) (cdr entry))))
+	  (push (current-buffer) (cdr entry))
+	(push (cons dict (list (current-buffer)))
+	      predictive-global-used-dict-list)))
 
-    ;; indicate successful loading
+    ;; add buffer-local hook to unload dictionaries before killing the buffer
+    (add-hook 'kill-buffer-hook 'predictive-kill-buffer-unload-dicts nil t)
+
+    ;; indicate successful loading and return loaded dict
     (message "Dictionary %s loaded in buffer %s"
 	     (dictree-name dict) (buffer-name (current-buffer)))
-    t))
-
-
-
-(defun predictive-unlist-dict (dict)
-  "Remove DICT from the list of dictionaries used by the current buffer.
-Interactively, DICT is read from the mini-buffer.
-
-Note that this does not unload the dictionary from Emacs (see
-`predictive-unload-dict'), nor does it prevent the dictionary
-being used in the buffer. It only affects which dictionaries are
-included when learning from the buffer (see
-`predictive-learn-from-buffer' and
-`predictive-fast-learn-from-buffer'), and which dictionaries are
-auto-saved when the buffer is killed or predictive mode is
-disabled (see `predictive-dict-autosave-on-kill-buffer' and
-`predictive-dict-autosave-on-mode-disable')."
-
-  (interactive (list (read-dict "Dictionary: "
-				nil predictive-used-dict-list)))
-  ;; sort out argument
-  (when (symbolp dict) (setq dict (eval dict)))
-
-  ;; remove dictionary from buffer's used dictionary list
-  (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
-  (message "Dictionary %s unloaded from buffer %s"
-	   (dictree-name dict) (buffer-name (current-buffer))))
+    dict))
 
 
 
 (defun predictive-unload-dict (dict &optional dont-save)
-  "Unload dictionary DICT.
+  "Unload dictionary DICT from the current buffer.
 
-Warning: if the dictionary is currently in use in the buffer,
-predictive-mode will start throwing horrible errors when you try
-to complete words!"
+If the dictionary is not in use by any other buffers, this will
+also unload the dictionary from Emacs."
   (interactive (list (read-dict "Dictionary: "
 				nil predictive-used-dict-list)))
   ;; sort out argument
   (when (symbolp dict) (setq dict (eval dict)))
-  ;; warn if unloading main dict
-  (unless (and (interactive-p)
-	       (or (eq dict (eval predictive-main-dict))
-		   (eq dict (eval (default-value 'predictive-main-dict))))
-	       (not (yes-or-no-p (concat
-				  "Unloading the main dictionary will "
-				  "cripple predictive-mode; continue "
-				  "anyway? "))))
-    ;; unlist and unload dictionary
-    (predictive-unlist-dict dict)
-    (dictree-unload dict dont-save)))
+
+  ;; remove dict from buffer's used dictionary list
+  (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
+  (message "Dictionary %s unloaded from buffer %s"
+	   (dictree-name dict) (buffer-name (current-buffer)))
+
+  ;; remove buffer from dict's buffer list in global used dictionary list
+  (let ((entry (assq dict predictive-global-used-dict-list)))
+    (when entry
+      (setq entry (setcdr entry (delq (current-buffer) (cdr entry)))))
+
+    ;; unload dictionary if it's not longer used by any buffer and isn't the
+    ;; main dict or listed in `predictive-dict-lock-loaded-list'
+    (unless (or entry
+		(memq (intern-soft (dictree-name dict))
+		      (if (listp predictive-main-dict)
+			  predictive-main-dict
+			(list predictive-main-dict)))
+		(memq (intern-soft (dictree-name dict))
+		      predictive-dict-lock-loaded-list))
+      (setq predictive-global-used-dict-list
+	    (assq-delete-all dict predictive-global-used-dict-list))
+      (dictree-unload dict dont-save))))
+
+
+
+(defun predictive-kill-buffer-unload-dicts ()
+  "Called when a buffer with loaded dictionaries is killed,
+to clean up `predictive-global-used-dict-list'."
+  (mapc 'predictive-unload-dict predictive-used-dict-list))
 
 
 
@@ -1332,8 +1355,8 @@ respectively."
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead in some Emacs versions)
   (when (or (null dictname)
-	    (and (null (dictree-p (condition-case
-				      error (eval (intern-soft dictname))
+	    (and (null (dictree-p (condition-case nil
+				      (eval (intern-soft dictname))
 				    (void-variable nil))))
 		 (setq dictname (intern dictname)))
 	    (and (or (null (interactive-p))
@@ -1399,8 +1422,8 @@ The other arguments are as for `predictive-create-dict'."
   ;; (Note: we need the condition-case to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead)
-  (when (or (and (null (dictree-p (condition-case
-				      error (eval (intern-soft name))
+  (when (or (and (null (dictree-p (condition-case nil
+				      (eval (intern-soft name))
 				    (void-variable nil))))
 		 (setq name (intern name)))
 	    (or (null (interactive-p))
