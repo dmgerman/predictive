@@ -483,7 +483,9 @@ effectively added on to the end of
 latter take precedence."
   :group 'predictive
   :type '(choice (const :tag "German"
-			(("ss" . "\\(?ss\\|ß\\)?") ("SS" . "\\(?SS\\|ß\\)")))
+			(("ss" . "\\(?ss\\|ß\\)?")
+			 ("SS" . "\\(?SS\\|ß\\)?")
+			 ("ß"  . "\\(?ss\\|ß\\)?")))
 		 (alist :tag "custom" :key-type regexp :value-type string)))
 
 
