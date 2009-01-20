@@ -1253,9 +1253,8 @@ alist should associate regexps with their replacements. The expansions
 are applied in-order to the completion prefix. Characters matching a
 regexp are only expanded once, i.e. later expansions are @emph{not}
 applied to the replacement text of previous expansions. Case is always
-significant. The expanded prefix can contain certain shell-glob-like
-wildcards (described below), to form a pattern used to match prefixes
-that should be considered equivalent for completion.
+significant. The expanded prefix can be a regexp used to match prefixes
+that should be considered equivalent for completion (see below).
 @end vtable
 
 When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
