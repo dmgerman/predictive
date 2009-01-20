@@ -127,11 +127,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       ;; use html browser menu if first character of prefix is "<" or "&"
       (make-local-variable 'completion-menu)
       (setq completion-menu
-	    (lambda (prefix completions)
+	    (lambda (prefix completions cmpl-function cmpl-prefix-function
+			    cmpl-replaces-prefix)
 	      (if (or (string= (substring prefix 0 1) "<")
 		      (string= (substring prefix 0 1) "&"))
-		  (predictive-html-construct-browser-menu prefix completions)
-		(completion-construct-menu prefix completions))
+		  (predictive-html-construct-browser-menu
+		   prefix completions cmpl-function cmpl-prefix-function
+		   cmpl-replaces-prefix)
+		(completion-construct-menu
+		 prefix completions cmpl-function cmpl-prefix-function
+		 cmpl-replaces-prefix))
 	      ))
 
       ;; delete any existing predictive auto-overlay regexps and load html
@@ -423,14 +428,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
 
-(defun predictive-html-construct-browser-menu (prefix completions)
+(defun predictive-html-construct-browser-menu
+  (prefix completions cmpl-function cmpl-prefix-function cmpl-replaces-prefix)
   "Construct the html browser menu keymap."
 
   ;; construct menu, dropping the last two entries which are a separator and a
   ;; link back to the basic completion menu (would just redisplay this menu,
   ;; since we're using the browser as the default menu)
   (let ((menu (completion-construct-browser-menu
-	       prefix completions 'completion-browser-menu-item)))
+	       prefix completions
+	       cmpl-function
+	       cmpl-prefix-function
+	       cmpl-replaces-prefix
+	       'completion-browser-menu-item)))
     (setq menu (butlast menu 2))))
 
 
