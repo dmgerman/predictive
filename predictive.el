@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.18
+;; Version: 0.18.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -51,6 +51,9 @@
 ;;   `predictive-dict-lock-loaded-list' customization option, so that
 ;;   predictive mode can now automatically manage loading and unloading of
 ;;   dictionaries
+;; * updated `predictive-prefix-expansions' and `predictive-expand-prefix' for
+;;   compatibility with new `dictree-regexp-reach', which replaces wildcard
+;;   searches
 ;;
 ;; Version 0.18
 ;; * updated for compatibility with new dict-tree.el
@@ -441,18 +444,19 @@ equivalent. See also `predictive-auto-correction-no-completion'
 and `completion-highlight-prefix-alterations'.
 
 `predictive-equivalent-characters' works by substituting a
-character alternative pattern listing all the equivalent
-characters whenever those characters appear in the prefix. It
-merely provides a more convenient way of defining these commonly
-used expansions, and is exactly the same as adding those
-expansions on to the very *end* of `predictive-prefix-expansions'
-\(which see\), in the same order in which the characters are
-listed in the string."
+character alternative listing all the equivalent characters
+whenever those characters appear in the prefix. It merely
+provides a more convenient way of defining these commonly used
+expansions, and is exactly the same as adding those expansions on
+to the very *end* of `predictive-prefix-expansions' \(which
+see\), in the same order in which the characters are listed in
+the string."
   :group 'predictive
   :type '(choice (const :tag "French"
 			("aâà" "eéêè" "iî" "oô" "uû" "cç"
 			 "AÂÀ" "EÉÊÈ" "IÎ" "OÔ" "UÛ" "CÇ"))
-		 (const :tag "German" ("aä" "oö" "uü" "sß"))
+		 (const :tag "German"
+			("aä" "oö" "uü" "AÄ" "OÖ" "UÜ"))
 		 (repeat :tag "custom" string)))
 
 
@@ -465,50 +469,22 @@ prefix. Characters matching a regexp are only expanded once,
 i.e. later expansions are *not* applied to the replacement text
 of previous expansions. Case is always significant.
 
-The expanded prefix can contain certain shell-glob-like
-wildcards, to form a pattern that is used to match prefixes for
-completion.
+The expansions themselves can be regexp fragments, and can
+include regexp special characters. However, back-references and
+non-greedy grouping constructs are *not* supported.
 
-  ?  wildcard
-    Matches any single character.
-
-  [...]  character alternative
-    Matches any of the characters listed between the square
-    brackets.
-
-  [^...]  negated character alternative
-    Matches any character *other* then those listed between the
-    square brackets.
-
-  []...]  character alternative including `]'
-    Matches any of the listed characters, including `]'.
-
-  [^]...]  negated character alternative including `]'
-    Matches any character other than `]' and any others listed.
-
-  \\  quote literal
-    Causes the next element of the pattern sequence to be treated
-    literally; special characters lose their special meaning, for
-    anything else it has no effect.
-
-To include a `]' in a character alternative, place it immediately
-after the opening `[', or the opening `[^' in a negated character
-alternative. To include a `^' in a character alternative, negated
-or otherwise, place it anywhere other than immediately after the
-opening `['. To include a literal `\\' in the pattern, quote it
-with another `\\' (remember that `\\' also has to be quoted
-within Elisp strings, so as a string this would be \"\\\\\\\\\").
-
-If the original prefix contains any of the above special
-characters, they are quoted using `\\' *before* the prefix
-expansions are applied.
+If the original prefix contains any regexp special characters,
+they are quoted using `\\' *before* the prefix expansions are
+applied.
 
 Expansions produced by `predictive-equivalent-characters' are
 effectively added on to the end of
 `predictive-prefix-expansions', so any expansions defined in the
 latter take precedence."
   :group 'predictive
-  :type '(alist :key-type regexp :value-type string))
+  :type '(choice (const :tag "German"
+			(("ss" . "\\(?ss\\|ß\\)?") ("SS" . "\\(?SS\\|ß\\)")))
+		 (alist :tag "custom" :key-type regexp :value-type string)))
 
 
 (defcustom predictive-auto-correction-no-completion nil
@@ -2299,12 +2275,12 @@ for uncapitalized version."
     (when dict
       ;; expand prefix
       (setq pfx (predictive-expand-prefix prefix))
-      ;; if expanded prefix is a wildcard pattern, do a wildcard search, using
-      ;; RESULTFUN argument of `dictree-wildcard-search' to convert dump word
-      ;; weights and convert wildcard group data into prefix length
-      (if (eq (car pfx) 'wildcard)
+      ;; if expanded prefix is a regexp, do a regexp search, using RESULTFUN
+      ;; argument of `dictree-regexp-search' to convert dump word weights and
+      ;; convert regexp group data into prefix length
+      (if (eq (car pfx) 'regexp)
 	  (setq completions
-		(dictree-wildcard-search
+		(dictree-regexp-search
 		 dict (cdr pfx) (if maxnum t nil)
 		 maxnum nil nil filter
 		 (unless predictive-auto-correction-no-completion
@@ -2347,9 +2323,10 @@ for uncapitalized version."
     ;; if there are prefix expansions, or
     ;; `predictive-auto-correction-no-completion' is set...
     (let ((original-prefix prefix)
-	  expansion-list)
+	  expansion-list expanded-flag)
       ;; quote any special characters in prefix
-      (dolist (expansion '(("\\*" . "\\\\*") ("\\?" . "\\\\?")
+      (dolist (expansion '(("\\." . "\\\\.") ("\\*" . "\\\\*")
+			   ("\\+" . "\\\\+") ("\\?" . "\\\\?")
 			   ("\\[" . "\\\\[") ("\\]" . "\\\\]")))
 	(setq prefix (replace-regexp-in-string (car expansion) (cdr expansion)
 					       prefix)))
@@ -2362,8 +2339,8 @@ for uncapitalized version."
 	  (push (cons (char-to-string (aref equiv (- (length equiv) i 1)))
 		      (concat "[" equiv "]"))
 		expansion-list)))
-      (setq expansion-list (append predictive-prefix-expansions
-				   expansion-list))
+      (setq expansion-list
+	    (append predictive-prefix-expansions expansion-list))
       ;; apply `predictive-prefix-expansions' and
       ;; `predictive-equivalent-characters' expansions
       (let ((case-fold-search nil)
@@ -2373,8 +2350,9 @@ for uncapitalized version."
 	(dolist (expansion expansion-list)
 	  (setq i (string-match (car expansion) prefix 0))
 	  (while (and i (not (aref expanded i)))
-	    (setf (nth i chars) (cdr expansion))
-	    (aset expanded i t)
+	    (setf (nth i chars) (cdr expansion)
+		  (aref expanded i) t
+		  expanded-flag t)
 	    (dotimes (i (- (match-end 0) (match-beginning 0) 1))
 	      (setf (nth (+ (match-beginning 0) i 1) chars) nil)
 	      (aset expanded (+ (match-beginning 0) i 1) t))
@@ -2405,13 +2383,12 @@ for uncapitalized version."
 	      (setq prefix (concat "[" (char-to-string c)
 				   (char-to-string (downcase c)) "]"
 				   (substring prefix 1)))))
-	   ))))
-    ;; quote any ('s and )'s
-    (setq prefix (replace-regexp-in-string "(" "\\\\(" prefix))
-    (setq prefix (replace-regexp-in-string ")" "\\\\)" prefix))
-    (if predictive-auto-correction-no-completion
-	(cons 'wildcard prefix)
-      (cons 'wildcard (concat "(" prefix ")*")))))
+	   )))
+      (if predictive-auto-correction-no-completion
+	  (cons 'regexp prefix)
+	(if expanded-flag
+	    (cons 'regexp (concat "\\(" prefix "\\).*"))
+	  (cons 'complete original-prefix))))))
 
 
 
