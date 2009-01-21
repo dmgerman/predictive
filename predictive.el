@@ -999,11 +999,7 @@ When completing a word, the following keys are available:
     ;; make sure modified dictionaries used in the buffer are saved when the
     ;; bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
-      (add-hook 'kill-buffer-hook
-		(lambda ()
-		  (dictree-save-modified predictive-used-dict-list
-					 predictive-dict-compilation))
-		nil 'local))
+      (add-hook 'kill-buffer-hook 'predictive-save-used-dicts nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
     (when predictive-use-buffer-local-dict
@@ -1065,8 +1061,7 @@ When completing a word, the following keys are available:
 
     ;; save the dictionaries
     (when predictive-dict-autosave-on-mode-disable
-      (dictree-save-modified predictive-used-dict-list
-			     predictive-dict-compilation))
+      (predictive-save-used-dicts))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
 
@@ -1090,11 +1085,7 @@ When completing a word, the following keys are available:
 
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
-    (remove-hook 'kill-buffer-hook
-		 (lambda ()
-		   (dictree-save-modified predictive-used-dict-list
-					  predictive-dict-compilation))
-		 'local)
+    (remove-hook 'kill-buffer-hook 'predictive-save-used-dicts 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
     (remove-hook 'completion-reject-functions
@@ -1162,8 +1153,7 @@ To set it permanently, you should customize
 	  (setq dict dic)
 	(error "Dictionary %s could not be loaded" dict))))
   (setq dict (intern-soft (dictree-name dict)))
-  (make-local-variable 'predictive-main-dict)
-  (setq predictive-main-dict dict))
+  (set (make-local-variable 'predictive-main-dict) dict))
 
 
 
@@ -1173,9 +1163,11 @@ To set it permanently, you should customize
 DICT must be the name of a dictionary to be found somewhere in
 the load path. Returns the dictionary, or nil if dictionary fails
 to load. Interactively, it is read from the mini-buffer."
+
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
   ;; sort out argument
   (when (symbolp dict) (setq dict (symbol-name dict)))
+
   (cond
    ;; DICT is already a dictionary
    ((dictree-p dict))
@@ -1188,34 +1180,31 @@ to load. Interactively, it is read from the mini-buffer."
 	  (setq dict dic)
 	(error "%s is not a dictionary" dict))))
    ;; DICT is the name of an unloaded dictionary
-   (t (setq dict (dictree-load dict))))
+   (t
+    (let ((dic (dictree-load dict)))
+      (if (dictree-p dic)
+	  (setq dict dic)
+	(error "Dictionary %s could not be loaded" dict)))))
 
-  ;; if we failed to load dict, throw error interactively, non-interactively
-  ;; just return nil
-  (if (null dict)
-      (if (interactive-p)
-	  (error "Dictionary %s could not be loaded" dict)
-	nil)
+  ;; if we successfully loaded the dictionary, add it to global and buffer's
+  ;; used dictionary lists (note: can't use add-to-list because we want
+  ;; comparison with eq, not equal)
+  (unless (memq dict predictive-used-dict-list)
+    (push dict predictive-used-dict-list))
+  (let ((entry (assq dict predictive-global-used-dict-list)))
+    (if entry
+	(unless (memq (current-buffer) (cdr entry))
+	  (push (current-buffer) (cdr entry)))
+      (push (cons dict (list (current-buffer)))
+	    predictive-global-used-dict-list)))
 
-    ;; if we successfully loaded the dictionary, add it to global and buffer's
-    ;; used dictionary lists (note: can't use add-to-list because we want
-    ;; comparison with eq, not equal)
-    (unless (memq dict predictive-used-dict-list)
-      (push dict predictive-used-dict-list))
-    (let ((entry (assq dict predictive-global-used-dict-list)))
-      (if (and entry
-	       (not (memq (current-buffer) (cdr entry))))
-	  (push (current-buffer) (cdr entry))
-	(push (cons dict (list (current-buffer)))
-	      predictive-global-used-dict-list)))
+  ;; add buffer-local hook to unload dictionaries before killing the buffer
+  (add-hook 'kill-buffer-hook 'predictive-kill-buffer-unload-dicts nil t)
 
-    ;; add buffer-local hook to unload dictionaries before killing the buffer
-    (add-hook 'kill-buffer-hook 'predictive-kill-buffer-unload-dicts nil t)
-
-    ;; indicate successful loading and return loaded dict
-    (message "Dictionary %s loaded in buffer %s"
-	     (dictree-name dict) (buffer-name (current-buffer)))
-    dict))
+  ;; indicate successful loading and return loaded dict
+  (message "Dictionary %s loaded in buffer %s"
+	   (dictree-name dict) (buffer-name (current-buffer)))
+  dict)
 
 
 
@@ -1243,9 +1232,9 @@ also unload the dictionary from Emacs."
     ;; main dict or listed in `predictive-dict-lock-loaded-list'
     (unless (or entry
 		(memq (intern-soft (dictree-name dict))
-		      (if (listp predictive-main-dict)
-			  predictive-main-dict
-			(list predictive-main-dict)))
+		      (if (listp (default-value 'predictive-main-dict))
+			  (default-value 'predictive-main-dict)
+			(list (default-value 'predictive-main-dict))))
 		(memq (intern-soft (dictree-name dict))
 		      predictive-dict-lock-loaded-list))
       (setq predictive-global-used-dict-list
@@ -1286,8 +1275,8 @@ See also `predictive-dict-compilation'."
 
 
 
-(defun predictive-create-dict (&optional dictname file
-					 populate autosave speed)
+(defun predictive-create-dict
+  (&optional dictname file populate autosave speed)
   "Create a new predictive mode dictionary called DICTNAME.
 
 The optional argument FILE specifies a file to associate with the
@@ -2561,6 +2550,7 @@ Usually called after a completion is accepted."
 
 
 
+
 ;;; ===================================================================
 ;;;    Internal functions and variables to do with dictionaries
 
@@ -2738,16 +2728,23 @@ there's only one."
 
 (defun predictive-unload-buffer-local-dict ()
   "Unload the buffer-local dictionary."
-    (let ((buffer-dict (predictive-buffer-local-dict-name))
-	  (meta-dict (predictive-buffer-local-meta-dict-name)))
-      (when (boundp buffer-dict)
-	(if (dictree-p (eval (predictive-buffer-local-dict-name)))
-	    (dictree-unload (eval (predictive-buffer-local-dict-name)))
-	  (unintern buffer-dict)))
-      (when (boundp meta-dict)
-	(if (dictree-p (eval (predictive-buffer-local-meta-dict-name)))
-	    (dictree-unload (eval (predictive-buffer-local-meta-dict-name)))
-	  (unintern meta-dict)))))
+  (let ((buffer-dict (predictive-buffer-local-dict-name))
+	(meta-dict (predictive-buffer-local-meta-dict-name)))
+    (when (boundp buffer-dict)
+      (if (dictree-p (eval (predictive-buffer-local-dict-name)))
+	  (dictree-unload (eval (predictive-buffer-local-dict-name)))
+	(unintern buffer-dict)))
+    (when (boundp meta-dict)
+      (if (dictree-p (eval (predictive-buffer-local-meta-dict-name)))
+	  (dictree-unload (eval (predictive-buffer-local-meta-dict-name)))
+	(unintern meta-dict)))))
+
+
+
+(defun predictive-save-used-dicts ()
+  "Save all dictionaries used by the current buffer."
+  (dictree-save-modified predictive-used-dict-list
+			 predictive-dict-compilation))
 
 
 
