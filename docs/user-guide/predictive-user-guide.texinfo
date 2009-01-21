@@ -1295,7 +1295,7 @@ Pre-defined @env{predictive-equivalent-characters} and
 selected when customizing these variables.
 
 
-@vtable
+@vtable @env
 @item predictive-ignore-initial-caps
 Controls whether predictive mode should ignore initial capital letters
 when searching for completions. If non-nil (the default), completions
