@@ -3,7 +3,7 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2004-2006 Toby Cubitt
+;; Copyright (C) 2004-2006 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.2.1

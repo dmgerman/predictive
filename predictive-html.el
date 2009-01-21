@@ -1,8 +1,8 @@
 
-;;; predictive-setup-html.el --- predictive mode HTML setup function
+;;; predictive-html.el --- predictive mode HTML setup function
 
 
-;; Copyright (C) 2005 2008 Toby Cubitt
+;; Copyright (C) 2005 2008-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt
 ;; Version: 0.4.1
@@ -29,7 +29,7 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.4
+;; Version 0.4.1
 ;; * made `predictive-setup-html' fail gracefully when a required dictionary
 ;;   can't be found
 ;;

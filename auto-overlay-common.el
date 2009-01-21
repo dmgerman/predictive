@@ -2,7 +2,7 @@
 ;;; auto-overlay-common.el --- general overlay functions
 
 
-;; Copyright (C) 2006 Toby Cubitt
+;; Copyright (C) 2006-2007 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1.1

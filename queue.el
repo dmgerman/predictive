@@ -1,6 +1,6 @@
 ;;; queue.el --- queue data structure
 
-;; Copyright (C) 1991-1995, 2008 Free Software Foundation
+;; Copyright (C) 1991-1995, 2008-2009 Free Software Foundation
 
 ;; Author: Inge Wallin <inge@lysator.liu.se>
 ;;         rewritten by Toby Cubitt <toby-predictive@dr-qubit.org>
