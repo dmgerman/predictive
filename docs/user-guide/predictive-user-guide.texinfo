@@ -1142,6 +1142,7 @@ completions is displayed.
 @noindent
 The following variables affect the overall behaviour of predictive mode:
 
+
 @vtable @env
 @item completion-resolve-behaviour
 Determines what to do with dynamics completions that have not explicitly
@@ -1183,8 +1184,8 @@ both when you manually call @command{complete-word-at-point} with the
 point positioned in the middle of a word, and when
 @command{auto-completion-mode} is enabled and you type a new character
 in the middle of a word. Enabled by default.
-@end vtable
 @findex complete-word-at-point
+@end vtable
 
 Predictive mode doesn't play all that well with
 @command{overwrite-mode}. The @env{completion-overwrite} option
@@ -1195,6 +1196,19 @@ enabled, the part of the word at point that comes after the point will
 be over-written by the completion. When disabled, the completion is
 simply inserted in the middle of the word, without deleting the rest of
 it.
+
+
+@vtable @env
+@item completion-max-candidates
+Maximum number of completions to find. Default is 10.
+@end vtable
+
+Setting @env{completion-max-candidates} to a large number is probably
+not useful, and will slow predictive mode down. It is easier to type a
+few extra characters than cycle through lots of completions, and the
+number available directly via hotkeys is limited by the number of keys
+you are prepared to set aside for selecting completions
+(@pxref{Completion Hotkeys}).
 
 
 @vtable @env
@@ -1210,10 +1224,10 @@ Setting @env{predictive-auto-correction-no-completion} changes
 predictive mode from being a completion mode to being an auto-correction
 mode. It relies on you defining equivalent characters in
 @env{predictive-equivalent-characters} or useful prefix expansions in
-@env{predictive-prefix-expansions}. For example, if the former defines
-all accented variants of characters to be equivalent, then predictive
-mode will auto-correct accents for you, but without offering completions
-of the words. If you enable
+@env{predictive-prefix-expansions} (see below). For example, if the
+former defines all accented variants of characters to be equivalent,
+then predictive mode will auto-correct accents for you, but without
+offering completions of the words. If you enable
 @env{predictive-auto-correction-no-completion}, you will almost
 certainly want to enable @command{auto-completion-mode}
 (@pxref{Auto-Completion Mode}, change the default
@@ -1223,23 +1237,6 @@ certainly want to enable @command{auto-completion-mode}
 
 
 @vtable @env
-@item completion-max-candidates
-Maximum number of completions to find. Default is 10.
-@end vtable
-
-Setting @env{completion-max-candidates} to a large number is probably
-not useful, and will slow predictive mode down. It is easier to type a
-few extra characters than cycle through lots of completions, and the
-number available directly via hotkeys is limited by the number of keys
-you are prepared to set aside for selecting completions
-(@pxref{Completion Hotkeys}).
-
-@vtable @env
-@item predictive-ignore-initial-caps
-Controls whether predictive mode should ignore initial capital letters
-when searching for completions. If non-nil (the default), completions
-for the uncapitalised string are also found.
-
 @item predictive-equivalent-characters
 A list of characters to be treated as equivalent. Each element of the
 list should be a string, and all characters appearing in the same string
@@ -1249,35 +1246,35 @@ for all equivalent prefixes. Note that case is significant.
 
 @item predictive-prefix-expansions
 An alist of expansions to apply to a prefix before completing it. The
-alist should associate regexps with their replacements. The expansions
-are applied in-order to the completion prefix. Characters matching a
-regexp are only expanded once, i.e. later expansions are @emph{not}
-applied to the replacement text of previous expansions. Case is always
-significant. The expanded prefix can be a regexp used to match prefixes
-that should be considered equivalent for completion (see below).
+alist should associate regexps with their replacements. The result of
+expanding a prefix should be a valid regexp, which is used to match
+prefixes that should be considered equivalent for completion. The
+expansions are applied in-order to the completion prefix. Characters
+matching a regexp are only expanded once, i.e. later expansions are
+@emph{not} applied to the replacement text of previous expansions. Case
+is always significant.
 @end vtable
 
-When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
-capital letter of a string is ignored. Thus typing @kbd{A} would find
-@samp{and} (which would complete to @samp{And}), @samp{Alaska} and
-@samp{ANSI}, but typing @kbd{AN} would only find @samp{ANSI}, whilst
-typing @kbd{a} would only find @samp{and}.
+The result of expanding a prefix according to
+@env{predictive-equivalent-characters} and
+@env{predictive-prefix-expansions} must produce a valid regexp, which is
+used to match prefixes that are considered equivalent to the one
+actually typed.
 
 @env{predictive-equivalent-characters} works by substituting a character
-alternative pattern (see below) listing all the equivalent characters
-whenever those characters appear in the prefix. It merely provides a
-more convenient way of defining these commonly used expansions, and is
-exactly the same as adding those expansions on to the very @emph{end} of
-@env{predictive-prefix-expansions}, in the same order in which the
-characters are listed in the string. Any expansions defined in
-@env{predictive-predix-expansions} therefore take precedence over
+alternative listing all the equivalent characters whenever those
+characters appear in the prefix. It merely provides a more convenient
+way of defining these commonly used expansions, and is exactly the same
+as adding those expansions on to the very @emph{end} of
+@env{predictive-prefix-expansions}. Any expansions defined in
+@env{predictive-prefix-expansions} therefore take precedence over
 character equivalences defined in
 @env{predictive-equivalent-characters}.
 
 The main use of @env{predictive-equivalent-characters} is to make
 certain characters, e.g. the same character with and without diacritics,
 equivalent as far as completion is concerned. For example, if
-@env{predictive-equivalent-expansions} was set to
+@env{predictive-equivalent-characters} was set to
 @lisp
 ("[e@'e@^e@`e]" "[E@'E@^E@`E]" "[a@^a@`a]" "[A@^A@`A]")
 @end lisp
@@ -1291,57 +1288,25 @@ auto-correction or spell-checker, be careful when using this: if there
 are two words that are identical up to diacritics, such as @samp{a} and
 @samp{@`a}, then predictive mode can't telepathically know which one you
 want@footnote{Telepathy support is slated for inclusion in version 1.0},
-and will insert whichever is the most likely. Since this is such a
-common usage, pre-defined settings appropriate for some languages can be
-selected when customizing this variable.
+and will insert whichever is the most likely.
 
-The result of applying the expansions defined in
-@env{predictive-prefix-expansions} will usually contain one or more of
-the following wildcard patterns:
+Pre-defined @env{predictive-equivalent-characters} and
+@env{predictive-prefix-expansions} settings for some languages can be
+selected when customizing these variables.
 
-@table @asis
-  @item @samp{?} wildcard
-  Matches any single character.
 
-  @item @samp{[@dots{}]}  character alternative
-  Matches any of the characters listed between the square brackets.
+@vtable
+@item predictive-ignore-initial-caps
+Controls whether predictive mode should ignore initial capital letters
+when searching for completions. If non-nil (the default), completions
+for the uncapitalised string are also found.
+@end vtable
 
-  @item @samp{[^@dots{}]}  negated character alternative
-  Matches any character *other* then those listed between the square
-  brackets.
-
-  @item @samp{[]@dots{}]}  character alternative including @samp{]}
-  Matches any of the listed characters, including `]'.
-
-  @item @samp{[]@dots{}]}  character alternative including @samp{]}
-  Matches any character other than `]' and any others listed.
-
-  @samp{\}  quote literal
-  Causes the next element of the pattern sequence to be treated
-  literally; special characters lose their special meaning, for anything
-  else it has no effect.
-@end table
-
-To include a @samp{]} in a character alternative, place it immediately
-after the opening @samp{[}, or the opening @samp{[^} in a negated
-character alternative.  To include a @samp{^} in a character
-alternative, negated or otherwise, place it anywhere other than
-immediately after the opening @samp{[}. To include a literal @samp{\} in
-the pattern, quote it with another @samp{\} giving
-@samp{\\}@footnote{Remember that @samp{\} also has to be quoted within
-Elisp strings, so, as a string in Elisp, a literal @samp{\} becomes
-@samp{\\\\}, just as in regexps.}). If the original prefix contains any
-of the above special characters, they are quoted using @samp{\}
-@emph{before} the prefix expansions are applied. The expansions are
-applied by passing the regexp, replacement and prefix to Emacs'
-@command{replace-regexp-in-string} function.
-
-The expanded prefix pattern is used to match prefixes that are
-considered equivalent to the one actually typed. The pattern must
-@emph{only} match strings of the same length as the original prefix. The
-easiest way to ensure this is the case is to make sure each expansion
-expands @math{n} characters into a pattern that also matches @math{n}
-characters.
+When @env{predictive-ignore-initial-caps} is set, only the @emph{first}
+capital letter of a string is ignored. Thus typing @kbd{A} would find
+@samp{and} (which would complete to @samp{And}), @samp{Alaska} and
+@samp{ANSI}, but typing @kbd{AN} would only find @samp{ANSI}, whilst
+typing @kbd{a} would only find @samp{and}.
 
 
 @vtable @env
@@ -1608,25 +1573,34 @@ addition to @env{predictive-main-dict} (@pxref{Basic Dictionary Usage}).
 @end vtable
 
 
-To use a dictionary, it must be loaded into memory. If the dictionary is
-in your load path, this can be done manually using the
-@command{load-library} or @command{predictive-load-dict} commands. The
+To use a dictionary, it must be loaded into memory. Usually, predictive
+mode loads the dictionaries it needs automatically, and unloads them
+again when they are no longer needed. Once it has been loaded, the
+@env{predictive-main-dict} is never automatically unloaded. It can take
+a while to load large dictionaries, and @env{predictive-main-dict} is
+likely to be used by most predictive-mode buffers. If you would like to
+prevent any other dictionaries from being unloaded automatically, add
+them to @env{predictive-dict-lock-loaded}.
+
+You can also load and unload dictionaries manually. If a dictionary is
+saved somewhere in your load path, you can load it using the
+@command{predictive-load-dict} and @command{dictree-load} commands. The
 @command{predictive-load-dict} command additionally adds it to the list
 of dictionaries used by the current buffer. This has two implications:
 the dictionary will automatically be saved when the buffer is killed
 (assuming its autosave flag is non-nil, @pxref{Creating Dictionaries}),
 and it will be included when learning from the buffer (@pxref{Learning
-from Buffers and Files}). Alternatively, you can manually load a
-dictionary from file using the @command{dictree-load} command (you
-should avoid loading a dictionary using the @command{load-file} command,
-as it will not necessarily ensure that the dictionary is correctly
-associated with the file it was loaded from).
+from Buffers and Files}). (You should avoid loading a dictionary using
+the @command{load-file} command, as it will not necessarily ensure that
+the dictionary is correctly associated with the file it was loaded
+from).
 
-If you want a dictionary to be loaded every time you run Emacs, you can
-add the following line to your @file{.emacs} file:
+If you want a dictionary to be loaded every time you run Emacs, and the
+dictionary is saved somewhere in your @env{load-path}, you can add the
+following line to your @file{.emacs} file:
 
 @lisp
-(require '@var{dictionary-name})
+(dictree-load '@var{dictionary-name})
 @end lisp
 
 @noindent
