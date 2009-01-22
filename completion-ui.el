@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.4
+;; Version: 0.10.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -109,6 +109,14 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.10.1
+;; * bug-fixes to `complete-dynamic' relating to prefixes whose size has
+;;   changed
+;; * refactored recurring code into `completion-highlight-common-substring'
+;;   and `completion-hightlight-prefix-alterations' functions
+;; * always bind `completion-self-insert' in `completion-map', so that old
+;;   completions get resolved
 ;;
 ;; Version 0.10
 ;; * removed `completion-includes-prefix' flag; completion functions now have
@@ -1421,7 +1429,7 @@ used if the current Emacs version lacks command remapping support."
   ;; If the current Emacs version doesn't support overlay keybindings
   ;; half decently, have to simulate them using the
   ;; `completion-run-if-within-overlay' hack.
-  (when (<= emacs-major-version 21)
+;;  (when (<= emacs-major-version 21)
     ;; if we can remap commands, remap `self-insert-command' to
     ;; `completion-self-insert'
     (if (fboundp 'command-remapping)
@@ -1430,7 +1438,8 @@ used if the current Emacs version lacks command remapping support."
       ;; otherwise, rebind all printable characters to
       ;; `completion-self-insert' manually
       (completion-bind-printable-chars completion-map
-                                       'completion-self-insert))))
+                                       'completion-self-insert))
+    );)
 
 
 ;; make sure completion-map is associated with `completion-function' in
@@ -1946,7 +1955,7 @@ cauliflower will start growing out of your ears."
         (overlay-put overlay 'completion-num 0)
 	;; highlight alterations to prefix, if enabled
 	(when completion-dynamic-highlight-prefix-alterations
-	  (completion-highlight-prefix-alterations prefix cmpl pos))
+	  (completion-highlight-prefix-alterations prefix cmpl pos len))
         ;; highlight common substring, if enabled
         (when completion-dynamic-highlight-common-substring
 	  (completion-highlight-common-substring
@@ -2402,7 +2411,7 @@ If ARG is supplied, it is passed through to COMMAND."
       (overlay-put overlay 'completion-num (1- num))
       ;; highlight alterations to prefix, if enabled
       (when completion-dynamic-highlight-prefix-alterations
-	(completion-highlight-prefix-alterations prefix cmpl pos))
+	(completion-highlight-prefix-alterations prefix cmpl pos len))
       ;; highlight common substring, if enabled
       (when completion-dynamic-highlight-common-substring
 	(completion-highlight-common-substring prefix cmpl pos len overlay)))
@@ -2522,8 +2531,11 @@ methods. Toggling will show all possible completions."
   ;; if we're auto-completing, hand over to `auto-completion-self-insert'
   (if auto-completion-mode
       (auto-completion-self-insert)
-    ;; otherwise, resolve current completion and insert last input event
-    (completion-resolve-current)
+    ;; otherwise, resolve old and current completions, and insert last input
+    ;; event
+    (let ((overlay (completion-overlay-at-point)))
+      (completion-resolve-old overlay)
+      (completion-resolve-current overlay))
     (self-insert-command 1)))
 
 
@@ -2580,6 +2592,7 @@ The Emacs `self-insert-command' is remapped to this when
            wordstart prefix)
 
       ;; ----- resolve behaviour -----
+      (completion-resolve-old overlay)
       ;; if behaviour alist entry is a function, call it
       (when (functionp resolve-behaviour)
         (setq resolve-behaviour (funcall resolve-behaviour)))
@@ -3096,7 +3109,7 @@ be auto-displayed."
       (overlay-put overlay 'completion-num i)
       ;; highlight alterations to prefix, if enabled
       (when completion-dynamic-highlight-prefix-alterations
-	(completion-highlight-prefix-alterations prefix cmpl pos))
+	(completion-highlight-prefix-alterations prefix cmpl pos len))
       ;; highlight longest common substring, if enabled
       (when completion-dynamic-highlight-common-substring
 	(completion-highlight-common-substring prefix cmpl pos len overlay))
@@ -3730,14 +3743,13 @@ the end if it is to be accepted."
 
 
 
-(defun completion-highlight-prefix-alterations (prefix cmpl pos)
+(defun completion-highlight-prefix-alterations (prefix cmpl pos len)
   "Highlight altered characters in PREFIX.
 CMPL is the current dynamic completion, and POS is the position
 of the end of PREFIX in the buffer."
-  (let ((p-len (length prefix))
-	(c-len (length cmpl)))
+  (let ((p-len (length prefix)))
     ;; compare characters of prefix and highlight differences
-    (dotimes (i (min c-len p-len))
+    (dotimes (i (min len p-len))
       (unless (eq (aref cmpl i) (aref prefix i))
 	(put-text-property
 	 (+ pos i) (+ pos i 1)
@@ -3745,9 +3757,9 @@ of the end of PREFIX in the buffer."
 	 'completion-dynamic-prefix-alterations-face)))
     ;; if prefix length has been altered, highlight all the remaining altered
     ;; prefix
-    (unless (<= c-len p-len)
+    (when (< len p-len)
       (put-text-property
-       (+ pos p-len) (+ pos c-len)
+       (+ pos len) (+ pos p-len)
        (if font-lock-mode 'font-lock-face 'face)
        'completion-dynamic-prefix-alterations-face))))
 
