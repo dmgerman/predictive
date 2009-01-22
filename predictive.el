@@ -1184,27 +1184,30 @@ to load. Interactively, it is read from the mini-buffer."
     (let ((dic (dictree-load dict)))
       (if (dictree-p dic)
 	  (setq dict dic)
-	(error "Dictionary %s could not be loaded" dict)))))
+	(if (interactive-p)
+	    (error "Dictionary %s could not be loaded" dict)
+	  (setq dict nil))))))
 
-  ;; if we successfully loaded the dictionary, add it to global and buffer's
-  ;; used dictionary lists (note: can't use add-to-list because we want
-  ;; comparison with eq, not equal)
-  (unless (memq dict predictive-used-dict-list)
-    (push dict predictive-used-dict-list))
-  (let ((entry (assq dict predictive-global-used-dict-list)))
-    (if entry
-	(unless (memq (current-buffer) (cdr entry))
-	  (push (current-buffer) (cdr entry)))
-      (push (cons dict (list (current-buffer)))
-	    predictive-global-used-dict-list)))
+  (when dict
+    ;; if we successfully loaded the dictionary, add it to global and buffer's
+    ;; used dictionary lists (note: can't use add-to-list because we want
+    ;; comparison with eq, not equal)
+    (unless (memq dict predictive-used-dict-list)
+      (push dict predictive-used-dict-list))
+    (let ((entry (assq dict predictive-global-used-dict-list)))
+      (if entry
+	  (unless (memq (current-buffer) (cdr entry))
+	    (push (current-buffer) (cdr entry)))
+	(push (cons dict (list (current-buffer)))
+	      predictive-global-used-dict-list)))
 
-  ;; add buffer-local hook to unload dictionaries before killing the buffer
-  (add-hook 'kill-buffer-hook 'predictive-kill-buffer-unload-dicts nil t)
+    ;; add buffer-local hook to unload dictionaries before killing the buffer
+    (add-hook 'kill-buffer-hook 'predictive-kill-buffer-unload-dicts nil t)
 
-  ;; indicate successful loading and return loaded dict
-  (message "Dictionary %s loaded in buffer %s"
-	   (dictree-name dict) (buffer-name (current-buffer)))
-  dict)
+    ;; indicate successful loading and return loaded dict
+    (message "Dictionary %s loaded in buffer %s"
+	     (dictree-name dict) (buffer-name (current-buffer)))
+    dict))
 
 
 
