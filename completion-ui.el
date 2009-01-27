@@ -2577,161 +2577,159 @@ The Emacs `self-insert-command' is remapped to this when
   (when (null char) (setq char last-input-event))
   (when (null syntax) (setq syntax (char-syntax last-input-event)))
 
-  (cond
-   (t  ;; otherwise, lookup behaviour in syntax alists
-    (let* ((behaviour (if no-syntax-override
-                          (completion-lookup-behaviour nil syntax)
-                        (completion-lookup-behaviour char syntax)))
-           (complete-behaviour
-            (completion-get-completion-behaviour behaviour))
-           (resolve-behaviour
-            (completion-get-resolve-behaviour behaviour))
-           (insert-behaviour
-            (completion-get-insertion-behaviour behaviour))
-           (overlay (completion-overlay-at-point))
-           wordstart prefix)
+  (let* ((behaviour (if no-syntax-override
+			(completion-lookup-behaviour nil syntax)
+		      (completion-lookup-behaviour char syntax)))
+	 (complete-behaviour
+	  (completion-get-completion-behaviour behaviour))
+	 (resolve-behaviour
+	  (completion-get-resolve-behaviour behaviour))
+	 (insert-behaviour
+	  (completion-get-insertion-behaviour behaviour))
+	 (overlay (completion-overlay-at-point))
+	 wordstart prefix)
 
-      ;; ----- resolve behaviour -----
-      (completion-resolve-old overlay)
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp resolve-behaviour)
-        (setq resolve-behaviour (funcall resolve-behaviour)))
+    ;; ----- resolve behaviour -----
+    (completion-resolve-old overlay)
+    ;; if behaviour alist entry is a function, call it
+    (when (functionp resolve-behaviour)
+      (setq resolve-behaviour (funcall resolve-behaviour)))
 
-      ;; do whatever action was specified in alists
-      (cond
-       ;; no-op
-       ((null resolve-behaviour))
+    ;; do whatever action was specified in alists
+    (cond
+     ;; no-op
+     ((null resolve-behaviour))
 
-       ;; accept
-       ((eq resolve-behaviour 'accept)
-        (setq prefix (string char))
-        (setq wordstart t)
-        ;; if there is a completion at point...
-        (when overlay
-          ;; if point is not at start of overlay, delete overlay
-          ;; (effectively accepting old completion but without running
-          ;; hooks)
-          (if (/= (point) (overlay-start overlay))
-              (completion-delete-overlay overlay)
-            ;; otherwise, accept completion
-            (completion-accept nil overlay))))
+     ;; accept
+     ((eq resolve-behaviour 'accept)
+      (setq prefix (string char))
+      (setq wordstart t)
+      ;; if there is a completion at point...
+      (when overlay
+	;; if point is not at start of overlay, delete overlay (effectively
+	;; accepting old completion but without running hooks)
+	(if (/= (point) (overlay-start overlay))
+	    (completion-delete-overlay overlay)
+	  ;; otherwise, accept completion
+	  (completion-accept nil overlay))))
 
-       ;; reject
-       ((eq resolve-behaviour 'reject)
-        (setq prefix (string char))
-        (setq wordstart t)
-        ;; if there is a completion at point...
-        (when overlay
-          ;; if point is not at start of overlay, delete overlay
-          ;; (effectively accepting old completion without running hooks)
-          (if (/= (point) (overlay-start overlay))
-              (completion-delete-overlay overlay)
-            ;; otherwise, reject completion
-            (completion-reject nil overlay))))
+     ;; reject
+     ((eq resolve-behaviour 'reject)
+      (setq prefix (string char))
+      (setq wordstart t)
+      ;; if there is a completion at point...
+      (when overlay
+	;; if point is not at start of overlay, delete overlay (effectively
+	;; accepting old completion without running hooks)
+	(if (/= (point) (overlay-start overlay))
+	    (completion-delete-overlay overlay)
+	  ;; otherwise, reject completion
+	  (completion-reject nil overlay))))
 
-       ;; add to prefix
-       ((eq resolve-behaviour 'add)
-        ;; if we're at the start of a word, prevent adjacent word from
-        ;; being deleted below if `completion-overwrite' is non-nil
-        (when (completion-beginning-of-word-p) (setq wordstart t))
-        ;; if point is within a completion overlay...
-        (when overlay
-          ;; if point is not at start of overlay, delete overlay
-          ;; (effectively accepting the old completion) and behave as if
-          ;; no completion was in progress
-          (if (/= (point) (overlay-start overlay))
-              (completion-delete-overlay overlay)
-            ;; otherwise, delete old completion and add character to
-            ;; prefix
-            (delete-region (overlay-start overlay)
-                           (overlay-end overlay))
-            (setq prefix (concat (overlay-get overlay 'prefix)
-                                 (string char)))
-            ;; prevent any adjacent word from being deleted
-            (setq wordstart t))
-          ))
+     ;; add to prefix
+     ((eq resolve-behaviour 'add)
+      ;; if we're at the start of a word, prevent adjacent word from being
+      ;; deleted below if `completion-overwrite' is non-nil
+      (when (completion-beginning-of-word-p) (setq wordstart t))
+      ;; if point is within a completion overlay...
+      (when overlay
+	;; if point is not at start of overlay, delete overlay (effectively
+	;; accepting the old completion) and behave as if no completion was in
+	;; progress
+	(if (/= (point) (overlay-start overlay))
+	    (completion-delete-overlay overlay)
+	  ;; otherwise, delete old completion and add character to
+	  ;; prefix
+	  (delete-region (overlay-start overlay)
+			 (overlay-end overlay))
+	  (setq prefix (concat (overlay-get overlay 'prefix)
+			       (string char)))
+	  ;; prevent any adjacent word from being deleted
+	  (setq wordstart t))
+	))
 
-       ;; error
-       (t (error "Invalid entry in `auto-completion-syntax-alist'\
+     ;; error
+     (t (error "Invalid entry in `auto-completion-syntax-alist'\
   or `auto-completion-override-syntax-alist', %s"
-                 (prin1-to-string resolve-behaviour))))
+	       (prin1-to-string resolve-behaviour))))
 
 
-      ;; ----- insersion behaviour -----
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp insert-behaviour)
-        (setq insert-behaviour (funcall insert-behaviour)))
+    ;; ----- insersion behaviour -----
+    ;; if behaviour alist entry is a function, call it
+    (when (functionp insert-behaviour)
+      (setq insert-behaviour (funcall insert-behaviour)))
 
-      ;; if we're inserting...
-      (when insert-behaviour
-        ;; use `self-insert-command' if possible, since `auto-fill-mode'
-        ;; depends on it
-        (if (eq char last-input-event)
-            (self-insert-command 1)
-          (insert char))
-        (when (and overlay (overlay-buffer overlay))
-          (move-overlay overlay (point) (point))))
+    ;; if we're inserting...
+    (when insert-behaviour
+      ;; use `self-insert-command' if possible, since `auto-fill-mode' depends
+      ;; on it
+      (if (eq char last-input-event)
+	  (self-insert-command 1)
+	(insert char))
+      (when (and overlay (overlay-buffer overlay))
+	(move-overlay overlay (point) (point))))
 
 
-      ;; ----- completion behaviour -----
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp complete-behaviour)
-        (setq complete-behaviour (funcall complete-behaviour)))
+    ;; ----- completion behaviour -----
+    ;; if behaviour alist entry is a function, call it
+    (when (functionp complete-behaviour)
+      (setq complete-behaviour (funcall complete-behaviour)))
+
+    (cond
+     ;; no-op
+     ((null complete-behaviour))
+
+     ;; if not completing, clear up any overlay left lying around
+     ((eq complete-behaviour 'none)
+      (when overlay
+	(when (overlay-get overlay 'popup-frame)
+	  (delete-frame (overlay-get overlay 'popup-frame)))
+	(completion-delete-overlay overlay)))
+
+     ;; if completing...
+     ((or (eq complete-behaviour 'string)
+	  (eq complete-behaviour 'word))
+      ;; if point is in middle of a word, `completion-overwrite' is set, and
+      ;; overwriting hasn't been disabled, delete rest of word prior to
+      ;; completing
+      (when (and completion-overwrite (completion-within-word-p)
+		 (null wordstart))
+	(let ((pos (point))
+	      (word-thing
+	       (if (fboundp 'auto-overlay-local-binding)
+		   (auto-overlay-local-binding 'completion-word-thing)
+		 completion-word-thing
+		 'word)))
+	  (save-excursion
+	    (forward-thing word-thing)
+	    (delete-region pos (point)))))
 
       (cond
-       ;; no-op
-       ((null complete-behaviour))
+       ;; if a prefix has been set, setup overlay with the prefix, and do
+       ;; completion
+       (prefix
+	(completion-setup-overlay
+	 prefix
+	 (when overlay (1+ (overlay-get overlay 'prefix-length)))
+	 nil nil nil nil overlay)
+	(complete-in-buffer nil nil nil nil 'auto))
 
-       ;; if not completing, clear up any overlay left lying around
-       ((eq complete-behaviour 'none)
-        (when overlay
-          (when (overlay-get overlay 'popup-frame)
-            (delete-frame (overlay-get overlay 'popup-frame)))
-          (completion-delete-overlay overlay)))
+       ;; if doing basic completion, let prefix be found normally
+       ((eq complete-behaviour 'string)
+	(complete-in-buffer nil nil nil nil 'auto))
 
-       ;; if completing...
-       ((or (eq complete-behaviour 'string)
-            (eq complete-behaviour 'word))
-        ;; if point is in middle of a word, `completion-overwrite' is
-        ;; set, and overwriting hasn't been disabled, delete rest of word
-        ;; prior to completing
-        (when (and completion-overwrite (completion-within-word-p)
-                   (null wordstart))
-          (let ((pos (point))
-                (word-thing
-                 (if (fboundp 'auto-overlay-local-binding)
-                     (auto-overlay-local-binding 'completion-word-thing)
-                   completion-word-thing
-		   'word)))
-            (save-excursion
-              (forward-thing word-thing)
-              (delete-region pos (point)))))
+       ;; if completing word at point, delete any overlay at point to ensure
+       ;; prefix is found anew, and do completion
+       (t
+	(when (setq overlay (completion-overlay-at-point))
+	  (completion-delete-overlay overlay))
+	(complete-in-buffer nil nil nil nil 'auto))))
 
-        (cond
-         ;; if a prefix has been set, setup overlay with the prefix, and
-         ;; do completion
-         (prefix
-          (completion-setup-overlay
-	   prefix (1+ (overlay-get overlay 'prefix-length))
-	   nil nil nil nil overlay)
-          (complete-in-buffer nil nil nil nil 'auto))
-
-         ;; if doing basic completion, let prefix be found normally
-         ((eq complete-behaviour 'string)
-          (complete-in-buffer nil nil nil nil 'auto))
-
-         ;; if completing word at point, delete any overlay at point to
-         ;; ensure prefix is found anew, and do completion
-         (t
-          (when (setq overlay (completion-overlay-at-point))
-            (completion-delete-overlay overlay))
-          (complete-in-buffer nil nil nil nil 'auto))))
-
-       ;; error
-       (t (error "Invalid entry in `auto-completion-syntax-alist'\
+     ;; error
+     (t (error "Invalid entry in `auto-completion-syntax-alist'\
  or `auto-completion-override-syntax-alist', %s"
-                 (prin1-to-string complete-behaviour))))
-      ))))
+	       (prin1-to-string complete-behaviour))))
+    ))
 
 
 
