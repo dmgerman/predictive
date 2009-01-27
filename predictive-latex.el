@@ -46,6 +46,8 @@
 ;; * implemented flexible completion browser sub-menu definitions, via
 ;;   `predictive-latex-browser-submenu-alist' variable and modified
 ;;   `predictive-latex-browser-menu-item' function
+;; * removed "'" definition from `auto-completion-override-alist' since it
+;;   should just behave like a word-constituent, as per its syntax
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -1127,13 +1129,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			   t
 			 (TeX-insert-quote nil)
 			 nil))))
-	     (?' . ((lambda ()
-		      (if (and (char-before) (= (char-before) ?\\))
-			  'add ',punct-resolve))
-		    (lambda ()
-		      (if (and (char-before (1- (point)))
-			       (= (char-before (1- (point))) ?\\))
-			  ',punct-complete 'none))))
+	     ;; (?' . ((lambda ()
+	     ;; 	      (if (and (char-before) (= (char-before) ?\\))
+	     ;; 		  'add ',punct-resolve))
+	     ;; 	    (lambda ()
+	     ;; 	      (if (and (char-before (1- (point)))
+	     ;; 		       (= (char-before (1- (point))) ?\\))
+	     ;; 		  ',punct-complete 'none))))
 	     (?\( . ((lambda ()
 		       (if (and (char-before) (= (char-before) ?\\))
 			   'add ',punct-resolve))
