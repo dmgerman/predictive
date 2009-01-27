@@ -430,7 +430,7 @@ typing \"a\" would only find \"and\"."
   :type 'boolean)
 
 
-(defcustom predictive-equivalent-characters nil
+(defcustom predictive-equivalent-characters '(" -")
   "*List of characters to be treated as equivalent.
 Each element of the list should be a string, and all characters
 appearing in the same string will be treated as equivalent when
@@ -452,7 +452,9 @@ to the very *end* of `predictive-prefix-expansions' \(which
 see\), in the same order in which the characters are listed in
 the string."
   :group 'predictive
-  :type '(choice (const :tag "French"
+  :type '(choice (const :tag "off" nil)
+		 (const :tag "English" (" -"))
+		 (const :tag "French"
 			("aâà" "eéêè" "iî" "oô" "uû" "cç"
 			 "AÂÀ" "EÉÊÈ" "IÎ" "OÔ" "UÛ" "CÇ"))
 		 (const :tag "German"
@@ -482,7 +484,8 @@ effectively added on to the end of
 `predictive-prefix-expansions', so any expansions defined in the
 latter take precedence."
   :group 'predictive
-  :type '(choice (const :tag "German"
+  :type '(choice (const :tag "off" nil)
+		 (const :tag "German"
 			(("ss" . "\\(?ss\\|ß\\)?")
 			 ("SS" . "\\(?SS\\|ß\\)?")
 			 ("ß"  . "\\(?ss\\|ß\\)?")))
@@ -2311,21 +2314,26 @@ for uncapitalized version."
       ;; lower-case and capitalized prefixes
       (if (and predictive-ignore-initial-caps
 	       (predictive-capitalized-p prefix))
-	  (cons 'complete (list prefix (downcase prefix)))
+	  (cons 'complete
+		(list prefix
+		      (concat (downcase (char-to-string (aref prefix 0)))
+			      (substring prefix 1))))
 	(cons 'complete prefix))
 
     ;; if there are prefix expansions, or
     ;; `predictive-auto-correction-no-completion' is set...
-    (let ((original-prefix prefix)
+    (let ((expanded-prefix prefix)
 	  expansion-list expanded-flag)
       ;; quote any special characters in prefix
       (dolist (expansion '(("\\." . "\\\\.") ("\\*" . "\\\\*")
 			   ("\\+" . "\\\\+") ("\\?" . "\\\\?")
 			   ("\\[" . "\\\\[") ("\\]" . "\\\\]")))
-	(setq prefix (replace-regexp-in-string (car expansion) (cdr expansion)
-					       prefix)))
-      (setq prefix (replace-regexp-in-string "\\(\\\\\\)\\([^][*?\\]\\|$\\)"
-					     "\\\\\\\\" prefix nil nil 1))
+	(setq expanded-prefix
+	      (replace-regexp-in-string
+	       (car expansion) (cdr expansion) expanded-prefix)))
+      (setq expanded-prefix
+	    (replace-regexp-in-string
+	     "\\(\\\\\\)\\([^][*?\\]\\|$\\)" "\\\\\\\\" prefix nil nil 1))
 
       ;; convert `predictive-equivalent-characters' into expansions
       (dolist (equiv (reverse predictive-equivalent-characters))
@@ -2335,14 +2343,15 @@ for uncapitalized version."
 		expansion-list)))
       (setq expansion-list
 	    (append predictive-prefix-expansions expansion-list))
+
       ;; apply `predictive-prefix-expansions' and
       ;; `predictive-equivalent-characters' expansions
       (let ((case-fold-search nil)
-	    (chars (mapcar 'char-to-string (append prefix nil)))
-	    (expanded (make-vector (length prefix) nil))
+	    (chars (mapcar 'char-to-string (append expanded-prefix nil)))
+	    (expanded (make-vector (length expanded-prefix) nil))
 	    i)
 	(dolist (expansion expansion-list)
-	  (setq i (string-match (car expansion) prefix 0))
+	  (setq i (string-match (car expansion) expanded-prefix 0))
 	  (while (and i (not (aref expanded i)))
 	    (setf (nth i chars) (cdr expansion)
 		  (aref expanded i) t
@@ -2350,39 +2359,52 @@ for uncapitalized version."
 	    (dotimes (i (- (match-end 0) (match-beginning 0) 1))
 	      (setf (nth (+ (match-beginning 0) i 1) chars) nil)
 	      (aset expanded (+ (match-beginning 0) i 1) t))
-	    (setq i (string-match (car expansion) prefix (match-end 0)))))
-	(setq prefix (apply 'concat chars)))
+	    (setq i (string-match
+		     (car expansion) expanded-prefix (match-end 0)))))
+	(setq expanded-prefix (apply 'concat chars)))
+
       ;; if ignoring initial caps...
-      (when (and predictive-ignore-initial-caps
-		 (predictive-capitalized-p original-prefix))
-	(let ((c (aref prefix 0)))
+      (when (and expanded-flag
+		 predictive-ignore-initial-caps
+		 (predictive-capitalized-p prefix))
+	(let ((c (aref expanded-prefix 0)))
 	  (cond
 	   ;; if initial character is a non-negated character alternative, add
 	   ;; lower-case letters to the alternative
-	   ((and (eq c ?\[) (not (eq (aref prefix 1) ?^)))
+	   ((and (eq c ?\[) (not (eq (aref expanded-prefix 1) ?^)))
 	    (let ((case-fold-search nil)
 		  char-alt)
-	      (string-match "^\\[.*?\\]" prefix)
-	      (setq char-alt (substring (match-string 0 prefix) 1 -1))
+	      (string-match "^\\[.*?\\]" expanded-prefix)
+	      (setq char-alt
+		    (substring (match-string 0 expanded-prefix) 1 -1))
 	      (dolist (c (append char-alt nil))
 		(unless (eq c (downcase c))
 		  (setq char-alt
 			(concat char-alt (char-to-string (downcase c))))))
-	      (setq prefix (concat "[" char-alt "]"
-				   (replace-match "" nil nil prefix)))))
+	      (setq expanded-prefix
+		    (concat "[" char-alt "]"
+			    (replace-match "" nil nil prefix)))))
 	   ;; if initial character is a literal upper-case character, expand
 	   ;; it into a character alternative including lower-case version
 	   ((not (or (eq c ?*) (eq c ??) (eq c ?\[) (eq c ?\]) (eq c ?\\)))
-	    (when (predictive-capitalized-p prefix)
-	      (setq prefix (concat "[" (char-to-string c)
-				   (char-to-string (downcase c)) "]"
-				   (substring prefix 1)))))
+	    (setq expanded-prefix
+		  (concat "[" (char-to-string c)
+			  (char-to-string (downcase c)) "]"
+			  (substring prefix 1))))
 	   )))
+
+      ;; return expanded (or otherwise) prefix
       (if predictive-auto-correction-no-completion
-	  (cons 'regexp prefix)
+	  (cons 'regexp expanded-prefix)
 	(if expanded-flag
-	    (cons 'regexp (concat "\\(" prefix "\\).*"))
-	  (cons 'complete original-prefix))))))
+	    (cons 'regexp (concat "\\(" expanded-prefix "\\).*"))
+	  (if (and predictive-ignore-initial-caps
+		   (predictive-capitalized-p prefix))
+	      (cons 'complete
+		    (list prefix
+			  (concat (vector (downcase (aref prefix 0)))
+				  (substring prefix 1))))
+	    (cons 'complete prefix)))))))
 
 
 
