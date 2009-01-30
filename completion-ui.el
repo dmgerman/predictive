@@ -1854,15 +1854,17 @@ is non-nil, only complete if point is at POS."
         (completion-resolve-old overlay)
 
         ;; get prefix
-        (setq cmpl-prefix-function
-              (or (and (fboundp 'auto-overlay-local-binding)
-                       (let ((completion-prefix-function
-			      cmpl-prefix-function))
-			 (auto-overlay-local-binding
-			  'completion-prefix-function)))
-                  completion-prefix-function
-		  'completion-prefix))
-        (setq prefix (or prefix (funcall cmpl-prefix-function)))
+	(unless (or prefix
+		    (and overlay (setq prefix (overlay-get overlay 'prefix))))
+	  (setq cmpl-prefix-function
+		(or (and (fboundp 'auto-overlay-local-binding)
+			 (let ((completion-prefix-function
+				cmpl-prefix-function))
+			   (auto-overlay-local-binding
+			    'completion-prefix-function)))
+		    completion-prefix-function
+		    'completion-prefix))
+	  (setq prefix (or prefix (funcall cmpl-prefix-function))))
 
         ;; if auto-completing, only complete prefix if it has requisite
         ;; number of characters
@@ -2711,7 +2713,7 @@ The Emacs `self-insert-command' is remapped to this when
 	(completion-setup-overlay
 	 prefix
 	 (when overlay (1+ (overlay-get overlay 'prefix-length)))
-	 nil nil nil nil overlay)
+	 nil nil nil nil nil overlay)
 	(complete-in-buffer nil nil nil nil 'auto))
 
        ;; if doing basic completion, let prefix be found normally
@@ -3224,7 +3226,7 @@ complete what remains of that word."
       ;; restore original prefix
       (when overlay
 	(goto-char (- (overlay-start overlay)
-		      (length (overlay-get overlay 'prefix))))
+		      (overlay-get overlay 'prefix-length)))
 	(delete-region (point) (overlay-start overlay))
 	(let ((overwrite-mode nil))
 	  (insert (overlay-get overlay 'prefix)))
@@ -3302,11 +3304,9 @@ complete what remains of that word."
                              (auto-overlay-local-binding
                               'completion-prefix))
                         completion-prefix-function
-			'completion-prefix))
+	      		'completion-prefix))
               (setq prefix (funcall prefix-fun))
-              (setq overlay
-                    (completion-setup-overlay prefix nil nil nil
-					      nil nil nil overlay))
+              (setq overlay (completion-setup-overlay prefix))
               (move-overlay overlay (point) (point))
               ;; if we've not deleted beyond start of word, and a pop-up
               ;; frame was being displayed, make sure it's updated when
@@ -3325,7 +3325,8 @@ complete what remains of that word."
                      ;; FIXME: tooltip key-bindings don't work - why?
                      `(lambda ()
                         (setq completion-backward-delete-timer nil)
-                        (complete-in-buffer nil nil nil nil 'auto ,(point)))))
+                        (complete-in-buffer nil nil nil nil
+					    'auto ,(point)))))
             ;; if completing with no delay, do so
             (complete-in-buffer nil nil nil nil 'auto (point)))
           ))));)
