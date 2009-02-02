@@ -1487,6 +1487,7 @@ specified by the prefix argument."
 
   ;; insert word
   (let* ((defpref (and predictive-auto-define-prefixes
+		       (not (dictree-meta-dict-p dict))
 		       (not (dictree-member-p dict word))))
 	 (newweight (dictree-insert dict word (or weight 0)
 				    (when (null weight)
@@ -1506,19 +1507,20 @@ specified by the prefix argument."
 
     ;; if word has associated prefixes, make sure weight of each prefix is at
     ;; least as great as word's new weight
-    (let ((prefixes (dictree-get-property dict word :prefixes)))
-      (dolist (prefix prefixes)
-	(setq pweight (dictree-lookup dict prefix))
-	(cond
-	 ;; prefix has been deleted from dictionary
-	 ((null pweight)
-	  ;; confirm prefix really has been deleted
-	  (unless (dictree-member-p dict prefix)
-	    (dictree-put-property dict word :prefixes
-				  (delete prefix prefixes))))
-	 ;; prefix weight needs incrementing
-	 ((< pweight newweight)
-	  (dictree-insert dict prefix newweight (lambda (a b) a)))))))
+    (unless (dictree-meta-dict-p dict)
+      (let ((prefixes (dictree-get-property dict word :prefixes)))
+	(dolist (prefix prefixes)
+	  (setq pweight (dictree-lookup dict prefix))
+	  (cond
+	   ;; prefix has been deleted from dictionary
+	   ((null pweight)
+	    ;; confirm prefix really has been deleted
+	    (unless (dictree-member-p dict prefix)
+	      (dictree-put-property dict word :prefixes
+				    (delete prefix prefixes))))
+	   ;; prefix weight needs incrementing
+	   ((< pweight newweight)
+	    (dictree-insert dict prefix newweight (lambda (a b) a))))))))
 
   (when (interactive-p)
     (message "\"%s\" added to dictionary %s" word (dictree-name dict))))
