@@ -48,6 +48,8 @@
 ;;   `predictive-latex-browser-menu-item' function
 ;; * removed "'" definition from `auto-completion-override-alist' since it
 ;;   should just behave like a word-constituent, as per its syntax
+;; * refer to buffer-local variables instead of auto-dict names
+;; * bug-fixes to `TeX-master' handling
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -266,16 +268,35 @@ When a document class is in the list, "
   "*When non-nil, save the LaTeX section dictionary.
 
 Disabled by default because saving the section dictionary has a
-tendency to fail badly through hitting an internal Emacs limit on
-printing deeply nested structures, hard-coded in
-\"print.c\". Since the section dictionary is only used for
-navigation, there is little disadvantage in leaving this
-disabled.
+tendency to hit an irritating internal Emacs limit on printing
+deeply nested structures, hard-coded in \"print.c\". Since the
+section dictionary is only used for navigation, there is little
+disadvantage in leaving this disabled.
 
 Do *not* enable this without first applying the \"print.c.diff\"
 patch (included in the Predictive Completion package) to the file
 \"print.c\" in the Emacs source, and recompiling Emacs from the
 patched source."
+  :group 'predictive-latex
+  :type 'boolean)
+
+
+(defcustom predictive-latex-save-label-dict nil
+  "*When non-nil, save the LaTeX label dictionary.
+
+Disabled by default because saving the label dictionaries has a
+tendency to occasionally hit an irritating internal Emacs limit
+on printing deeply nested structures, hard-coded in
+\"print.c\". Not saving the label dictionary means all learnt
+word weights for LaTeX label names are lost when a label
+dictionary is unloaded.
+
+If you only use short label names, it is reasonably safe to
+enable this. However, if you see \"Apparently circular structure
+being printed\" errors, then you must either disable this option,
+or (better), apply the \"print.c.diff\" patch (included in the
+Predictive Completion package) to the file \"print.c\" in the
+Emacs source, and recompile Emacs from the patched source."
   :group 'predictive-latex
   :type 'boolean)
 
@@ -440,38 +461,43 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        ;; predictive mode in it, and share buffer-local settings with it
        ((and (boundp 'TeX-master) (stringp TeX-master))
 	(let (filename buff used-dicts main-dict latex-dict math-dict
-		       preamble-dict env-dict label-dict local-env-dict)
-	  (setq filename (expand-file-name TeX-master))
-	  (unless (string= (substring filename -4) ".tex")
-	    (setq filename (concat filename ".tex")))
+		       preamble-dict env-dict label-dict
+		       local-env-dict local-section-dict)
+	  (setq filename
+		(concat (file-name-sans-extension
+			 (expand-file-name TeX-master))
+			".tex"))
 	  (unless (file-exists-p filename) (throw 'load-fail nil))
 	  (save-window-excursion
 	    (find-file filename)
 	    (turn-on-predictive-mode)
-	    (setq buff (current-buffer))
-	    (setq used-dicts predictive-used-dict-list)
-	    (setq main-dict predictive-main-dict)
-	    (setq latex-dict predictive-latex-dict)
-	    (setq math-dict predictive-latex-math-dict)
-	    (setq preamble-dict predictive-latex-preamble-dict)
-	    (setq env-dict predictive-latex-env-dict)
-	    (setq label-dict predictive-latex-label-dict)
-	    (setq local-env-dict predictive-latex-local-env-dict))
+	    (setq buff (current-buffer)
+		  used-dicts predictive-used-dict-list
+		  main-dict predictive-main-dict
+		  latex-dict predictive-latex-dict
+		  math-dict predictive-latex-math-dict
+		  preamble-dict predictive-latex-preamble-dict
+		  env-dict predictive-latex-env-dict
+		  label-dict predictive-latex-label-dict
+		  local-env-dict predictive-latex-local-env-dict
+		  local-section-dict predictive-latex-section-dict))
 	  (auto-overlay-share-regexp-set 'predictive buff)
-	  (setq predictive-used-dict-list used-dicts)
-	  (setq predictive-main-dict main-dict)
-	  (setq predictive-latex-dict latex-dict)
-	  (setq predictive-latex-math-dict math-dict)
-	  (setq predictive-latex-preamble-dict preamble-dict)
-	  (setq predictive-latex-env-dict env-dict)
-	  (setq predictive-latex-label-dict label-dict)
-	  (setq predictive-latex-local-env-dict local-env-dict)
+	  (setq predictive-used-dict-list used-dicts
+		predictive-main-dict main-dict
+		predictive-latex-dict latex-dict
+		predictive-latex-math-dict math-dict
+		predictive-latex-preamble-dict preamble-dict
+		predictive-latex-env-dict env-dict
+		predictive-latex-label-dict label-dict
+		predictive-latex-local-env-dict local-env-dict
+		predictive-latex-section-dict local-section-dict)
 	  ;; start the auto-overlays, restoring buffer's modified flag
 	  ;; afterwards, since automatic synchronization of LaTeX envionments
 	  ;; can modify buffer without actually changing buffer text
 	  (let ((restore-modified (buffer-modified-p)))
 	    (auto-overlay-start 'predictive nil
-				predictive-auxiliary-file-location)
+				predictive-auxiliary-file-location
+				'no-regexp-check)
 	    (set-buffer-modified-p restore-modified))
 	  ))
 
@@ -501,9 +527,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (predictive-auto-dict-load "latex-local-env")
 	      predictive-latex-section-dict
 	      (predictive-auto-dict-load "latex-section"))
-	;; disable saving of section dictionary to avoid Emacs "bug"
+	;; disable saving of section and label dictionaries to avoid
+	;; Emacs "bug"
 	(unless predictive-latex-save-section-dict
 	  (setf (dictree-autosave predictive-latex-section-dict) nil))
+	(unless predictive-latex-save-label-dict
+	  (setf (dictree-autosave predictive-latex-label-dict) nil))
 
 	;; add local environment, maths and text-mode dictionaries to
 	;; appropriate dictionary lists
@@ -568,7 +597,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; if we're the TeX-master, first disable predictive mode in all related
     ;; LaTeX buffers, which we find by looking for buffers that share the
     ;; auto-overlays 'predictive regexp set
-    (when (eq TeX-master t)
+    (unless (and (boundp 'TeX-master) (stringp TeX-master))
       (dolist (buff (auto-o-get-buffer-list 'predictive))
 	;; TeX-master itself will be in list of buffers sharing regexp set, so
 	;; need to filter it out
@@ -582,11 +611,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 					 predictive-auxiliary-file-location))
     (auto-overlay-unload-set 'predictive)
     ;; unload local dicts, without saving if buffer wasn't saved
-    (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))
+    (unless (and (boundp 'TeX-master) (stringp TeX-master))
+      (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p)))
     (kill-local-variable 'predictive-latex-label-dict)
     (kill-local-variable 'predictive-latex-local-latex-dict)
     (kill-local-variable 'predictive-latex-local-math-dict)
@@ -1241,12 +1271,26 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (when (buffer-file-name)
       (auto-overlay-save-overlays 'predictive nil
 				  predictive-auxiliary-file-location))
-    ;; unload local dicts, saving if buffer is saved
-    (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
-    (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))))
+    ;; if we're not the TeX-master, unload the regexps to unshare them
+    (if (and (boundp 'TeX-master) (stringp TeX-master))
+	(auto-overlay-unload-set 'predictive)
+      ;; if we're the TeX master, first disable predictive mode in all related
+      ;; LaTeX buffers,  which we find by  looking for buffers  that share the
+      ;; auto-overlays 'predictive regexp set
+      (dolist (buff (auto-o-get-buffer-list 'predictive))
+	;; TeX-master itself will be in list of buffers sharing regexp set, so
+	;; need to filter it out; test for null buffer name avoids deleted
+	;; buffers, though this should never occur.
+	(unless (or (eq buff (current-buffer)) (null (buffer-name buff)))
+	  (save-excursion
+	    (set-buffer buff)
+	    (predictive-mode -1))))
+      ;; unload local dicts, saving if buffer is saved
+      (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p)))))
 
 
 
@@ -1259,11 +1303,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (null (buffer-file-name)))
 	  (string= predictive-latex-previous-filename
 		   (buffer-file-name)))
-      (progn
-	(predictive-auto-dict-save "latex-label")
+      (unless (and (boundp 'TeX-master) (stringp TeX-master))
 	(predictive-auto-dict-save "latex-local-latex")
 	(predictive-auto-dict-save "latex-local-math")
 	(predictive-auto-dict-save "latex-local-env")
+	(when predictive-latex-save-label-dict
+	  (predictive-auto-dict-save "latex-label"))
 	(when predictive-latex-save-section-dict
 	  (predictive-auto-dict-save "latex-section")))
     ;; otherwise, restart predictive-mode to set everything up afresh
@@ -1300,26 +1345,56 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (kill-local-variable 'predictive-latex-bibstyle-dict)
   (make-local-variable 'predictive-latex-bibstyle-dict)
   ;; revert to saved auto-dicts
-  (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-math" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-local-env" nil (buffer-modified-p))
-  (predictive-auto-dict-unload "latex-section" nil (buffer-modified-p))
-  (setq predictive-latex-label-dict
-	(predictive-auto-dict-load "latex-label")
-	predictive-latex-local-latex-dict
-	(predictive-auto-dict-load "latex-local-latex")
-	predictive-latex-local-math-dict
-	(predictive-auto-dict-load "latex-local-math")
-	predictive-latex-local-env-dict
-	(predictive-auto-dict-load "latex-local-env")
-	predictive-latex-section-dict
-	(predictive-auto-dict-load "latex-section"))
-  ;; disable saving of section dictionary to avoid Emacs "bug"
-  (unless predictive-latex-save-section-dict
-    (setf (dictree-autosave
-	   (eval (predictive-auto-dict-name "latex-section")))
-	  nil))
+  (let (used-dicts main-dict latex-dict math-dict
+  		   preamble-dict env-dict label-dict
+  		   local-env-dict local-section-dict)
+    (save-excursion
+      (when (and (boundp 'TeX-master) (stringp TeX-master))
+  	(set-buffer (concat (file-name-sans-extension TeX-master) ".tex")))
+      (predictive-auto-dict-unload "latex-label" nil
+  				   (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-latex" nil
+  				   (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-math" nil
+  				   (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-local-env" nil
+  				   (buffer-modified-p))
+      (predictive-auto-dict-unload "latex-section" nil
+  				   (buffer-modified-p))
+      (setq predictive-latex-label-dict
+  	    (predictive-auto-dict-load "latex-label")
+  	    predictive-latex-local-latex-dict
+  	    (predictive-auto-dict-load "latex-local-latex")
+  	    predictive-latex-local-math-dict
+  	    (predictive-auto-dict-load "latex-local-math")
+  	    predictive-latex-local-env-dict
+  	    (predictive-auto-dict-load "latex-local-env")
+  	    predictive-latex-section-dict
+  	    (predictive-auto-dict-load "latex-section"))
+      ;; disable saving of label and section dictionaries to avoid Emacs "bug"
+      (unless predictive-latex-save-label-dict
+	(setf (dictree-autosave predictive-latex-label-dict) nil))
+      (unless predictive-latex-save-section-dict
+	(setf (dictree-autosave predictive-latex-section-dict) nil))
+      (setq used-dicts predictive-used-dict-list
+  	    main-dict predictive-main-dict
+  	    latex-dict predictive-latex-dict
+  	    math-dict predictive-latex-math-dict
+  	    preamble-dict predictive-latex-preamble-dict
+  	    env-dict predictive-latex-env-dict
+  	    label-dict predictive-latex-label-dict
+  	    local-env-dict predictive-latex-local-env-dict
+  	    local-section-dict predictive-latex-section-dict))
+    (when (and (boundp 'TeX-master) (stringp TeX-master))
+      (setq predictive-used-dict-list used-dicts
+  	    predictive-main-dict main-dict
+  	    predictive-latex-dict latex-dict
+  	    predictive-latex-math-dict math-dict
+  	    predictive-latex-preamble-dict preamble-dict
+  	    predictive-latex-env-dict env-dict
+  	    predictive-latex-label-dict label-dict
+  	    predictive-latex-local-env-dict local-env-dict
+  	    predictive-latex-section-dict local-section-dict)))
   ;; clear and reload the overlay definitions (have to do this, otherwise some
   ;; auto-overlays try to add duplicate regexp definitions when reparsed)
   (setq auto-overlay-regexps nil)
@@ -1350,8 +1425,7 @@ definition of the same thing."
 
     (or
      ;; when we're on either a cross-reference or a label definition...
-     (and (or (member (setq dict (eval (predictive-auto-dict-name
-					"latex-label")))
+     (and (or (member (setq dict predictive-latex-label-dict)
 		      current-dict)
 	      (setq o-def (car (auto-overlays-at-point
 				nil '((identity auto-overlay)
@@ -1363,10 +1437,8 @@ definition of the same thing."
 	  (setq type "label"))
 
      ;; when we're on either a LaTeX command or a definition thereof...
-     (and (or (member (eval (predictive-auto-dict-name "latex-local-latex"))
-		      current-dict)
-	      (member (eval (predictive-auto-dict-name "latex-local-math"))
-		      current-dict)
+     (and (or (member predictive-latex-local-latex-dict current-dict)
+	      (member predictive-latex-local-math-dict current-dict)
 	      (setq o-def
 		    (car (auto-overlays-at-point
 			  nil `((identity auto-overlay)
@@ -1378,8 +1450,8 @@ definition of the same thing."
 	  ;; set dict to temporary meta-dict that combines local-latex and
 	  ;; local-math dicts
 	  (setq dict (dictree-meta-dict-create
-		      (list (predictive-auto-dict-name "latex-local-latex")
-			    (predictive-auto-dict-name "latex-local-math"))
+		      (list predictive-latex-local-latex-dict
+			    predictive-latex-local-math-dict)
 		      nil nil nil t '+))
 	  ;; look for command at point
 	  (setq word (thing-at-point 'predictive-latex-word))
@@ -1389,8 +1461,7 @@ definition of the same thing."
 	  (setq type "command"))
 
      ;; when we're on either a LaTeX environment or definition thereof...
-     (and (or (member (setq dict (eval (predictive-auto-dict-name
-					"latex-local-env")))
+     (and (or (member (setq dict predictive-latex-local-env-dict)
 		      current-dict)
 	      (setq o-def (car (auto-overlays-at-point
 				nil `((identity auto-overlay)
@@ -1432,7 +1503,7 @@ Interactively, LABEL is read from the mini-buffer, defaulting to
 the label at point (if any)."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "latex-label")))
+  (let ((dict predictive-latex-label-dict)
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
@@ -1487,9 +1558,9 @@ that are defined in the document's preamble."
   (interactive)
 
   (let ((dict (dictree-meta-dict-create
-	       (list (predictive-auto-dict-name "latex-local-latex")
-		     (predictive-auto-dict-name "latex-local-math"))
-		      nil nil nil t '+))
+	       (list predictive-latex-local-latex-dict
+		     predictive-latex-local-math-dict)
+	       nil nil nil t '+))
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
@@ -1552,7 +1623,7 @@ the environment at point (if any). This only jumps to
 environments that are defined in the document's preamble."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "latex-local-env")))
+  (let ((dict predictive-latex-local-env-dict)
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
@@ -1608,8 +1679,7 @@ environments that are defined in the document's preamble."
 Interactively, SECTION is read from the mini-buffer."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "latex-section"))))
-
+  (let ((dict predictive-latex-section-dict))
     ;; interactively, read section name from minibuffer, defaulting to what
     ;; we've found
     (when (interactive-p)
