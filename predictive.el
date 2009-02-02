@@ -54,6 +54,9 @@
 ;; * updated `predictive-prefix-expansions' and `predictive-expand-prefix' for
 ;;   compatibility with new `dictree-regexp-reach', which replaces wildcard
 ;;   searches
+;; * bug-fixes to `predictive-add-to-dict' meta-dict handling
+;; * renamed `predictive-fast-learn-from-*' commands to
+;;   `predictive-fast-learn-or-add-from-*'
 ;;
 ;; Version 0.18
 ;; * updated for compatibility with new dict-tree.el
@@ -1957,7 +1960,7 @@ specified by the presence of a prefix argument."
 
 
 
-(defun predictive-fast-learn-from-buffer (&optional buffer dict all)
+(defun predictive-fast-learn-or-add-from-buffer (&optional buffer dict all)
   "Learn word weights from BUFFER (defaults to the current buffer).
 
 The word weight of each word in dictionary DICT is incremented by
@@ -2134,7 +2137,7 @@ the buffer's syntax table."
 
 
 
-(defun predictive-fast-learn-from-file (file &optional dict all)
+(defun predictive-fast-learn-or-add-from-file (file &optional dict all)
   "Learn word weights from FILE.
 
 The word weight of each word in dictionary DICT is incremented by
@@ -2182,7 +2185,7 @@ entirely of word- or symbol-constituent characters."
 	  (setq visiting t)
 	(find-file file))
       ;; learn from the buffer
-      (predictive-fast-learn-from-buffer buff dict all)
+      (predictive-fast-learn-or-add-from-buffer buff dict all)
       (unless visiting (kill-buffer buff)))))
 
 

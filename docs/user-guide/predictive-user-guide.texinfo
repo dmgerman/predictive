@@ -1775,13 +1775,14 @@ overridden by supplying a prefix argument, in which case all occurrences
 are counted, irrespective of whether the dictionary is active at the
 word occurrence. Note that you @emph{cannot} use this command to add
 words to a dictionary, only to train the weights of words already in a
-dictionary (see @command{predictive-fast-learn-from-buffer}, below).
+dictionary (see @command{predictive-fast-learn-or-add-from-buffer},
+below).
 
 @item predictive-learn-from-file
 Like @command{predictive-learn-from-buffer}, but learns from a file
 instead of a buffer.
 
-@item predictive-fast-learn-from-buffer
+@item predictive-fast-learn-or-add-from-buffer
 Similar to @command{predictive-learn-from-buffer}. It runs faster for
 large dictionaries, at the expense of missing some words. Specifically,
 only words consisting entirely of word- or symbol-constituent characters
@@ -1795,9 +1796,9 @@ explicit dictionary is specified, @env{predictive-auto-add-to-dict} has
 the usual effect, as do the other auto-add-related options
 (@pxref{Automatic Learning}).
 
-@item predictive-fast-learn-from-file
-Like @command{predictive-fast-learn-from-buffer}, but learns from a file
-instead of a buffer.
+@item predictive-fast-learn-or-add-from-file
+Like @command{predictive-fast-learn-or-add-from-buffer}, but learns
+from a file instead of a buffer.
 @end ftable
 
 
@@ -2087,11 +2088,11 @@ dictionary, the only way to accept words while typing is to ensure
 dynamic completion is enabled, and type an end-of-word character (such
 as a space or punctuation character) at the end of the word
 (@pxref{Dynamic Completion}). Alternatively, you can use the fast
-learning commands @command{predictive-fast-learn-from-buffer} and
-@command{predictive-fast-learn-from-file} to add words from existing
-text (note that you @emph{must} use the fast learning commands for this;
-the normal ones will only increment the weights of words that are
-already in the dictionary).
+learning commands @command{predictive-fast-learn-or-add-from-buffer}
+and @command{predictive-fast-learn-or-add-from-file} to add words from
+existing text (note that you @emph{must} use the fast learning commands
+for this; the normal ones will only increment the weights of words that
+are already in the dictionary).
 @cindex relationship between words
 @cindex prefix words
 @cindex words, relationships
