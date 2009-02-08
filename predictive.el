@@ -475,8 +475,16 @@ i.e. later expansions are *not* applied to the replacement text
 of previous expansions. Case is always significant.
 
 The expansions themselves can be regexp fragments, and can
-include regexp special characters. However, back-references and
-non-greedy grouping constructs are *not* supported.
+include regexp special characters. However, only a subset of the
+full Emacs regular expression syntax is supported. There is no
+support for regexp constructs that are only meaningful for
+strings (character ranges and character classes inside character
+alternatives, and syntax-related backslash
+constructs). Back-references and non-greedy postfix operators are
+not supported, so `?' after a postfix operator loses its special
+meaning. Also, matches are always anchored, so `$' and `^' lose
+their special meanings (use `.*' at the beginning and end of the
+regexp to get an unanchored match).
 
 If the original prefix contains any regexp special characters,
 they are quoted using `\\' *before* the prefix expansions are
