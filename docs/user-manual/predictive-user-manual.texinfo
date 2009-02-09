@@ -3,13 +3,13 @@
 @comment Documentation for the Emacs predictive completion mode
 
 @c %**start of header
-@setfilename predictive-user-guide.info
-@settitle Emacs Predictive Completion User Guide
+@setfilename predictive-user-manual.info
+@settitle Emacs Predictive Completion User Manual
 @c %**end of header
 
 @dircategory Emacs
 @direntry
-* Predictive: (predictive-user-guide). Predictive text completion package for Emacs.
+* Predictive: (predictive-user-manual). Predictive text completion package for Emacs.
 @end direntry
 
 @copying
@@ -113,8 +113,8 @@ complete what you are trying to type before you've finished typing it.
 
 The predictive completion package described here is an add-on to the GNU
 Emacs editor, which implements a new minor-mode called
-@code{predictive-mode} (@pxref{Minor Modes, , , emacs, GNU emacs
-manual}). When this predictive completion minor-mode is switched on,
+@code{predictive-mode} (@pxref{Minor Modes, , , emacs, GNU Emacs
+Manual}). When this predictive completion minor-mode is switched on,
 Emacs will try to complete the word you are typing based on the
 characters typed so far. As you add characters, it can look up words
 starting with those characters in a dictionary, and offer to insert the
@@ -322,7 +322,7 @@ behaviour to be radically changed. The many and various predictive
 completion mode customization options can be found in the
 @env{predictive} and @env{completion-ui} customization groups. If you
 like the idea of predictive completion, but don't like the way it works
-``out-of-the-box'' the rest of this guide explains all the options and
+``out-of-the-box'' the rest of this manual explains all the options and
 features in detail.
 
 Use the @command{predictive-mode} command to switch the predictive
@@ -330,7 +330,7 @@ minor-mode on. The same command will also switch it off again. This
 section only covers (some of) the @emph{default} behaviour of
 @code{predictive-mode}. The way that @code{predictive-mode} works can be
 radically changed via numerous customization options, which are
-described in detail in the rest of this user-guide.
+described in detail in the rest of this manual.
 @findex predictive-mode
 
 As you add characters to a word, predictive mode searches in a
@@ -1680,9 +1680,9 @@ you want to set the default main dictionary permanently, customize
 Using overlays, it is possible to set up dictionaries that are local to
 specific regions of text. The predictive mode support for a number of
 major modes makes use of this feature (@pxref{Major Modes}). Configuring
-region-local dictionaries is, however, beyond the scope of this
-user-guide. @xref{Region-Local Dictionaries, , ,
-predictive-programmer-guide, Predictive Programmer Guide}.
+region-local dictionaries is, however, beyond the scope of this user
+manual. @xref{Region-Local Dictionaries, , ,
+predictive-programmer-manual, Predictive Programmer Manual}.
 
 @ftable @command
 @item predictive-which-dict-mode
@@ -2184,7 +2184,8 @@ by predictive mode. Many of these are on the borderline between
 user-customisations and features to be used by Lisp packages that
 enhanced predictive completion for specific major modes, though
 describing all the features available to Lisp packages is beyond the
-scope of this user guide.
+scope of this user manual. @xref{Region-Local Dictionaries, , ,
+predictive-programmer-manual, Predictive Programmer Manual}.
 
 @menu
 * Character Syntax and Key Bindings::
@@ -2379,7 +2380,7 @@ form@footnote{Lisp packages can additionally set a third element that
 controls whether the typed character is inserted, and can replace any
 element in the list with a function that returns one of the values
 described here or nil, but these features are beyond the scope of this
-user-guide.}:
+user manual.}:
 @lisp
 (<accept|reject|add> <string|word|none>)
 @end lisp
@@ -2398,11 +2399,11 @@ part of the current word appearing before point@footnote{The value of
 @env{completion-word-thing} determines what is considered a
 word. Logically enough, it defaults to @code{word}. Lisp packages can
 redefine it, or even override the whole prefix-finding mechanism with
-their own function, but this is again beyond the scope of this
-user-guide.}.. The difference is only evident when typing a character in
-the middle or at the end of an existing word, in which case
-@code{string} completes the newly typed character whereas @code{word}
-completes the existing word plus the new character.
+their own function, but this is again beyond the scope of this user
+manual.}. The difference is only evident when typing a character in the
+middle or at the end of an existing word, in which case @code{string}
+completes the newly typed character whereas @code{word} completes the
+existing word plus the new character.
 
 Finally, it is occasionally useful to be able to manually override a
 character's syntax, and have it treated one-off as though it had a
@@ -2685,8 +2686,8 @@ function (if any) to call when loading or unloading a @LaTeX{} package
 (see below). This allows arbitrary configuration changes to be made when
 packages are included in or removed from the document. (A common use of
 this is to add or remove auto-overlay regexps, @pxref{LaTeX Automatic
-Overlays, @LaTeX{} Automatic Overlays, , predictive-programmer-guide,
-Predictive Programmer Guide}.)
+Overlays, @LaTeX{} Automatic Overlays, , predictive-programmer-manual,
+Predictive Programmer Manual}.)
 
 @vtable @env
 @item predictive-latex-usepackage-functions

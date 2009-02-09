@@ -1,11 +1,11 @@
 
-all: user-guide auto-overlay-manual #programmer-guide
+all: user-manual auto-overlay-manual #programmer-manual
 
 
 DIR=~/programming/predictive/docs
 WEB=~/www.dr-qubit.org/htdocs/predictive
-USERDIR=user-guide
-PROGDIR=programmer-guide
+USERDIR=user-manual
+PROGDIR=programmer-manual
 AUTOODIR=auto-overlay-manual
 
 test:
@@ -32,12 +32,12 @@ clean:
 
 install:
 	cp -r $(USERDIR)/html $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide-html.tar.gz $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide.info.gz $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide.pdf $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide.ps.gz $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide.texinfo $(WEB)/$(USERDIR)/
-	cp $(USERDIR)/predictive-user-guide.txt.gz $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual-html.tar.gz $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual.info.gz $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual.pdf $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual.ps.gz $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual.texinfo $(WEB)/$(USERDIR)/
+	cp $(USERDIR)/predictive-user-manual.txt.gz $(WEB)/$(USERDIR)/
 #	cp -r $(PROGDIR) $(WEB)
 # 	cp -r html $(WEB)
 	cp -r $(AUTOODIR)/html $(WEB)/$(AUTOODIR)/
@@ -49,20 +49,20 @@ install:
 	cp $(AUTOODIR)/auto-overlay-manual.txt.gz $(WEB)/$(AUTOODIR)/
 
 
-user-guide: $(USERDIR)/predictive-user-guide.info.gz \
-            $(USERDIR)/predictive-user-guide-html \
-	    $(USERDIR)/predictive-user-guide-html.tar.gz \
-            $(USERDIR)/predictive-user-guide.txt.gz \
-            $(USERDIR)/predictive-user-guide.ps.gz \
-            $(USERDIR)/predictive-user-guide.pdf
+user-manual: $(USERDIR)/predictive-user-manual.info.gz \
+            $(USERDIR)/predictive-user-manual-html \
+	    $(USERDIR)/predictive-user-manual-html.tar.gz \
+            $(USERDIR)/predictive-user-manual.txt.gz \
+            $(USERDIR)/predictive-user-manual.ps.gz \
+            $(USERDIR)/predictive-user-manual.pdf
 
 
-programmer-guide: $(PROGDIR)/predictive-prog-guide.info.gz \
-                  $(PROGDIR)/predictive-prog-guide-html \
-	          $(PROGDIR)/predictive-prog-guide-html.tar.gz \
-                  $(PROGDIR)/predictive-prog-guide.txt.gz \
-                  $(PROGDIR)/predictive-prog-guide.ps.gz \
-                  $(PROGDIR)/predictive-prog-guide.pdf
+programmer-manual: $(PROGDIR)/predictive-prog-manual.info.gz \
+                  $(PROGDIR)/predictive-programmer-manual-html \
+	          $(PROGDIR)/predictive-programmer-manual-html.tar.gz \
+                  $(PROGDIR)/predictive-programmer-manual.txt.gz \
+                  $(PROGDIR)/predictive-programmer-manual.ps.gz \
+                  $(PROGDIR)/predictive-programmer-manual.pdf
 
 
 auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
