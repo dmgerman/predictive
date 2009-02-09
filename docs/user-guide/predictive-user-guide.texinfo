@@ -1247,19 +1247,27 @@ for all equivalent prefixes. Note that case is significant.
 @item predictive-prefix-expansions
 An alist of expansions to apply to a prefix before completing it. The
 alist should associate regexps with their replacements. The result of
-expanding a prefix should be a valid regexp, which is used to match
-prefixes that should be considered equivalent for completion. The
-expansions are applied in-order to the completion prefix. Characters
-matching a regexp are only expanded once, i.e. later expansions are
-@emph{not} applied to the replacement text of previous expansions. Case
-is always significant.
+expanding a prefix should be a valid regexp (but see below), which is
+used to match prefixes that should be considered equivalent for
+completion. The expansions are applied in-order to the completion
+prefix. Characters matching a regexp are only expanded once, i.e. later
+expansions are @emph{not} applied to the replacement text of previous
+expansions. Case is always significant.
 @end vtable
 
 The result of expanding a prefix according to
 @env{predictive-equivalent-characters} and
 @env{predictive-prefix-expansions} must produce a valid regexp, which is
 used to match prefixes that are considered equivalent to the one
-actually typed.
+actually typed. Only a subset of the full Emacs regular expression
+syntax is supported. There is no support for regexp constructs that are
+only meaningful for strings (character ranges and character classes
+inside character alternatives, and syntax-related backslash
+constructs). Back-references and non-greedy postfix operators are not
+supported, so `?' after a postfix operator loses its special
+meaning. Also, matches are always anchored, so `$' and `^' lose their
+special meanings (use `.*' at the beginning and end of the regexp to get
+an unanchored match).
 
 @env{predictive-equivalent-characters} works by substituting a character
 alternative listing all the equivalent characters whenever those
