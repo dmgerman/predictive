@@ -1729,31 +1729,37 @@ syntax-class of CHAR."
              (auto-overlay-local-binding
               'auto-completion-override-syntax-alist)
            auto-completion-override-syntax-alist))
-        behaviour)
+	(global-syntax-alist auto-completion-syntax-alist)
+	behaviour)
 
     ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
     ;; cons cell), convert it to an alist
-    (unless (listp (car syntax-alist))
-      (setq syntax-alist
-            `(;; word constituents add to current completion and
-              ;; complete word or string, depending on VALUE
-              (?w . (add ,(cdr syntax-alist)))
-              ;; symbol constituents, whitespace and punctuation
-              ;; characters either accept or reject, depending on
-              ;; VALUE, and don't complete
-              (?_ .  (,(car syntax-alist) none))
-              (?  .  (,(car syntax-alist) none))
-              (?. .  (,(car syntax-alist) none))
-              (?\( . (,(car syntax-alist) none))
-              (?\) . (,(car syntax-alist) none))
-              ;; anything else rejects and does't complete
-              (t . (reject none)))
-            ))
+    (dolist (alist '(syntax-alist global-syntax-alist))
+      (unless (listp (car (eval alist)))
+	(set alist
+	     `(;; word constituents add to current completion and complete
+	       ;; word or string, depending on VALUE
+	       (?w . (add ,(cdr (eval alist))))
+	       ;; symbol constituents, whitespace and punctuation characters
+	       ;; either accept or reject, depending on VALUE, and don't
+	       ;; complete
+	       (?_ .  (,(car (eval alist)) none))
+	       (?  .  (,(car (eval alist)) none))
+	       (?. .  (,(car (eval alist)) none))
+	       (?\( . (,(car (eval alist)) none))
+	       (?\) . (,(car (eval alist)) none))
+	       ;; anything else rejects and does't complete
+	       (t . (reject none)))
+	     )))
 
     ;; extract behaviours from syntax alists
     (setq behaviour (or (when char (cdr (assq char override-alist)))
                         (cdr (assq syntax syntax-alist))
-                        (cdr (assq t syntax-alist))))
+                        (cdr (assq t syntax-alist))
+			;; fall back to global values if not defined in
+			;; overlay-local ones
+			(cdr (assq char auto-completion-override-syntax-alist))
+			(cdr (assq syntax global-syntax-alist))))
     (when (= (length behaviour) 2)
       (setq behaviour (append behaviour '(t))))
     ;; return behaviour
