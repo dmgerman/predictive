@@ -50,6 +50,7 @@
 ;;   should just behave like a word-constituent, as per its syntax
 ;; * refer to buffer-local variables instead of auto-dict names
 ;; * bug-fixes to `TeX-master' handling
+;; * minor fix to completion behaviour inside "\begin{...}"
 ;;
 ;; Version 0.10.2
 ;; * define delimiter portion of all brace regexps to fix overlay bug
@@ -740,6 +741,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
+	       (auto-completion-syntax-alist
+		. ((?w . (add
+			  (lambda ()
+			    (let ((pos (point)))
+			      (when (re-search-forward
+				     "[[:alpha:]]+}" (line-end-position) t)
+				(backward-char)
+				(delete-region pos (point))))
+			    ',word-complete)
+			  t))))
 	       ;; (auto-completion-override-syntax-alist
 	       ;;  . ((?* . (add ,word-complete t))))
 	       (completion-menu
