@@ -39,12 +39,12 @@ docs: info pdf dvi txt ps html
 clean:
 	find . -name '*.elc' -delete
 	[ ! -e dict-english.el ] || rm dict-english.el
-	[ ! -e predictive-user-guide.info.gz ] || rm predictive-user-guide.info.gz
-	[ ! -e predictive-user-guide.pdf ] || rm predictive-user-guide.pdf
-	[ ! -e predictive-user-guide.dvi ] || rm predictive-user-guide.dvi
-	[ ! -e predictive-user-guide.ps.gz ] || rm predictive-user-guide.ps.gz
-	[ ! -e predictive-user-guide.txt.gz ] || rm predictive-user-guide.txt.gz
-	[ ! -d predictive-user-guide-html ] || rm -r predictive-user-guide-html/
+	[ ! -e predictive-user-manual.info.gz ] || rm predictive-user-manual.info.gz
+	[ ! -e predictive-user-manual.pdf ] || rm predictive-user-manual.pdf
+	[ ! -e predictive-user-manual.dvi ] || rm predictive-user-manual.dvi
+	[ ! -e predictive-user-manual.ps.gz ] || rm predictive-user-manual.ps.gz
+	[ ! -e predictive-user-manual.txt.gz ] || rm predictive-user-manual.txt.gz
+	[ ! -d predictive-user-manual-html ] || rm -r predictive-user-manual-html/
 
 
 .PHONY : install
@@ -135,22 +135,22 @@ texinfo_dicts: $(texinfo_dicts)
 
 
 # documentation targets
-info: predictive-user-guide.info.gz
+info: predictive-user-manual.info.gz
 
-pdf: predictive-user-guide.pdf
+pdf: predictive-user-manual.pdf
 
-dvi: predictive-user-guide.dvi
+dvi: predictive-user-manual.dvi
 
-ps: predictive-user-guide.ps.gz
+ps: predictive-user-manual.ps.gz
 
-txt: predictive-user-guide.txt.gz
+txt: predictive-user-manual.txt.gz
 
-html: predictive-user-guide-html
+html: predictive-user-manual-html
 
 
 # info file installation target
-install-info: predictive-user-guide.info.gz
-	install-info predictive-user-guide.info.gz $(INFODIR)/dir
+install-info: predictive-user-manual.info.gz
+	install-info predictive-user-manual.info.gz $(INFODIR)/dir
 
 
 
@@ -191,4 +191,4 @@ dict-%.elc: dict-%.word-list #dict-tree.elc
 	makeinfo --html $< -o $(dir $@)/html
 
 %-html.tar.gz: %-html
-	cd $(dir $@); pwd; tar -cvzf $(notdir $@) predictive-user-guide-html
+	cd $(dir $@); pwd; tar -cvzf $(notdir $@) predictive-user-manual-html
