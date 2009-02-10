@@ -2510,6 +2510,7 @@ enabled automatically when predictive completion mode is turned on in a
 @menu
 * Parsing LaTeX Documents::
 * LaTeX Navigation Commands::
+* Help with LaTeX Command Syntax::
 * LaTeX Packages::
 * Automatically Created Files for @LaTeX{}::
 @end menu
@@ -2650,6 +2651,20 @@ equation. This will jump to @samp{\begin@{...@}}, @samp{\[} or @samp{$}.
 Jump to the end delimiter of the innermost environment or equation. This
 will jump to @samp{\end@{...@}}, @samp{\]} or @samp{$}.
 @end ftable
+
+
+@node Help with LaTeX Command Syntax
+@subsubsection Help with @LaTeX{} Command Syntax
+@cindex @LaTeX{} command syntax help
+@cindex command syntax help, @LaTeX{}
+
+Predictive mode can automatically display a reminder of the syntax of
+the @LaTeX{} command you are currently typing in the echo area. This is
+enabled when @env{predictive-latex-display-help} is non-nil (the
+default), disabled otherwise@footnote{The only way to add new help text
+definitions is to dump the relevant @LaTeX{} dictionary to file
+(@pxref{Loading and Saving Dictionaries}), edit it manually, and
+recreate the dictionary (@pxref{Creating Dictionaries}).}.
 
 
 @node LaTeX Packages
