@@ -6,9 +6,10 @@
 ;;         Inge Wallin <inge@lysator.liu.se>
 ;;         Thomas Bellman <bellman@lysator.liu.se>
 ;;         modified by Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Version: 0.1
 ;; Maintainer: FSF
 ;; Created: 10 May 1991
-;; Keywords: extensions, data structures
+;; Keywords: extensions, data structures, AVL, tree
 
 ;; This file is part of GNU Emacs.
 
@@ -49,6 +50,18 @@
 ;;
 ;; The functions with names of the form "avl-tree--" are intended for
 ;; internal use only.
+
+
+;;; Change log:
+;;
+;; Version 0.1
+;; * drop-in replacement for the version included with Emacs
+;; * simplified rebalancing code
+;; * added new optional arguments to `avl-tree-member', `avl-tree-enter',
+;;   `avl-tree-delete' and `avl-tree-map'
+;; * added `avl-tree-member-p', `avl-tree-mapc', `avl-tree-mapcar',
+;;  `avl-tree-mapf', `avl-tree-stack', `avl-tree-stack-pop' and
+;;  `avl-tree-stack-first' functions
 
 
 ;;; Code:

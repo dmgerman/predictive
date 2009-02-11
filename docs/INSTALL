@@ -158,6 +158,14 @@ by replacing the final line as follows:
   (autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
             "Turn on Predictive Completion Mode." t)
 
+***********  The predictive package includes an enhanced version of the
+* CAREFUL *  avl-tree.el library, which is a drop-in replacement for the
+***********  version that comes with Emacs. If you don't want to overwrite
+or delete the original version, then you *must* make sure that the
+replacement version is saved to a path that appears *earlier* in your
+`load-path' than the directory containing the original version (which is
+usually located somewhere like "/usr/share/emacs/lisp/emacs-lisp/" on
+*nix systems), so that the new version masks the old one.
 
 If you want to install the info documentation into your local info
 system, you should run the following command AS ROOT:
