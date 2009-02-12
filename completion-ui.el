@@ -1951,10 +1951,11 @@ cauliflower will start growing out of your ears."
         (delete-region
 	 (- pos
 	    (if (or (null cmpl-replaces-prefix)
-		    (not (overlay-get overlay 'prefix-replaced)))
+		    (and (eq completion-resolve-behaviour 'accept)
+			 (not (overlay-get overlay 'prefix-replaced))
+			 (overlay-put overlay 'prefix-replaced t)))
 		(overlay-get overlay 'prefix-length) 0))
 	 (overlay-end overlay))
-	(when cmpl-replaces-prefix (overlay-put overlay 'prefix-replaced t))
         ;; insert new completion
 	(setq cmpl (car completions)
 	      len  (length prefix))
@@ -2414,11 +2415,13 @@ If ARG is supplied, it is passed through to COMMAND."
 	      cmpl (car cmpl)))
       (move-marker pos (overlay-start overlay))
       (set-marker-insertion-type pos nil)
-      (delete-region (- (overlay-start overlay)
-			(if (and cmpl-replaces-prefix
-				 (overlay-get overlay 'prefix-replaced))
-			    0 (overlay-get overlay 'prefix-length)))
-		     (overlay-end overlay))
+      (delete-region
+       (- (overlay-start overlay)
+	  (if (and cmpl-replaces-prefix
+		   (or (not (eq completion-resolve-behaviour 'accept))
+		       (overlay-get overlay 'prefix-replaced)))
+	      0 (overlay-get overlay 'prefix-length)))
+       (overlay-end overlay))
       ;; insert new completion
       (let ((overwrite-mode nil)) (insert cmpl))
       (move-overlay overlay
@@ -2427,7 +2430,8 @@ If ARG is supplied, it is passed through to COMMAND."
       (overlay-put overlay 'prefix-length len)
       (overlay-put overlay 'completion-num (1- num))
       ;; highlight alterations to prefix, if enabled
-      (when completion-dynamic-highlight-prefix-alterations
+      (when (and completion-dynamic-highlight-prefix-alterations
+		 (not cmpl-replaces-prefix))
 	(completion-highlight-prefix-alterations prefix cmpl pos len))
       ;; highlight common substring, if enabled
       (when completion-dynamic-highlight-common-substring
@@ -2962,8 +2966,9 @@ the prefix and the completion string\). Otherwise returns nil."
       ;; delete prefix + provisional completion if there is a completion to
       ;; accept, and prefix hasn't already been replaced with completion (in
       ;; that case, deleting the overlay, below, is sufficient)
-      (unless (and (overlay-get overlay 'completion-replaces-prefix)
-		   (overlay-get overlay 'prefix-replaced))
+      (if (and (overlay-get overlay 'completion-replaces-prefix)
+	       (overlay-get overlay 'prefix-replaced))
+	  (goto-char (overlay-end overlay))
         (delete-region (- (overlay-start overlay)
 			  (overlay-get overlay 'prefix-length))
                        (overlay-end overlay))
@@ -3011,12 +3016,13 @@ the prefix and the completion string\). Otherwise returns nil."
       (setq completion (nth (overlay-get overlay 'completion-num)
 			    (overlay-get overlay 'completions)))
       ;; reject current completion
-      (delete-region (- (overlay-start overlay)
-			(if (and (overlay-get overlay
-					      'completion-replaces-prefix)
-				 (overlay-get overlay 'prefix-replaced))
-			    0 (overlay-get overlay 'prefix-length)))
-		     (overlay-end overlay))
+      (delete-region
+       (- (overlay-start overlay)
+	  (if (and (overlay-get overlay 'completion-replaces-prefix)
+		   (eq completion-resolve-behaviour 'accept)
+		   (overlay-get overlay 'prefix-replaced))
+	      0 (overlay-get overlay 'prefix-length)))
+       (overlay-end overlay))
       ;; restore original prefix
       (insert (overlay-get overlay 'prefix))
       ;; run reject hooks
@@ -3111,13 +3117,13 @@ be auto-displayed."
       ;; deleted
       (move-marker pos (overlay-start overlay))
       (set-marker-insertion-type pos nil)
-      (delete-region (- (overlay-start overlay)
-			(if (and cmpl-replaces-prefix
-				 (overlay-get overlay 'prefix-replaced))
-			    0 (overlay-get overlay 'prefix-length)))
-		     (overlay-end overlay))
-      (when cmpl-replaces-prefix
-        (overlay-put overlay 'prefix-replaced t))
+      (delete-region
+       (- (overlay-start overlay)
+	  (if (and cmpl-replaces-prefix
+		   (or (not (eq completion-resolve-behaviour 'accept))
+		       (overlay-get overlay 'prefix-replaced)))
+	      0 (overlay-get overlay 'prefix-length)))
+       (overlay-end overlay))
       ;; insert new completion
       (let ((overwrite-mode nil)) (insert cmpl))
       (move-overlay overlay
@@ -3126,7 +3132,8 @@ be auto-displayed."
       (overlay-put overlay 'prefix-length len)
       (overlay-put overlay 'completion-num i)
       ;; highlight alterations to prefix, if enabled
-      (when completion-dynamic-highlight-prefix-alterations
+      (when (and completion-dynamic-highlight-prefix-alterations
+		 (not cmpl-replaces-prefix))
 	(completion-highlight-prefix-alterations prefix cmpl pos len))
       ;; highlight longest common substring, if enabled
       (when completion-dynamic-highlight-common-substring
@@ -3242,7 +3249,8 @@ complete what remains of that word."
     ;(combine-after-change-calls
 
       ;; restore original prefix
-      (when overlay
+      (when (and overlay
+		 (null 	(overlay-get overlay 'completion-replaces-prefix)))
 	(goto-char (- (overlay-start overlay)
 		      (overlay-get overlay 'prefix-length)))
 	(delete-region (point) (overlay-start overlay))
@@ -3277,8 +3285,16 @@ complete what remains of that word."
           ;; if point is at start of completion, delete completion but
           ;; keep overlay
           (if (= (point) (overlay-start overlay))
-              (delete-region (overlay-start overlay)
-                             (overlay-end overlay))
+	      (progn
+		(delete-region (overlay-start overlay) (overlay-end overlay))
+		;; restore prefix if `completion-replaces-prefix' and it has
+		;; indeed been replaced
+		(when (and (overlay-get overlay 'completion-replaces-prefix)
+			   (overlay-get overlay 'prefix-replaced))
+		  (let ((overwrite-mode nil))
+		    (insert (overlay-get overlay 'prefix)))
+		  (move-overlay overlay (point) (point))
+		  (overlay-put overlay 'prefix-replaced nil)))
             ;; otherwise, delete provisional completion characters after
             ;; point, then delete the overlay, effectively accepting
             ;; (rest of) completion, preserving pop-up frame
