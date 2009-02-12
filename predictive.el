@@ -1005,6 +1005,7 @@ When completing a word, the following keys are available:
    ((not predictive-mode)
     ;; set the completion function
     (setq completion-function 'predictive-complete)
+    (setq completion-replaces-prefix nil)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)
