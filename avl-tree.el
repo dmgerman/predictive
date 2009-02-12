@@ -15,8 +15,8 @@
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by the
-;; Free Software Foundation, either version 3 of the License, or (at your
-;; option) any later version.
+;; Free Software Foundation, either version 3 of the License, or (at
+;; your option) any later version.
 
 ;; GNU Emacs is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,17 +36,17 @@
 ;; making insertion slighty slower, deletion somewhat slower, and
 ;; retrieval somewhat faster (the asymptotic scaling is of course the
 ;; same for all types). Thus it may be a good choice when the tree will
-;; be relatively static, i.e. data will be retrieved more often than they
-;; are modified.
+;; be relatively static, i.e. data will be retrieved more often than
+;; they are modified.
 ;;
 ;; Internally, a tree consists of two elements, the root node and the
-;; comparison function. The actual tree has a dummy node as its root with
-;; the real root in the left pointer, which allows the root node to be
-;; treated on a par with all other nodes.
+;; comparison function. The actual tree has a dummy node as its root
+;; with the real root in the left pointer, which allows the root node to
+;; be treated on a par with all other nodes.
 ;;
-;; Each node of the tree consists of one data element, one left sub-tree,
-;; one right sub-tree, and a balance count. The latter is the difference
-;; in depth of the left and right sub-trees.
+;; Each node of the tree consists of one data element, one left
+;; sub-tree, one right sub-tree, and a balance count. The latter is the
+;; difference in depth of the left and right sub-trees.
 ;;
 ;; The functions with names of the form "avl-tree--" are intended for
 ;; internal use only.
@@ -57,8 +57,8 @@
 ;; Version 0.1
 ;; * drop-in replacement for the version included with Emacs
 ;; * simplified rebalancing code
-;; * added new optional arguments to `avl-tree-member', `avl-tree-enter',
-;;   `avl-tree-delete' and `avl-tree-map'
+;; * added new optional arguments to `avl-tree-member',
+;;   `avl-tree-enter', `avl-tree-delete' and `avl-tree-map'
 ;; * added `avl-tree-member-p', `avl-tree-mapc', `avl-tree-mapcar',
 ;;  `avl-tree-mapf', `avl-tree-stack', `avl-tree-stack-pop' and
 ;;  `avl-tree-stack-first' functions
@@ -105,7 +105,8 @@
 (defstruct (avl-tree--node
             ;; We force a representation without tag so it matches the
             ;; pre-defstruct representation.  Also we use the underlying
-            ;; representation in the implementation of avl-tree--node-branch.
+            ;; representation in the implementation of
+            ;; avl-tree--node-branch.
             (:type vector)
             (:constructor nil)
             (:constructor avl-tree--node-create (left right data balance))
@@ -114,17 +115,17 @@
 
 
 (defalias 'avl-tree--node-branch 'aref
-  ;; This implementation is efficient but breaks the defstruct abstraction.
-  ;; An alternative could be
-  ;; (funcall (aref [avl-tree-left avl-tree-right avl-tree-data] branch) node)
+  ;; This implementation is efficient but breaks the defstruct
+  ;; abstraction.  An alternative could be (funcall (aref [avl-tree-left
+  ;; avl-tree-right avl-tree-data] branch) node)
   "Get value of a branch of a node.
 NODE is the node, and BRANCH is the branch.
 0 for left pointer, 1 for right pointer and 2 for the data.")
 
 
-;; The funcall/aref trick wouldn't work for the setf method, unless we tried
-;; to access the underlying setter function, but this wouldn't be portable
-;; either.
+;; The funcall/aref trick wouldn't work for the setf method, unless we
+;; tried to access the underlying setter function, but this wouldn't be
+;; portable either.
 (defsetf avl-tree--node-branch aset)
 
 
@@ -149,13 +150,15 @@ NODE is the node, and BRANCH is the branch.
 ;;                          Deleting data
 
 (defun avl-tree--del-balance (node branch dir)
-  ;; Rebalance a tree at the left (BRANCH=0) or right (BRANCH=1) child of NODE
-  ;; after deleting from the left (DIR=0) or right (DIR=1) sub-tree of that
-  ;; child [or is it vice-versa?]. Return t if the height of the tree has
-  ;; shrunk.
+  ;; Rebalance a tree at the left (BRANCH=0) or right (BRANCH=1) child
+  ;; of NODE after deleting from the left (DIR=0) or right (DIR=1)
+  ;; sub-tree of that child [or is it vice-versa?]. Return t if the
+  ;; height of the tree has shrunk.
   (let ((br (avl-tree--node-branch node branch))
-	(opp (avl-tree--switch-dir dir))  ; opposite direction: 0,1 -> 1,0
-	(sgn (avl-tree--dir-to-sign dir)) ; direction 0,1 -> sign factor -1,+1
+	;; opposite direction: 0,1 -> 1,0
+	(opp (avl-tree--switch-dir dir))
+	;; direction 0,1 -> sign factor -1,+1
+	(sgn (avl-tree--dir-to-sign dir))
         p1 b1 p2 b2)
     (cond
      ((> (* sgn (avl-tree--node-balance br)) 0)
@@ -174,29 +177,33 @@ NODE is the node, and BRANCH is the branch.
           ;; Single rotation.
           (progn
             (setf (avl-tree--node-branch br opp)
-		  (avl-tree--node-branch p1 dir))
-            (setf (avl-tree--node-branch p1 dir) br)
-            (setf (avl-tree--node-branch node branch) p1)
+		    (avl-tree--node-branch p1 dir)
+		  (avl-tree--node-branch p1 dir) br
+		  (avl-tree--node-branch node branch) p1)
             (if (= 0 b1)
                 (progn
-                  (setf (avl-tree--node-balance br) (- sgn))
-                  (setf (avl-tree--node-balance p1) sgn)
+                  (setf (avl-tree--node-balance br) (- sgn)
+			(avl-tree--node-balance p1) sgn)
                   nil)  ; height hasn't changed
               (setf (avl-tree--node-balance br) 0)
               (setf (avl-tree--node-balance p1) 0)
               t))  ; height has changed
 
         ;; Double rotation.
-        (setq p2 (avl-tree--node-branch p1 dir)
-              b2 (avl-tree--node-balance p2))
-        (setf (avl-tree--node-branch p1 dir) (avl-tree--node-branch p2 opp))
-        (setf (avl-tree--node-branch p2 opp) p1)
-        (setf (avl-tree--node-branch br opp) (avl-tree--node-branch p2 dir))
-        (setf (avl-tree--node-branch p2 dir) br)
-        (setf (avl-tree--node-balance br) (if (< (* sgn b2) 0) sgn 0))
-        (setf (avl-tree--node-balance p1) (if (> (* sgn b2) 0) (- sgn) 0))
-        (setf (avl-tree--node-branch node branch) p2)
-        (setf (avl-tree--node-balance p2) 0)
+        (setf p2 (avl-tree--node-branch p1 dir)
+              b2 (avl-tree--node-balance p2)
+	      (avl-tree--node-branch p1 dir)
+	        (avl-tree--node-branch p2 opp)
+	      (avl-tree--node-branch p2 opp) p1
+	      (avl-tree--node-branch br opp)
+	        (avl-tree--node-branch p2 dir)
+	      (avl-tree--node-branch p2 dir) br
+	      (avl-tree--node-balance br)
+	        (if (< (* sgn b2) 0) sgn 0)
+	      (avl-tree--node-balance p1)
+	        (if (> (* sgn b2) 0) (- sgn) 0)
+	      (avl-tree--node-branch node branch) p2
+	      (avl-tree--node-balance p2) 0)
         t)))))
 
 (defun avl-tree--do-del-internal (node branch q)
@@ -204,14 +211,15 @@ NODE is the node, and BRANCH is the branch.
     (if (avl-tree--node-right br)
         (if (avl-tree--do-del-internal br 1 q)
             (avl-tree--del-balance node branch 1))
-      (setf (avl-tree--node-data q) (avl-tree--node-data br))
-      (setf (avl-tree--node-branch node branch)
-            (avl-tree--node-left br))
+      (setf (avl-tree--node-data q) (avl-tree--node-data br)
+	    (avl-tree--node-branch node branch)
+              (avl-tree--node-left br))
       t)))
 
 (defun avl-tree--do-delete (cmpfun root branch data test nilflag)
-  ;; Return (<shrunk> . <data>), where <shrunk> is t if the height of the tree
-  ;; has shrunk and nil otherwise, and <data> is the releted data.
+  ;; Return (<shrunk> . <data>), where <shrunk> is t if the height of
+  ;; the tree has shrunk and nil otherwise, and <data> is the releted
+  ;; data.
   (let ((br (avl-tree--node-branch root branch)))
     (cond
      ;; DATA not in tree.
@@ -234,11 +242,13 @@ NODE is the node, and BRANCH is the branch.
 	  (cons nil nilflag)
 	(cond
 	 ((null (avl-tree--node-right br))
-	  (setf (avl-tree--node-branch root branch) (avl-tree--node-left br))
+	  (setf (avl-tree--node-branch root branch)
+		(avl-tree--node-left br))
 	  (cons t (avl-tree--node-data br)))
 
 	 ((null (avl-tree--node-left br))
-	  (setf (avl-tree--node-branch root branch) (avl-tree--node-right br))
+	  (setf (avl-tree--node-branch root branch)
+		(avl-tree--node-right br))
 	  (cons t (avl-tree--node-data br)))
 
 	 (t
@@ -254,12 +264,15 @@ NODE is the node, and BRANCH is the branch.
 ;;                           Entering data
 
 (defun avl-tree--enter-balance (node branch dir)
-  ;; Rebalance tree at the left (BRANCH=0) or right (BRANCH=1) child of NODE
-  ;; after an insertion into the left (DIR=0) or right (DIR=1) sub-tree of
-  ;; that child. Return t if the height of the tree has grown.
+  ;; Rebalance tree at the left (BRANCH=0) or right (BRANCH=1) child of
+  ;; NODE after an insertion into the left (DIR=0) or right (DIR=1)
+  ;; sub-tree of that child. Return t if the height of the tree has
+  ;; grown.
   (let ((br (avl-tree--node-branch node branch))
-	(opp (avl-tree--switch-dir dir))  ; opposite direction: 0,1 -> 1,0
-	(sgn (avl-tree--dir-to-sign dir)) ; direction 0,1 -> sign factor -1,+1
+	;; opposite direction: 0,1 -> 1,0
+	(opp (avl-tree--switch-dir dir))
+	;; direction 0,1 -> sign factor -1,+1
+	(sgn (avl-tree--dir-to-sign dir))
         p1 p2 b2 result)
     (cond
      ((< (* sgn (avl-tree--node-balance br)) 0)
@@ -283,21 +296,27 @@ NODE is the node, and BRANCH is the branch.
             (setf (avl-tree--node-branch node branch) p1))
 
         ;; Double rotation.
-        (setq p2 (avl-tree--node-branch p1 opp)
-	      b2 (avl-tree--node-balance p2))
-        (setf (avl-tree--node-branch p1 opp) (avl-tree--node-branch p2 dir))
-        (setf (avl-tree--node-branch p2 dir) p1)
-        (setf (avl-tree--node-branch br dir) (avl-tree--node-branch p2 opp))
-        (setf (avl-tree--node-branch p2 opp) br)
-        (setf (avl-tree--node-balance br) (if (> (* sgn b2) 0) (- sgn) 0))
-        (setf (avl-tree--node-balance p1) (if (< (* sgn b2) 0) sgn 0))
-        (setf (avl-tree--node-branch node branch) p2))
-      (setf (avl-tree--node-balance (avl-tree--node-branch node branch)) 0)
+        (setf p2 (avl-tree--node-branch p1 opp)
+	      b2 (avl-tree--node-balance p2)
+	      (avl-tree--node-branch p1 opp)
+	        (avl-tree--node-branch p2 dir)
+	      (avl-tree--node-branch p2 dir) p1
+	      (avl-tree--node-branch br dir)
+	        (avl-tree--node-branch p2 opp)
+	      (avl-tree--node-branch p2 opp) br
+	      (avl-tree--node-balance br)
+	        (if (> (* sgn b2) 0) (- sgn) 0)
+	      (avl-tree--node-balance p1)
+	        (if (< (* sgn b2) 0) sgn 0)
+	      (avl-tree--node-branch node branch) p2
+	      (avl-tree--node-balance
+	       (avl-tree--node-branch node branch)) 0))
       nil))))
 
 (defun avl-tree--do-enter (cmpfun root branch data &optional updatefun)
-  ;; Return cons cell (<grew> . <data>), where <grew> is t if height of tree
-  ;; ROOT has grown and nil otherwise, and <data> is the inserted data.
+  ;; Return cons cell (<grew> . <data>), where <grew> is t if height of
+  ;; tree ROOT has grown and nil otherwise, and <data> is the inserted
+  ;; data.
   (let ((br (avl-tree--node-branch root branch)))
     (cond
      ((null br)
@@ -322,8 +341,10 @@ NODE is the node, and BRANCH is the branch.
 	     (if updatefun
 		 (funcall updatefun data (avl-tree--node-data br))
 	       data)))
-	(if (or (funcall cmpfun newdata data) (funcall cmpfun data newdata))
-	    (error "avl-tree-enter: updated data does not match existing data"))
+	(if (or (funcall cmpfun newdata data)
+		(funcall cmpfun data newdata))
+	    (error "avl-tree-enter:\
+ updated data does not match existing data"))
 	(setf (avl-tree--node-data br) newdata)
 	(cons nil newdata))  ; return value
       ))))
@@ -336,8 +357,8 @@ NODE is the node, and BRANCH is the branch.
   ;; The function is applied in-order, either ascending (DIR=0) or
   ;; descending (DIR=1).
   ;;
-  ;; Note: MAP-FUNCTION is applied to the node and not to the data itself.
-  ;; INTERNAL USE ONLY.
+  ;; Note: MAP-FUNCTION is applied to the node and not to the data
+  ;;       itself.  INTERNAL USE ONLY.
   (let ((node root)
         (stack nil)
         (go-dir t))
@@ -373,10 +394,11 @@ NODE is the node, and BRANCH is the branch.
 	    (:constructor nil)
 	    (:constructor avl-tree--stack-create
 			  (tree &optional reverse
-				&aux (store
-				      (if (avl-tree-empty tree)
-					  nil
-					(list (avl-tree--root tree))))))
+				&aux
+				(store
+				 (if (avl-tree-empty tree)
+				     nil
+				   (list (avl-tree--root tree))))))
 	    (:copier nil))
   reverse store)
 
@@ -384,8 +406,8 @@ NODE is the node, and BRANCH is the branch.
   "Return t if argument is an avl-tree-stack, nil otherwise.")
 
 (defun avl-tree--stack-repopulate (stack)
-  ;; Recursively push children of the node at the head of STACK onto the front
-  ;; of the STACK, until a leaf is reached.
+  ;; Recursively push children of the node at the head of STACK onto the
+  ;; front of the STACK, until a leaf is reached.
   (let ((node (car (avl-tree--stack-store stack)))
 	(dir (if (avl-tree--stack-reverse stack) 1 0)))
     (when node  ; check for emtpy stack
@@ -464,9 +486,11 @@ be distinguished from a null element. (See also
     (catch 'found
       (while node
 	(cond
-	 ((funcall (avl-tree--cmpfun tree) data (avl-tree--node-data node))
+	 ((funcall (avl-tree--cmpfun tree)
+		   data (avl-tree--node-data node))
 	  (setq node (avl-tree--node-left node)))
-	 ((funcall (avl-tree--cmpfun tree) (avl-tree--node-data node) data)
+	 ((funcall (avl-tree--cmpfun tree)
+		   (avl-tree--node-data node) data)
 	  (setq node (avl-tree--node-right node)))
 	 (t (throw 'found (avl-tree--node-data node)))))
       nilflag)))
@@ -497,7 +521,8 @@ descending order if REVERSE is non-nil."
 
 
 (defun avl-tree-mapc (avl-tree-function tree &optional reverse)
-  "Apply FUNCTION to all elements in avl tree TREE, for side-effect only.
+  "Apply FUNCTION to all elements in avl tree TREE,
+for side-effect only.
 
 FUNCTION is applied to the elements in ascending order, or
 descending order if REVERSE is non-nil."
@@ -508,7 +533,8 @@ descending order if REVERSE is non-nil."
    (if reverse 1 0)))
 
 
-(defun avl-tree-mapf (avl-tree-function combinator tree &optional reverse)
+(defun avl-tree-mapf
+  (avl-tree-function combinator tree &optional reverse)
   "Apply FUNCTION to all elements in avl tree TREE,
 and combine the results using COMBINATOR.
 
@@ -519,7 +545,8 @@ order, or descending order if REVERSE is non-nil."
      (lambda (node)
        (setq avl-tree-mapf--accumulate
 	     (funcall combinator
-		      (funcall avl-tree-function (avl-tree--node-data node))
+		      (funcall avl-tree-function
+			       (avl-tree--node-data node))
 		      avl-tree-mapf--accumulate)))
      (avl-tree--root tree)
      (if reverse 0 1))
@@ -562,7 +589,8 @@ is more efficient."
 (defun avl-tree-copy (tree)
   "Return a copy of the avl tree TREE."
   (let ((new-tree (avl-tree-create (avl-tree--cmpfun tree))))
-    (setf (avl-tree--root new-tree) (avl-tree--do-copy (avl-tree--root tree)))
+    (setf (avl-tree--root new-tree)
+	  (avl-tree--do-copy (avl-tree--root tree)))
     new-tree))
 
 (defun avl-tree-flatten (tree)
@@ -588,7 +616,8 @@ is more efficient."
 
 
 (defun avl-tree-stack (tree &optional reverse)
-  "Return an object that behaves like a sorted stack of all elements of TREE.
+  "Return an object that behaves like a sorted stack
+of all elements of TREE.
 
 If REVERSE is non-nil, the stack is sorted in reverse order.
 \(See also `avl-tree-stack-pop'\).
@@ -646,4 +675,10 @@ element stored in the AVL tree.)"
 
 (provide 'avl-tree)
 
+
+;;; Local Variables:
+;;; fill-column: 72
+;;; End:
+
 ;;; avl-tree.el ends here
+

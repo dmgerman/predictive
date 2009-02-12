@@ -128,4 +128,9 @@ order. The elements themselves are *not* copied."
 
 (provide 'queue)
 
+
+;;; Local Variables:
+;;; fill-column: 72
+;;; End:
+
 ;;; queue.el ends here
