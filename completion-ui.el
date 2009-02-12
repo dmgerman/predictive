@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.10.1
+;; Version: 0.10.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -630,7 +630,8 @@ element."
     (?6 . (reject none))
     (?7 . (reject none))
     (?8 . (reject none))
-    (?9 . (reject none)))
+    (?9 . (reject none))
+    (?' . (add word)))
   "*Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
 in `auto-completion-syntax-alist'. The format is the same as for
