@@ -110,6 +110,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.10.2
+;; * bug-fixes to `completion-replaces-prefix' support (thanks once again to
+;;   Henry Weller for reporting them)
+;;
 ;; Version 0.10.1
 ;; * bug-fixes to `complete-dynamic' relating to prefixes whose size has
 ;;   changed
@@ -868,7 +872,7 @@ point in the current buffer.")
 for a `completion-function' that does something other than
 straight prefix-completion.
 
- Enable this if `completion-function' returns matches that should
+Enable this if `completion-function' returns matches that should
 completely replace the original \"prefix\" in the buffer, e.g. if
 the \"prefix\" is used as a search pattern which should be
 replaced by whatever matches.")
@@ -1946,8 +1950,7 @@ cauliflower will start growing out of your ears."
         (delete-region
 	 (- pos
 	    (if (or (null cmpl-replaces-prefix)
-		    (and (not auto-completion-mode)
-			 (not (overlay-get overlay 'prefix-replaced))))
+		    (not (overlay-get overlay 'prefix-replaced)))
 		(overlay-get overlay 'prefix-length) 0))
 	 (overlay-end overlay))
 	(when cmpl-replaces-prefix (overlay-put overlay 'prefix-replaced t))
@@ -1958,11 +1961,14 @@ cauliflower will start growing out of your ears."
 	  (setq len  (cdr cmpl)
 		cmpl (car cmpl)))
         (let ((overwrite-mode nil)) (insert cmpl))
-        (move-overlay overlay (+ pos len) (+ pos (length cmpl)))
+        (move-overlay overlay
+		      (+ pos (if cmpl-replaces-prefix 0 len))
+		      (+ pos (length cmpl)))
         (overlay-put overlay 'prefix-length len)
         (overlay-put overlay 'completion-num 0)
 	;; highlight alterations to prefix, if enabled
-	(when completion-dynamic-highlight-prefix-alterations
+	(when (and completion-dynamic-highlight-prefix-alterations
+		   (not cmpl-replaces-prefix))
 	  (completion-highlight-prefix-alterations prefix cmpl pos len))
         ;; highlight common substring, if enabled
         (when completion-dynamic-highlight-common-substring
@@ -2409,12 +2415,14 @@ If ARG is supplied, it is passed through to COMMAND."
       (set-marker-insertion-type pos nil)
       (delete-region (- (overlay-start overlay)
 			(if (and cmpl-replaces-prefix
-				 (overlay-get overlay 'prefix-deleted))
+				 (overlay-get overlay 'prefix-replaced))
 			    0 (overlay-get overlay 'prefix-length)))
 		     (overlay-end overlay))
       ;; insert new completion
       (let ((overwrite-mode nil)) (insert cmpl))
-      (move-overlay overlay (+ pos len) (+ pos (length cmpl)))
+      (move-overlay overlay
+		    (+ pos (if cmpl-replaces-prefix 0 len))
+		    (+ pos (length cmpl)))
       (overlay-put overlay 'prefix-length len)
       (overlay-put overlay 'completion-num (1- num))
       ;; highlight alterations to prefix, if enabled
@@ -2646,10 +2654,13 @@ The Emacs `self-insert-command' is remapped to this when
 	;; progress
 	(if (/= (point) (overlay-start overlay))
 	    (completion-delete-overlay overlay)
-	  ;; otherwise, delete old completion and add character to
-	  ;; prefix
-	  (delete-region (overlay-start overlay)
-			 (overlay-end overlay))
+	  ;; otherwise, delete old completion, restore prefix if
+	  ;; `completion-replaces-prefix', and add character to prefix
+	  (delete-region (overlay-start overlay) (overlay-end overlay))
+	  (when (overlay-get overlay 'completion-replaces-prefix)
+	    (let ((overwrite-mode nil))
+	      (insert (overlay-get overlay 'prefix)))
+	    (overlay-put overlay 'prefix-replaced nil))
 	  (setq prefix (concat (overlay-get overlay 'prefix)
 			       (string char)))
 	  ;; prevent any adjacent word from being deleted
@@ -2998,9 +3009,7 @@ the prefix and the completion string\). Otherwise returns nil."
       (setq prefix (overlay-get overlay 'prefix))
       (setq completion (nth (overlay-get overlay 'completion-num)
 			    (overlay-get overlay 'completions)))
-      (setq cmpl-function (overlay-get overlay 'completion-replaces-prefix))
       ;; reject current completion
-      (delete-region (overlay-start overlay) (overlay-end overlay))
       (delete-region (- (overlay-start overlay)
 			(if (and (overlay-get overlay
 					      'completion-replaces-prefix)
@@ -3110,7 +3119,9 @@ be auto-displayed."
         (overlay-put overlay 'prefix-replaced t))
       ;; insert new completion
       (let ((overwrite-mode nil)) (insert cmpl))
-      (move-overlay overlay (+ pos len) (+ pos (length cmpl)))
+      (move-overlay overlay
+		    (+ pos (if cmpl-replaces-prefix 0 len))
+		    (+ pos (length cmpl)))
       (overlay-put overlay 'prefix-length len)
       (overlay-put overlay 'completion-num i)
       ;; highlight alterations to prefix, if enabled
@@ -3725,7 +3736,9 @@ the end of the common prefix for `accept-common' or
 the end if it is to be accepted."
   (cond
    ;; reject or auto-completion-mode
-   ((or auto-completion-mode (eq completion-resolve-behaviour 'reject))
+   ((or auto-completion-mode
+	(overlay-get overlay 'completion-replaces-prefix)
+	(eq completion-resolve-behaviour 'reject))
     (goto-char (overlay-start overlay)))
 
    ;; accept-common
@@ -3776,19 +3789,26 @@ CMPL is the current dynamic completion, POS is the position of
 the end of PREFIX in the buffer, LEN is the length of the prefix
 inserted in the buffer, and OVERLAY is the dynamic completion
 overlay."
-  (let ((substr (try-completion
-		 "" (mapcar
-		     (lambda (cmpl)
-		       (if (stringp cmpl)
-			   (substring cmpl (length prefix))
-			 (substring (car cmpl) (cdr cmpl))))
-		     (overlay-get overlay 'completions)))))
-    ;; (try-completion returns t if there's only one completion)
+  (let* ((cmpl-replaces-prefix
+	  (overlay-get overlay 'completion-replaces-prefix))
+	 (substr (try-completion
+		  "" (mapcar
+		      (lambda (cmpl)
+			(if (stringp cmpl)
+			    (if cmpl-replaces-prefix
+				cmpl
+			      (substring cmpl (length prefix)))
+			  (if cmpl-replaces-prefix
+			      (car cmpl)
+			    (substring (car cmpl) (cdr cmpl)))))
+		      (overlay-get overlay 'completions)))))
+    ;; note: try-completion returns t if there's only one completion
     (move-overlay (overlay-get overlay 'common-substring)
-		  (+ pos len)
+		  (+ pos (if cmpl-replaces-prefix 0 len))
 		  (if (eq substr t)
-		      (+ pos len)
-		    (+ pos len (length substr))))))
+		      (+ pos (if cmpl-replaces-prefix 0 len))
+		    (+ pos (if cmpl-replaces-prefix 0 len)
+		       (length substr))))))
 
 
 
@@ -3908,7 +3928,7 @@ OVERLAY will be left alone."
                   ;; accept
 		  (progn
 		    (when (and (overlay-get o 'completion-replaces-prefix)
-			       (not (overlay-get o 'prefix-deleted)))
+			       (not (overlay-get o 'prefix-replaced)))
 		      (delete-region (- (overlay-start o)
 					(overlay-get o 'prefix-length))
 				     (overlay-start o)))
