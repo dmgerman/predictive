@@ -918,11 +918,11 @@ to get a completion menu keymap (the latter is more usual).
 
 If a function, that function is called with five arguments:
 PREFIX, COMPLETIONS, CMPL-FUNCTION, CMPL-PREFIX-FUNCTION and
-CMPL-REPLACES-PREFIX It should return a menu keymap. The first
+CMPL-REPLACES-PREFIX. It should return a menu keymap. The first
 two arguments are self-explanatory. CMPL-FUNCTION,
 CMPL-PREFIX-FUNCTION and CMPL-REPLACES-PREFIX and the values of
 `completion-function', `completion-prefix-function', and
-`completion-replaces-prefix' for the currenct completion.
+`completion-replaces-prefix' for the current completion.
 
 Note: the value of `completion-menu' can be overridden by an
 \"overlay local\" binding (see `auto-overlay-local-binding').")
@@ -1443,8 +1443,27 @@ used if the current Emacs version lacks command remapping support."
       ;; otherwise, rebind all printable characters to
       ;; `completion-self-insert' manually
       (completion-bind-printable-chars completion-map
-                                       'completion-self-insert))
-    );)
+                                       'completion-self-insert));)
+
+  ;; <up> and <down> cycle the tooltip
+  ;; Note: it shouldn't be necessary to bind them here, but the bindings in
+  ;;       completion-tooltip-map don't work when the tooltip is
+  ;;       auto-displayed, for mysterious reasons (note that we can't use
+  ;;       `completion-run-if-condition' in `completion-dynamic-map', hence
+  ;;       binding them here)
+  (define-key completion-map [down]
+    (lambda () (interactive)
+      (completion-run-if-condition
+       completion-tooltip-active
+       'completion-function
+       'completion-tooltip-cycle)))
+  (define-key completion-map [down]
+    (lambda () (interactive)
+      (completion-run-if-condition
+       completion-tooltip-active
+       'completion-function
+       'completion-tooltip-cycle-backwards)))
+  )
 
 
 ;; make sure completion-map is associated with `completion-function' in
@@ -1885,8 +1904,7 @@ is non-nil, only complete if point is at POS."
 	  (setq cmpl-function
 		(or (and (fboundp 'auto-overlay-local-binding)
 			 (let ((completion-function cmpl-function))
-			   (auto-overlay-local-binding
-			    'completion-function)))
+			   (auto-overlay-local-binding 'completion-function)))
 		    completion-function))
           (setq completions (funcall completion-function
 				     prefix completion-max-candidates))
@@ -2129,10 +2147,13 @@ point is at POINT."
       ;; if enabling hotkeys only when a tooltip or pop-up frame is active,
       ;; construct hotkey bindings from `completion-hotkey-list'
       (when (eq completion-use-hotkeys 'pop-up)
-	(completion-enable-hotkeys overlay))
+	(completion-enable-hotkeys overlay)
+	(completion-enable-tooltip-keys overlay))
 
-      ;; set flag to indicate tooltip is active for this overlay (this enables
-      ;; tooltip-related key bindings)
+      ;; set flag to indicate tooltip is active for this overlay (this should
+      ;; tooltip-related key bindings, but doesn't when tooltip is
+      ;; auto-displayed, so we also add them to overlay's keymap)
+      (completion-enable-tooltip-keys overlay)
       (setq completion-tooltip-active overlay)
       )))
 
@@ -2883,6 +2904,8 @@ internally. It should *never* be bound in a keymap."
 	      (completion-enable-hotkeys overlay))))
 
 	 ;; if there are too few completions, display message
+	 ;; FIXME: could just not enable these keys, but maybe that would be
+	 ;;        confusing to the user?
 	 ((>= n (length completions))
 	  (beep)
 	  (if (= (length completions) 1)
@@ -4068,6 +4091,21 @@ inserting anything)."
     (define-key (overlay-get overlay 'keymap) (vector key) nil)))
 
 
+(defun completion-enable-tooltip-keys (overlay)
+  "Enable tooltip key bindings for OVERLAY."
+  (map-keymap
+   (lambda (key binding)
+     (define-key (overlay-get overlay 'keymap) (vector key) binding))
+   completion-tooltip-map))
+
+
+(defun completion-disable-tooltip-keys (overlay)
+  "Disable tooltip key bindings for OVERLAY."
+  (map-keymap
+   (lambda (key binding)
+     (define-key (overlay-get overlay 'keymap) (vector key) nil))
+   completion-tooltip-map))
+
 
 (defun completion-cancel-tooltip ()
   "Hide the completion tooltip and cancel timers."
@@ -4081,6 +4119,8 @@ inserting anything)."
   ;; cancel tooltip
   (when (and completion-function window-system (fboundp 'x-show-tip))
     (tooltip-hide)
+    (when (overlayp completion-tooltip-active)
+      (completion-disable-tooltip-keys completion-tooltip-active))
     (setq completion-tooltip-active nil)))
 
 
