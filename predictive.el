@@ -1029,7 +1029,7 @@ When completing a word, the following keys are available:
 	      nil 'local)
     (add-hook 'completion-accept-functions 'predictive-auto-learn nil 'local)
     (add-hook 'completion-reject-functions
-	      (lambda (prefix word arg)
+	      (lambda (prefix word &optional arg)
 		(when arg (predictive-auto-learn prefix prefix)))
 	      nil 'local)
 
@@ -1104,7 +1104,7 @@ When completing a word, the following keys are available:
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
     (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
     (remove-hook 'completion-reject-functions
-		 (lambda (prefix word arg)
+		 (lambda (prefix word &optional arg)
 		   (when arg (predictive-auto-learn prefix word)))
 		 'local)
 
