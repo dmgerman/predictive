@@ -113,6 +113,8 @@
 ;; Version 0.10.2
 ;; * bug-fixes to `completion-replaces-prefix' support (thanks once again to
 ;;   Henry Weller for reporting them)
+;; * added work-around to enable tooltip keybindings when tooltip is
+;;   auto-displayed
 ;;
 ;; Version 0.10.1
 ;; * bug-fixes to `complete-dynamic' relating to prefixes whose size has
@@ -1454,15 +1456,15 @@ used if the current Emacs version lacks command remapping support."
   (define-key completion-map [down]
     (lambda () (interactive)
       (completion-run-if-condition
-       completion-tooltip-active
+       'completion-tooltip-cycle
        'completion-function
-       'completion-tooltip-cycle)))
+       completion-tooltip-active)))
   (define-key completion-map [down]
     (lambda () (interactive)
       (completion-run-if-condition
-       completion-tooltip-active
+       'completion-tooltip-cycle-backwards
        'completion-function
-       'completion-tooltip-cycle-backwards)))
+       completion-tooltip-active)))
   )
 
 
