@@ -2291,13 +2291,12 @@ for uncapitalized version."
       ;; convert regexp group data into prefix length
       (if (eq (car pfx) 'regexp)
 	  (setq completions
-		(dictree-regexp-search
-		 dict (cdr pfx) (if maxnum t nil)
-		 maxnum nil nil filter
-		 (unless predictive-auto-correction-no-completion
-		   (lambda (key data)
-		     (cons (car key)
-			   (- (cdr (cadr key)) (car (cadr key))))))))
+	  	(dictree-regexp-search
+	  	 dict (cdr pfx) (if maxnum t nil) maxnum nil nil filter
+	  	 (unless predictive-auto-correction-no-completion
+	  	   (lambda (key data)
+	  	     (cons (car key)
+	  		   (- (cdr (cadr key)) (car (cadr key))))))))
 
 	;; otherwise, complete the prefix
 	(setq completions
