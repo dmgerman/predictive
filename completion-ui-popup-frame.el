@@ -310,8 +310,6 @@ If no OVERLAY is supplied, tries to find one at point."
   ;; overlay
   (unless overlay (setq overlay completion-popup-frame-parent-overlay))
 
-  ;; disable pop-up frame keys
-  (completion-deactivate-popup-frame-keys overlay)
   ;; if showing all completions, revert to storing just the first maxnum
   (when completion-popup-frame-show-all
     (let* ((prefix (overlay-get overlay 'prefix))
@@ -364,17 +362,15 @@ If ARG is supplied, it is passed through to COMMAND."
     (move-overlay completion-popup-frame-overlay pos (point)))
 
   ;; insert selected completion in parent buffer
-  (let ((num (line-number-at-pos))
-	(frame (selected-frame)))
+  (let ((num (1-(line-number-at-pos)))
+	(frame (selected-frame))
+	(overlay completion-popup-frame-parent-overlay))
     ;; update completion overlay properties and user-interfaces
     (select-frame completion-popup-frame-parent-frame)
-    (save-excursion
-      (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
-      (completion-ui-deactivate-interfaces-pre-update
-       completion-popup-frame-parent-overlay)
-      (overlay-put completion-popup-frame-parent-overlay 'completion-num num)
-      (completion-ui-activate-interfaces
-       completion-popup-frame-parent-overlay))
+    (set-buffer (overlay-buffer overlay))
+    (completion-ui-deactivate-interfaces-pre-update overlay)
+    (overlay-put overlay 'completion-num num)
+    (completion-ui-activate-interfaces overlay)
     (select-frame-set-input-focus frame)))
 
 

@@ -169,17 +169,18 @@ cauliflower will start growing out of your ears."
   "Deactivate dynamic completions for comletion OVERLAY."
   ;; delete dynamic completion and prefix, unless prefix has been replaced
   (when (overlay-buffer overlay)
-    (goto-char (overlay-end overlay))
-    (delete-region
-     (- (overlay-start overlay)
-	(if (and (overlay-get overlay 'non-prefix-completion)
-		 (overlay-get overlay 'prefix-replaces))
-	    0 (overlay-get overlay 'prefix-length)))
-     (overlay-end overlay))
-    ;; restore original prefix
-    (let ((overwrite-mode nil)) (insert (overlay-get overlay 'prefix)))
-    ;; reset overlay
-    (move-overlay overlay (point) (point))))
+    (goto-char (overlay-start overlay))
+    (let ((pos (point)))
+      (delete-region
+       (- (overlay-start overlay)
+	  (if (and (overlay-get overlay 'non-prefix-completion)
+		   (overlay-get overlay 'prefix-replaces))
+	      0 (overlay-get overlay 'prefix-length)))
+       (overlay-end overlay))
+      ;; restore original prefix
+      (let ((overwrite-mode nil)) (insert (overlay-get overlay 'prefix)))
+      ;; reset overlay
+      (move-overlay overlay (point) (point)))))
 
 
 

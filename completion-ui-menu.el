@@ -191,14 +191,24 @@ of 'completion-menu, or `completion-menu' if there is none."
       ;; if we've constructed a menu, display it
       (when keymap
         (setq result
-              (x-popup-menu (save-excursion
-                              (goto-char (overlay-start overlay))
-                              (completion-posn-at-point-as-event
-                               nil nil
-                               (car completion-menu-offset)
-                               (+ (frame-char-height) 3
-                                  (cdr completion-menu-offset))))
-                            keymap))
+              (x-popup-menu
+	       (save-excursion
+		 (goto-char (overlay-start overlay))
+		 (list
+		  (let ((pos (completion-window-posn-at-point
+			      nil nil
+			      (car completion-menu-offset)
+			      (+ (frame-char-height) 3
+				 (cdr completion-menu-offset)))))
+		    (list (car pos) (cdr pos)))
+		  (selected-window))
+		 ;; (completion-posn-at-point-as-event
+		 ;;  nil nil
+		 ;;  (car completion-menu-offset)
+		 ;;  (+ (frame-char-height) 3
+		 ;;     (cdr completion-menu-offset)))
+		 )
+	       keymap))
 
         ;; if they ain't selected nuffin', don't do nuffin'!
         (when result

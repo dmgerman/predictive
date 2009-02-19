@@ -105,12 +105,17 @@ Note: this can be overridden by an \"overlay local\" binding (see
 These key bindings also get added to the completion overlay keymap.")
 
 
+(defvar completion-tooltip-active-map nil
+  "Keymap used when a tooltip is being displayed.")
+
+
 
 ;;; ============================================================
 ;;;                   Internal variables
 
 (defvar completion-tooltip-active nil
-  "Used to enable `completion-tooltip-map' when a tooltip is displayed.")
+  "Used to enable `completion-tooltip-active-map'
+when a tooltip is displayed.")
 
 
 
@@ -141,30 +146,35 @@ These key bindings also get added to the completion overlay keymap.")
 ;; is displayed, unless it's already been set (most likely in an init
 ;; file). This keymap is active when `completion-tooltip-active' is
 ;; non-nil.
-(unless completion-tooltip-map
-  (setq completion-tooltip-map (make-sparse-keymap))
+(unless completion-tooltip-active-map
+  (setq completion-tooltip-active-map (make-sparse-keymap))
   ;; <up> and <down> cycle completions, which appears to move selection
   ;; up and down tooltip entries
-  (define-key completion-tooltip-map
+  (define-key completion-tooltip-active-map
     [down] 'completion-tooltip-cycle)
-  (define-key completion-tooltip-map
+  (define-key completion-tooltip-active-map
     [up] 'completion-tooltip-cycle-backwards))
 
-;; make sure completion-tooltip-map is in minor-mode-keymap-alist
+;; make sure completion-tooltip-active-map is in minor-mode-keymap-alist
 (let ((existing (assq 'completion-tooltip-active minor-mode-map-alist)))
   (if existing
-      (setcdr existing completion-tooltip-map)
-    (push (cons 'completion-tooltip-active completion-tooltip-map)
+      (setcdr existing completion-tooltip-active-map)
+    (push (cons 'completion-tooltip-active completion-tooltip-active-map)
           minor-mode-map-alist)))
 
 
-;; S-<down> displays the completion tooltip
-(define-key completion-overlay-map [S-down] 'completion-activate-tooltip)
+;; Set default key bindings for the keymap whose key bindings are added to the
+;; overlay keymap when the tooltip interface is enabled
+(unless completion-tooltip-map
+  (setq completion-tooltip-map (make-sparse-keymap))
+  ;; S-<down> displays the completion tooltip
+  (define-key completion-tooltip-map [S-down] 'completion-activate-tooltip))
+
 
 ;; <up> and <down> cycle the tooltip
 ;; Note: it shouldn't be necessary to bind them here, but the bindings in
-;;       completion-tooltip-map don't work when the tooltip is auto-displayed,
-;;       for mysterious reasons (note that we can't use
+;;       completion-tooltip-active-map don't work when the tooltip is
+;;       auto-displayed, for mysterious reasons (note that we can't use
 ;;       `completion-run-if-condition' in `completion-overlay-map', hence
 ;;       binding them here)
 (define-key completion-map [down]
@@ -282,7 +292,6 @@ If OVERLAY is not supplied, try to find one at point."
       ;; set flag to indicate tooltip is active for this overlay (this should
       ;; enable tooltip-related key bindings, but doesn't when tooltip is
       ;; auto-displayed, so we also add them to overlay's keymap)
-      (completion-activate-tooltip-keys overlay)
       (setq completion-tooltip-active overlay)
       )))
 

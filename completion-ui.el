@@ -1845,7 +1845,7 @@ pop-up frame. The menu functions should return menu keymaps."
   	(otherstack other-args)
   	(arg 0) arglist)
     (while cmplstack
-      (dotimes (i (- (car cmplstack) arg))
+      (dotimes (i (- (car cmplstack) arg 1))
   	(push (when otherstack (pop otherstack)) arglist))
       (push (pop argnames) arglist)
       (setq arg (pop cmplstack)))
@@ -1865,7 +1865,7 @@ pop-up frame. The menu functions should return menu keymaps."
      		   completions)))))
      ;; maxnum argument with other args required
      ((and (= (length completion-args) 2)
-     	   (or other-args (not (= (nth 2 completion-args) 1))))
+     	   (or other-args (not (= (nth 1 completion-args) 1))))
       (setq completion-function
       	    `(lambda (prefix &optional maxnum)
       	       (let ((completions (,completion-function ,@arglist)))
@@ -2396,8 +2396,8 @@ the prefix and the completion string\). Otherwise returns nil."
   ;; if we haven't been passed one, get completion overlay at point
   (unless overlay (setq overlay (completion-overlay-at-point)))
 
-  ;; resolve any other old provisional completions
-  (completion-resolve-old overlay)
+  ;; ;; resolve any other old provisional completions
+  ;; (completion-resolve-old overlay)
 
   ;; if we ain't found an overlay, can't accept nuffink!
   (unless (or (null overlay)
@@ -2441,8 +2441,8 @@ the prefix and the completion string\). Otherwise returns nil."
   ;; if we haven't been passed one, get completion overlay at point
   (unless overlay (setq overlay (completion-overlay-at-point)))
 
-  ;; resolve any other old provisional completions
-  (completion-resolve-old overlay)
+  ;; ;; resolve any other old provisional completions
+  ;; (completion-resolve-old overlay)
 
   ;; if we ain't found an overlay, can't reject nuffink!
   (unless (or (null overlay)
@@ -3470,7 +3470,8 @@ OVERLAY will be left alone."
    ((eq completion-how-to-resolve-old-completions 'leave)
     (mapc (lambda (o)
 	    (when (= (overlay-start o) (overlay-end o))
-	      (completion-accept o)))))
+	      (completion-accept o)))
+	  completion-overlay-list))
 
    ;; accept old completions
    ((eq completion-how-to-resolve-old-completions 'accept)
@@ -3706,14 +3707,17 @@ DX and DY specify optional offsets from the top left of the glyph."
     (setcar (nthcdr 2 pos)
             (cons (+ (car x-y) (car  edges) (- (car win-x-y))  dx)
                   (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) dy)))
-    (list 'mouse-1 pos)))
+    (list 'mouse-1 pos 1)))
 
 
 
-(defun completion-window-posn-at-point (&optional position window)
+(defun completion-window-posn-at-point
+  (&optional position window dx dy)
   "Return pixel position of top left of corner glyph at POSITION,
 relative to top left corner of WINDOW. Defaults to the position
 of point in the selected window.
+
+DX and DY specify optional offsets from the top left of the glyph.
 
 See also `completion-window-inside-posn-at-point' and
 `completion-frame-posn-at-point'."
@@ -3724,30 +3728,36 @@ See also `completion-window-inside-posn-at-point' and
   (let ((x-y (posn-x-y (posn-at-point position window)))
         (edges (window-inside-pixel-edges window))
         (win-x-y (window-pixel-edges window)))
-    (cons (+ (car x-y) (car  edges) (- (car win-x-y)))
-          (+ (cdr x-y) (cadr edges) (- (cadr win-x-y))))))
+    (cons (+ (car x-y) (car  edges) (- (car win-x-y)) dx)
+          (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) dy))))
 
 
 
 (defun completion-window-inside-posn-at-point
-  (&optional position window)
+  (&optional position window dx dy)
   "Return pixel position of top left corner of glyph at POSITION,
 relative to top left corner of the text area in WINDOW. Defaults
 to the position of point in the selected window.
+
+DX and DY specify optional offsets from the top left of the glyph.
 
 See also `completion-window-posn-at-point' and
 `completion-frame-posn-at-point'.."
 
   (unless window (setq window (selected-window)))
   (unless position (setq position (window-point window)))
-  (posn-x-y (posn-at-point position window)))
+  (let ((x-y (posn-x-y (posn-at-point position window))))
+    (cons (+ (car x-y) dx) (+ (cdr x-y) dy))))
 
 
 
-(defun completion-frame-posn-at-point (&optional position window)
+(defun completion-frame-posn-at-point
+  (&optional position window dx dy)
   "Return pixel position of top left corner of glyph at POSITION,
 relative to top left corner of frame containing WINDOW. Defaults
 to the position of point in the selected window.
+
+DX and DY specify optional offsets from the top left of the glyph.
 
 See also `completion-window-posn-at-point' and
 `completion-window-inside-posn-at-point'."
@@ -3757,8 +3767,8 @@ See also `completion-window-posn-at-point' and
 
   (let ((x-y (posn-x-y (posn-at-point position window)))
         (edges (window-inside-pixel-edges window)))
-    (cons (+ (car x-y) (car  edges))
-          (+ (cdr x-y) (cadr edges)))))
+    (cons (+ (car x-y) (car  edges) dx)
+          (+ (cdr x-y) (cadr edges) dy))))
 
 
 
