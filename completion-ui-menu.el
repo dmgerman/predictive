@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-menu t
+(defcustom completion-use-menu t
   "*Enable the completion menu and browser."
   :group 'completion-ui
   :type 'boolean)
@@ -125,7 +125,7 @@ These key bindings get added to the completion overlay keymap.")
 With a prefix argument, show the completion browser."
   (interactive (list nil current-prefix-arg))
   ;; look for completion overlay at point, unless one was supplied
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   ;; deactivate other auto-show interfaces
   (completion-ui-deactivate-auto-show-interface overlay)
   ;; show the completion menu
@@ -165,7 +165,7 @@ completion OVERLAY. MENU defaults to the \"overlay local\"
 binding of 'completion-menu, or `completion-menu' if there is
 none."
   (interactive)
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   (when overlay
     (unless menu
@@ -231,7 +231,7 @@ none."
 	      (completion-ui-deactivate-interfaces overlay)
 	      (delete-region (- (point) (length prefix)) (point))
 	      (let ((overwrite-mode nil)) (insert cmpl)))
-            (completion-delete-overlay overlay))
+            (completion-ui-delete-overlay overlay))
 
            ;; otherwise, run whatever they did select
            (t (funcall (lookup-key keymap result))))
@@ -285,7 +285,7 @@ for a completion OVERLAY."
 		       ,(if (stringp (nth n completions))
 			    (length prefix) (cdr (nth n completions)))))
 	      ;; if a hotkey is associated with completion, show it in menu
-	      :keys (when (and completion-ui-use-hotkeys
+	      :keys (when (and completion-use-hotkeys
 			       (< n (length completion-hotkey-list)))
 		      (key-description
 		       (vector (nth n completion-hotkey-list)))))))
@@ -537,7 +537,7 @@ and OVERLAY. They should return menu keymaps."
 
 
 (completion-ui-register-interface
- 'completion-ui-use-menu
+ 'completion-use-menu
  :activate 'completion-activate-menu-keys
  :deactivate 'completion-deactivate-menu-keys
  :auto-show 'completion-show-menu)

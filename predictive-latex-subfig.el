@@ -57,17 +57,24 @@
 
 
 (defun predictive-latex-load-subfig ()
-  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-	 (word-complete (completion-get-completion-behaviour word-behaviour))
-	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-	 (whitesp-complete (completion-get-completion-behaviour
-			    whitesp-behaviour))
-	 (whitesp-resolve (completion-get-resolve-behaviour
-			   whitesp-behaviour)))
+  (destructuring-bind (word-resolve word-complete word-insert
+		       punct-resolve punct-complete punct-insert
+		       whitesp-resolve whitesp-complete whitesp-insert)
+      (append (auto-completion-lookup-behaviour nil ?w)
+	      (auto-completion-lookup-behaviour nil ?.)
+	      (auto-completion-lookup-behaviour nil ? ))
+  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
+  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+  ;; 	 (whitesp-complete (completion-get-completion-behaviour
+  ;; 			    whitesp-behaviour))
+  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
+  ;; 			   whitesp-behaviour)))
+
     ;; Load subfig regexps
     (auto-overlay-load-regexp
      'predictive 'brace

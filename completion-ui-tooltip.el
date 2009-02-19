@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-tooltip t
+(defcustom completion-use-tooltip t
   "*When non-nil, enable the tooltip Completion-UI interface."
   :group 'completion-ui
   :type 'boolean)
@@ -179,15 +179,15 @@ when a tooltip is displayed.")
 ;;       binding them here)
 (define-key completion-map [down]
   (lambda () (interactive)
-    (completion-run-if-condition
+    (completion--run-if-condition
      'completion-tooltip-cycle
-     'completion-ui-activated
+     'completion-ui--activated
      completion-tooltip-active)))
 (define-key completion-map [down]
   (lambda () (interactive)
-    (completion-run-if-condition
+    (completion--run-if-condition
      'completion-tooltip-cycle-backwards
-     'completion-ui-activated
+     'completion-ui--activated
      completion-tooltip-active)))
 
 
@@ -203,7 +203,7 @@ The point had better be within OVERLAY or you'll have bad luck
 in all your flower-arranging endevours for thirteen years."
     (interactive)
     ;; if no overlay was supplied, try to find one at point
-    (unless overlay (setq overlay (completion-overlay-at-point)))
+    (unless overlay (setq overlay (completion-ui-overlay-at-point)))
     ;; deactivate other auto-show interfaces
     (completion-ui-deactivate-auto-show-interface overlay)
     ;; show tooltip
@@ -219,7 +219,7 @@ in all your flower-arranging endevours for fourteen years.
 If OVERLAY is not supplied, try to find one at point."
 
   ;; if no overlay was supplied, try to find one at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if we can display a tooltip and there are completions to display in it...
   (when (and overlay (overlay-get overlay 'completions)
@@ -316,8 +316,7 @@ If OVERLAY is not supplied, try to find one at point."
   "Hide the completion tooltip and cancel timers."
   (interactive)
   ;; cancel timer
-  (when (timerp completion-auto-timer)
-    (cancel-timer completion-auto-timer))
+  (completion-ui-cancel-auto-show)
   ;; cancel tooltip
   (when (and window-system (fboundp 'x-show-tip))
     (tooltip-hide)
@@ -347,7 +346,7 @@ inserted dynamic completion."
       (setq str (concat str (make-string (- maxlen (length str)) ? )))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
-      (when (and completion-ui-use-hotkeys
+      (when (and completion-use-hotkeys
                  (< i (length completion-hotkey-list)))
         (setq str
               (concat str " "
@@ -413,7 +412,7 @@ sheep."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-ui-use-tooltip
+ 'completion-use-tooltip
  :activate 'completion-activate-tooltip-keys
  :deactivate 'completion-cancel-tooltip
  :auto-show 'completion-show-tooltip)

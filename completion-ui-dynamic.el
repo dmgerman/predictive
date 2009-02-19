@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-dynamic t
+(defcustom completion-use-dynamic t
   "*Enable dynamic completion.
 Dynamic completion directly inserts the first completion into the
 buffer without further action required by the user. It is still a
@@ -151,14 +151,14 @@ cauliflower will start growing out of your ears."
 	;; highlight alterations to prefix, if enabled
 	(when (and completion-dynamic-highlight-prefix-alterations
 		   (not cmpl-replaces-prefix))
-	  (completion-highlight-prefix-alterations prefix cmpl pos len))
+	  (completion--highlight-prefix-alterations prefix cmpl pos len))
         ;; highlight common substring, if enabled
         (when completion-dynamic-highlight-common-substring
-	  (completion-highlight-common-substring
+	  (completion--highlight-common-substring
 	   prefix cmpl pos len overlay)))
 
       ;; move point to appropriate position in the overlay
-      (completion-position-point-in-overlay overlay))
+      (completion--position-point-in-overlay overlay))
 
     ;; delete temporary marker
     (set-marker pos nil)))
@@ -184,7 +184,7 @@ cauliflower will start growing out of your ears."
 
 
 
-(defun completion-highlight-prefix-alterations (prefix cmpl pos len)
+(defun completion--highlight-prefix-alterations (prefix cmpl pos len)
   "Highlight altered characters in PREFIX.
 CMPL is the current dynamic completion, and POS is the position
 of the end of PREFIX in the buffer."
@@ -206,7 +206,7 @@ of the end of PREFIX in the buffer."
 
 
 
-(defun completion-highlight-common-substring (prefix cmpl pos len overlay)
+(defun completion--highlight-common-substring (prefix cmpl pos len overlay)
   "Highlight longest common substring of all completions of PREFIX.
 CMPL is the current dynamic completion, POS is the position of
 the end of PREFIX in the buffer, LEN is the length of the prefix
@@ -243,7 +243,7 @@ overlay."
 
 
 
-(defun completion-position-point-in-overlay (overlay)
+(defun completion--position-point-in-overlay (overlay)
   "Move point to appropriate position in OVERLAY,
 the start for `auto-completion-mode' or if it is to be rejected,
 the end of the common prefix for `accept-common' or
@@ -285,7 +285,7 @@ the end if it is to be accepted."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-ui-use-dynamic
+ 'completion-use-dynamic
  :activate 'completion-activate-dynamic
  :deactivate 'completion-deactivate-dynamic)
 

@@ -131,6 +131,11 @@
 ;; * `completion-ui-register-source' settings replace the
 ;;   `completion-function', `completion-prefix-function' etc. variables
 ;; * added `auto-completion-source' customization variable
+;; * Rationalised function and variable names: `completion-*' are intended for
+;;   users (apart from the odd general utility function), `auto-completion-*'
+;;   are related to `auto-completion-mode', `completion-ui-*' are related to
+;;   user-interface implementation, `completion--*' are intended for internal
+;;   use only.
 ;;
 ;; Version 0.10.2
 ;; * bug-fixes to `completion-replaces-prefix' support (thanks once again to
@@ -697,7 +702,7 @@ characters rather than syntax descriptors."
 ;;; ============================================================
 ;;;               Other configuration variables
 
-(defvar completion-ui-activated nil
+(defvar completion-ui--activated nil
   "Non-nil when Completion-UI is activated in a buffer.
 
 This variable enables the global `completion-map' keymap, which
@@ -707,7 +712,7 @@ older versions of Emacs.
 It only ever be disabled when debugging Completion-UI and the
 `completion-map' bindings are causing problems.")
 
-(make-variable-buffer-local 'completion-ui-activated)
+(make-variable-buffer-local 'completion-ui--activated)
 
 
 (defvar completion-accept-functions nil
@@ -751,21 +756,21 @@ auto-completion-mode is enabled.")
 ;;; ============================================================
 ;;;                     Internal variables
 
-(defvar completion-overlay-list nil
+(defvar completion--overlay-list nil
   "List of overlays used during completion")
-(make-variable-buffer-local 'completion-overlay-list)
+(make-variable-buffer-local 'completion--overlay-list)
 
 
-(defvar completion-auto-timer (timer-create)
+(defvar completion--auto-timer (timer-create)
   "Timer used to postpone auto-completion or auto-show
 until there's a pause in typing.")
 
 
-(defvar completion-backward-delete-timer nil
+(defvar completion--backward-delete-timer nil
   "Timer used to postpone completion until finished deleting.")
 
 
-(defvar completion-trap-recursion nil
+(defvar completion--trap-recursion nil
   "Used to trap infinite recursion errors
 in calls to certain completion functions, for which infinite
 recursion can result from incorrectly configured key bindings set
@@ -790,7 +795,7 @@ by the Emacs user.")
 ;;; ===============================================================
 ;;;                  Keybinding functions
 
-(defun completion-define-word-constituent-binding
+(defun completion--define-word-constituent-binding
   (key char &optional syntax no-syntax-override)
   "Setup key binding for KEY so that it inserts character CHAR as
 though it's syntax were SYNTAX. SYNTAX defaults to
@@ -815,18 +820,18 @@ SYNTAX."
 
     ;; if emacs version doesn't support overlay keymaps properly, create
     ;; binding in `completion-map' to simulate it via
-    ;; `completion-run-if-within-overlay' hack
+    ;; `completion--run-if-within-overlay' hack
     (when (<= emacs-major-version 21)
       (define-key completion-map key
         `(lambda () ,doc
            (interactive)
-           (completion-run-if-within-overlay
+           (completion--run-if-within-overlay
             (lambda () (interactive)
               (auto-completion-self-insert ,char ,syntax ,no-syntax-override))
-            'completion-ui-activated))))))
+            'completion-ui--activated))))))
 
 
-(defun completion-remap-delete-commands (map)
+(defun completion--remap-delete-commands (map)
   "Remap deletion commands to completion-UI versions
 \(or substitute existing bindings, if remapping is not supported\)."
 
@@ -893,7 +898,7 @@ SYNTAX."
 
 
 
-(defun completion-bind-printable-chars (map command)
+(defun completion--bind-printable-chars (map command)
   "Manually bind printable characters to COMMAND.
 Command remapping is a far better way to do this, so it should only be
 used if the current Emacs version lacks command remapping support."
@@ -995,10 +1000,10 @@ used if the current Emacs version lacks command remapping support."
 
 
 
-(defun completion-simulate-overlay-bindings
+(defun completion--simulate-overlay-bindings
   (source dest variable &optional no-parent)
   ;; Simulate SOURCE overlay keybindings in DEST using the
-  ;; `completion-run-if-within-overlay' hack. DEST should be a symbol whose
+  ;; `completion--run-if-within-overlay' hack. DEST should be a symbol whose
   ;; value is a keymap, SOURCE should be a keymap.
   ;;
   ;; VARIABLE should be a symbol that deactivates DEST when its value is
@@ -1024,14 +1029,14 @@ used if the current Emacs version lacks command remapping support."
        (unless (stringp key) (setq key (vector key)))
        ;; bind key in DEST to simulated overlay keymap binding
        (define-key dest key
-         (completion-construct-simulated-overlay-binding binding variable))))
+         (completion--construct-simulated-overlay-binding binding variable))))
    source))
 
 
 
-(defun completion-construct-simulated-overlay-binding (binding variable)
+(defun completion--construct-simulated-overlay-binding (binding variable)
   ;; Return a binding that simulates assigning BINDING to KEY in an overlay
-  ;; keymap, using the `completion-run-if-within-overlay' hack.
+  ;; keymap, using the `completion--run-if-within-overlay' hack.
   ;;
   ;; VARIABLE should be a symbol that deactivates BINDING when its value is
   ;; (temporarily) set to nil. Typically, BINDING will be bound in a
@@ -1056,7 +1061,7 @@ used if the current Emacs version lacks command remapping support."
          ;; usually need to wrap key in an array for define-key
          (unless (stringp key) (setq key (vector key)))
          (define-key map key
-           (completion-construct-simulated-overlay-binding bind variable)))
+           (completion--construct-simulated-overlay-binding bind variable)))
        binding)
       map))
 
@@ -1101,7 +1106,7 @@ used if the current Emacs version lacks command remapping support."
       `(lambda ,(copy-sequence arglist)
          "" ;,docstring
          ,(copy-sequence interactive)
-         (completion-run-if-within-overlay
+         (completion--run-if-within-overlay
           (lambda ,(copy-sequence arglist) ,(copy-sequence interactive)
             (apply ',binding ,args))
           ',variable))
@@ -1109,7 +1114,7 @@ used if the current Emacs version lacks command remapping support."
 
    ;; anything else is an error
    (t (error (concat "Unexpected binding in "
-                     "`completion-construct-simulated-overlay-binding': %s")
+                     "`completion--construct-simulated-overlay-binding': %s")
              binding))))
 
 
@@ -1137,7 +1142,7 @@ used if the current Emacs version lacks command remapping support."
     ;; otherwise, create a great big keymap and rebind all printable
     ;; characters to `completion-self-insert' manually
     (setq completion-overlay-map (make-keymap))
-    (completion-bind-printable-chars completion-overlay-map
+    (completion--bind-printable-chars completion-overlay-map
 				     'completion-self-insert))
 
   ;; M-<tab> and M-/ cycle or complete word at point
@@ -1159,7 +1164,7 @@ used if the current Emacs version lacks command remapping support."
   ;; C-<space> abandons
   (define-key completion-overlay-map [?\C- ] 'completion-reject)
   ;; ;; remap the deletion commands
-  (completion-remap-delete-commands completion-overlay-map)
+  (completion--remap-delete-commands completion-overlay-map)
   )
 
 
@@ -1211,7 +1216,7 @@ used if the current Emacs version lacks command remapping support."
 
 
 ;; Set the default keymap if it hasn't been defined already (most likely in an
-;; init file). This keymap is active whenever `completion-ui-activated' is
+;; init file). This keymap is active whenever `completion-ui--activated' is
 ;; non-nil.
 (unless completion-map
   ;; If the current Emacs version doesn't support overlay keybindings
@@ -1234,26 +1239,26 @@ used if the current Emacs version lacks command remapping support."
 
   ;; RET deals with any pending completion candidate, then runs
   ;; whatever is usually bound to RET.
-  ;; Note: although this uses `completion-run-if-within-overlay', it is
+  ;; Note: although this uses `completion--run-if-within-overlay', it is
   ;;       not a hack to work-around poor overlay keybinding
   ;;       support. Rather, we are using it to run
-  ;;       `completion-resolve-current' and then run the normal RET
+  ;;       `completion--resolve-current' and then run the normal RET
   ;;       keybinding. We bind it here instead of in the overlay keymap
   ;;       because it's easier to disable this keymap.
   (dolist (key '("\r" "\n" [return]))
     (define-key completion-map key 'completion-resolve-then-run-command))
 
   ;; remap the deletion commands
-  (completion-remap-delete-commands completion-map)
+  (completion--remap-delete-commands completion-map)
 
   ;; ----- Simulated overlay keybindings -----
   ;; Note: could remove this and leave it up to the call to the
-  ;;       `completion-simulate-overlay-keybindings' function at the very end
+  ;;       `completion--simulate-overlay-keybindings' function at the very end
   ;;       of this file, if only that function could deal with remappings
 
   ;; If the current Emacs version doesn't support overlay keybindings
   ;; half decently, have to simulate them using the
-  ;; `completion-run-if-within-overlay' hack.
+  ;; `completion--run-if-within-overlay' hack.
 ;;  (when (<= emacs-major-version 21)
     ;; if we can remap commands, remap `self-insert-command' to
     ;; `completion-self-insert'
@@ -1262,18 +1267,18 @@ used if the current Emacs version lacks command remapping support."
           'completion-self-insert)
       ;; otherwise, rebind all printable characters to
       ;; `completion-self-insert' manually
-      (completion-bind-printable-chars completion-map
+      (completion--bind-printable-chars completion-map
                                        'completion-self-insert));)
   )
 
 
-;; make sure completion-map is associated with `completion-ui-activated' in
+;; make sure completion-map is associated with `completion-ui--activated' in
 ;; the minor-mode-keymap-alist, so that the bindings are enabled whenever
 ;; Completion-UI is loaded
-(let ((existing (assq 'completion-ui-activated minor-mode-map-alist)))
+(let ((existing (assq 'completion-ui--activated minor-mode-map-alist)))
   (if existing
       (setcdr existing completion-map)
-    (push (cons 'completion-ui-activated completion-map)
+    (push (cons 'completion-ui--activated completion-map)
           minor-mode-map-alist)))
 
 
@@ -1292,10 +1297,10 @@ used if the current Emacs version lacks command remapping support."
     ;; `auto-completion-self-insert', which decides what to do based on the
     ;; character's syntax
     (setq auto-completion-map (make-keymap))
-    (completion-bind-printable-chars auto-completion-map
+    (completion--bind-printable-chars auto-completion-map
                                      'auto-completion-self-insert))
   ;; remap the deletion commands
-  (completion-remap-delete-commands auto-completion-map))
+  (completion--remap-delete-commands auto-completion-map))
 
 
 
@@ -1373,22 +1378,22 @@ major mode, or by another minor mode)."
   "Completion-UI user-interface definitions.")
 
 
-(defmacro completion-ui-interface-variable (def)
+(defmacro completion-ui--interface-variable (def)
   `(car ,def))
 
-(defmacro completion-ui-interface-name (def)
+(defmacro completion-ui--interface-name (def)
   `(cadr ,def))
 
-(defmacro completion-ui-interface-activate-function (def)
+(defmacro completion-ui--interface-activate-function (def)
   `(nth 2 ,def))
 
-(defmacro completion-ui-interface-deactivate-function (def)
+(defmacro completion-ui--interface-deactivate-function (def)
   `(nth 3 ,def))
 
-(defmacro completion-ui-interface-auto-show (def)
+(defmacro completion-ui--interface-auto-show (def)
   `(plist-get ,def :auto-show))
 
-(defmacro completion-ui-interface-auto-show-helper (def)
+(defmacro completion-ui--interface-auto-show-helper (def)
   `(plist-get ,def :auto-show-helper))
 
 
@@ -1400,7 +1405,7 @@ major mode, or by another minor mode)."
 
 VARIABLE should be the customization variable (a symbol) used to
 enable and disable this interface. It should conform to the
-naming convention \"completion-ui-use-<name>\" where <name> is
+naming convention \"completion-use-<name>\" where <name> is
 the NAME of the user-interface.
 
 The :activate keyword argument is mandatory, and should be a
@@ -1412,7 +1417,7 @@ analogous, but should deactivate the user-interface.
 The optional :name keyword argument can be used to give a
 name (symbol) to the user-interface, which will appear in
 customization options. The default is to construct the interface
-name from VARIABLE, removing \"completion-ui-use-\" from the
+name from VARIABLE, removing \"completion-use-\" from the
 front.
 
 The optional :after keyword causes the interface definition to be
@@ -1474,7 +1479,7 @@ interface is activated."
   ;; extract name from customization-variable if not defined explicitly
   (unless name
     (setq name (symbol-name variable))
-    (when (string-match "^completion-ui-use-+" name)
+    (when (string-match "^completion-use-" name)
       (setq name (substring name (match-end 0))))
     (setq name (intern name)))
 
@@ -1514,12 +1519,12 @@ is passed one argument, a completion overlay."
 	   ,@(let (defcustom-list)
 	       (mapc
 		(lambda (def)
-		  (when (completion-ui-interface-auto-show def)
+		  (when (completion-ui--interface-auto-show def)
 		    (push
 		     (list
 		      'const
-		      :tag (symbol-name (completion-ui-interface-name def))
-		      (completion-ui-interface-auto-show def))
+		      :tag (symbol-name (completion-ui--interface-name def))
+		      (completion-ui--interface-auto-show def))
 		     defcustom-list)))
 		(append
 		 (assq-delete-all
@@ -1539,13 +1544,13 @@ is passed one argument, a completion overlay."
 
 (defmacro completion-ui-interface-activate (interface-def overlay)
   ;; Activate interface defined by INTERFACE-DEF for completion OVERLAY
-  `(let ((func (completion-ui-interface-activate-function ,interface-def)))
+  `(let ((func (completion-ui--interface-activate-function ,interface-def)))
      (when (functionp func) (funcall func ,overlay))))
 
 
 (defmacro completion-ui-interface-deactivate (interface-def overlay)
   ;; Activate interface defined by INTERFACE-DEF for completion OVERLAY
-  `(let ((func (completion-ui-interface-deactivate-function ,interface-def)))
+  `(let ((func (completion-ui--interface-deactivate-function ,interface-def)))
      (when (functionp func)(funcall func ,overlay))))
 
 
@@ -1584,7 +1589,7 @@ is passed one argument, a completion overlay."
 (defmacro completion-ui-activate-auto-show-interface (overlay)
   ;; Activate auto-show interface for current completion OVERLAY.
   `(funcall
-    (completion-ui-interface-auto-show
+    (completion-ui--interface-auto-show
      (assq completion-auto-show completion-ui-interface-definitions))
     overlay))
 
@@ -1594,7 +1599,7 @@ is passed one argument, a completion overlay."
   `(let (func)
      (dolist (interface-def completion-ui-interface-definitions)
        (when (and (completion-ui-interface-enabled-p interface-def)
-		  (setq func (completion-ui-interface-auto-show-helper
+		  (setq func (completion-ui--interface-auto-show-helper
 			      interface-def)))
 	 (funcall func ,overlay)))))
 
@@ -1616,37 +1621,37 @@ is passed one argument, a completion overlay."
   "Compltion-UI source definitions.")
 
 
-(defmacro completion-ui-source-def-name (def)
+(defmacro completion-ui--source-def-name (def)
   `(car ,def))
 
-(defmacro completion-ui-source-def-completion-function (def)
+(defmacro completion-ui--source-def-completion-function (def)
   `(cadr ,def))
 
-(defmacro completion-ui-source-def-non-prefix-completion (def)
+(defmacro completion-ui--source-def-non-prefix-completion (def)
   `(plist-get ,def :non-prefix-completion))
 
-(defmacro completion-ui-source-def-prefix-function (def)
+(defmacro completion-ui--source-def-prefix-function (def)
   `(plist-get ,def :prefix-function))
 
-(defmacro completion-ui-source-def-word-thing (def)
+(defmacro completion-ui--source-def-word-thing (def)
   `(plist-get ,def :prefix-name-thing))
 
-(defmacro completion-ui-source-def-accept-function (def)
+(defmacro completion-ui--source-def-accept-function (def)
   `(plist-get ,def :accept))
 
-(defmacro completion-ui-source-def-reject-function (def)
+(defmacro completion-ui--source-def-reject-function (def)
   `(plist-get ,def :reject))
 
-(defmacro completion-ui-source-def-tooltip-function (def)
+(defmacro completion-ui--source-def-tooltip-function (def)
   `(plist-get ,def :tooltip-function))
 
-(defmacro completion-ui-source-def-popup-frame-function (def)
+(defmacro completion-ui--source-def-popup-frame-function (def)
   `(plist-get ,def :popup-frame))
 
-(defmacro completion-ui-source-def-menu-function (def)
+(defmacro completion-ui--source-def-menu-function (def)
   `(plist-get ,def :menu))
 
-(defmacro completion-ui-source-def-browser-function (def)
+(defmacro completion-ui--source-def-browser-function (def)
   `(plist-get ,def :browser))
 
 
@@ -1918,7 +1923,7 @@ pop-up frame. The menu functions should return menu keymaps."
 	     ,(concat "Complete or cycle word at point using "
 		      (symbol-name name) " source.")
 	     (interactive "p")
-	     (complete-or-cycle-word-at-point ',completion-function n)))
+	     (complete-or-cycle-word-at-point ',name n)))
 
        ;; update `auto-completion-source' defcustom
        ,(unless no-auto-completion
@@ -1931,7 +1936,7 @@ pop-up frame. The menu functions should return menu keymaps."
 	       ,@(nreverse
 		  (mapcar
 		   (lambda (def)
-		     (list 'const (completion-ui-source-def-name def)))
+		     (list 'const (completion-ui--source-def-name def)))
 		   (append
 		    (assq-delete-all
 		     name (copy-sequence completion-ui-source-definitions))
@@ -1955,7 +1960,7 @@ pop-up frame. The menu functions should return menu keymaps."
 (defmacro completion-ui-source-completion-function
   (source &optional overlay)
   ;; return completion-function for SOURCE or OVERLAY at point
-  `(completion-ui-source-def-completion-function
+  `(completion-ui--source-def-completion-function
     (assq (completion-ui-completion-source ,source ,overlay)
   	  completion-ui-source-definitions)))
 
@@ -1968,11 +1973,11 @@ pop-up frame. The menu functions should return menu keymaps."
        ,(when source
   	  `(and (fboundp 'auto-overlay-local-binding)
   		(let ((completion-prefix-function
-  		       (completion-ui-source-def-prefix-function
+  		       (completion-ui--source-def-prefix-function
   			(assq (completion-ui-completion-source ,source)
   			      completion-ui-source-definitions))))
   		  (auto-overlay-local-binding 'completion-prefix-function)))
-  	  `(completion-ui-source-def-prefix-function
+  	  `(completion-ui--source-def-prefix-function
   	    (assq (completion-ui-completion-source ,source)
   		  completion-ui-source-definitions)))
        'completion-prefix))  ; default fall-back
@@ -1986,11 +1991,11 @@ pop-up frame. The menu functions should return menu keymaps."
        ,(when source
   	  `(and (fboundp 'auto-overlay-local-binding)
   		(let ((completion-word-thing
-  		       (completion-ui-source-def-word-thing
+  		       (completion-ui--source-def-word-thing
   			(assq (completion-ui-completion-source ,source)
   			      completion-ui-source-definitions))))
   		  (auto-overlay-local-binding 'completion-prefix-function)))
-  	  `(completion-ui-source-def-word-thing
+  	  `(completion-ui--source-def-word-thing
   	    (assq (completion-ui-completion-source ,source)
   		  completion-ui-source-definitions)))
        'word))  ; default fall-back
@@ -2005,12 +2010,12 @@ pop-up frame. The menu functions should return menu keymaps."
        ,(when source
   	  `(and (fboundp 'auto-overlay-local-binding)
   		(let ((completion-non-prefix-completion
-  		       (completion-ui-source-def-non-prefix-completion
+  		       (completion-ui--source-def-non-prefix-completion
   			(assq (completion-ui-completion-source ,source)
   			      completion-ui-source-definitions))))
   		  (auto-overlay-local-binding
 		   'completion-non-prefix-completion)))
-  	  `(completion-ui-source-def-non-prefix-completion
+  	  `(completion-ui--source-def-non-prefix-completion
   	    (assq (completion-ui-completion-source ,source)
   		  completion-ui-source-definitions)))
        nil))  ; default fall-back
@@ -2019,7 +2024,7 @@ pop-up frame. The menu functions should return menu keymaps."
 (defmacro completion-ui-source-accept-function
   (source &optional overlay)
   ;; return accept-function for SOURCE or OVERLAY
-  `(completion-ui-source-def-accept-function
+  `(completion-ui--source-def-accept-function
     (assq (completion-ui-completion-source ,source ,overlay)
   	  completion-ui-source-definitions)))
 
@@ -2027,7 +2032,7 @@ pop-up frame. The menu functions should return menu keymaps."
 (defmacro completion-ui-source-reject-function
   (source &optional overlay)
   ;; return reject-function for SOURCE or OVERLAY
-  `(completion-ui-source-def-reject-function
+  `(completion-ui--source-def-reject-function
     (assq (completion-ui-completion-source ,source ,overlay)
   	  completion-ui-source-definitions)))
 
@@ -2037,11 +2042,11 @@ pop-up frame. The menu functions should return menu keymaps."
   ;; return popup-frame-function for SOURCE of OVERLAY at point
   `(or (and (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-popup-frame-function
-  		   (completion-ui-source-def-popup-frame-function
+  		   (completion-ui--source-def-popup-frame-function
   		    (assq (completion-ui-completion-source ,source ,overlay)
   			  completion-ui-source-definitions))))
   	      (auto-overlay-local-binding 'completion-popup-frame-function)))
-       (completion-ui-source-def-popup-frame-function
+       (completion-ui--source-def-popup-frame-function
   	(assq (completion-ui-completion-source ,source ,overlay)
   	      completion-ui-source-definitions))
        'completion-construct-popup-frame-text))  ; default fall-back
@@ -2052,11 +2057,11 @@ pop-up frame. The menu functions should return menu keymaps."
   ;; return tooltip-function for SOURCE of OVERLAY at point
   `(or (and (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-tooltip-function
-  		   (completion-ui-source-def-tooltip-function
+  		   (completion-ui--source-def-tooltip-function
   		    (assq (completion-ui-completion-source ,source ,overlay)
   			  completion-ui-source-definitions))))
   	      (auto-overlay-local-binding 'completion-tooltip-function)))
-       (completion-ui-source-def-tooltip-function
+       (completion-ui--source-def-tooltip-function
   	(assq (completion-ui-completion-source ,source ,overlay)
   	      completion-ui-source-definitions))
        'completion-construct-tooltip-text))  ; default fall-back
@@ -2067,11 +2072,11 @@ pop-up frame. The menu functions should return menu keymaps."
   ;; return popup-frame-function for SOURCE of OVERLAY at point
   `(or (and (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-menu-function
-  		   (completion-ui-source-def-menu-function
+  		   (completion-ui--source-def-menu-function
   		    (assq (completion-ui-completion-source ,source ,overlay)
   			  completion-ui-source-definitions))))
   	      (auto-overlay-local-binding 'completion-menu-function)))
-       (completion-ui-source-def-menu-function
+       (completion-ui--source-def-menu-function
   	(assq (completion-ui-completion-source ,source ,overlay)
   	      completion-ui-source-definitions))
        'completion-construct-menu))  ; default fall-back
@@ -2082,11 +2087,11 @@ pop-up frame. The menu functions should return menu keymaps."
   ;; return popup-frame-function for SOURCE of OVERLAY at point
   `(or (and (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-browser-function
-  		   (completion-ui-source-def-browser-function
+  		   (completion-ui--source-def-browser-function
   		    (assq (completion-ui-completion-source ,source ,overlay)
   			  completion-ui-source-definitions))))
   	      (auto-overlay-local-binding 'completion-browser-function)))
-       (completion-ui-source-def-browser-function
+       (completion-ui--source-def-browser-function
   	(assq (completion-ui-completion-source ,source ,overlay)
   	      completion-ui-source-definitions))
        'completion-construct-browser-menu))  ; default fall-back
@@ -2161,12 +2166,12 @@ non-nil, assume we're auto-completing and respect settings of
 user-interfaces for that overlay rather than activating them from
 scratch. If POS is non-nil, only complete if point is at POS."
 
-  ;; set `completion-ui-activated' (buffer-locally) to enable `completion-map'
+  ;; set `completion-ui--activated' (buffer-locally) to enable `completion-map'
   ;; work-around hacks
-  (setq completion-ui-activated t)
+  (setq completion-ui--activated t)
 
   ;; cancel any timer so that we don't have two running at once
-  (cancel-timer completion-auto-timer)
+  (cancel-timer completion--auto-timer)
 
   ;; only complete if point is at POS (only used when called from timer)
   (unless (and pos (/= (point) pos))
@@ -2174,7 +2179,7 @@ scratch. If POS is non-nil, only complete if point is at POS."
     ;; if we're auto-completing and `auto-completion-delay' is set,
     ;; delay completing by setting a timer to call ourselves later
     (if (and auto auto-completion-delay (not (eq auto 'timer)))
-        (setq completion-auto-timer
+        (setq completion--auto-timer
               (run-with-idle-timer auto-completion-delay nil
                                    'complete-in-buffer
                                    completion-source prefix-function
@@ -2185,7 +2190,7 @@ scratch. If POS is non-nil, only complete if point is at POS."
       ;; otherwise...
       (let (completion-function word-thing prefix completions)
 	;; resolve any provisional completions
-	(completion-resolve-old update)
+	(completion-ui-resolve-old update)
 
 
 	;; --- get completion properties ---
@@ -2238,7 +2243,7 @@ scratch. If POS is non-nil, only complete if point is at POS."
 			 prefix completion-max-candidates))
 
           (let ((overlay
-		 (completion-setup-overlay
+		 (completion-ui-setup-overlay
 		  prefix 'unchanged completions nil
 		  completion-source prefix-function non-prefix-completion
 		  update)))
@@ -2248,12 +2253,12 @@ scratch. If POS is non-nil, only complete if point is at POS."
 	    (if update
 		(completion-ui-update-interfaces overlay)
 	      (completion-ui-activate-interfaces overlay))
-	    (when completion-auto-show (completion-auto-show overlay))))
+	    (when completion-auto-show (completion-ui-auto-show overlay))))
 	))))
 
 
 
-(defun completion-auto-show (&optional overlay point)
+(defun completion-ui-auto-show (&optional overlay point)
   "Display list of completions for OVERLAY in auto-show interface.
 The point had better be within OVERLAY or your hair will fall
 out.
@@ -2271,10 +2276,10 @@ called from timer)."
   (interactive)
 
   ;; if no overlay supplied, try to find one at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; cancel any running timer so we don't end up being called twice
-  (cancel-timer completion-auto-timer)
+  (cancel-timer completion--auto-timer)
 
   ;; make sure things are still in a sensible state (might not be if
   ;; displaying after a delay)
@@ -2284,14 +2289,21 @@ called from timer)."
              (or (null point) (= (point) point)))
     ;; if delaying, setup timer to call ourselves later
     (if (and completion-auto-show-delay (null point))
-        (setq completion-auto-timer
+        (setq completion--auto-timer
               (run-with-timer completion-auto-show-delay nil
-                              'completion-auto-show
+                              'completion-ui-auto-show
                               overlay (point)))
       ;; otherwise, display whatever we're displaying
       (overlay-put overlay 'auto-show completion-auto-show)
       (completion-ui-call-auto-show-interface-helpers overlay)
       (funcall completion-auto-show overlay))))
+
+
+
+(defmacro completion-ui-cancel-auto-show ()
+  "Cancel any pending auto-show."
+  `(when (timerp completion--auto-timer)
+     (cancel-timer completion--auto-timer)))
 
 
 
@@ -2302,11 +2314,12 @@ called from timer)."
   (&optional completion-source prefix-function non-prefix-completion)
   "Complete the word at or next to point.
 
-"
+COMPLETION-SOURCE, PREFIX-FUNCTION, and NON-PREFIX-COMPLETION are
+passed to `complete-in-buffer' (which see)."
   (interactive)
 
   ;; get completion overlay at point
-  (let* ((overlay (completion-overlay-at-point))
+  (let* ((overlay (completion-ui-overlay-at-point))
 	 (word-thing
 	  (or (and overlay (overlay-get overlay 'prefix-word-thing))
 	      (and (fboundp 'auto-overlay-local-binding)
@@ -2328,7 +2341,7 @@ called from timer)."
       ;; delete overlay (effectively accepting old completion) and behave
       ;; as if no completion was in progress
       (when overlay
-	(completion-delete-overlay overlay)
+	(completion-ui-delete-overlay overlay)
 	(setq overlay nil))
 
       ;; if point is in middle of a word and `completion-overwrite' is
@@ -2336,8 +2349,8 @@ called from timer)."
       (when (and completion-overwrite (completion-within-word-p word-thing))
 	(completion-overwrite-word-at-point word-thing)
         ;; if there is now a completion overlay at point, delete it
-        (when (setq overlay (completion-overlay-at-point))
-          (completion-delete-overlay overlay)
+        (when (setq overlay (completion-ui-overlay-at-point))
+          (completion-ui-delete-overlay overlay)
 	  (setq overlay nil))))
 
     ;; do completion
@@ -2355,7 +2368,7 @@ When completing, COMPLETION-SOURCE, PREFIX-FUNCTION, and
 NON-PREFIX-COMPLETION are passed to `complete-in-buffer' (which
 see)."
   (interactive "p")
-  (if (completion-overlay-at-point)
+  (if (completion-ui-overlay-at-point)
       (completion-cycle n)
     (complete-word-at-point completion-source prefix-function
 			    non-prefix-completion)))
@@ -2370,7 +2383,7 @@ When completing, COMPLETION-SOURCE, PREFIX-FUNCTION, and
 NON-PREFIX-COMPLETION are passed to `complete-in-buffer' (which
 see)."
   (interactive "p")
-  (if (completion-overlay-at-point)
+  (if (completion-ui-overlay-at-point)
       (completion-cycle (- n))
     (complete-word-at-point completion-source prefix-function
 			    non-prefix-completion)))
@@ -2394,15 +2407,15 @@ the prefix and the completion string\). Otherwise returns nil."
   (interactive "P")
 
   ;; if we haven't been passed one, get completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; ;; resolve any other old provisional completions
-  ;; (completion-resolve-old overlay)
+  ;; (completion-ui-resolve-old overlay)
 
   ;; if we ain't found an overlay, can't accept nuffink!
   (unless (or (null overlay)
 	      (and (null (overlay-get overlay 'completion-num))
-		   (progn (completion-delete-overlay overlay) t)))
+		   (progn (completion-ui-delete-overlay overlay) t)))
     ;; otherwise, deactivate the interfaces and accept the completion
     (let ((prefix (overlay-get overlay 'prefix))
 	  (cmpl (nth (overlay-get overlay 'completion-num)
@@ -2416,7 +2429,7 @@ the prefix and the completion string\). Otherwise returns nil."
       (completion-ui-source-run-accept-function overlay prefix cmpl arg)
       (run-hook-with-args 'completion-accept-functions prefix cmpl arg)
       ;; delete overlay
-      (completion-delete-overlay overlay)
+      (completion-ui-delete-overlay overlay)
       ;; return prefix and accepted completion
       (cons prefix cmpl))))
 
@@ -2439,15 +2452,15 @@ the prefix and the completion string\). Otherwise returns nil."
   (interactive "P")
 
   ;; if we haven't been passed one, get completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; ;; resolve any other old provisional completions
-  ;; (completion-resolve-old overlay)
+  ;; (completion-ui-resolve-old overlay)
 
   ;; if we ain't found an overlay, can't reject nuffink!
   (unless (or (null overlay)
 	      (and (null (overlay-get overlay 'completion-num))
-		   (progn (completion-delete-overlay overlay) t)))
+		   (progn (completion-ui-delete-overlay overlay) t)))
     ;; otherwise, deactivate the interfaces and reject the completion
     (let ((prefix (overlay-get overlay 'prefix))
 	  (cmpl (nth (overlay-get overlay 'completion-num)
@@ -2458,7 +2471,7 @@ the prefix and the completion string\). Otherwise returns nil."
       (completion-ui-source-run-accept-function overlay prefix cmpl arg)
       (run-hook-with-args 'completion-reject-functions prefix cmpl arg)
       ;; delete overlay
-      (completion-delete-overlay overlay)
+      (completion-ui-delete-overlay overlay)
       ;; return prefix and rejected completion
       (cons prefix cmpl))))
 
@@ -2468,9 +2481,9 @@ the prefix and the completion string\). Otherwise returns nil."
  "Resolve current completion, then run command
 that would normally be bound to this key."
  (interactive)
- (completion-run-if-within-overlay
-  (lambda () (interactive) (completion-resolve-current nil nil ? ))
-  'completion-ui-activated 'before))
+ (completion--run-if-within-overlay
+  (lambda () (interactive) (completion--resolve-current nil nil ? ))
+  'completion-ui--activated 'before))
 
 
 
@@ -2485,9 +2498,9 @@ crash through your ceiling."
   (interactive "P")
 
   ;; resolve any other old provisional completions
-  (completion-resolve-old overlay)
+  (completion-ui-resolve-old overlay)
   ;; if we haven't been passed one, get completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if we ain't found an overlay, can't select nuffink!
   ;; if we ain't found an overlay, can't accept nuffink!
@@ -2520,18 +2533,9 @@ crash through your ceiling."
 	(completion-ui-source-run-accept-function overlay prefix cmpl)
 	(run-hook-with-args 'completion-accept-functions prefix cmpl)
 	;; delete overlay
-	(completion-delete-overlay overlay)
+	(completion-ui-delete-overlay overlay)
 	;; return prefix and accepted completion
 	(cons prefix cmpl)))))
-
-
-(defun completion-select-if-within-overlay ()
-  "Select a completion to insert if there is one, otherwise run
-whatever command would normally be bound to the key sequence used
-to invoke this command."
-  (interactive)
-  (completion-run-if-within-overlay 'completion-select
-                                    'completion-use-hotkeys))
 
 
 
@@ -2545,7 +2549,7 @@ boil away."
   (interactive)
 
   ;; look for completion overlay at point if none was specified
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if there are no characters to accept, do nothing
   (if (or (null overlay) (null (overlay-get overlay 'completion-num)))
@@ -2563,7 +2567,7 @@ boil away."
       (let ((overwrite-mode nil)) (insert cmpl))
       ;; update the overlay
       (move-overlay overlay (point) (point))
-      (completion-setup-overlay cmpl nil nil nil nil nil nil overlay)
+      (completion-ui-setup-overlay cmpl nil nil nil nil nil nil overlay)
       ;; re-complete
       (complete-in-buffer nil nil nil nil 'auto overlay))))
 
@@ -2586,7 +2590,7 @@ If NO-AUTO is non-nil, the `completion-auto-show' interface will
   (when (null n) (setq n 1))
 
   ;; if we haven't been passed one, get completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if there are no completions, can't cycle
   (if (or (null overlay) (null (overlay-get overlay 'completions)))
@@ -2623,7 +2627,7 @@ green over night."
   (interactive)
 
   ;; look for completion overlay at point if none was specified
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if within a completion overlay
   (when overlay
@@ -2660,7 +2664,7 @@ green over night."
         (let ((overwrite-mode nil)) (insert str))
 	;; update overlay properties
         (move-overlay overlay (point) (point))
-	(completion-setup-overlay str nil nil nil nil nil 'unchanged overlay)
+	(completion-ui-setup-overlay str nil nil nil nil nil 'unchanged overlay)
         ;; when auto-completing, do so
         (if (and auto-completion-mode
 		 (eq (overlay-get overlay 'completion-source)
@@ -2675,11 +2679,18 @@ green over night."
 ;;; ===============================================================
 ;;;                Self-insert functions
 
-(defun completion-lookup-behaviour (&optional char syntax)
+(defun auto-completion-lookup-behaviour (&optional char syntax)
   "Return syntax-dependent behaviour
 of character CHAR and/or syntax-class SYNTAX. At least one of
 these must be supplied. If both are supplied, SYNTAX overrides the
-syntax-class of CHAR."
+syntax-class of CHAR.
+
+Returns a three-element list:
+
+  (RESOLVE COMPLETE INSERT)
+
+containing the resolve-behaviour, completion-behaviour and
+insert-behaviour."
 
   ;; SYNTAX defaults to syntax-class of CHAR
   (when (and char (not syntax)) (setq syntax (char-syntax char)))
@@ -2733,25 +2744,25 @@ syntax-class of CHAR."
 
 
 
-(defmacro completion-get-resolve-behaviour (behaviour)
-  "Extract syntax-dependent resolve behaviour from BEHAVIOUR.
-BEHAVIOUR should be the return value of a call to
-`completion-lookup-behaviour'."
-  `(nth 0 ,behaviour))
+;; (defmacro completion-get-resolve-behaviour (behaviour)
+;;   "Extract syntax-dependent resolve behaviour from BEHAVIOUR.
+;; BEHAVIOUR should be the return value of a call to
+;; `auto-completion-lookup-behaviour'."
+;;   `(nth 0 ,behaviour))
 
 
-(defmacro completion-get-completion-behaviour (behaviour)
-  "Extract syntax-dependent completion behaviour from BEHAVIOUR.
-BEHAVIOUR should be the return value of a call to
-`completion-lookup-behaviour'."
-  `(nth 1 ,behaviour))
+;; (defmacro completion-get-completion-behaviour (behaviour)
+;;   "Extract syntax-dependent completion behaviour from BEHAVIOUR.
+;; BEHAVIOUR should be the return value of a call to
+;; `auto-completion-lookup-behaviour'."
+;;   `(nth 1 ,behaviour))
 
 
-(defmacro completion-get-insertion-behaviour (behaviour)
-  "Extract syntax-dependent insertion behaviour from BEHAVIOUR.
-BEHAVIOUR should be the return value of a call to
-`completion-lookup-behaviour'."
-  `(nth 2 ,behaviour))
+;; (defmacro completion-get-insertion-behaviour (behaviour)
+;;   "Extract syntax-dependent insertion behaviour from BEHAVIOUR.
+;; BEHAVIOUR should be the return value of a call to
+;; `auto-completion-lookup-behaviour'."
+;;   `(nth 2 ,behaviour))
 
 
 
@@ -2766,9 +2777,9 @@ BEHAVIOUR should be the return value of a call to
       (auto-completion-self-insert)
     ;; otherwise, resolve old and current completions, and insert last input
     ;; event
-    (let ((overlay (completion-overlay-at-point)))
-      (completion-resolve-old overlay)
-      (completion-resolve-current overlay))
+    (let ((overlay (completion-ui-overlay-at-point)))
+      (completion-ui-resolve-old overlay)
+      (completion--resolve-current overlay))
     (self-insert-command 1)))
 
 
@@ -2809,22 +2820,31 @@ overlays."
   (when (null char) (setq char last-input-event))
   (when (null syntax) (setq syntax (char-syntax last-input-event)))
 
-  (let* ((behaviour (if no-syntax-override
-			(completion-lookup-behaviour nil syntax)
-		      (completion-lookup-behaviour char syntax)))
-	 (complete-behaviour
-	  (completion-get-completion-behaviour behaviour))
-	 (resolve-behaviour
-	  (completion-get-resolve-behaviour behaviour))
-	 (insert-behaviour
-	  (completion-get-insertion-behaviour behaviour))
-	 (overlay (completion-overlay-at-point))
-	 (word-thing
+  (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour
+		       overlay word-thing wordstart prefix)
+      (append
+       (if no-syntax-override
+	   (auto-completion-lookup-behaviour nil syntax)
+	 (auto-completion-lookup-behaviour char syntax))
+       (list (completion-ui-overlay-at-point) nil nil nil))
+    (setq word-thing
 	  (completion-ui-source-word-thing auto-completion-source overlay))
-	 wordstart prefix)
+    ;; (let ((behaviour (if no-syntax-override
+    ;; 	  		(auto-completion-lookup-behaviour nil syntax)
+    ;; 	  	      (auto-completion-lookup-behaviour char syntax)))
+    ;; 	  (complete-behaviour
+    ;; 	   (completion-get-completion-behaviour behaviour))
+    ;; 	  (resolve-behaviour
+    ;; 	   (completion-get-resolve-behaviour behaviour))
+    ;; 	  (insert-behaviour
+    ;; 	   (completion-get-insertion-behaviour behaviour))
+    ;; 	  (overlay (completion-ui-overlay-at-point))
+    ;; 	  (word-thing
+    ;; 	   (completion-ui-source-word-thing auto-completion-source overlay))
+    ;; 	  wordstart prefix)
 
     ;; ----- resolve behaviour -----
-    (completion-resolve-old overlay)
+    (completion-ui-resolve-old overlay)
     ;; if behaviour alist entry is a function, call it
     (when (functionp resolve-behaviour)
       (setq resolve-behaviour (funcall resolve-behaviour)))
@@ -2845,7 +2865,7 @@ overlays."
 	    (completion-accept nil overlay)
 	  ;; otherwise, delete overlay (effectively accepting old completion
 	  ;; but without running hooks)
-	  (completion-delete-overlay overlay)
+	  (completion-ui-delete-overlay overlay)
 	  (completion-ui-deactivate-interfaces overlay))
 	(setq overlay nil)))
 
@@ -2860,7 +2880,7 @@ overlays."
 	    (completion-reject nil overlay)
 	  ;; otherwise, delete everything following point, and delete overlay
 	  (delete-region (point) (overlay-end overlay))
-	  (completion-delete-overlay overlay)
+	  (completion-ui-delete-overlay overlay)
 	  (completion-ui-deactivate-interfaces overlay))
 	(setq overlay nil)))
 
@@ -2880,7 +2900,7 @@ overlays."
 	      (completion-ui-deactivate-interfaces-pre-update overlay))
 	  ;; otherwise, delete overlay (effectively accepting the old
 	  ;; completion) and behave as if no completion was in progress
-	  (completion-delete-overlay overlay)
+	  (completion-ui-delete-overlay overlay)
 	  (completion-ui-deactivate-interfaces overlay)
 	  (setq overlay nil))))
 
@@ -2918,7 +2938,7 @@ overlays."
      ((eq complete-behaviour 'none)
       (when overlay
 	(completion-ui-deactivate-interfaces overlay)
-	(completion-delete-overlay overlay)))
+	(completion-ui-delete-overlay overlay)))
 
      ;; if completing...
      ((or (eq complete-behaviour 'string)
@@ -2935,7 +2955,7 @@ overlays."
        ;; if a prefix has been set, setup overlay with the prefix, and do
        ;; completion
        (prefix
-	(completion-setup-overlay
+	(completion-ui-setup-overlay
 	 prefix (when overlay (1+ (overlay-get overlay 'prefix-length)))
 	 nil nil nil nil nil overlay)
 	(complete-in-buffer auto-completion-source nil nil 'auto overlay))
@@ -2947,8 +2967,8 @@ overlays."
        ;; if completing word at point, delete any overlay at point to ensure
        ;; prefix is found anew, and do completion
        (t
-	(when (setq overlay (completion-overlay-at-point))
-	  (completion-delete-overlay overlay))
+	(when (setq overlay (completion-ui-overlay-at-point))
+	  (completion-ui-delete-overlay overlay))
 	(complete-in-buffer auto-completion-source nil nil 'auto overlay))))
 
      ;; error
@@ -2964,12 +2984,12 @@ overlays."
 ;;;                  Deletion commands
 
 (defun completion-backward-delete (command &rest args)
-  "Run backward-delete COMMAND, passing it ARGS.
+  "Call backward-delete COMMAND, passing it ARGS.
 Any provisional completion at the point is first rejected. If
-COMMAND deletes into a word and auto-completion is enabled,
-complete what remains of that word."
+COMMAND deletes into a word and `auto-completion-mode' is
+enabled, complete what remains of that word."
 
-  (let* ((overlay (completion-overlay-at-point))
+  (let* ((overlay (completion-ui-overlay-at-point))
          pos)
     ;(combine-after-change-calls
 
@@ -3012,11 +3032,11 @@ complete what remains of that word."
 
 	      ;; delete overlay, effectively accepting (rest of) the
               ;; completion at point
-              (completion-delete-overlay overlay)
+              (completion-ui-delete-overlay overlay)
 	      (completion-ui-deactivate-interfaces overlay))
 
             ;; resolve old provisional completions and delete backwards
-            (completion-resolve-old)
+            (completion-ui-resolve-old)
             (apply command args))
 
 
@@ -3027,7 +3047,7 @@ complete what remains of that word."
 			      (completion-beginning-of-word-p word-thing))))
 
 	  ;; resolve any old provisional completions
-	  (completion-resolve-old overlay)
+	  (completion-ui-resolve-old overlay)
 
 	  ;; if point is in a completion...
 	  (when overlay
@@ -3036,7 +3056,7 @@ complete what remains of that word."
 	    ;;        `completion-accept-or-reject-by-default'?
 	    (delete-region (point) (overlay-end overlay))
 	    ;; delete the overlay, effectively accepting (rest of) completion
-	    (completion-delete-overlay overlay)
+	    (completion-ui-delete-overlay overlay)
 	    ;; deactivate the interfaces pending update
 	    (completion-ui-deactivate-interfaces-pre-update overlay))
 
@@ -3050,9 +3070,9 @@ complete what remains of that word."
 	   ;; user-interfaces and cancel any timer that's been set up
 	   ((and (not (completion-within-word-p word-thing))
 		 (not (completion-end-of-word-p word-thing)))
-	    (when (timerp completion-backward-delete-timer)
-	      (cancel-timer completion-backward-delete-timer))
-	    (setq completion-backward-delete-timer nil)
+	    (when (timerp completion--backward-delete-timer)
+	      (cancel-timer completion--backward-delete-timer))
+	    (setq completion--backward-delete-timer nil)
 	    (when overlay (completion-ui-deactivate-interfaces overlay)))
 
 
@@ -3072,20 +3092,20 @@ complete what remains of that word."
 		     (prefix (let ((completion-word-thing word-thing))
 			       (funcall prefix-fun)))
 		     (pos (point)))
-		(completion-setup-overlay
+		(completion-ui-setup-overlay
 		 prefix nil nil nil nil nil nil overlay)
 		(move-overlay overlay (point) (point))))
 
 	    ;; if there's no existing timer, set one up to complete remainder
 	    ;; of word after some idle time
-	    (when (timerp completion-backward-delete-timer)
-	      (cancel-timer completion-backward-delete-timer))
+	    (when (timerp completion--backward-delete-timer)
+	      (cancel-timer completion--backward-delete-timer))
 	    (if auto-completion-backward-delete-delay
-		(setq completion-backward-delete-timer
+		(setq completion--backward-delete-timer
 		      (run-with-idle-timer
 		       auto-completion-backward-delete-delay nil
 		       `(lambda ()
-			  (setq completion-backward-delete-timer nil)
+			  (setq completion--backward-delete-timer nil)
 			  (complete-in-buffer
 			   ',auto-completion-source
 			   nil nil 'auto ,overlay ,(point)))))
@@ -3103,32 +3123,34 @@ If there is a provisional completion at point after deleting, reject
 it."
   ;; delete any completion overlay at point (effectively accepting it, but
   ;; without running any hook functions)
-  (let ((overlay (completion-overlay-at-point)))
+  (let ((overlay (completion-ui-overlay-at-point)))
     (when overlay
-      (completion-delete-overlay overlay)
+      (completion-ui-delete-overlay overlay)
       (completion-ui-deactivate-interfaces overlay)))
   ;; now resolve any old completions
-  (completion-resolve-old)
+  (completion-ui-resolve-old)
   ;; call the deletion command
   (apply command args)
   ;; if there's a completion overlay at point after deleting, delete it
   ;; (effectively rejecting it, but without calling any hook functions)
-  (let ((overlay (completion-overlay-at-point)))
+  (let ((overlay (completion-ui-overlay-at-point)))
     (when overlay
       (delete-region (overlay-start overlay) (overlay-end overlay))
-      (completion-delete-overlay overlay)
+      (completion-ui-delete-overlay overlay)
       (completion-ui-deactivate-interfaces overlay))))
 
 
 (defun completion-delete-char (n &optional killflag)
   "Delete the following N characters (previous if N is negative).
-If there is a provisional completion at point after deleting,
-reject it.  \(If N is negative, behaviour is instead as for
-`completion-backward-delete-char'.\)
 
 Non-nil optional second arg KILLFLAG means kill instead (save in
 kill ring). Interactively, N is the prefix arg (default 1), and
-KILLFLAG is set if n was explicitly specified."
+KILLFLAG is set if n was explicitly specified. \(If N is
+negative, behaviour is instead as for
+`completion-backward-delete-char'.\)
+
+If there is a provisional completion at point after deleting, it
+is rejected. "
   (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
@@ -3139,15 +3161,16 @@ KILLFLAG is set if n was explicitly specified."
 
 
 (defun completion-backward-delete-char (n &optional killflag)
-  "Delete the previous N characters (following if N is negative).
-Any provisional completion at point is first rejected. If
-deleting backwards into a word, and `auto-completion-mode' is
-enabled, complete what remains of that word. \(If N is negative,
-behaviour is instead as for `completion-delete-char'.\)
+  "Delete the previous N characters.
 
 Optional second arg KILLFLAG non-nil means kill instead (save in
 kill ring). Interactively, N is the prefix arg (default 1), and
-KILLFLAG is set if N was explicitly specified."
+KILLFLAG is set if N was explicitly specified. \(If N is
+negative, behaviour is instead as for `completion-delete-char'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
@@ -3159,16 +3182,17 @@ KILLFLAG is set if N was explicitly specified."
 
 (defun completion-backward-delete-char-untabify (n &optional killflag)
   "Delete N characters backward, changing tabs into spaces.
-Any provisional completion at point is first rejected. If
-deleting backwards into a word, and `auto-completion-mode' is
-enabled, complete what remains of that word. \(If N is negative,
-behaviour is instead as for `completion-delete-char'.\)
 
 Optional second arg KILLFLAG non-nil means kill instead (save in
 kill ring). Interactively, N is the prefix arg (default 1), and
-KILLFLAG is set if N was explicitly specified.
+KILLFLAG is set if N was explicitly specified. \(If N is
+negative, behaviour is instead as for `completion-delete-char'.\)
 
-The exact behavior depends on `backward-delete-char-untabify-method'."
+The exact behavior depends on `backward-delete-char-untabify-method'.
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "P")
   (when (and (interactive-p) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
@@ -3180,10 +3204,11 @@ The exact behavior depends on `backward-delete-char-untabify-method'."
 
 (defun completion-kill-word (&optional n)
   "Kill characters forward until encountering the end of a word.
-With argument, do this that many times. If there is a provisional
-completion at point after deleting, reject it. \(If N is
-negative, behaviour is instead as for
-`completion-backward-kill-word'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-backward-kill-word'.\)
+
+If there is a provisional completion at point after deleting, it
+is rejected."
   (interactive "p")
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -3193,11 +3218,12 @@ negative, behaviour is instead as for
 
 (defun completion-backward-kill-word (&optional n)
   "Kill characters backward until encountering the end of a word.
-With argument, do this that many times. Any provisional
-completion at point is first rejected. If deleting backwards into
-a word, and `auto-completion-mode' is enabled, complete what
-remains of that word.  \(If N is negative, behaviour is instead
-as for `completion-kill-word'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-kill-word'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "p")
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3207,10 +3233,12 @@ as for `completion-kill-word'.\)"
 
 (defun completion-kill-sentence (&optional n)
   "Kill from point to end of sentence.
-With argument, do this that many times. If there is a provisional
-completion at point after deleting, reject it. \(If N is
-negative, behaviour is instead as for
-`completion-backward-kill-sentence'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for
+`completion-backward-kill-sentence'.\)
+
+If there is a provisional completion at point after deleting, it
+is rejected."
   (interactive "p")
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -3220,11 +3248,12 @@ negative, behaviour is instead as for
 
 (defun completion-backward-kill-sentence (&optional n)
   "Kill back from point to start of sentence.
-With argument, do this that many times. Any provisional
-completion at point is first rejected. If deleting backwards into
-a word, and `auto-completion-mode' is enabled, complete what
-remains of that word.  \(If N is negative, behaviour is instead
-as for `completion-kill-sentence'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-kill-sentence'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "p")
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3234,10 +3263,11 @@ as for `completion-kill-sentence'.\)"
 
 (defun completion-kill-sexp (&optional n)
   "Kill the sexp (balanced expression) following point.
-With argument, do this that many times. If there is a provisional
-completion at point after deleting, reject it. \(If N is
-negative, behaviour is instead as for
-`completion-backward-kill-sexp'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-backward-kill-sexp'.\)
+
+If there is a provisional completion at point after deleting, it
+is rejected."
   (interactive "p")
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -3247,11 +3277,12 @@ negative, behaviour is instead as for
 
 (defun completion-backward-kill-sexp (&optional n)
   "Kill the sexp (balanced expression) before point.
-With argument, do this that many times. Any provisional
-completion at point is first rejected. If deleting backwards into
-a word, and `auto-completion-mode' is enabled, complete what
-remains of that word.  \(If N is negative, behaviour is instead
-as for `completion-kill-sexp'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-kill-sexp'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "p")
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3262,10 +3293,11 @@ as for `completion-kill-sexp'.\)"
 
 (defun completion-kill-line (&optional n)
   "Kill the line following point.
-With argument, do this that many times. If there is a provisional
-completion at point after deleting, reject it. \(If N is
-negative, behaviour is instead as for
-`completion-backward-kill-line'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-backward-kill-line'.\)
+
+If there is a provisional completion at point after deleting, it
+is rejected."
   (interactive "P")
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (and (integerp n) (< n 0))
@@ -3276,11 +3308,12 @@ negative, behaviour is instead as for
 
 (defun completion-backward-kill-line (&optional n)
   "Kill the line before point.
-With argument, do this that many times. Any provisional
-completion at point is first rejected. If deleting backwards into
-a word, and `auto-completion-mode' is enabled, complete what
-remains of that word.  \(If N is negative, behaviour is instead
-as for `completion-kill-line'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-kill-line'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "p")
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3290,10 +3323,12 @@ as for `completion-kill-line'.\)"
 
 (defun completion-kill-paragraph (&optional n)
   "Kill forward to end of paragraph.
-With argument, do this that many times. If there is a provisional
-completion at point after deleting, reject it. \(If N is
-negative, behaviour is instead as for
-`completion-backward-kill-paragraph'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for
+`completion-backward-kill-paragraph'.\)
+
+If there is a provisional completion at point after deleting,
+reject it."
   (interactive "p")
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -3303,11 +3338,12 @@ negative, behaviour is instead as for
 
 (defun completion-backward-kill-paragraph (&optional n)
   "Kill backward to start of paragraph.
-With argument, do this that many times. Any provisional
-completion at point is first rejected. If deleting backwards into
-a word, and `auto-completion-mode' is enabled, complete what
-remains of that word.  \(If N is negative, behaviour is instead
-as for `completion-kill-paragraph'.\)"
+With argument, do this that many times. \(If N is negative,
+behaviour is instead as for `completion-kill-paragraph'.\)
+
+Any provisional completion at point is first rejected. If
+deleting backwards into a word, and `auto-completion-mode' is
+enabled, complete what remains of that word."
   (interactive "p")
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3325,7 +3361,7 @@ as for `completion-kill-paragraph'.\)"
   "Return the completion prefix at point.
 This is the default `completion-prefix-function'."
   (declare (special completion-word-thing))
-  (let ((overlay (completion-overlay-at-point))
+  (let ((overlay (completion-ui-overlay-at-point))
 	(pos (point)))
     ;; if point is within existing completion overlay, return its prefix
     (if overlay
@@ -3337,7 +3373,7 @@ This is the default `completion-prefix-function'."
 
 
 
-(defun completion-setup-overlay
+(defun completion-ui-setup-overlay
     (prefix &optional prefix-length completions num
 	    completion-source prefix-function
 	    non-prefix-completion overlay)
@@ -3357,7 +3393,7 @@ properties (either a supplied OVERLAY or an existing overlay at
 point) are being set."
 
   ;; look for completion overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if overlay does not already exists, create one
   (unless overlay
@@ -3380,7 +3416,7 @@ point) are being set."
 	   auto-completion-overlay-map
 	 completion-overlay-map)))
     ;; add overlay to list
-    (push overlay completion-overlay-list))
+    (push overlay completion--overlay-list))
 
   ;; update modifiable overlay properties
   (overlay-put overlay 'prefix prefix)
@@ -3399,18 +3435,18 @@ point) are being set."
 
 
 
-(defun completion-delete-overlay (overlay &optional keep-popup)
+(defun completion-ui-delete-overlay (overlay &optional keep-popup)
   "Delete completion overlay, and clean up after it.
 If KEEP-POPUP is non-nil, prevent deletion of any pop-up frame
 associated with OVERLAY."
   (when (overlayp (overlay-get overlay 'common-substring))
     (delete-overlay (overlay-get overlay 'common-substring)))
   (delete-overlay overlay)
-  (setq completion-overlay-list (delq overlay completion-overlay-list)))
+  (setq completion--overlay-list (delq overlay completion--overlay-list)))
 
 
 
-(defun completion-overlay-at-point (&optional point)
+(defun completion-ui-overlay-at-point (&optional point)
   "Return completion overlay overlapping point.
 \(There should only be one; if not, one is returned at random\)"
   (setq point (or point (point)))
@@ -3443,7 +3479,6 @@ associated with OVERLAY."
 
 (defun completion-overlays-in (start end)
   "Return list of completion overlays between START and END."
-
   ;; get overlays between START and END
   (let ((o-list (overlays-in start end))
         overlay-list)
@@ -3456,14 +3491,13 @@ associated with OVERLAY."
 
 
 
-(defun completion-resolve-old (&optional overlay)
+(defun completion-ui-resolve-old (&optional overlay)
   "Resolve old completions according to the setting of
 `completion-reslove-method'. Any completion overlay specified by
 OVERLAY will be left alone."
-
   ;; temporarily remove ignored overlay from list
-  (setq completion-overlay-list
-        (delq overlay completion-overlay-list))
+  (setq completion--overlay-list
+        (delq overlay completion--overlay-list))
 
   (cond
    ;; leave old completions (but accept zero-length ones)
@@ -3471,15 +3505,15 @@ OVERLAY will be left alone."
     (mapc (lambda (o)
 	    (when (= (overlay-start o) (overlay-end o))
 	      (completion-accept o)))
-	  completion-overlay-list))
+	  completion--overlay-list))
 
    ;; accept old completions
    ((eq completion-how-to-resolve-old-completions 'accept)
-    (mapc 'completion-accept completion-overlay-list))
+    (mapc 'completion-accept completion--overlay-list))
 
    ;; reject old completions
    ((eq completion-how-to-resolve-old-completions 'reject)
-    (mapc 'completion-reject completion-overlay-list))
+    (mapc 'completion-reject completion--overlay-list))
 
    ;; ask 'em
    ((eq completion-how-to-resolve-old-completions 'ask)
@@ -3491,14 +3525,14 @@ OVERLAY will be left alone."
               (if (y-or-n-p "Accept completion? ")
 		  (completion-accept o)
 		(completion-reject o)))
-            completion-overlay-list))))
+            completion--overlay-list))))
 
   ;; add ignored overlay back into the list
-  (when (overlayp overlay) (push overlay completion-overlay-list)))
+  (when (overlayp overlay) (push overlay completion--overlay-list)))
 
 
 
-(defun completion-resolve-current (&optional overlay char syntax)
+(defun completion--resolve-current (&optional overlay char syntax)
   "Resolve current completion according to customization settings.
 
 If OVERLAY is supplied, use that instead of trying to find one at
@@ -3511,35 +3545,32 @@ with syntax class SYNTAX was inserted at point (without actually
 inserting anything)."
 
   ;; if no overlay was supplied, try to find one at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   ;; resolve provisional completions not at point
-  (completion-resolve-old overlay)
+  (completion-ui-resolve-old overlay)
 
   ;; if there's a completion at point...
   (when overlay
     (let (resolve)
+      ;; if `auto-completion-mode' is enabled, and at least one of CHAR or
+      ;; SYNTAX was supplied, lookup behaviour for CHAR and SYNTAX
+      (if (and auto-completion-mode
+	       (eq (overlay-get overlay 'completion-source)
+		   auto-completion-source)
+	       (or char syntax))
+	  (setq resolve (car (auto-completion-lookup-behaviour char syntax)))
 
-      ;; if `auto-completion-mode' is disabled, or neither CHAR nor
-      ;; SYNTAX were supplied...
-      (if (or (not (and auto-completion-mode
-			(eq (overlay-get overlay 'completion-source)
-			    auto-completion-source)))
-	      (not (or char syntax)))
-          (cond
-           ((or (eq completion-accept-or-reject-by-default 'reject)
-                (eq completion-accept-or-reject-by-default 'accept-common))
-            (setq resolve 'reject))
-           ((eq completion-accept-or-reject-by-default 'accept)
-            (setq resolve 'accept))
-           (t (setq resolve 'other)))
-
-        ;; otherwise, if point is not at start of overlay, we want to
-        ;; effectively accept completion without running hooks
-        (if (/= (point) (overlay-start overlay))
-            (setq resolve 'other)
-          ;; otherwise, lookup behaviour for CHAR and SYNTAX
-          (setq resolve (completion-get-resolve-behaviour
-                         (completion-lookup-behaviour char syntax)))))
+	;; otherwise, `completion-accept-or-reject-by-default' determines the
+	;; behaviour
+	;; note: setting resolve to 'reject causes characters between point
+	;;       and end of overlay to be deleted, which accepts longest
+	;;       common substring in the case of 'accept-common because of
+	;;       where point is positioned
+	(cond
+	 ((or (eq completion-accept-or-reject-by-default 'reject)
+	      (eq completion-accept-or-reject-by-default 'accept-common))
+	  (setq resolve 'reject))
+	 (t (setq resolve 'accept))))
 
 
       (cond
@@ -3551,7 +3582,7 @@ inserting anything)."
           ;; otherwise, delete everything after point but keep whatever
           ;; comes before it
           (delete-region (point) (overlay-end overlay))
-          (completion-delete-overlay overlay)))
+          (completion-ui-delete-overlay overlay)))
 
        ;; if accepting, do so
        ((eq resolve 'accept)
@@ -3559,12 +3590,12 @@ inserting anything)."
 
        ;; anything else effectively accepts the completion but without
        ;; running accept hooks
-       (t (completion-delete-overlay overlay)))
+       (t (completion-ui-delete-overlay overlay)))
       )))
 
 
 
-(defun completion-run-if-condition
+(defun completion--run-if-condition
   (command variable condition &optional when)
   "Run COMMAND if CONDITION is non-nil.
 
@@ -3581,8 +3612,8 @@ Intended to be invoked (directly or indirectly) via a key
 sequence in a keymap."
 
   ;; throw and error if executing recursively
-  (when completion-trap-recursion
-    (error "Recursive call to `completion-run-if-condition';\
+  (when completion--trap-recursion
+    (error "Recursive call to `completion--run-if-condition';\
  supplied variable probably doesn't disable keymap"))
 
   ;; run command if running before, or if running instead and CONDITION
@@ -3595,7 +3626,7 @@ sequence in a keymap."
   ;; run whatever would normally be bound to the key sequence,
   ;; unless running instead and CONDITION is non-nil
   (unless (and (or (null when) (eq when 'instead)) condition)
-    (let ((completion-trap-recursion t)
+    (let ((completion--trap-recursion t)
           (restore (eval variable))
           command)
       (set variable nil)
@@ -3614,7 +3645,7 @@ sequence in a keymap."
 
 
 
-(defun completion-run-if-within-overlay
+(defun completion--run-if-within-overlay
   (command variable &optional when)
   "Run COMMAND if within a completion overlay.
 
@@ -3629,8 +3660,8 @@ end of this function.
 
 Intended to be (invoked directly or indirectly) via a key
 sequence in a keymap."
-  (completion-run-if-condition
-   command variable (completion-overlay-at-point) when))
+  (completion--run-if-condition
+   command variable (completion-ui-overlay-at-point) when))
 
 
 
@@ -3790,20 +3821,22 @@ See also `completion-window-posn-at-point' and
 
 ;; prevent bogus compiler warnings
 (eval-when-compile
-  (defun completion-compat-window-offsets (dummy)))
+  (defun completion--compat-window-offsets (dummy))
+  (defun completion--compat-frame-posn-at-point
+    (&optional arg1 arg2 arg3 arg4)))
 
 
 
 (unless (fboundp 'posn-at-point)
-  ;;  (require 'completion-ui-compat)
 
-
-  (defun completion-compat-frame-posn-at-point
-    (&optional position window)
+  (defun completion--compat-frame-posn-at-point
+    (&optional position window dx dy)
     "Return pixel position of top left corner of glyph at POSITION,
 relative to top left corner of frame containing WINDOW. Defaults
-to the position of point in the selected window."
+to the position of point in the selected window.
 
+DX and DY specify optional offsets from the top left of the
+glyph."
     (unless window (setq window (selected-window)))
     (unless position (setq position (window-point window)))
 
@@ -3817,7 +3850,7 @@ to the position of point in the selected window."
                                 window))
            (x (nth 1 x-y))
            (y (nth 2 x-y))
-           (offset (completion-compat-window-offsets window))
+           (offset (completion--compat-window-offsets window))
            (restore (mouse-pixel-position))
            pixel-pos)
 
@@ -3830,14 +3863,16 @@ to the position of point in the selected window."
                                 (cddr restore))
 
       ;; return pixel position
-      (setcdr pixel-pos
-              (- (cdr pixel-pos)
-                 (/ (frame-char-height (window-frame window)) 2)))
+      (setf (car pixel-pos) (+ (car pixel-pos) dx)
+	    (cdr pixel-pos)
+	    (+ (- (cdr pixel-pos)
+		  (/ (frame-char-height (window-frame window)) 2))
+	       dy))
       pixel-pos))
 
 
 
-  (defun completion-compat-posn-at-point-as-event
+  (defun completion--compat-posn-at-point-as-event
     (&optional position window dx dy)
     "Return pixel position of top left corner of glyph at POSITION,
 relative to top left corner of WINDOW, as a mouse-1 click
@@ -3865,7 +3900,7 @@ glyph."
                                 window))
            (x (nth 1 x-y))
            (y (nth 2 x-y))
-           (offset (completion-compat-window-offsets window))
+           (offset (completion--compat-window-offsets window))
            (restore (mouse-pixel-position))
            (frame (window-frame window))
            (edges (window-edges window))
@@ -3895,10 +3930,26 @@ glyph."
 
 
 
+  (defun completion--compat-window-posn-at-point
+    (&optional position window dx dy)
+    "Return pixel position of top left corner of glyph at POSITION,
+relative to top left corner of WINDOW. Defaults to the position
+of point in the selected window.
+
+DX and DY specify optional offsets from the top left of the
+glyph."
+    (let ((x-y (completion--compat-frame-posn-at-point
+		position window dx dy))
+	  (win-x-y (completion--compat-window-offsets window)))
+      (cons (+ (car x-y) (car win-x-y))
+	    (+ (cdr x-y) (cdr win-x-y)))))
+
+
+
 ;;; Borrowed from senator.el (I promise I'll give it back when I'm
 ;;; finished...)
 
-  (defun completion-compat-window-offsets (&optional window)
+  (defun completion--compat-window-offsets (&optional window)
     "Return offsets of WINDOW relative to WINDOW's frame.
 Return a cons cell (XOFFSET . YOFFSET) so the position (X . Y) in
 WINDOW is equal to the position ((+ X XOFFSET) .  (+ Y YOFFSET))
@@ -3939,16 +3990,18 @@ in WINDOW'S frame."
       (cons xoffset yoffset)))
 
 
-  (defun completion-compat-line-number-at-pos (pos)
+  (defun completion--compat-line-number-at-pos (pos)
     "Return (narrowed) buffer line number at position POS.
 \(Defaults to the point.\)"
     (1+ (count-lines (point-min) pos)))
 
 
   (defalias 'completion-posn-at-point-as-event
-    'completion-compat-posn-at-point-as-event)
+    'completion--compat-posn-at-point-as-event)
   (defalias 'completion-frame-posn-at-point
-    'completion-compat-frame-posn-at-point)
+    'completion--compat-frame-posn-at-point)
+  (defalias 'completion-window-posn-at-point
+    'completion--compat-window-posn-at-point)
 )
 
 
@@ -3958,13 +4011,13 @@ in WINDOW'S frame."
 
 ;; If the current Emacs version doesn't support overlay keybindings half
 ;; decently, have to simulate them using the
-;; `completion-run-if-within-overlay' hack. So far, no Emacs version supports
+;; `completion--run-if-within-overlay' hack. So far, no Emacs version supports
 ;; things properly for zero-length overlays, so we always have to do this!
 
 (when (<= emacs-major-version 21)
-  (completion-simulate-overlay-bindings completion-overlay-map completion-map
+  (completion--simulate-overlay-bindings completion-overlay-map completion-map
                                         'completion-ui)
-  (completion-simulate-overlay-bindings auto-completion-overlay-map
+  (completion--simulate-overlay-bindings auto-completion-overlay-map
                                         auto-completion-map
                                         'auto-completion-mode t))
 

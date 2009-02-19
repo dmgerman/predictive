@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-popup-frame t
+(defcustom completion-use-popup-frame t
   "*Enable the completion pop-up frame."
   :group 'completion-ui
   :type 'boolean)
@@ -197,7 +197,7 @@ With a prefix argument, display all possible completions in the
 pop-up frame, rather than just the first few."
   (interactive (list nil current-prefix-arg))
   ;; look for completion overlay at point, unless one was supplied
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   ;; deactivate other auto-show interfaces
   (completion-ui-deactivate-auto-show-interface overlay)
   ;; show the completion menu
@@ -237,7 +237,7 @@ If no OVERLAY is supplied, tries to find one at point."
   (interactive)
 
   ;; if none was supplied, find overlay at point
-  (unless overlay (setq overlay (completion-overlay-at-point)))
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   (when (and overlay window-system)
     (let* ((parent-frame (selected-frame))
@@ -465,7 +465,7 @@ methods. Toggling will show all possible completions."
                       ;; pad to same length
                       (make-string (- maxlen (length str)) ? )
                       ;; add hotkey for current completion, if any
-                      (if (and completion-ui-use-hotkeys
+                      (if (and completion-use-hotkeys
                                (< i (length completion-hotkey-list)))
                           (format " (%s)"
                                   (key-description
@@ -479,7 +479,7 @@ methods. Toggling will show all possible completions."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-ui-use-popup-frame
+ 'completion-use-popup-frame
  :activate 'completion-activate-popup-frame-keys
  :deactivate 'completion-popup-frame-dismiss
  :update 'completion-update-popup-frame

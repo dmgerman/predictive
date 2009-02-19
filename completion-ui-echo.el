@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-echo t
+(defcustom completion-use-echo t
   "*Display completions in echo area."
   :group 'completion-ui
   :type 'boolean)
@@ -78,8 +78,8 @@
       (unless (stringp cmpl) (setq cmpl (car cmpl)))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
-      (if (or (eq completion-ui-use-hotkeys t)
-	      (and (eq completion-ui-use-hotkeys 'auto-show)
+      (if (or (eq completion-use-hotkeys t)
+	      (and (eq completion-use-hotkeys 'auto-show)
 		   (overlay-get overlay 'auto-show)))
 	  (if (< i (length completion-hotkey-list))
 	      (setq cmpl
@@ -108,8 +108,8 @@ of completion overlay."
         (dotimes (i (length completions))
           ;; if using hotkeys and one is assigned to current
           ;; completion, show it next to completion text
-          (if (or (eq completion-ui-use-hotkeys t)
-		  (and (eq completion-ui-use-hotkeys 'auto-show)
+          (if (or (eq completion-use-hotkeys t)
+		  (and (eq completion-use-hotkeys 'auto-show)
 		       (overlay-get overlay 'auto-show)))
 	      (if (< i (length completion-hotkey-list))
 		  (setq str
@@ -135,7 +135,7 @@ of completion overlay."
 
 
 (completion-ui-register-interface
- 'completion-ui-use-echo
+ 'completion-use-echo
  :activate 'completion-echo
  :deactivate t
  :auto-show-helper 'completion-echo)

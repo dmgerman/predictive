@@ -232,17 +232,23 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-texinfo-load-regexps ()
   "Load the predictive mode Texinfo auto-overlay regexp definitions."
 
-  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-	 (word-complete (completion-get-completion-behaviour word-behaviour))
-	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-	 (whitesp-complete (completion-get-completion-behaviour
-			    whitesp-behaviour))
-	 (whitesp-resolve (completion-get-resolve-behaviour
-			   whitesp-behaviour)))
+  (destructuring-bind (word-resolve word-complete word-insert
+		       punct-resolve punct-complete punct-insert
+		       whitesp-resolve whitesp-complete whitesp-insert)
+      (append (auto-completion-lookup-behaviour nil ?w)
+	      (auto-completion-lookup-behaviour nil ?.)
+	      (auto-completion-lookup-behaviour nil ? ))
+  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
+  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+  ;; 	 (whitesp-complete (completion-get-completion-behaviour
+  ;; 			    whitesp-behaviour))
+  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
+  ;; 			   whitesp-behaviour)))
 
     ;; @c starts comments that last till end of line
     (auto-overlay-load-definition
@@ -582,18 +588,26 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)
+
   ;; get behaviours defined in `auto-completion-syntax-alist'
-  (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-	 (word-complete (completion-get-completion-behaviour word-behaviour))
-	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-	 (whitesp-complete (completion-get-completion-behaviour
-			    whitesp-behaviour))
-	 (whitesp-resolve (completion-get-resolve-behaviour
-			   whitesp-behaviour)))
+  (destructuring-bind (word-resolve word-complete word-insert
+		       punct-resolve punct-complete punct-insert
+		       whitesp-resolve whitesp-complete whitesp-insert)
+      (append (auto-completion-lookup-behaviour nil ?w)
+	      (auto-completion-lookup-behaviour nil ?.)
+	      (auto-completion-lookup-behaviour nil ? ))
+  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
+  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
+  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
+  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
+  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
+  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
+  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
+  ;; 	 (whitesp-complete (completion-get-completion-behaviour
+  ;; 			    whitesp-behaviour))
+  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
+  ;; 			   whitesp-behaviour)))
+
     ;; make "\", "$", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist
 	  (append

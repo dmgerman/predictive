@@ -49,7 +49,7 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
-(defcustom completion-ui-use-hotkeys t
+(defcustom completion-use-hotkeys t
   "*Enable completion hotkeys (single-key selection of completions).
 
 If t, enable hotkeys whenever completions are available. If nil,
@@ -78,7 +78,7 @@ when `completion-use-hotkeys' is enabled."
 (defun completion-activate-hotkeys (overlay)
   "Activate completion hotkeys for OVERLAY."
   ;; activate keys unless only active when auto-show interface is displayed
-  (unless (eq completion-ui-use-hotkeys 'auto-show)
+  (unless (eq completion-use-hotkeys 'auto-show)
     (dolist (key completion-hotkey-list)
       (define-key (overlay-get overlay 'keymap) (vector key)
 	'completion-hotkey-select))))
@@ -87,7 +87,7 @@ when `completion-use-hotkeys' is enabled."
 (defun completion-auto-show-activate-hotkeys (overlay)
   "Activate completion hotkeys for OVERLAY
 when auto-show interface is displayed."
-  (when (eq completion-ui-use-hotkeys 'auto-show)
+  (when (eq completion-use-hotkeys 'auto-show)
     (dolist (key completion-hotkey-list)
       (define-key (overlay-get overlay 'keymap) (vector key)
 	'completion-hotkey-select))))
@@ -107,10 +107,10 @@ Characters in `completion-hotkey-list' get bound to this
 internally. It should *never* be bound in a keymap."
   (interactive)
 
-  (let ((overlay (completion-overlay-at-point))
+  (let ((overlay (completion-ui-overlay-at-point))
 	key n)
     ;; resolve any other old provisional completions
-    (completion-resolve-old overlay)
+    (completion-ui-resolve-old overlay)
     ;; find completion index corresponding to last input event
     (setq unread-command-events (listify-key-sequence (this-command-keys))
 	  key (read-key-sequence-vector ""))
@@ -125,10 +125,10 @@ internally. It should *never* be bound in a keymap."
      ;; FIXME: could also do this if there are too few completions, but maybe
      ;;        that would be confusing to the user?
      ((or (null overlay) (null (overlay-get overlay 'completions)))
-      (when completion-trap-recursion
+      (when completion--trap-recursion
 	(error "Recursive call to `completion-hotkey-select'"))
       (completion-deactivate-hotkeys overlay)
-      (let ((completion-trap-recursion t))
+      (let ((completion--trap-recursion t))
 	(unwind-protect
 	    (command-execute (key-binding key t))
 	  (completion-activate-hotkeys overlay))))
@@ -142,7 +142,7 @@ internally. It should *never* be bound in a keymap."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-ui-use-hotkeys
+ 'completion-use-hotkeys
  :activate 'completion-activate-hotkeys
  :deactivate 'completion-deactivate-hotkeys
  :auto-show-helper 'competion-auto-show-activate-hotkeys)
