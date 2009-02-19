@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.18.1
+;; Version: 0.19
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19
+;; * updated for compatibility with new Completion-UI
 ;;
 ;; Version 0.18.1
 ;; * rewrote `predictive-load-dict' and `predictive-unload-dict', and added
@@ -779,6 +782,34 @@ associated function is called, with a positive argument if
 predictive mode is being enabled or a negative one if it is being
 disabled. This makes it easier to customize predictive mode for
 different major modes.")
+
+
+(defvar predictive-accept-functions '(predictive-auto-learn)
+  "Hook run after a predictive completion is accepted.
+The functions are called with two or three arguments: the prefix,
+the accepted completion, and any prefix argument supplied by the
+user when the completion was accepted interactively.")
+
+
+(defvar predictive-reject-functions
+  '((lambda (prefix word &optional arg)
+      (when arg (predictive-auto-learn prefix word))))
+  "Hook run after a predictive completion is rejected.
+The functions are called with two or three arguments: the prefix,
+the accepted completion, and any prefix argument supplied by the
+user when the completion was accepted interactively.")
+
+
+(defvar predictive-menu-function 'completion-construct-menu
+  "Function used to construct the predictive completion menu.")
+
+
+(defvar predictive-browser-function 'completion-construct-browser-menu
+  "Function used to construct the predictive completion browser.")
+
+
+(defvar predictive-word-thing 'word
+  "Thing-at-point symbol used to determine the prefix to complete.")
 
 
 (defvar predictive-completion-filter nil
@@ -2870,9 +2901,15 @@ minor mode."
 (completion-ui-register-source
  predictive-complete
  :name 'predictive
- :accept-function 'predictive-auto-learn
- :reject-function (lambda (prefix word &optional arg)
-		    (when arg (predictive-auto-learn prefix word))))
+ :accept-function (lambda (prefix completion &optional arg)
+		    (run-hook-with-args 'predictive-accept-functions
+					prefix word arg))
+ :reject-function (lambda (prefix completion &optional arg)
+		    (run-hook-with-args 'predictive-reject-functions
+					prefix word arg))
+ :menu-function '(eval predictive-menu-function)
+ :browser-function '(eval predictive-browser-function)
+ :word-thing '(eval predictive-word-thing))
 
 
 
