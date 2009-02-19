@@ -160,8 +160,10 @@ If no OVERLAY is supplied, one is found at point (this only
 happens when this function is called interactively).
 
 If MENU is supplied, use that to construct the menu, unless an
-overlay overrides it. Defaults to the \"overlay local\" binding
-of 'completion-menu, or `completion-menu' if there is none."
+overlay overrides it. It is called with one argument, the
+completion OVERLAY. MENU defaults to the \"overlay local\"
+binding of 'completion-menu, or `completion-menu' if there is
+none."
   (interactive)
   (unless overlay (setq overlay (completion-overlay-at-point)))
 
