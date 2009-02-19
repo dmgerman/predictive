@@ -520,7 +520,8 @@ completions of the words."
 
 
 (defcustom predictive-auto-complete t
-  "*Enable and disable auto-completion-mode along with predictive mode."
+  "*Enable and disable `auto-completion-mode'
+along with predictive mode."
   :group 'predictive
   :type 'boolean)
 
@@ -708,45 +709,45 @@ See also `predictive-which-dict-mode' and `predictive-which-dict'."
 ;;; ==================================================================
 ;;;          Aliases for completion-UI customization options
 
-(when (fboundp 'defvaralias)
-  (defvaralias 'predictive-completion-max-candidates
-    'completion-max-candidates)
-  (defvaralias 'predictive-completion-resolve-behaviour
-    'completion-resolve-behaviour)
-  (defvaralias 'predictive-auto-completion-min-chars
-    'auto-completion-min-chars)
-  (defvaralias 'predictive-auto-completion-delay
-    'auto-completion-delay)
-  (defvaralias 'predictive-auto-completion-backward-delete-delay
-    'auto-completion-backward-delete-delay)
-  (defvaralias 'predictive-completion-use-dynamic
-    'completion-use-dynamic)
-  (defvaralias 'predictive-completion-dynamic-syntax-alist
-    'completion-dynamic-syntax-alist)
-  (defvaralias 'predictive-completion-dynamic-override-syntax-alist
-    'completion-dynamic-override-syntax-alist)
-  (defvaralias 'predictive-completion-use-hotkeys
-    'completion-use-hotkeys)
-  (defvaralias 'predictive-completion-hotkey-list
-    'completion-hotkey-list)
-  (defvaralias 'predictive-completion-use-tooltip
-    'completion-use-tooltip)
-  (defvaralias 'predictive-completion-tooltip-delay
-    'completion-tooltip-delay)
-  (defvaralias 'predictive-completion-tooltip-timeout
-    'completion-tooltip-timeout)
-  (defvaralias 'predictive-completion-tooltip-offset
-    'completion-tooltip-offset)
-  (defvaralias 'predictive-completion-tooltip-face
-    'completion-tooltip-face)
-  (defvaralias 'predictive-completion-auto-show-menu
-    'completion-auto-show-menu)
-  (defvaralias 'predictive-completion-browser-max-items
-    'completion-browser-max-items)
-  (defvaralias 'predictive-completion-browser-buckets
-    'completion-browser-buckets)
-  (defvaralias 'predictive-completion-use-echo
-    'completion-use-echo))
+;; (when (fboundp 'defvaralias)
+;;   (defvaralias 'predictive-completion-max-candidates
+;;     'completion-max-candidates)
+;;   (defvaralias 'predictive-completion-resolve-behaviour
+;;     'completion-resolve-behaviour)
+;;   (defvaralias 'predictive-auto-completion-min-chars
+;;     'auto-completion-min-chars)
+;;   (defvaralias 'predictive-auto-completion-delay
+;;     'auto-completion-delay)
+;;   (defvaralias 'predictive-auto-completion-backward-delete-delay
+;;     'auto-completion-backward-delete-delay)
+;;   (defvaralias 'predictive-completion-use-dynamic
+;;     'completion-use-dynamic)
+;;   (defvaralias 'predictive-completion-dynamic-syntax-alist
+;;     'completion-dynamic-syntax-alist)
+;;   (defvaralias 'predictive-completion-dynamic-override-syntax-alist
+;;     'completion-dynamic-override-syntax-alist)
+;;   (defvaralias 'predictive-completion-use-hotkeys
+;;     'completion-use-hotkeys)
+;;   (defvaralias 'predictive-completion-hotkey-list
+;;     'completion-hotkey-list)
+;;   (defvaralias 'predictive-completion-use-tooltip
+;;     'completion-use-tooltip)
+;;   (defvaralias 'predictive-completion-tooltip-delay
+;;     'completion-tooltip-delay)
+;;   (defvaralias 'predictive-completion-tooltip-timeout
+;;     'completion-tooltip-timeout)
+;;   (defvaralias 'predictive-completion-tooltip-offset
+;;     'completion-tooltip-offset)
+;;   (defvaralias 'predictive-completion-tooltip-face
+;;     'completion-tooltip-face)
+;;   (defvaralias 'predictive-completion-auto-show-menu
+;;     'completion-auto-show-menu)
+;;   (defvaralias 'predictive-completion-browser-max-items
+;;     'completion-browser-max-items)
+;;   (defvaralias 'predictive-completion-browser-buckets
+;;     'completion-browser-buckets)
+;;   (defvaralias 'predictive-completion-use-echo
+;;     'completion-use-echo))
 
 
 
@@ -975,14 +976,14 @@ the Predictive Completion Manual for fuller information.
 When `predictive-auto-complete' is enabled, words will
 automatically be completed as you type. Otherwise, to complete
 the word at or next to the point, the following keys can be used:
-\\<completion-map>
-  \\[complete-or-cycle-word-at-point] \\[complete-or-cycle-backwards-word-at-point] \t Complete word at point.
+  \\<predictive-map>
+  \\[complete-predictive] \t Complete word at point.
 
 When completing a word, the following keys are available:
 
+  \\<completion-overlay-map>
   \\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
   \\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
-  \\<completion-dynamic-map>
   \\[completion-accept] \t Accept the current completion.
   \\[completion-reject] \t Reject the current completion.
   \\[completion-tab-complete] \t\t Insert longest common prefix.
@@ -1003,9 +1004,6 @@ When completing a word, the following keys are available:
 
    ;; ----- enabling predictive mode -----
    ((not predictive-mode)
-    ;; set the completion function
-    (setq completion-function 'predictive-complete)
-    (setq completion-replaces-prefix nil)
     ;; make sure main dictionary is loaded
     (when predictive-main-dict
       (if (atom predictive-main-dict)
@@ -1027,11 +1025,6 @@ When completing a word, the following keys are available:
     ;; supplied)
     (add-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches
 	      nil 'local)
-    (add-hook 'completion-accept-functions 'predictive-auto-learn nil 'local)
-    (add-hook 'completion-reject-functions
-	      (lambda (prefix word &optional arg)
-		(when arg (predictive-auto-learn prefix prefix)))
-	      nil 'local)
 
     ;; look up major mode in major-mode-alist and call any matching function
     ;; with a positive argument to indicate enabling
@@ -1047,6 +1040,7 @@ When completing a word, the following keys are available:
 		 (prin1-to-string (cdr modefunc))))))
 
     ;; turn on auto-completion mode if necessary
+    (set (make-local-variable 'auto-completion-source) 'predictive)
     (when predictive-auto-complete (auto-completion-mode 1))
 
     ;; turn on which-dict mode if necessary
@@ -1064,9 +1058,8 @@ When completing a word, the following keys are available:
 
    ;; ----- disabling predictive mode -----
    (predictive-mode
-    ;; unset the completion function
-    (setq completion-function nil)
     ;; turn off auto-completion mode if necessary
+    (kill-local-variable 'auto-completion-source)
     (when predictive-auto-complete (auto-completion-mode -1))
     ;; turn off which-dict mode
     (predictive-which-dict-mode -1)
@@ -1102,15 +1095,9 @@ When completing a word, the following keys are available:
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
     (remove-hook 'kill-buffer-hook 'predictive-save-used-dicts 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
-    (remove-hook 'completion-accept-functions 'predictive-auto-learn 'local)
-    (remove-hook 'completion-reject-functions
-		 (lambda (prefix word &optional arg)
-		   (when arg (predictive-auto-learn prefix word)))
-		 'local)
 
     ;; delete local variable bindings
     (kill-local-variable 'predictive-used-dict-list)
-    (kill-local-variable 'completion-menu)
     ;; reset the mode variable and run the hook
     (setq predictive-mode nil)
     (run-hooks 'predictive-mode-disable-hook)
@@ -1136,11 +1123,7 @@ Remaining arguments are ignored (they are there to allow
 `completion-accept-functions' hook)."
   (interactive (list nil
 		     (thing-at-point
-		      (or (and (fboundp 'auto-overlay-local-binding)
-			       (auto-overlay-local-binding
-				'completion-word-thing))
-			  completion-word-thing
-			  'word))))
+		      (completion-ui-source-word-thing 'predictive))))
 
   (when word
     (let ((dict (predictive-current-dict))
@@ -2882,7 +2865,16 @@ minor mode."
 
 
 ;;; ===============================================================
-;;;                       Provide package
+;;;                   Register Completion-UI source
+
+(completion-ui-register-source
+ predictive-complete
+ :name 'predictive
+ :accept-function 'predictive-auto-learn
+ :reject-function (lambda (prefix word &optional arg)
+		    (when arg (predictive-auto-learn prefix word))))
+
+
 
 (provide 'predictive)
 
