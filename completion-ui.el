@@ -3499,36 +3499,41 @@ OVERLAY will be left alone."
   (setq completion--overlay-list
         (delq overlay completion--overlay-list))
 
-  (cond
-   ;; leave old completions (but accept zero-length ones)
-   ((eq completion-how-to-resolve-old-completions 'leave)
-    (mapc (lambda (o)
-	    (when (= (overlay-start o) (overlay-end o))
-	      (completion-accept o)))
-	  completion--overlay-list))
-
-   ;; accept old completions
-   ((eq completion-how-to-resolve-old-completions 'accept)
-    (mapc 'completion-accept completion--overlay-list))
-
-   ;; reject old completions
-   ((eq completion-how-to-resolve-old-completions 'reject)
-    (mapc 'completion-reject completion--overlay-list))
-
-   ;; ask 'em
-   ((eq completion-how-to-resolve-old-completions 'ask)
-    (save-excursion
+  (save-excursion
+    (cond
+     ;; leave old completions (but accept zero-length ones)
+     ((eq completion-how-to-resolve-old-completions 'leave)
       (mapc (lambda (o)
-              (goto-char (overlay-end o))
-              ;; FIXME: remove hard-coded face
-              (overlay-put o 'face '(background-color . "red"))
-              (if (y-or-n-p "Accept completion? ")
-		  (completion-accept o)
-		(completion-reject o)))
-            completion--overlay-list))))
+	      (when (= (overlay-start o) (overlay-end o))
+		(completion-accept nil o)))
+	    completion--overlay-list))
+
+     ;; accept old completions
+     ((eq completion-how-to-resolve-old-completions 'accept)
+      (mapc (lambda (o) (completion-accept nil o))
+	    completion--overlay-list))
+
+     ;; reject old completions
+     ((eq completion-how-to-resolve-old-completions 'reject)
+      (mapc (lambda (o) (completion-reject nil o))
+	    completion--overlay-list))
+
+     ;; ask 'em
+     ((eq completion-how-to-resolve-old-completions 'ask)
+      (save-excursion
+	(mapc (lambda (o)
+		(goto-char (overlay-end o))
+		;; FIXME: remove hard-coded face
+		(overlay-put o 'face '(background-color . "red"))
+		(if (y-or-n-p "Accept completion? ")
+		    (completion-accept nil o)
+		  (completion-reject nil o)))
+	      completion--overlay-list)))))
 
   ;; add ignored overlay back into the list
-  (when (overlayp overlay) (push overlay completion--overlay-list)))
+  (when (overlayp overlay) (push overlay completion--overlay-list))
+  (when (null completion--overlay-list)
+    (setq completion-ui--activated nil)))
 
 
 
@@ -3586,7 +3591,7 @@ inserting anything)."
 
        ;; if accepting, do so
        ((eq resolve 'accept)
-        (completion-accept overlay))
+        (completion-accept nil overlay))
 
        ;; anything else effectively accepts the completion but without
        ;; running accept hooks
