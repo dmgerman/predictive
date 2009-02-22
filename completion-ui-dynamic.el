@@ -41,8 +41,9 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
+
 (provide 'completion-ui-dynamic)
-;;(require 'completion-ui)
+(require 'completion-ui)
 
 
 

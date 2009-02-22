@@ -41,8 +41,9 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
+
 (provide 'completion-ui-popup-frame)
-;;(require 'completion-ui)
+(require 'completion-ui)
 
 
 

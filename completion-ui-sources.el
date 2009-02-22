@@ -127,8 +127,9 @@
 ;; All the customization options and settings are documented there.
 
 
-;;(require 'completion-ui)
 (provide 'completion-ui-sources)
+(require 'completion-ui)
+
 
 ;; get rid of compiler warnings
 (eval-when-compile

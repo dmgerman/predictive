@@ -3853,19 +3853,6 @@ See also `completion-window-posn-at-point' and
 
 
 
-;;; ================================================================
-;;;                Load user-interface modules
-
-(require 'completion-ui-popup-frame)
-(require 'completion-ui-dynamic)
-(require 'completion-ui-hotkeys)
-(require 'completion-ui-echo)
-(require 'completion-ui-tooltip)
-(require 'completion-ui-menu)
-(require 'completion-ui-sources)
-
-
-
 ;;; ===============================================================
 ;;;                     Compatibility Stuff
 
@@ -4073,6 +4060,18 @@ in WINDOW'S frame."
 
 
 
+;;; ================================================================
+;;;                Load user-interface modules
+
 (provide 'completion-ui)
+(require 'completion-ui-popup-frame)
+(require 'completion-ui-dynamic)
+(require 'completion-ui-hotkeys)
+(require 'completion-ui-echo)
+(require 'completion-ui-tooltip)
+(require 'completion-ui-menu)
+(require 'completion-ui-sources)
+
+
 
 ;;; completion-ui.el ends here
