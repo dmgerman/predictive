@@ -49,9 +49,14 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-echo nil
+  "Completion-UI echo-area user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-echo t
   "*Display completions in echo area."
-  :group 'completion-ui
+  :group 'completion-ui-echo
   :type 'boolean)
 
 

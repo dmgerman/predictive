@@ -49,9 +49,14 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-tooltip nil
+  "Completion-UI tooltip user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-tooltip t
   "*When non-nil, enable the tooltip Completion-UI interface."
-  :group 'completion-ui
+  :group 'completion-ui-tooltip
   :type 'boolean)
 
 
@@ -61,7 +66,7 @@ Unfortunately, there is no way to display a tooltip indefinitely
 in Emacs. You can work around this by using a very large
 number. (The completion tooltip disapears automatically as soon
 as you do anything other than cycling through completions.)"
-  :group 'completion-ui
+  :group 'completion-ui-tooltip
   :type 'integer)
 
 
@@ -69,7 +74,7 @@ as you do anything other than cycling through completions.)"
   "Pixel offset for tooltip.
 This sometimes needs to be tweaked manually to get the tooltip in
 the correct position under different window systems."
-  :group 'completion-ui
+  :group 'completion-ui-tooltip
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
@@ -81,7 +86,7 @@ the correct position under different window systems."
 	      '(:background "light yellow" :foreground "black"))))
   "*Face used in tooltip. Only :foreground, :background and :family
 attributes are used."
-  :group 'completion-ui)
+  :group 'completion-ui-tooltip)
 
 
 

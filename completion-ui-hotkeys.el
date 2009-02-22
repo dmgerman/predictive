@@ -49,6 +49,11 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-hotkeys nil
+  "Completion-UI hotkeys user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-hotkeys t
   "*Enable completion hotkeys (single-key selection of completions).
 
@@ -58,7 +63,7 @@ enable hotkeys when the `completion-auto-show' interface is
 active. (Note that because the completion menu steals keyboard
 focus, enabling hotkeys when the menu is active has no effect. So
 don't try to report this as a bug!)"
-  :group 'completion-ui
+  :group 'completion-ui-hotkeys
   :type '(choice (const t)
                  (const auto-show)
                  (const nil)))
@@ -67,7 +72,7 @@ don't try to report this as a bug!)"
 (defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)
   "*List of keys (vectors) to use for selecting completions
 when `completion-use-hotkeys' is enabled."
-  :group 'completion-ui
+  :group 'completion-ui-hotkeys
   :type '(repeat character))
 
 

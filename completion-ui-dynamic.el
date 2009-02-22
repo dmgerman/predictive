@@ -49,25 +49,30 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-dynamic nil
+  "Completion-UI dynamic completion user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-dynamic t
   "*Enable dynamic completion.
 Dynamic completion directly inserts the first completion into the
 buffer without further action required by the user. It is still a
 provisional completion, so until it is accepted all the usual
 mechanisms for selecting completions are still available."
-  :group 'completion-ui
+  :group 'completion-ui-dynamic
   :type 'boolean)
 
 
 (defcustom completion-dynamic-highlight-common-substring t
   "*Highlight the longest common prefix in dynamic completions."
-  :group 'completion-ui
+  :group 'completion-ui-dynamic
   :type 'boolean)
 
 
 (defcustom completion-dynamic-highlight-prefix-alterations t
   "*Highlight alterations to the prefix in dynamic completions."
-  :group 'completion-ui
+  :group 'completion-ui-dynamic
   :type 'boolean)
 
 
@@ -77,7 +82,7 @@ mechanisms for selecting completions are still available."
     (((class color) (background light))
      (:background "gold" :foreground "black")))
   "*Face used to highlight the common prefix in dynamic completions."
-  :group 'completion-ui)
+  :group 'completion-ui-dynamic)
 
 
 (defface completion-dynamic-prefix-alterations-face
@@ -86,7 +91,7 @@ mechanisms for selecting completions are still available."
     (((class color) (background light))
      (:background "yellow" :foreground "black")))
   "*Face used to highlight prefix alterations in dynamic completions."
-  :group 'completion-ui)
+  :group 'completion-ui-dynamic)
 
 
 
@@ -115,7 +120,7 @@ cauliflower will start growing out of your ears."
     (let ((prefix (overlay-get overlay 'prefix))
 	  (completions (overlay-get overlay 'completions))
 	  (prefix-len (overlay-get overlay 'prefix-length))
-	  (cmpl-replaces-prefix
+	  (non-prefix-cmpl
 	   (overlay-get overlay 'non-prefix-completion))
 	  cmpl len)
       (when completions
@@ -130,7 +135,7 @@ cauliflower will start growing out of your ears."
         ;; `auto-completion-mode' is disabled
         (delete-region
 	 (- pos
-	    (if (or (null cmpl-replaces-prefix)
+	    (if (or (null non-prefix-cmpl)
 		    (and (not (overlay-get overlay 'prefix-replaced))
 			 (eq completion-accept-or-reject-by-default 'accept)
 			 (overlay-put overlay 'prefix-replaced t)))
@@ -145,12 +150,12 @@ cauliflower will start growing out of your ears."
 	;; insert new completion
         (let ((overwrite-mode nil)) (insert cmpl))
         (move-overlay overlay
-		      (+ pos (if cmpl-replaces-prefix 0 len))
+		      (+ pos (if non-prefix-cmpl 0 len))
 		      (+ pos (length cmpl)))
         (overlay-put overlay 'prefix-length len)
 	;; highlight alterations to prefix, if enabled
 	(when (and completion-dynamic-highlight-prefix-alterations
-		   (not cmpl-replaces-prefix))
+		   (not non-prefix-cmpl))
 	  (completion--highlight-prefix-alterations prefix cmpl pos len))
         ;; highlight common substring, if enabled
         (when completion-dynamic-highlight-common-substring
@@ -174,7 +179,8 @@ cauliflower will start growing out of your ears."
       (delete-region
        (- (overlay-start overlay)
 	  (if (and (overlay-get overlay 'non-prefix-completion)
-		   (overlay-get overlay 'prefix-replaces))
+		   (overlay-get overlay 'prefix-replaced)
+		   (not (overlay-put overlay 'prefix-replaced nil)))
 	      0 (overlay-get overlay 'prefix-length)))
        (overlay-end overlay))
       ;; restore original prefix
@@ -212,18 +218,22 @@ CMPL is the current dynamic completion, POS is the position of
 the end of PREFIX in the buffer, LEN is the length of the prefix
 inserted in the buffer, and OVERLAY is the dynamic completion
 overlay."
-  (let* ((cmpl-replaces-prefix
+  (let* ((non-prefix-cmpl
 	  (overlay-get overlay 'non-prefix-completion))
 	 (substr (try-completion
 		  "" (mapcar
 		      (lambda (cmpl)
 			(if (stringp cmpl)
-			    (if cmpl-replaces-prefix
+			    (if non-prefix-cmpl
 				cmpl
-			      (substring cmpl (length prefix)))
-			  (if cmpl-replaces-prefix
+			      ;; avoid throwing error for nonsense completions
+			      (when (<= (length prefix) (length cmpl))
+				(substring cmpl (length prefix))))
+			  (if non-prefix-cmpl
 			      (car cmpl)
-			    (substring (car cmpl) (cdr cmpl)))))
+			    ;; avoid throwing error for nonsense completions
+			    (when (<= (cdr cmpl) (length (car cmpl)))
+			      (substring (car cmpl) (cdr cmpl))))))
 		      (overlay-get overlay 'completions)))))
 
     ;; create common substring overlay if doesn't already exist
@@ -235,10 +245,10 @@ overlay."
 
     ;; note: try-completion returns t if there's only one completion
     (move-overlay (overlay-get overlay 'common-substring)
-		  (+ pos (if cmpl-replaces-prefix 0 len))
+		  (+ pos (if non-prefix-cmpl 0 len))
 		  (if (eq substr t)
-		      (+ pos (if cmpl-replaces-prefix 0 len))
-		    (+ pos (if cmpl-replaces-prefix 0 len)
+		      (+ pos (if non-prefix-cmpl 0 len))
+		    (+ pos (if non-prefix-cmpl 0 len)
 		       (length substr))))))
 
 
@@ -253,7 +263,6 @@ the end if it is to be accepted."
    ((or (and auto-completion-mode
 	     (eq (overlay-get overlay 'completion-source)
 		 auto-completion-source))
-	(overlay-get overlay 'non-prefix-completion)
 	(eq completion-accept-or-reject-by-default 'reject))
     (goto-char (overlay-start overlay)))
 

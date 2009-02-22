@@ -49,9 +49,14 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-menu nil
+  "Completion-UI menu user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-menu t
   "*Enable the completion menu and browser."
-  :group 'completion-ui
+  :group 'completion-ui-menu
   :type 'boolean)
 
 
@@ -59,14 +64,14 @@
   "*Pixel offset for completion menus.
 This sometimes needs to be tweaked manually to get completion
 menus in the correct position under different window systems."
-  :group 'completion-ui
+  :group 'completion-ui-menu
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
 (defcustom completion-browser-max-items 25
   "*Maximum number of completions to display
 in any one completion browser submenu."
-  :group 'completion-ui
+  :group 'completion-ui-menu
   :type 'integer)
 
 
@@ -80,7 +85,7 @@ Note that setting `non-prefix-completion' makes the browser
 act as though this variable is set to nil, regardless of its
 actual value, since recursing only makes sense for prefix
 completion."
-  :group 'completion-ui
+  :group 'completion-ui-menu
   :type 'boolean)
 
 
@@ -92,7 +97,7 @@ display:
 balance:  balance number of buckets and size of content
 maximize: maximize number of buckets, minimize size of contents
 mininize: minimize number of buckets, maximize size of contents"
-  :group 'predictive
+  :group 'completion-ui-menu
   :type '(choice (const :tag "balance" balance)
                  (const :tag "maximize" max)
                  (const :tag "minimize" min)))

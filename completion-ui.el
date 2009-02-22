@@ -461,6 +461,13 @@
 (require 'auto-overlay-common nil t)
 
 
+(defvar completion-ui-interface-definitions nil
+  "Completion-UI user-interface definitions.")
+
+(defvar completion-ui-source-definitions nil
+  "Compltion-UI source definitions.")
+
+
 
 
 ;;; ============================================================
@@ -543,9 +550,14 @@ before the `completion-auto-show' interface is activated."
 
 ;;; ===== Auto-completion customizations =====
 
+(defgroup auto-completion-mode nil
+  "auto-completion-mode"
+  :group 'completion-ui)
+
+
 (defcustom auto-completion-source nil
   "*Completion source for `auto-completion-mode'."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type `(choice
 	  (const nil)
 	  ,@(nreverse
@@ -557,7 +569,7 @@ before the `completion-auto-show' interface is activated."
 
 (defcustom auto-completion-min-chars nil
   "*Minimum number of characters before completions are offered."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type '(choice (const :tag "Off" nil)
                  (integer :tag "On")))
 
@@ -565,7 +577,7 @@ before the `completion-auto-show' interface is activated."
 (defcustom auto-completion-delay nil
   "*Number of seconds to wait before activating completion mechanisms
 in auto-completion mode."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type '(choice (const :tag "Off" nil)
                  (float :tag "On")))
 
@@ -573,7 +585,7 @@ in auto-completion mode."
 (defcustom auto-completion-backward-delete-delay 0.1
   "*Number of seconds to wait before activating completion mechanisms
 after deleting backwards in auto-completion mode."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type 'float)
 
 
@@ -656,7 +668,7 @@ function to take-over the job of inserting characters (e.g. in
 order to make sure parentheses are inserted in pairs), and is
 probably the only time it makes sense to use a null third
 element."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type '(choice
           (cons :tag "Predefined"
                 (choice :tag "Acceptance behaviour"
@@ -693,7 +705,7 @@ Overrides the default behaviour defined by the character's syntax
 in `auto-completion-syntax-alist'. The format is the same as for
 `auto-completion-synax-alist', except that the alist keys are
 characters rather than syntax descriptors."
-  :group 'completion-ui
+  :group 'auto-completion-mode
   :type '(alist :key-type (choice character (const :tag "default" t))
                 :value-type (list (choice (const :tag "accept" accept)
                                           (const :tag "reject" reject)
@@ -707,19 +719,6 @@ characters rather than syntax descriptors."
 
 ;;; ============================================================
 ;;;               Other configuration variables
-
-(defvar completion-ui--activated nil
-  "Non-nil when Completion-UI is activated in a buffer.
-
-This variable enables the global `completion-map' keymap, which
-contains hacks to work-around poor overlay keymap support in
-older versions of Emacs.
-
-It only ever be disabled when debugging Completion-UI and the
-`completion-map' bindings are causing problems.")
-
-(make-variable-buffer-local 'completion-ui--activated)
-
 
 (defvar completion-accept-functions nil
   "Hook run after a completion is accepted.
@@ -761,6 +760,19 @@ auto-completion-mode is enabled.")
 
 ;;; ============================================================
 ;;;                     Internal variables
+
+(defvar completion-ui--activated nil
+  "Non-nil when Completion-UI is activated in a buffer.
+
+This variable enables the global `completion-map' keymap, which
+contains hacks to work-around poor overlay keymap support in
+older versions of Emacs.
+
+It only ever be disabled when debugging Completion-UI and the
+`completion-map' bindings are causing problems.")
+
+(make-variable-buffer-local 'completion-ui--activated)
+
 
 (defvar completion--overlay-list nil
   "List of overlays used during completion")
@@ -1397,10 +1409,6 @@ major mode, or by another minor mode)."
 ;;; =======================================================
 ;;;              Modularized user interfaces
 
-(defvar completion-ui-interface-definitions nil
-  "Completion-UI user-interface definitions.")
-
-
 (defmacro completion-ui--interface-variable (def)
   `(car ,def))
 
@@ -1639,10 +1647,6 @@ is passed one argument, a completion overlay."
 
 ;;; =======================================================
 ;;;           Modularized source definitions
-
-(defvar completion-ui-source-definitions nil
-  "Compltion-UI source definitions.")
-
 
 (defmacro completion-ui--source-def-name (def)
   `(car ,def))

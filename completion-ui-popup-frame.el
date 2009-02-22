@@ -49,15 +49,20 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defgroup completion-ui-popup-frame nil
+  "Completion-UI pop-up frame user interface."
+  :group 'completion-ui)
+
+
 (defcustom completion-use-popup-frame t
   "*Enable the completion pop-up frame."
-  :group 'completion-ui
+  :group 'completion-ui-popup-frame
   :type 'boolean)
 
 
 (defcustom completion-popup-frame-max-height 20
   "*Maximum height of a popup frame"
-  :group 'completion-ui
+  :group 'completion-ui-popup-frame
   :type 'integer)
 
 
@@ -65,7 +70,7 @@
   "Pixel offset for pop-up frame.
 This sometimes needs to be tweaked manually to get the pop-up
 frame in the correct position under different window systems."
-  :group 'completion-ui
+  :group 'completion-ui-popup-frame
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
