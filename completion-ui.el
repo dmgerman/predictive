@@ -546,7 +546,13 @@ before the `completion-auto-show' interface is activated."
 (defcustom auto-completion-source nil
   "*Completion source for `auto-completion-mode'."
   :group 'completion-ui
-  :type '(choice :tag "none" nil))
+  :type `(choice
+	  (const nil)
+	  ,@(nreverse
+	     (mapcar
+	      (lambda (def)
+		(list 'const (completion-ui--source-def-name def)))
+	      completion-ui-source-definitions))))
 
 
 (defcustom auto-completion-min-chars nil
@@ -1357,16 +1363,33 @@ major mode, or by another minor mode)."
   nil                   ; init-value
   " Complete"           ; lighter
   auto-completion-map   ; keymap
-  ;; refuse to enable if no source is defined
-  (when (and auto-completion-mode (null auto-completion-source))
+
+  (cond
+   ;; refuse to enable if no source is defined
+   ((and auto-completion-mode (null auto-completion-source))
     (setq auto-completion-mode nil)
     (message (concat "No `auto-completion-souce' set; "
-		     "auto-completion-mode NOT enabled"))))
+		     "auto-completion-mode NOT enabled")))
+
+   ;; run appropriate hook when `auto-completion-mode' is enabled/disabled
+   (auto-completion-mode
+    (run-hooks 'auto-completion-mode-enable-hook))
+   ((not auto-completion-mode)
+    (run-hooks 'auto-completion-mode-disable-hook))))
+
 
 
 (defun turn-on-auto-completion-mode ()
   "Turn on auto-completion mode. Useful for adding to hooks."
   (unless auto-completion-mode (auto-completion-mode)))
+
+
+(defvar auto-completion-mode-enable-hook nil
+  "Hook run when `auto-completion-mode' is enabled.")
+
+
+(defvar auto-completion-mode-disable-hook nil
+  "Hook run when `auto-completion-mode' is disabled.")
 
 
 
@@ -2124,9 +2147,9 @@ pop-up frame. The menu functions should return menu keymaps."
 ;;;             The core completion functions
 
 (defun* complete-in-buffer
-    (completion-source &optional prefix-function
-		       (non-prefix-completion nil npcmpl)
-		       auto update pos)
+    (completion-source
+     &optional prefix-function (non-prefix-completion nil s-npcmpl)
+     auto update pos)
   "Complete in-buffer using COMPLETION-SOURCE.
 
 COMPLETION-SOURCE must either be a function, or the name of a
@@ -2159,12 +2182,14 @@ COMPLETION-SOURCE does something other than prefix completion,
 and instead treats the PREFIX as a pattern to search for, which
 should be replaced by the completion.
 
-AUTO, UPDATE and POS are for internal use only. If AUTO is
-non-nil, assume we're auto-completing and respect settings of
-`auto-completion-min-chars' and (unless AUTO is 'timer)
-`auto-completion-delay'. If UPDATE is an overlay, update the
-user-interfaces for that overlay rather than activating them from
-scratch. If POS is non-nil, only complete if point is at POS."
+The remaining arguments are for internal use only."
+  ;; If AUTO is non-nil, assume we're auto-completing and respect settings of
+  ;; `auto-completion-min-chars' and (unless AUTO is 'timer)
+  ;; `auto-completion-delay'. If UPDATE is an overlay, update the
+  ;; user-interfaces for that overlay rather than activating them from
+  ;; scratch. If POS is non-nil, only complete if point is at POS. To specify
+  ;; any of these without setting NON-PRFIX-COMPLETION, use any value for the
+  ;; latter that is neither null nor t.
 
   ;; set `completion-ui--activated' (buffer-locally) to enable `completion-map'
   ;; work-around hacks
@@ -2180,11 +2205,12 @@ scratch. If POS is non-nil, only complete if point is at POS."
     ;; delay completing by setting a timer to call ourselves later
     (if (and auto auto-completion-delay (not (eq auto 'timer)))
         (setq completion--auto-timer
-              (run-with-idle-timer auto-completion-delay nil
-                                   'complete-in-buffer
-                                   completion-source prefix-function
-				   non-prefix-completion
-				   'timer update (point)))
+              (run-with-idle-timer
+	       auto-completion-delay nil
+	       'complete-in-buffer
+	       completion-source prefix-function
+	       (if s-npcmpl non-prefix-completion 'not-set)
+	       'timer update (point)))
 
 
       ;; otherwise...
@@ -2198,8 +2224,9 @@ scratch. If POS is non-nil, only complete if point is at POS."
 	;; if updating a completion overlay, use it's properties
 	(if update
 	    (setq completion-function
-		  (completion-ui-source-completion-function nil update)
-		  prefix (overlay-get update 'prefix))
+		    (completion-ui-source-completion-function nil update)
+		  prefix
+		    (overlay-get update 'prefix))
 
 	  ;; otherwise, sort out arguments...
 	  ;; get completion-function
@@ -2220,7 +2247,9 @@ scratch. If POS is non-nil, only complete if point is at POS."
 	    (setq word-thing
 	  	  (completion-ui-source-word-thing completion-source)))
 	  ;; get non-prefix-completion unless specified in arguments
-	  (unless npcmpl
+	  (unless (and s-npcmpl
+		       (or (null non-prefix-completion)
+			   (eq non-prefix-completion t)))
 	    (setq non-prefix-completion
 	  	  (completion-ui-source-non-prefix-completion
 		   completion-source)))
@@ -2310,8 +2339,9 @@ called from timer)."
 ;;; ============================================================
 ;;;                  Interactive commands
 
-(defun complete-word-at-point
-  (&optional completion-source prefix-function non-prefix-completion)
+(defun* complete-word-at-point
+  (&optional completion-source prefix-function
+	     (non-prefix-completion nil s-npcmpl))
   "Complete the word at or next to point.
 
 COMPLETION-SOURCE, PREFIX-FUNCTION, and NON-PREFIX-COMPLETION are
@@ -2355,12 +2385,14 @@ passed to `complete-in-buffer' (which see)."
 
     ;; do completion
     (complete-in-buffer completion-source prefix-function
-			non-prefix-completion nil overlay)))
+			(if s-npcmpl non-prefix-completion 'not-set)
+			nil overlay)))
 
 
 
-(defun complete-or-cycle-word-at-point
-  (completion-source &optional n prefix-function non-prefix-completion)
+(defun* complete-or-cycle-word-at-point
+  (completion-source &optional n prefix-function
+		     (non-prefix-completion nil s-npcmpl))
   "Cycle through available completions if there are any,
 otherwise complete the word at point.
 
@@ -2370,12 +2402,14 @@ see)."
   (interactive "p")
   (if (completion-ui-overlay-at-point)
       (completion-cycle n)
-    (complete-word-at-point completion-source prefix-function
-			    non-prefix-completion)))
+    (complete-word-at-point
+     completion-source prefix-function
+     (if s-npcmpl non-prefix-completion 'not-set))))
 
 
-(defun complete-or-cycle-backwards-word-at-point
-  (completion-source &optional n prefix-function non-prefix-completion)
+(defun* complete-or-cycle-backwards-word-at-point
+  (completion-source &optional n prefix-function
+		     (non-prefix-completion nil s-npcmpl))
   "Cycle backwards through available completions if there are any,
 otherwise complete the word at point.
 
@@ -2385,8 +2419,9 @@ see)."
   (interactive "p")
   (if (completion-ui-overlay-at-point)
       (completion-cycle (- n))
-    (complete-word-at-point completion-source prefix-function
-			    non-prefix-completion)))
+    (complete-word-at-point
+     completion-source prefix-function
+     (if s-npcmpl non-prefix-completion 'not-set))))
 
 
 
@@ -2569,7 +2604,7 @@ boil away."
       (move-overlay overlay (point) (point))
       (completion-ui-setup-overlay cmpl nil nil nil nil nil nil overlay)
       ;; re-complete
-      (complete-in-buffer nil nil nil nil 'auto overlay))))
+      (complete-in-buffer nil nil 'not-set 'auto overlay))))
 
 
 
@@ -2664,12 +2699,14 @@ green over night."
         (let ((overwrite-mode nil)) (insert str))
 	;; update overlay properties
         (move-overlay overlay (point) (point))
-	(completion-ui-setup-overlay str nil nil nil nil nil 'unchanged overlay)
+	(completion-ui-setup-overlay
+	 str nil nil nil nil nil 'unchanged overlay)
         ;; when auto-completing, do so
         (if (and auto-completion-mode
 		 (eq (overlay-get overlay 'completion-source)
 		     auto-completion-source))
-            (complete-in-buffer auto-completion-source nil nil 'auto overlay)
+            (complete-in-buffer
+	     auto-completion-source nil 'not-set 'auto overlay)
           ;; otherwise, update completion interfaces
 	  (completion-ui-update-interfaces overlay))))))
 
@@ -2958,18 +2995,21 @@ overlays."
 	(completion-ui-setup-overlay
 	 prefix (when overlay (1+ (overlay-get overlay 'prefix-length)))
 	 nil nil nil nil nil overlay)
-	(complete-in-buffer auto-completion-source nil nil 'auto overlay))
+	(complete-in-buffer
+	 auto-completion-source nil 'not-set 'auto overlay))
 
        ;; if doing basic completion, let prefix be found normally
        ((eq complete-behaviour 'string)
-	(complete-in-buffer auto-completion-source nil nil 'auto overlay))
+	(complete-in-buffer
+	 auto-completion-source nil 'not-set 'auto overlay))
 
        ;; if completing word at point, delete any overlay at point to ensure
        ;; prefix is found anew, and do completion
        (t
 	(when (setq overlay (completion-ui-overlay-at-point))
 	  (completion-ui-delete-overlay overlay))
-	(complete-in-buffer auto-completion-source nil nil 'auto overlay))))
+	(complete-in-buffer
+	 auto-completion-source nil 'not-set 'auto overlay))))
 
      ;; error
      (t (error "Invalid entry in `auto-completion-syntax-alist'\
@@ -3107,11 +3147,11 @@ enabled, complete what remains of that word."
 		       `(lambda ()
 			  (setq completion--backward-delete-timer nil)
 			  (complete-in-buffer
-			   ',auto-completion-source
-			   nil nil 'auto ,overlay ,(point)))))
+			   ',auto-completion-source nil 'not-set
+			   'auto ,overlay ,(point)))))
 	      ;; if completing with no delay, do so
-	      (complete-in-buffer auto-completion-source
-				  nil nil 'auto overlay (point)))
+	      (complete-in-buffer auto-completion-source nil 'not-set
+				  'auto overlay (point)))
 	    )))));)
   )
 
@@ -3818,6 +3858,7 @@ See also `completion-window-posn-at-point' and
 (require 'completion-ui-echo)
 (require 'completion-ui-tooltip)
 (require 'completion-ui-menu)
+(require 'completion-ui-sources)
 
 
 
