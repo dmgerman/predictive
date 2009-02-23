@@ -2424,7 +2424,7 @@ Intended to be used as the \"resolve\" entry in
   (let (overlay completion)
     ;; if completion characters contain REGEXP, insert characters up to first
     ;; regexp match, and add them to the completion overlay prefix
-    (when (and (setq overlay (completion-overlay-at-point))
+    (when (and (setq overlay (completion-ui-overlay-at-point))
 	       (setq completion (buffer-substring-no-properties
 				 (overlay-start overlay)
 				 (overlay-end overlay)))

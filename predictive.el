@@ -832,9 +832,24 @@ to the dictionary, nil if it should not. Only used when
 `predictive-auto-add-to-dict' is enabled.")
 
 
-(defvar predictive-map (make-sparse-keymap)
+(defvar predictive-map nil
   "Keymap used in predictive mode.")
 
+
+
+;;; ================================================================
+;;;                Setup default key bindings
+
+(unless predictive-map
+  (setq predictive-map (make-sparse-keymap))
+  ;; M-<tab> and M-/ cycle word at point
+  (define-key predictive-map [?\M-\t] 'complete-or-cycle-word-at-point)
+  (define-key predictive-map "\M-/" 'complete-or-cycle-word-at-point)
+  ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
+  (define-key predictive-map [(meta shift iso-lefttab)]
+    'complete-or-cycle-backwards-word-at-point)
+  (define-key predictive-map "\M-?"
+    'complete-or-cycle-backwards-word-at-point))
 
 
 
@@ -2899,14 +2914,15 @@ minor mode."
 ;;;                   Register Completion-UI source
 
 (completion-ui-register-source
- predictive-complete
+ 'predictive-complete
  :name 'predictive
+ :completion-args 2
  :accept-function (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-accept-functions
-					prefix word arg))
+					prefix completion arg))
  :reject-function (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-reject-functions
-					prefix word arg))
+					prefix completion arg))
  :menu-function '(eval predictive-menu-function)
  :browser-function '(eval predictive-browser-function)
  :word-thing '(eval predictive-word-thing))
