@@ -563,7 +563,7 @@ before the `completion-auto-show' interface is activated."
 	  ,@(nreverse
 	     (mapcar
 	      (lambda (def)
-		(list 'const (completion-ui--source-def-name def)))
+		(list 'const (car def)))  ; FIXME: breaks abstraction
 	      completion-ui-source-definitions))))
 
 
@@ -1163,14 +1163,13 @@ used if the current Emacs version lacks command remapping support."
     (completion--bind-printable-chars completion-overlay-map
 				     'completion-self-insert))
 
-  ;; M-<tab> and M-/ cycle or complete word at point
-  (define-key completion-overlay-map [?\M-\t] 'complete-or-cycle-word-at-point)
-  (define-key completion-overlay-map "\M-/" 'complete-or-cycle-word-at-point)
+  ;; M-<tab> and M-/ cycle word at point
+  (define-key completion-overlay-map [?\M-\t] 'completion-cycle)
+  (define-key completion-overlay-map "\M-/" 'completion-cycle)
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
   (define-key completion-overlay-map [(meta shift iso-lefttab)]
-    'complete-or-cycle-backwards-word-at-point)
-  (define-key completion-overlay-map "\M-?"
-    'complete-or-cycle-backwards-word-at-point)
+    'completion-cycle-backwards)
+  (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
   ;; C-RET accepts, C-DEL rejects
   (define-key completion-overlay-map [(control return)] 'completion-accept)
   (define-key completion-overlay-map [(control backspace)] 'completion-reject)
@@ -2653,6 +2652,17 @@ If NO-AUTO is non-nil, the `completion-auto-show' interface will
       (overlay-put overlay 'completion-num i)
       ;; run post-cycle interface functions
       (completion-ui-update-interfaces overlay))))
+
+
+
+(defun completion-cycle-backwards (&optional n)
+  "Cycle backwards through available completions.
+
+Optional argument N specifies the number of completions to cycle
+backwards \(forwards if negative\). Default is 1. Interactively,
+N is the prefix argument."
+  (interactive "P")
+  (completion-cycle (- n)))
 
 
 
