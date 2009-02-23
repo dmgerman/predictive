@@ -167,6 +167,12 @@ replacement version is saved to a path that appears *earlier* in your
 usually located somewhere like "/usr/share/emacs/lisp/emacs-lisp/" on
 *nix systems), so that the new version masks the old one.
 
+You can verify that the new avl-tree.el library is indeed shadowing the
+version that comes with Emacs by looking at the output of
+
+  M-x list-load-path-shadows
+
+
 If you want to install the info documentation into your local info
 system, you should run the following command AS ROOT:
 
