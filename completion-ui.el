@@ -2439,25 +2439,39 @@ the prefix and the completion string\). Otherwise returns nil."
   ;; (completion-ui-resolve-old overlay)
 
   ;; if we ain't found an overlay, can't accept nuffink!
-  (unless (or (null overlay)
-	      (and (null (overlay-get overlay 'completion-num))
-		   (progn (completion-ui-delete-overlay overlay) t)))
-    ;; otherwise, deactivate the interfaces and accept the completion
+  (when overlay
     (let ((prefix (overlay-get overlay 'prefix))
-	  (cmpl (nth (overlay-get overlay 'completion-num)
-		     (overlay-get overlay 'completions))))
-      ;; deactivate the interfaces
-      (completion-ui-deactivate-interfaces overlay)
-      ;; delete the original prefix and insert the completion
-      (delete-region (- (point) (length prefix)) (point))
-      (let ((overwrite-mode nil)) (insert cmpl))
-      ;; run accept hooks
-      (completion-ui-source-run-accept-function overlay prefix cmpl arg)
-      (run-hook-with-args 'completion-accept-functions prefix cmpl arg)
-      ;; delete overlay
-      (completion-ui-delete-overlay overlay)
-      ;; return prefix and accepted completion
-      (cons prefix cmpl))))
+	  cmpl)
+      ;; if there's no selected completion, then we're effectively accepting
+      ;; the prefix as a completion
+      (if (null (overlay-get overlay 'completion-num))
+	  (progn
+	    ;; delete the overlay, effectively accepting the prefix
+	    (completion-ui-delete-overlay overlay)
+	    (completion-ui-deactivate-interfaces overlay)
+	    ;; run accept hooks
+	    (completion-ui-source-run-accept-function
+	     overlay prefix prefix arg)
+	    (run-hook-with-args
+	     'completion-accept-functions prefix prefix arg)
+	    ;; return prefix and accepted completion (the prefix itself)
+	    (cons prefix prefix))
+
+	;; otherwise, deactivate the interfaces and accept the completion
+	;; deactivate the interfaces
+	(setq cmpl (nth (overlay-get overlay 'completion-num)
+			(overlay-get overlay 'completions)))
+	(completion-ui-deactivate-interfaces overlay)
+	;; delete the original prefix and insert the completion
+	(delete-region (- (point) (length prefix)) (point))
+	(let ((overwrite-mode nil)) (insert cmpl))
+	;; run accept hooks
+	(completion-ui-source-run-accept-function overlay prefix cmpl arg)
+	(run-hook-with-args 'completion-accept-functions prefix cmpl arg)
+	;; delete overlay
+	(completion-ui-delete-overlay overlay)
+	;; return prefix and accepted completion
+	(cons prefix cmpl)))))
 
 
 
