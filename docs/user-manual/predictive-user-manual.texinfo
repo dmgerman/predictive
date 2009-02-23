@@ -14,7 +14,7 @@
 
 @copying
 This manual documents the Emacs Predictive Completion package, version
-0.22
+0.23
 @c --version--
 
 Copyright @copyright{} 2005--2009 Toby Cubitt
@@ -32,7 +32,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Predictive Completion Manual
-@subtitle Version 0.22
+@subtitle Version 0.23
 @c --version--
 @author Toby Cubitt
 
@@ -1233,7 +1233,7 @@ you are prepared to set aside for selecting completions
 
 
 @vtable @env
-@item @item completion-highlight-face
+@item completion-highlight-face
 The face used to highlight the completion candidates in the various
 user-interfaces.
 @end vtable

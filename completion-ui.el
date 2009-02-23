@@ -1,15 +1,3 @@
-;;; SCRATCH-PAD
-;;; -----------
-;;
-;; Bug:
-;; `completion-accept-or-reject-by-default' = 'reject
-;; `completion-overwrite' = nil
-;; `auto-completion-mode' = t (and nil?)
-;; `completion-use-dynamic' = t (and nil?)
-;; Start completing, move cursor to middle of prefix, type character.
-;; Instead of inserting character at point, it's inserted in front of prefix.
-
-
 
 ;;; completion-ui.el --- in-buffer completion user interface
 
@@ -2880,19 +2868,6 @@ overlays."
        (list (completion-ui-overlay-at-point) nil nil nil))
     (setq word-thing
 	  (completion-ui-source-word-thing auto-completion-source overlay))
-    ;; (let ((behaviour (if no-syntax-override
-    ;; 	  		(auto-completion-lookup-behaviour nil syntax)
-    ;; 	  	      (auto-completion-lookup-behaviour char syntax)))
-    ;; 	  (complete-behaviour
-    ;; 	   (completion-get-completion-behaviour behaviour))
-    ;; 	  (resolve-behaviour
-    ;; 	   (completion-get-resolve-behaviour behaviour))
-    ;; 	  (insert-behaviour
-    ;; 	   (completion-get-insertion-behaviour behaviour))
-    ;; 	  (overlay (completion-ui-overlay-at-point))
-    ;; 	  (word-thing
-    ;; 	   (completion-ui-source-word-thing auto-completion-source overlay))
-    ;; 	  wordstart prefix)
 
     ;; ----- resolve behaviour -----
     (completion-ui-resolve-old overlay)
@@ -3547,8 +3522,10 @@ associated with OVERLAY."
 
 (defun completion-ui-resolve-old (&optional overlay)
   "Resolve old completions according to the setting of
-`completion-reslove-method'. Any completion overlay specified by
-OVERLAY will be left alone."
+`completion-how-to-resolve-old-completions'. Any completion
+overlay specified by OVERLAY will be left alone, and completions
+near the point are dealt with specially, so as not to modify
+characters around the point."
   ;; temporarily remove ignored overlay from list
   (setq completion--overlay-list
         (delq overlay completion--overlay-list))
@@ -3564,12 +3541,37 @@ OVERLAY will be left alone."
 
      ;; accept old completions
      ((eq completion-how-to-resolve-old-completions 'accept)
-      (mapc (lambda (o) (completion-accept nil o))
+      (mapc (lambda (o)
+	      ;; if completion is nowhere near point, accept it
+	      (if (or (> (point) (overlay-end o))
+		      (< (point)
+			 (- (overlay-start o)
+			    (if (and (overlay-get o 'non-prefix-completion)
+				     (overlay-get o 'prefix-replaced))
+				0 (overlay-get o 'prefix-length)))))
+		  (completion-accept nil o)
+		;; otherwise, completion overlaps point, so just delete
+		;; overlay, effectively accepting whatever is there
+		(completion-ui-delete-overlay o)
+		(completion-ui-deactivate-interfaces o)))
 	    completion--overlay-list))
 
      ;; reject old completions
      ((eq completion-how-to-resolve-old-completions 'reject)
-      (mapc (lambda (o) (completion-reject nil o))
+      (mapc (lambda (o)
+	      ;; if completion is nowhere near point, reject it
+	      (if (or (> (point) (overlay-end o))
+		      (< (point)
+			 (- (overlay-start o)
+			    (if (and (overlay-get o 'non-prefix-completion)
+				     (overlay-get o 'prefix-replaced))
+				0 (overlay-get overlay 'prefix-length)))))
+		  (completion-reject nil o)
+		;; otherwise, completion overlaps point, so just delete
+		;; provisional completion characters and overlay
+		(delete-region (overlay-start o) (overlay-end o))
+		(completion-ui-delete-overlay o)
+		(completion-ui-deactivate-interfaces o)))
 	    completion--overlay-list))
 
      ;; ask 'em
