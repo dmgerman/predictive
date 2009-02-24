@@ -35,7 +35,7 @@
 ;;; Change Log:
 ;;
 ;; Version 0.1
-;; * initial release (split off from completion-ui.el)
+;; * initial version (split off from completion-ui.el)
 
 
 ;;; Code:

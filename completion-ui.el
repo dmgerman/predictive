@@ -30,81 +30,183 @@
 
 ;;; Commentary:
 ;;
-;; This package is primarily intended for Elisp package writers. It is NOT
-;; intended for Emacs users. Emacs users with no Elisp knowledge who want to
-;; try out the completion-UI features are referred instead to the accompanying
-;; "completion-ui-examples.el" package. You have been warned!
+;; Overview
+;; ========
 ;;
-;; This package provides a user-interface for in-buffer text completion. It
-;; doesn't find completions itself. Instead, a completion package can simply
-;; set the `completion-function' variable to a function that takes two
-;; arguments, a string PREFIX and an integer MAXNUM, and returns a list of at
-;; most MAXNUM completion candidates for PREFIX. Completion-UI does the rest.
+;; The goal of Completion-UI is to be the swiss-army knife of in-buffer
+;; completion user-interfaces. It doesn't do the work of finding the
+;; completions itself. Instead, anything that can find completions, be it a
+;; built-in Emacs function or an external Elisp package, can be hooked up to
+;; Completion-UI to provide a source of completions.
 ;;
-;; That's it! Completion-UI, the `auto-completion-mode' minor mode, and user
-;; customizations take care of the rest. (Avoid the temptation to set
-;; completion-UI customization variables from Elisp code to alter its
-;; behaviour. The user knows what they want better than you do!)
+;; Completion-UI comes with built-in support for a number of completion
+;; sources: the standard Emacs dabbrevs, etags, Elisp completion and file-name
+;; completion, as well as (if installed) CEDET's Semantic completion,
+;; nxml-mode, and the Predictive completion package.
 ;;
-;; Examples are available in the accompanying "completion-ui-examples.el"
-;; package, and on the Emacs wiki, at:
-;; www.emacswiki.org/cgi-bin/wiki/CompletionUI
+;; Completion-UI provides the following user-interfaces and features (though
+;; it is also easy to add new ones, see below):
 ;;
-;; Why use completion-UI? Typically, a lot of code in packages providing some
-;; kind of text completion deals with the user interface. This is a big waste
-;; of effort, since each package reinvents the wheel by implementing its own
-;; subset of in-buffer completion user-interfaces. The ultimate goal of
-;; completion-UI is that all packages providing in-buffer (and possibly one
-;; day also mini-buffer) completion should use this package to provide a
-;; common user interface, freeing them to concentrate on the more interesting
-;; task of finding the completions in the first place. The Elisp programmer
-;; benfits by not having to reinvent the wheel, and the Emacs user benefits by
-;; having a standard yet highly customizable user-interface that they can
-;; customize once and for all to to suit their preferences, for all completion
-;; mechanisms they want to use.
+;; * Dynamic completion
+;;     provisionally insert the first available completion candidate into the
+;;     buffer
 ;;
-;; Various completion user-interfaces are provided, all of which can be
-;; individually enabled, disabled and extensively tweaked via
-;; customization variables:
+;; * Completion hotkeys
+;;     single-key selection of a completion candidate
 ;;
-;; * Dynamic completion: provisionally insert the first available
-;;   completion candidate into the buffer.
+;; * Cycling
+;;     cycle through completion candidates.
 ;;
-;; * Completion hotkeys: single-key selection of a completion
-;;   candidate.
+;; * Tab-completion
+;;     "traditional" expansion to longest common substring
 ;;
-;; * Cycling: cycle through completion candidates.
+;; * Echo
+;;     display a list of completion candidates in the echo-area
 ;;
-;; * Tab-completion: "traditional" expansion to longest common
-;;   substring.
+;; * Tooltip
+;;     display a list of completion candidates in a tool-tip located below the
+;;     point, from which completions can be selected
 ;;
-;; * Help-echo: display a list of completion candidates in the
-;;   echo-area.
+;; * Pop-up frame
+;;     display a list of completion candidates in a pop-up frame located below
+;;     the point, which can be toggled between displaying some or all
+;;     completions, and from which completions can be selected
 ;;
-;; * Tooltip: display a list of completion candidates in a tool-tip
-;;   located below the point, from which completions can be selected.
+;; * Completion menu
+;;     allow completion candidates to be selected from a drop-down menu
+;;     located below the point
 ;;
-;; * Pop-up frame: display a list of completion candidates in a pop-up
-;;   frame located below the point, which can be toggled between
-;;   displaying some or all completions, and from which completions can
-;;   be selected.
+;; * Completion browser
+;;     browse through all possible completion candidates in a hierarchical
+;;     deck-of-cards menu located below the point
 ;;
-;; * Completion menu: allow completion candidates to be selected from
-;;   a drop-down menu located below the point.
 ;;
-;; * Completion browser: browse through all possible completion
-;;   candidates in a hierarchical deck-of-cards menu located below the
-;;   point.
 ;;
-;; Completion-UI also provides a new minor mode, called
-;; `auto-completion-mode'. When enabled, Emacs will automatically complete
-;; words as they are typed, using the `completion-function' to find completion
-;; candidates. The same customization variables determine how those candidates
-;; are displayed and can be selected. This works particularly well with
-;; dynamic completion (see above), as long as `completion-function' is fast.
+;; For Emacs users:
+;; ================
 ;;
-;; This package will work alongside the auto-overlays package if it's
-;; available, but does not require it.
+;; INSTALLING
+;; ----------
+;; To install this package, save this and all the other accompanying
+;; "completion-ui-*.el" files to a directory in your `load-path' (you can view
+;; the current `load-path' using "C-h v load-path" within Emacs), then add the
+;; following line to your .emacs startup file:
+;;
+;;    (require 'completion-ui)
+;;
+;;
+;; USING
+;; -----
+;; For each source of completions, Completion-UI provides an interactive
+;; command for completing the thing at or next to the point using the
+;; corresponding source: `complete-dabbrev', `complete-etags',
+;; `complete-elisp', `complete-files', `complete-semantic', `complete-nxml'
+;; and `complete-predictive'.
+;;
+;; These commands are not bound to any key by default. You're free to bind
+;; them to any keys of your choosing (though M-<tab> or M-/ fit best with the
+;; other default bindings). When completing a word, a number of other
+;; key-bindings are enabled. By default, these are:
+;;
+;; M-<tab>  M-/
+;;   Cycle through completions.
+;;
+;; M-S-<tab>  M-?
+;;   Cycle backwards through completions.
+;;
+;; C-<ret>
+;;   Accept the current completion.
+;;
+;; C-<del>
+;;    Reject the current completion.
+;;
+;; <tab>
+;;    Traditional tab-completion, i.e. insert longest common substring.
+;;
+;; C-<tab>
+;;    Accept current completion and re-complete the resulting word.
+;;
+;; S-<down>
+;;    Display the completion tooltip (then use <up> and <down> to cycle).
+;;
+;; M-<down>
+;;    Display the completion menu.
+;;
+;; C-<down>
+;;    Display the completion pop-up frame.
+;;
+;; S-<up> C-<up> M-<up> (in pop-up frame)
+;;    Dismiss the completion pop-up frame.
+;;
+;; M-/ (in pop-up frame)
+;;    Toggle between displaying all completions.
+;;
+;;
+;; Completion-UI also provides a minor-mode, `auto-completion-mode', which
+;; automatically completes words as you type them using any one of the
+;; completion sources. To enable and disable it, use:
+;;
+;;   M-x auto-completion-mode
+;;
+;; Note that `auto-completion-mode' is not very useful if the completion
+;; source takes a long time to find completions.
+;; <shameless plug> The Predictive completion package (available separately
+;; from the above URL) is designed from the ground up to be extremely fast,
+;; even when a very large number of completion candidates are available, and
+;; learns to predict which completion is the most likely. So it is
+;; particularly suited to being used as the `auto-completion-mode'
+;; source. </shameless plug>
+;;
+;;
+;; CUSTOMIZING
+;; -----------
+;; The completion user-interfaces can be heavily customized and tweaked to
+;; suit your every desire, via the `completion-ui' customization group, (and
+;; subgroups thereof):
+;;
+;;   M-x customize-group <ret> completion-ui <ret>
+;;
+;; All the customization options and settings are well documented via the
+;; usual built-in Emacs documentationn features.
+;;
+;;
+;;
+;; For Elisp coders:
+;; =================
+;;
+;; In fact, Completion-UI is even better than a swiss-army knife, because it's
+;; also extensible: it's easy to add new user-interfaces, as well as new
+;; completion sources.
+;;
+;; The philosophy of Completion-UI is that customization of the user-interface
+;; should be left up to USERS. They know what they want better than you do!
+;; By providing a universal user-interface that can be used by all completion
+;; packages, Completion-UI lets users customize their in-buffer completion
+;; user interface once-and-for-all to suit their tastes, rather than having to
+;; learn how to customize each new package separately.
+;;
+;;
+;; Adding new sources
+;; ------------------
+;; See `completion-ui-register-source'.
+;;
+;; One call to `completion-ui-register-source' is all there is to it!
+;; Registering a new source will define a new interactive command,
+;; `complete-<name>' (where <name> is the supplied source name) which
+;; completes whatever is at the point using the new completion source. It will
+;; also add the new source to the list of choices for the
+;; `auto-completion-source' customization option (unless this is supressed).
+;;
+;;
+;; Adding new interfaces
+;; ---------------------
+;; See `completion-ui-register-interface'.
+;;
+;; A number of Completion-UI functions are intended for use in creating new
+;; user-interfaces. These all start with the prefix `completion-ui-' (as
+;; opposed to `completion-', which are user commands plus a few general
+;; purpose utility functions, or `completion--', which are internal functions
+;; that are NOT intended for external use).
 
 
 
