@@ -158,7 +158,7 @@ auto-overlays package with the line
 This provides all the functions related to searching for overlays and
 retrieving overlay properties. @xref{Searching for Overlays}. Note that
 there is no need to include this line if any auto-overlay classes are
-@code{require}d.
+@code{require}d, though it will do no harm.
 
 This section describes the functions that are needed in order to make
 use of auto-overlays in an Elisp package. It does @emph{not} describe
@@ -531,19 +531,19 @@ explanation of ``highest priority'').
 @cindex LaTeX
 The interaction of all the different regexp definitions, overlay
 properties and auto-overlay classes provided by the auto-overlay package
-can be a little confusing. This section will go through an example of
-how the auto-overlay regexps could be defined to create overlays for a
-subset of La@TeX{}, which is complex enough to demonstrate most of the
+can be a little daunting. This section will go through an example of how
+the auto-overlay regexps could be defined to create overlays for a
+subset of @LaTeX{}, which is complex enough to demonstrate most of the
 features.
 
-La@TeX{} is a markup language, so a La@TeX{} document combines markup
+@LaTeX{} is a markup language, so a @LaTeX{} document combines markup
 commands with normal text. Commands start with @samp{\}, and end at the
-first non-word-constituent character. We want to highlight all La@TeX{}
+first non-word-constituent character. We want to highlight all @LaTeX{}
 commands in blue. Two commands that will particularly interest us are
-@samp{\begin} and @samp{\end}, which begin and end a La@TeX{}
+@samp{\begin} and @samp{\end}, which begin and end a @LaTeX{}
 environment. The environment name is enclosed in braces:
 @samp{\begin@{@var{environment-name}@}}, and we want it to be
-highlighted in pink. La@TeX{} provides many environments, used to create
+highlighted in pink. @LaTeX{} provides many environments, used to create
 lists, tables, titles, etc. We will take the example of an
 @samp{equation} environment, used to typeset mathematical
 equations. Thus equations are enclosed by @samp{\begin@{equation@}} and
@@ -553,9 +553,9 @@ of @samp{$}s delimit mathematical expressions that appear in the middle
 of a paragraph of normal text (whereas @samp{equation} environments
 appear on their own, slightly separated from surrounding text). Again,
 we want to highlight these mathematical expressions, this time in
-green. The final piece of La@TeX{} markup we will need to consider is
+green. The final piece of @LaTeX{} markup we will need to consider is
 the @samp{%} character, which creates a comment that lasts till the end
-of the line (i.e. text after the @samp{%} is ignored by the La@TeX{}
+of the line (i.e. text after the @samp{%} is ignored by the @LaTeX{}
 processor up to the end of the line).
 
 
@@ -563,7 +563,7 @@ processor up to the end of the line).
 @cindex example, word class
 @cindex overlay class, word example
 @cindex class, word example
-La@TeX{} commands are a good example of when to use @code{word} regular
+@LaTeX{} commands are a good example of when to use @code{word} regular
 expressions (@pxref{Overview}). The appropriate regexp definition is
 loaded by
 
@@ -588,13 +588,13 @@ letter characters. The @code{?} ensures that it matches the
 @emph{shortest} sequence of letters consistent with matching the regexp,
 since we want the region to end at the first non-letter character,
 matched by @code{[^[:alpha:]]}. The @code{\|} defines an alternative, to
-allow the La@TeX{} command to be terminated either by a non-letter
+allow the @LaTeX{} command to be terminated either by a non-letter
 character or by the end of the line (@code{$}). @xref{Regular
 Expressions,,,elisp, GNU Emacs Lisp Reference Manual}, for more details
 on Emacs regular expressions.
 
 However, there's a small problem. We only want the blue background to
-cover the characters making up a La@TeX{} command. But as we've defined
+cover the characters making up a @LaTeX{} command. But as we've defined
 things so far, it will cover all the text matched by the regexp, which
 includes the leading @samp{\} and the trailing non-letter character. To
 rectify this, we need to group the part of the regexp that matches the
@@ -632,10 +632,10 @@ escaped in lisp strings):
 @end lisp
 
 @noindent
-This won't quite work though. La@TeX{} maths commands also start with a
+This won't quite work though. @LaTeX{} maths commands also start with a
 @samp{\} character, which will match the @code{word} regexp. For the
 sake of example we want the entire equation highlighted in green,
-without highlighting any La@TeX{} maths commands it contains in
+without highlighting any @LaTeX{} maths commands it contains in
 blue. Since the @code{word} overlay will be within the @code{self}
 overlay, the blue highlighting will take precedence. We can change this
 by giving the @code{self} overlay a higher priority (any priority is
@@ -691,7 +691,7 @@ use @code{nested} overlays (@pxref{Overview}). Our example now looks like:
 Notice how we've used separate @code{start} and @code{end} regexps to
 define the auto-overlay. Once again, we have had to escape the @samp{\}
 characters, and increase the priority of the new regexp definition to
-avoid any La@TeX{} commands within the maths region being highlighted in
+avoid any @LaTeX{} commands within the maths region being highlighted in
 blue.
 
 
@@ -699,7 +699,7 @@ blue.
 @cindex overlay class, line example
 @cindex example, line class
 @cindex class, line example
-La@TeX{} comments start with @samp{%} and last till the end of the line:
+@LaTeX{} comments start with @samp{%} and last till the end of the line:
 a perfect demonstration of a @code{line} regexp. Here's a first attempt:
 
 @lisp
@@ -780,7 +780,7 @@ property:
 @cindex example, nested class
 @cindex class, nested example
 We're well on our way to creating a useful setup, at least for the
-La@TeX{} commands we're considering in this example. There is one last
+@LaTeX{} commands we're considering in this example. There is one last
 type of overlay to create, but it is the most complicated. We want
 environment names to be highlighted in pink, i.e. the region between
 @samp{\begin@{} and @samp{@}}. A first attempt at this might result in:
@@ -884,7 +884,7 @@ need something more along the lines of:
 @noindent
 We still haven't solved the problem though. The @samp{@}} character
 doesn't only close @samp{\begin@{} and @samp{\end@{} commands in
-La@TeX{}. @emph{All} arguments to La@TeX{} commands are surrounded by
+@LaTeX{}. @emph{All} arguments to @LaTeX{} commands are surrounded by
 @samp{@{} and @samp{@}}. We could add all the commands that take
 arguments, but we don't really want to bother about any other commands
 (at least in this example). All we want to do is prevent predictive mode
@@ -1002,7 +1002,7 @@ text):
 @end lisp
 
 There is one last issue. A literal @samp{@{} or @samp{@}} character can
-be included in a La@TeX{} document by escaping it with @samp{\}:
+be included in a @LaTeX{} document by escaping it with @samp{\}:
 @samp{\@{} and @samp{\@}}. In this situation, the characters do not
 match anything and should not be treated as delimiters. We can modify
 the @code{@{} and @code{@}} regexps to exclude these cases:
@@ -1071,11 +1071,13 @@ additional character before the @code{@}}, causing the overlay to end
 one character early. (The @code{@{} regexp will also match one
 additional character before the @code{@{}, but since the beginning of
 the overlay starts from the @emph{end} of the @code{start} delimiter,
-this poses no problem.) We need to group the part of the regexp that
-should define the delimiter, i.e. the @code{@}}, by surrounding it with
-@code{\(} and @code{\)}, and put the regexp in the @code{car} of a cons
-cell whose @code{cdr} specifies the new subgroup (i.e. the 2nd subgroup,
-since the regexp already included a group for other reasons). Our final
+this poses less of a problem.) We need to group the part of the regexp
+that should define the delimiter, i.e. the @code{@}}, by surrounding it
+with @code{\(} and @code{\)}, and put the regexp in the @code{car} of a
+cons cell whose @code{cdr} specifies the new subgroup (i.e. the 2nd
+subgroup, since the regexp already included a group for other reasons;
+we could alternatively replace the original group by a shy-group, since
+we don't actually need to capture match data for that group). Our final
 version looks like this:
 
 @lisp
@@ -1125,9 +1127,9 @@ version looks like this:
          (face . (background-color . "blue")))))
 @end lisp
 
-With these regexp definitions, La@TeX{} commands will automatically be
+With these regexp definitions, @LaTeX{} commands will automatically be
 highlighted in blue, equation environments in yellow, inline maths
-commands in green, and environment names in pink. La@TeX{} markup within
+commands in green, and environment names in pink. @LaTeX{} markup within
 comments will be ignored. And @samp{@{} and @samp{@}} characters from
 other commands will be correctly taken into account. All this is done in
 ``real-time''; it doesn't wait until Emacs is idle to update the
@@ -1185,9 +1187,9 @@ mark text that matches an auto-overlay regexp.
 
 For overlay classes that only require one regexp to fully define an
 overlay (the @code{word} and @code{line} classes are the only standard
-class like this@footnote{Although the @code{self} class only requires
+classes like this@footnote{Although the @code{self} class only requires
 one regexp definition, the auto-overlays themselves require two matches
-to that regexp to set the start and end of the overlay.}), the
+to that same regexp to set the start and end of the overlay.}), the
 auto-overlays are always matched with the corresponding match
 overlay. For classes that require two regexp matches to define the start
 and end of an overlay (all other standard classes), each edge of an
@@ -1198,23 +1200,23 @@ a regexp match is found, but it is possible for the second edge to not
 yet be matched (for many classes, the unmatched edge will be located at
 the beginning or end of the buffer).
 
-If a match overlay is matched with the start of an auto-overlay, the
-match overlay is stored in the auto-overlay's @code{start} property. The
-match overlay is also stored in the @code{start} property for
-auto-overlays that only require a single match. If a match overlay is
-matched with the end of an auto-overlay, the match overlay is stored in
-the auto-overlay's @code{end} property. Conversely, a ``link'' to the
-auto-overlay is always stored in the match overlay's @code{parent}
-property@footnote{The ``parent'' terminology is admittedly very poor,
-and is a relic of a previous incarnation of the auto-overlays package,
-when it made more sense.}.
+If a match overlay delimits the start of an auto-overlay, the match
+overlay is stored in the auto-overlay's @code{start} property. The match
+overlay is also stored in the @code{start} property for auto-overlays
+that only require a single match. If a match overlay delimits the end of
+an auto-overlay, the match overlay is stored in the auto-overlay's
+@code{end} property. Conversely, a ``link'' to the auto-overlay is
+always stored in the match overlay's @code{parent} property@footnote{The
+``parent'' terminology is admittedly very poor, and is a relic of a
+previous incarnation of the auto-overlays package, when it made more
+sense.}.
 
 Whenever a buffer is modified, the lines containing the modifications
 are scanned for new regexp matches. If one is found, a new match overlay
 is created covering the matching text, and then passed as an argument to
 the appropriate ``parse'' function@footnote{More bad terminology.} for
-its class. This deals with creating or updating the appropriate
-auto-overlays. If the text within a match overlay is modified, the match
+its class. This deals with creating or updating the auto-overlays as
+appropriate. If the text within a match overlay is modified, the match
 overlay checks whether the text it covers still matches the regexp. If
 it no longer matches, the match overlay is passed as an argument to the
 appropriate ``suicide'' function for its class, which deals with
@@ -1355,7 +1357,7 @@ perform whatever additional processing is required, and call the
 standard class functions to deal with creating and destroying the
 overlay.
 
-All the standard parse and suicide functions following the naming
+All the standard parse and suicide functions follow the same naming
 convention (@pxref{Integrating New Overlay Classes}), where @var{class}
 is the name of the overlay class (one of @code{word}, @code{line},
 @code{self}, @code{nested} or @code{flat}, @pxref{Overview}):
@@ -1381,9 +1383,10 @@ Delete or update auto-overlays as appropriate for overlay class
 @cindex overlays, functions for modifying
 @cindex extending, functions for modifying overlays
 These functions modify auto-overlays and match overlays as necessary to
-perform a particular update. They should probably @emph{always} be used
-to carry out their corresponding tasks, since these tasks require
-interaction with the core of the auto-overlays package.
+perform a particular update. They should @emph{always} be used to carry
+out their corresponding tasks, rather than doing it separately, since
+these tasks require interaction with the core of the auto-overlays
+package.
 
 @table @code
 @item (auto-o-update-exclusive @var{set-id} @var{beg} @var{end} @var{old-priority} @var{new-priority})
@@ -1417,21 +1420,22 @@ If @var{start} or @var{end} are match overlays, match the corresponding
 edge of @var{overlay}. The edge is moved to the location defined by the
 match overlay, and the @code{parent} property of the match overlay and
 the @code{start} and @code{end} properties of @var{overlay} are updated
-accordingly. @var{start} should be a match overlay corresponding either
-to the unique regexp if only one is needed for that overlay class, or to
-a start regexp if the overlay class uses separate start and end
-regexps. @var{end} should then be a match overlay corresponding to an
-end regexp in such a class (@pxref{Overview}). You're responsible for
-enforcing this; no check is made.
+accordingly. The @var{start} argument should be a match overlay
+corresponding either to the unique regexp if only one is needed for that
+overlay class, or to a start regexp if the overlay class uses separate
+start and end regexps. The @var{end} argument should then be a match
+overlay corresponding to an end regexp in such a class
+(@pxref{Overview}). You're responsible for enforcing this; no check is
+made.
 
-If @var{start} or @var{end} are numbers or markes, move the
-corresponding edge of @var{overlay} to that location and make it
+If @var{start} or @var{end} are numbers or markers, move the
+corresponding edge of @var{overlay} to that location and set it as
 unmatched. The @code{start} or @code{end} property of @var{overlay} and
 the @code{parent} property of any corresponding match overlay are set to
 @code{nil}). If @var{start} or @var{end} are non-nil but neither of the
 above, leave the corresponding edge of @var{overlay} where it is, but
-make it unmatched (as described above). If @var{start} or @var{end} are
-null, don't change the corresponding edge. However, for convenienve, if
+set it unmatched (as described above). If @var{start} or @var{end} are
+null, don't change the corresponding edge. However, for convenience, if
 @var{end} is null but @var{start} is a match overlay corresponding to a
 match for an end-regexp, match the end of @var{overlay} rather than the
 start.
