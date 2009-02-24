@@ -1598,7 +1598,7 @@ automatically be saved when they are unloaded (either with the
 nil, any unsaved modifications will be lost unless the dictionary is
 saved manually. @xref{Loading and Saving Dictionaries}.
 
-@item predictive-dict-compilation-mode
+@item predictive-dict-compilation
 Determines whether dictionaries are saved in compiled or uncompiled
 form, or both. If set to the symbol @code{compiled}, dictionaries are
 saved in compiled form, if set to @code{uncompiled} they are saved in
@@ -2124,13 +2124,13 @@ savvy Emacs user@footnote{Keyboard macros may help here...}!
 The second approach is to start from a completely empty dictionary, and
 use the auto-add feature to automatically add words as you type them
 (@pxref{Automatic Learning}). The auto-add feature adds words when you
-``accept'' them. In this case, since the words aren't already in the
-dictionary, the only way to accept words while typing is to ensure
-dynamic completion is enabled, and type an end-of-word character (such
-as a space or punctuation character) at the end of the word
-(@pxref{Dynamic Completion}). Alternatively, you can use the fast
-learning commands @command{predictive-fast-learn-or-add-from-buffer}
-and @command{predictive-fast-learn-or-add-from-file} to add words from
+``accept'' them. Since the words aren't already in the dictionary, the
+easiest way to add new words while typing is to ensure dynamic
+completion is enabled, and type an end-of-word character (such as a
+space or punctuation character) at the end of the word (@pxref{Dynamic
+Completion}). Alternatively, you can use the fast learning commands
+@command{predictive-fast-learn-or-add-from-buffer} and
+@command{predictive-fast-learn-or-add-from-file} to add words from
 existing text (note that you @emph{must} use the fast learning commands
 for this; the normal ones will only increment the weights of words that
 are already in the dictionary).
@@ -2194,10 +2194,13 @@ dictionary, it would be tragic to lose it all! Make sure you
 occasionally backup your dictionaries by dumping them to a plain text
 file using @command{predictive-dump-dict-to-file} (@pxref{Loading and
 Saving Dictionaries}). This is vital before upgrading to a new version
-of Emacs, since there's no guarantee that the dictionary will be
-readable in the new version@footnote{The dictionaries are saved as
-compiled Elisp code for efficiency reasons, and the byte-code format can
-change even between minor Emacs versions.}.
+of the Predictive package, since there's no guarantee that old
+dictionaries will be readable in the new version (whereas the dumped
+plain-text format is usually stable across Predictive package versions;
+even if exceptionally it changes, since it's a plain-text format it will
+at the very least always be readable in Emacs, and can be manipulated
+into the format required for recreating your dictionary in the new
+Predictive package version).
 @cindex dictionaries, backup
 @cindex dictionaries, dumping
 @cindex backing-up dictionaries
@@ -2215,7 +2218,7 @@ change even between minor Emacs versions.}.
 This chapter describes the more advanced customisation features provided
 by predictive mode. Many of these are on the borderline between
 user-customisations and features to be used by Lisp packages that
-enhanced predictive completion for specific major modes, though
+enhance predictive completion for specific major modes, though
 describing all the features available to Lisp packages is beyond the
 scope of this user manual. @xref{Region-Local Dictionaries, , ,
 predictive-programmer-manual, Predictive Programmer Manual}.
