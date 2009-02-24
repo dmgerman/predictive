@@ -8,6 +8,11 @@ USERDIR=user-manual
 PROGDIR=programmer-manual
 AUTOODIR=auto-overlay-manual
 
+
+VPATH=$(USERDIR):$(PROGDIR):$(AUTOODIR)
+GPATH=$(USERDIR):$(PROGDIR):$(AUTOODIR)
+
+
 test:
 	echo $(DIR)
 
@@ -49,32 +54,56 @@ install:
 	cp $(AUTOODIR)/auto-overlay-manual.txt.gz $(WEB)/$(AUTOODIR)/
 
 
-user-manual: $(USERDIR)/predictive-user-manual.info.gz \
-            $(USERDIR)/predictive-user-manual-html \
-	    $(USERDIR)/predictive-user-manual-html.tar.gz \
-            $(USERDIR)/predictive-user-manual.txt.gz \
-            $(USERDIR)/predictive-user-manual.ps.gz \
-            $(USERDIR)/predictive-user-manual.pdf
+user-manual: predictive-user-manual.info.gz \
+             $(USERDIR)/html/index.html \
+	     predictive-user-manual-html.tar.gz \
+             predictive-user-manual.txt.gz \
+             predictive-user-manual.ps.gz \
+             predictive-user-manual.pdf
 
 
-programmer-manual: $(PROGDIR)/predictive-prog-manual.info.gz \
-                  $(PROGDIR)/predictive-programmer-manual-html \
-	          $(PROGDIR)/predictive-programmer-manual-html.tar.gz \
-                  $(PROGDIR)/predictive-programmer-manual.txt.gz \
-                  $(PROGDIR)/predictive-programmer-manual.ps.gz \
-                  $(PROGDIR)/predictive-programmer-manual.pdf
+programmer-manual: predictive-prog-manual.info.gz \
+                   $(PROGDIR)/predictive-programmer-manual-html \
+	           predictive-programmer-manual-html.tar.gz \
+                   predictive-programmer-manual.txt.gz \
+                   predictive-programmer-manual.ps.gz \
+                   predictive-programmer-manual.pdf
 
 
-auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
-               $(AUTOODIR)/auto-overlay-manual-html \
-	       $(AUTOODIR)/auto-overlay-manual-html.tar.gz \
-               $(AUTOODIR)/auto-overlay-manual.txt.gz \
-               $(AUTOODIR)/auto-overlay-manual.ps.gz \
-               $(AUTOODIR)/auto-overlay-manual.pdf \
-               auto-o-src
+auto-overlay-manual: auto-overlay-manual.info.gz \
+                     $(AUTOODIR)/html/index.html \
+	             auto-overlay-manual-html.tar.gz \
+                     auto-overlay-manual.txt.gz \
+                     auto-overlay-manual.ps.gz \
+                     auto-overlay-manual.pdf \
+                     auto-overlay-manual-src.tar.gz
 
-auto-o-src:
-	tar -cvzf $(AUTOODIR)/auto-overlay-manual-src.tar.gz $(AUTOODIR)/auto-overlays.texinfo $(AUTOODIR)/auto-overlay-manual.texinfo
+auto-overlay-manual-src.tar.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
+	tar -cvzf $< $(AUTODIR)/auto-overlays.texinfo \
+	  $(AUTOODIR)/auto-overlay-manual.texinfo
+
+
+
+# have to override some implicit rules to add auto-overlays.texinfo dependency
+
+auto-overlay-manual.info: auto-overlay-manual.texinfo auto-overlays.texinfo
+	makeinfo $< -o $@
+
+auto-overlay-manual.txt: auto-overlay-manual.texinfo auto-overlays.texinfo
+	makeinfo --plaintext $< > $@
+
+auto-overlay-manual.txt.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
+	makeinfo --plaintext $< | gzip -c > $@
+
+auto-overlay-manual.dvi: auto-overlay-manual.texinfo auto-overlays.texinfo
+	texi2dvi -c -o $@ $<
+
+auto-overlay-manual.pdf: auto-overlay-manual.texinfo auto-overlays.texinfo
+	texi2dvi --pdf -c -o $@ $<
+
+auto-overlay-manual/html/index.html: auto-overlay-manual.texinfo \
+                                     auto-overlays.texinfo
+	makeinfo --html $< -o $(dir $@)
 
 
 
@@ -84,6 +113,9 @@ auto-o-src:
 %.info: %.texinfo
 	makeinfo $< -o $@
 
+# Note: to work correctly, this either requires the directory to be included
+#       in the target or the target to already exist in the correct directory
+#       so that directory search can find it
 %.info.gz: %.info
 	gzip -f $< -c > $@
 
@@ -99,11 +131,17 @@ auto-o-src:
 %.pdf: %.texinfo
 	texi2dvi --pdf -c -o $@ $<
 
+# Note: to work correctly, this either requires the directory to be included
+#       in the target or the target to already exist in the correct directory
+#       so that directory search can find it
 %.ps.gz: %.dvi
 	dvips -f $< | gzip -c > $@
 
-%-html: %.texinfo
-	makeinfo --html $< -o $(dir $@)/html
+%/html/index.html: %.texinfo
+	makeinfo --html $< -o $(dir $@)
 
-%-html.tar.gz: %-html
-	cd $(dir $@); pwd; tar -cvzf $(notdir $@) html
+# Note: this requires the directory containing the "html" subdirectory be
+#       given in the %-html prerequisite, e.g. path/foobar-html, since there's
+#       nowhere alse to deduce it from
+%-html.tar.gz: %.texinfo %/html/index.html
+	cd $(dir $<); pwd; tar -cvzf $(notdir $@) html

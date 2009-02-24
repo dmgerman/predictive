@@ -23,8 +23,9 @@ To port a dictionary to the new version, use the following procedure:
 2. start Emacs;
 
 3. load the "predictive-convert-dump-format" library (included in this
-   version of the predictive completion package) using "M-x load-file
-   /path/to/predictive-convert-dump-format.el";
+   version of the predictive completion package) using
+
+     M-x load-file /path/to/predictive-convert-dump-format.el
 
 4. open the dumped dictionary backup file in Emacs;
 
@@ -133,6 +134,23 @@ This can of course be combined with the DESTDIR option:
 
   make install DESTDIR=/path/to/install/ DICTDIR=/path/to/dictionaries/
 
+***********  The predictive package includes an enhanced version of the
+* CAREFUL *  avl-tree.el library, which is a drop-in replacement for the
+***********  version that comes with Emacs. Unless you're prepared to
+overwrite or delete the original version, then you MUST make sure that
+the replacement version is saved to a path that appears *earlier* in your
+`load-path' than the directory containing the original version (which is
+usually located somewhere like "/usr/share/emacs/lisp/emacs-lisp/" on
+*nix systems), so that the new version masks the old one.
+
+You can view your current load path using `C-h v load-path' from within
+Emacs. To verify that the replacement avl-tree.el library is indeed
+shadowing the version that comes with Emacs, look at the output of
+
+  M-x list-load-path-shadows
+
+and check that the new avl-tree.el hides the original version.
+
 
 Finally, put the following lines in your .emacs file (replace the paths
 as appropriate if you're not using the default install locations):
@@ -158,19 +176,9 @@ by replacing the final line as follows:
   (autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
             "Turn on Predictive Completion Mode." t)
 
-***********  The predictive package includes an enhanced version of the
-* CAREFUL *  avl-tree.el library, which is a drop-in replacement for the
-***********  version that comes with Emacs. If you don't want to overwrite
-or delete the original version, then you *must* make sure that the
-replacement version is saved to a path that appears *earlier* in your
-`load-path' than the directory containing the original version (which is
-usually located somewhere like "/usr/share/emacs/lisp/emacs-lisp/" on
-*nix systems), so that the new version masks the old one.
-
-You can verify that the new avl-tree.el library is indeed shadowing the
-version that comes with Emacs by looking at the output of
-
-  M-x list-load-path-shadows
+(Note that "~/.emacs.d/predictive/predictive" is not a typo! The second
+"predictive" refers to the "predictive.el" and "predictive.elc" files,
+minus the final extension.)
 
 
 If you want to install the info documentation into your local info
@@ -197,7 +205,7 @@ Windows and don't have Cygwin installed).
 
 --- Byte-Compiling ---
 
-For performance reasons, it is important to byte-compile the lisp
+For performance reasons, it is essential to byte-compile the lisp
 code. You can do it manually using `byte-compile-file' or one of the
 other Emacs byte-compilation commands (see The Compilation Functions, GNU
 Emacs Lisp Reference Manual) for all of the Lisp files contained in the
@@ -210,16 +218,16 @@ within Emacs. (See Operating on Files, GNU Emacs manual.)
 
 --- Creating the Dictionaries ---
 
-The only pre-prepared dictionary included in the main package is the
-English dictionary (so that predictive completion mode works "out of the
-box", albeit very slowly if you don't byte-compile!). However, you will
-get better results if you roll your own English dictionary and train it
-to your own writing style. The "dict-english.word-list" file could serve
-as a basis for this. (See Getting the Most out of Dictionaries,
-Predictive Completion Manual.) Other dictionaries (e.g. for LaTeX and
-html) are included only as plain-text word lists, from which the
-dictionaries can be created. So support for these major modes will not be
-available until the dictionaries have been created.
+The only pre-built dictionary included in the main package is the English
+dictionary (so that predictive completion mode works "out of the box",
+albeit very slowly if you don't byte-compile!). However, you will get
+better results if you roll your own main dictionary (or dictionaries) and
+train it to your own writing style. The "dict-english.word-list" file
+could serve as a basis for this. (See Getting the Most out of
+Dictionaries, Predictive Completion Manual.) Other dictionaries (e.g. for
+LaTeX, Texinfo and HTML) are included only as plain-text word lists, from
+which the dictionaries can be created. So support for these major modes
+will not be available until the dictionaries have been created.
 
 You can create the dictionaries manually using the
 `predictive-create-dict' command from within Emacs. You should give the
@@ -239,7 +247,6 @@ following in your .emacs file:
 
   (add-to-list 'load-path "/path/to/add/")
 
-
 ***********  Some of the dictionary Lisp files required to support
 * CAREFUL *  specific major-modes (e.g. LaTeX and html) may have been
 ***********  created in subdirectories of the predictive/ directory
@@ -249,10 +256,10 @@ locations are also in the load-path.
 
 ***********  The dictionaries are intended to be user-specific, and MUST
 * CAREFUL *  be writable by your user. If you're performing a site-wide
-***********  of the predictive package, the dictionary files (all files
-starting with the prefix "dict-" and ending in ".elc" or ".el") need to
-be copied to a separate writable directory for each user, and appropriate
-load-path lines added to their .emacs files.
+***********  installation of the predictive package, the dictionary files
+(all files starting with the prefix "dict-" and ending in ".elc" or
+".el") need to be copied to a separate writable directory for each user,
+and appropriate load-path lines added to their .emacs files.
 
 
 If you want the predictive completion minor-mode to be available whenever
@@ -268,9 +275,9 @@ by putting the following in your .emacs instead:
   (autoload 'predictive-mode "/path/to/predictive/predictive"
             "Turn on Predictive Completion Mode." t)
 
-Note that "/path/to/predictive/predictive" is not a typo! The second
+(Note that "/path/to/predictive/predictive" is not a typo! The second
 "predictive" refers to the "predictive.el" and "predictive.elc" files,
-minus the final extension.
+minus the final extension.)
 
 
 
@@ -290,16 +297,16 @@ and check the following points again:
 
 1. Can the predictive Lisp libraries (all files with extensions ".elc"
    and ".el") be found somewhere in your Emacs `load-path'? You can check
-   the current load-path using "C-h v load-path" from within Emacs.
+   the current load-path using `C-h v load-path' from within Emacs.
 
 2. That includes the dictionaries! (Files starting with the prefix
    "dict-" and ending with ".elc" or ".el"). If you forgot about them, go
    back to point 1. and check them too.
 
-3. Are you quite sure ALL the dictionaries can be found, including the
-   LaTeX and html ones? They're probably in the "predictive/latex/" and
-   "predictive/html/" subdirectories. If not, go back to point 2. and
-   redo.
+3. Are you quite sure ALL the dictionaries can be found in your
+   `load-path', including the LaTeX, Texinfo and HTML ones? They're
+   probably in the "predictive/latex/" and "predictive/html/"
+   subdirectories. If not, go back to point 2. and redo.
 
 4. Are all the dictionaries writable by your user (or the user running
    Emacs)? That includes the "dict-english.el" and "dict-english.elc"
@@ -311,10 +318,11 @@ and check the following points again:
    that file is re-read, usually by restarting Emacs.
 
 6. Have you got the latest version of the predictive completion package?
-   Check the web-page listed at the top of this document. If a newer
-   version is available, download and install it following the
-   instructions in the new INSTALL file included in the new package (if
-   things still don't work out, you'll end up back here, but this will be
+   There are fairly frequent bug-fix releases, especially after a new
+   major release. Check the web-page listed at the top of this
+   document. If a newer version is available, download and install it
+   following the instructions in the new INSTALL file included in the new
+   package (if things still don't work out, you'll end up back here, in
    the new INSTALL file).
 
 
