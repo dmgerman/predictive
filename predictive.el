@@ -46,6 +46,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.19.1
+;; * bug-fix to `completion-ui-register-source' definition
+;;
 ;; Version 0.19
 ;; * updated for compatibility with new Completion-UI
 ;;
@@ -2931,9 +2934,9 @@ minor mode."
  :reject-function (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-reject-functions
 					prefix completion arg))
- :menu-function '(eval predictive-menu-function)
- :browser-function '(eval predictive-browser-function)
- :word-thing '(eval predictive-word-thing))
+ :menu-function 'predictive-menu-function
+ :browser-function 'predictive-browser-function
+ :word-thing 'predictive-word-thing)
 
 
 
