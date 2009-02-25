@@ -212,6 +212,14 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.11.1
+;; * allow indirection in source :prefix-function, :word-thing,
+;;   :tooltip-function, :popup-frame-function, :menu-function and
+;;   :browser-function; if they are set to a symbol, that symbol is repeatedly
+;;   evaluated until we get a function (or a thing-at-point symbol in the case
+;;   of :word-thing)
+;; * bug-fixes to `posn-at-point' functions
+;;
 ;; Version 0.11
 ;; * Major rewrite: completely modularized the user-interfaces and completion
 ;;   sources!
@@ -1751,7 +1759,7 @@ is passed one argument, a completion overlay."
   `(plist-get ,def :prefix-function))
 
 (defmacro completion-ui--source-def-word-thing (def)
-  `(plist-get ,def :prefix-name-thing))
+  `(plist-get ,def :word-thing))
 
 (defmacro completion-ui--source-def-accept-function (def)
   `(plist-get ,def :accept))
@@ -2082,58 +2090,76 @@ pop-up frame. The menu functions should return menu keymaps."
   	  completion-ui-source-definitions)))
 
 
-(defmacro completion-ui-source-prefix-function
-  (source &optional overlay)
+(defun completion-ui-source-prefix-function (source &optional overlay)
   ;; return prefix-function for SOURCE or OVERLAY at point
-  `(or ,(when overlay
-  	  `(and ,overlay (overlay-get ,overlay 'completion-prefix-function)))
-       ,(when source
-  	  `(and (fboundp 'auto-overlay-local-binding)
-  		(let ((completion-prefix-function
-  		       (completion-ui--source-def-prefix-function
-  			(assq (completion-ui-completion-source ,source)
-  			      completion-ui-source-definitions))))
-  		  (auto-overlay-local-binding 'completion-prefix-function)))
-  	  `(completion-ui--source-def-prefix-function
-  	    (assq (completion-ui-completion-source ,source)
-  		  completion-ui-source-definitions)))
-       'completion-prefix))  ; default fall-back
+  (or (and overlay (overlay-get overlay 'completion-prefix-function))
+      (and source
+	   (let (prefix-function)
+	     ;; get overlay-local binding, falling back to SOURCE definition
+	     (if (fboundp 'auto-overlay-local-binding)
+		 (let ((completion-prefix-function
+			(completion-ui--source-def-prefix-function
+			 (assq (completion-ui-completion-source source)
+			       completion-ui-source-definitions))))
+		   (setq prefix-function
+			 (auto-overlay-local-binding
+			  'completion-prefix-function)))
+	       (setq prefix-function
+		     (completion-ui--source-def-prefix-function
+		      (assq (completion-ui-completion-source source)
+			    completion-ui-source-definitions))))
+	     ;; evaluate result until we get a function
+	     (while (and prefix-function
+			 (not (functionp prefix-function))
+			 (boundp prefix-function))
+	       (setq prefix-function (eval prefix-function)))
+	     prefix-function))
+      ;; default fall-back
+      'completion-prefix))
 
 
-(defmacro completion-ui-source-word-thing
+(defun completion-ui-source-word-thing
   (source &optional overlay)
   ;; return word-thing for SOURCE or OVERLAY at point
-  `(or ,(when overlay
-  	  `(and ,overlay (overlay-get ,overlay 'completion-word-thing)))
-       ,(when source
-  	  `(and (fboundp 'auto-overlay-local-binding)
-  		(let ((completion-word-thing
-  		       (completion-ui--source-def-word-thing
-  			(assq (completion-ui-completion-source ,source)
-  			      completion-ui-source-definitions))))
-  		  (auto-overlay-local-binding 'completion-prefix-function)))
-  	  `(completion-ui--source-def-word-thing
-  	    (assq (completion-ui-completion-source ,source)
-  		  completion-ui-source-definitions)))
-       'word))  ; default fall-back
+  (or (and overlay (overlay-get overlay 'completion-word-thing))
+      (and source
+	   (let (word-thing)
+	     ;; get overlay-local binding, falling back to SOURCE definition
+	     (if (fboundp 'auto-overlay-local-binding)
+		 (let ((completion-word-thing
+			(completion-ui--source-def-word-thing
+			 (assq (completion-ui-completion-source source)
+			       completion-ui-source-definitions))))
+		   (setq word-thing (auto-overlay-local-binding
+				     'completion-word-thing)))
+	       (setq word-thing
+		     (completion-ui--source-def-word-thing
+		      (assq (completion-ui-completion-source source)
+			    completion-ui-source-definitions))))
+	     ;; evaluate result until we get a thing-at-point symbol
+	     (while (and word-thing
+			 (not (get word-thing 'forward-op))
+			 (boundp word-thing))
+	       (setq word-thing (eval word-thing)))
+	     word-thing))
+      ;; default fall-back
+      'word))
 
 
-(defmacro completion-ui-source-non-prefix-completion
+(defun completion-ui-source-non-prefix-completion
   (source &optional overlay)
   ;; return non-prefix-completion setting for SOURCE or OVERLAY at point
-  `(or ,(when overlay
-  	  `(and ,overlay
-  		(overlay-get ,overlay 'completion-non-prefix-completion)))
-       ,(when source
-  	  `(and (fboundp 'auto-overlay-local-binding)
+  (or (and overlay (overlay-get overlay 'completion-non-prefix-completion))
+      (and source
+	   (and (fboundp 'auto-overlay-local-binding)
   		(let ((completion-non-prefix-completion
   		       (completion-ui--source-def-non-prefix-completion
-  			(assq (completion-ui-completion-source ,source)
+  			(assq (completion-ui-completion-source source)
   			      completion-ui-source-definitions))))
   		  (auto-overlay-local-binding
 		   'completion-non-prefix-completion)))
-  	  `(completion-ui--source-def-non-prefix-completion
-  	    (assq (completion-ui-completion-source ,source)
+	   (completion-ui--source-def-non-prefix-completion
+  	    (assq (completion-ui-completion-source source)
   		  completion-ui-source-definitions)))
        nil))  ; default fall-back
 
@@ -2154,64 +2180,111 @@ pop-up frame. The menu functions should return menu keymaps."
   	  completion-ui-source-definitions)))
 
 
-(defmacro completion-ui-source-popup-frame-function
+(defun completion-ui-source-popup-frame-function
   (source &optional overlay)
   ;; return popup-frame-function for SOURCE of OVERLAY at point
-  `(or (and (fboundp 'auto-overlay-local-binding)
-  	    (let ((completion-popup-frame-function
+  (or (let (popup-frame-function)
+	;; get overlay-local binding, falling back to SOURCE definition
+	(if (fboundp 'auto-overlay-local-binding)
+	    (let ((completion-popup-frame-function
   		   (completion-ui--source-def-popup-frame-function
-  		    (assq (completion-ui-completion-source ,source ,overlay)
+  		    (assq (completion-ui-completion-source source overlay)
   			  completion-ui-source-definitions))))
-  	      (auto-overlay-local-binding 'completion-popup-frame-function)))
-       (completion-ui--source-def-popup-frame-function
-  	(assq (completion-ui-completion-source ,source ,overlay)
-  	      completion-ui-source-definitions))
-       'completion-construct-popup-frame-text))  ; default fall-back
+  	      (setq popup-frame-function
+		    (auto-overlay-local-binding
+		     'completion-popup-frame-function)))
+	  (setq popup-frame-function
+		(completion-ui--source-def-popup-frame-function
+		 (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions))))
+	;; evaluate result until we get a function
+	(while (and popup-frame-function
+		    (not (functionp popup-frame-function))
+		    (boundp popup-frame-function))
+	  (setq popup-frame-function (eval popup-frame-function)))
+	popup-frame-function)
+      ;; default fall-back
+      'completion-construct-popup-frame-text))
 
 
-(defmacro completion-ui-source-tooltip-function
+(defun completion-ui-source-tooltip-function
   (source &optional overlay)
   ;; return tooltip-function for SOURCE of OVERLAY at point
-  `(or (and (fboundp 'auto-overlay-local-binding)
-  	    (let ((completion-tooltip-function
-  		   (completion-ui--source-def-tooltip-function
-  		    (assq (completion-ui-completion-source ,source ,overlay)
-  			  completion-ui-source-definitions))))
-  	      (auto-overlay-local-binding 'completion-tooltip-function)))
-       (completion-ui--source-def-tooltip-function
-  	(assq (completion-ui-completion-source ,source ,overlay)
-  	      completion-ui-source-definitions))
-       'completion-construct-tooltip-text))  ; default fall-back
+  (or (let (tooltip-function)
+	;; get overlay-local binding, falling back to SOURCE definition
+	(if (fboundp 'auto-overlay-local-binding)
+	    (let ((completion-tooltip-function
+		   (completion-ui--source-def-tooltip-function
+		    (assq (completion-ui-completion-source source overlay)
+			  completion-ui-source-definitions))))
+	      (setq tooltip-function
+		    (auto-overlay-local-binding
+		     'completion-tooltip-function)))
+	  (setq tooltip-function
+		(completion-ui--source-def-tooltip-function
+		 (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions))))
+	;; evaluate result until we get a function
+	(while (and tooltip-function
+		    (not (functionp tooltip-function))
+		    (boundp tooltip-function))
+	  (setq tooltip-function (eval tooltip-function)))
+	tooltip-function)
+      ;; default fall-back
+      'completion-construct-tooltip-text))
 
 
-(defmacro completion-ui-source-menu-function
+(defun completion-ui-source-menu-function
   (source &optional overlay)
   ;; return popup-frame-function for SOURCE of OVERLAY at point
-  `(or (and (fboundp 'auto-overlay-local-binding)
+  (or (let (menu-function)
+	;; get overlay-local binding, falling back to SOURCE definition
+	(if (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-menu-function
   		   (completion-ui--source-def-menu-function
-  		    (assq (completion-ui-completion-source ,source ,overlay)
+  		    (assq (completion-ui-completion-source source overlay)
   			  completion-ui-source-definitions))))
-  	      (auto-overlay-local-binding 'completion-menu-function)))
-       (completion-ui--source-def-menu-function
-  	(assq (completion-ui-completion-source ,source ,overlay)
-  	      completion-ui-source-definitions))
-       'completion-construct-menu))  ; default fall-back
+  	      (setq menu-function
+		    (auto-overlay-local-binding 'completion-menu-function)))
+	  (setq menu-function
+		(completion-ui--source-def-menu-function
+		 (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions))))
+	;; evaluate result until we get a function
+	(while (and menu-function
+		    (not (functionp menu-function))
+		    (boundp menu-function))
+	  (setq menu-function (eval menu-function)))
+	menu-function)
+      ;; default fall-back
+      'completion-construct-menu))
 
 
-(defmacro completion-ui-source-browser-function
+(defun completion-ui-source-browser-function
   (source &optional overlay)
   ;; return popup-frame-function for SOURCE of OVERLAY at point
-  `(or (and (fboundp 'auto-overlay-local-binding)
+  (or (let (browser-function)
+	;; get overlay-local binding, falling back to SOURCE definition
+	(if (fboundp 'auto-overlay-local-binding)
   	    (let ((completion-browser-function
   		   (completion-ui--source-def-browser-function
-  		    (assq (completion-ui-completion-source ,source ,overlay)
+  		    (assq (completion-ui-completion-source source overlay)
   			  completion-ui-source-definitions))))
-  	      (auto-overlay-local-binding 'completion-browser-function)))
-       (completion-ui--source-def-browser-function
-  	(assq (completion-ui-completion-source ,source ,overlay)
-  	      completion-ui-source-definitions))
-       'completion-construct-browser-menu))  ; default fall-back
+  	      (setq browser-function
+		    (auto-overlay-local-binding
+		     'completion-browser-function)))
+	  (setq browser-function
+		(completion-ui--source-def-browser-function
+		 (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions))))
+	;; evaluate result until we get a function
+	(while (and browser-function
+		    (not (functionp browser-function))
+		    (boundp browser-function))
+	  (setq browser-function (eval browser-function)))
+	browser-function)
+      ;; default fall-back
+      'completion-construct-browser-menu))
 
 
 
@@ -3919,8 +3992,6 @@ DX and DY specify optional offsets from the top left of the glyph."
 
   (unless window (setq window (selected-window)))
   (unless position (setq position (window-point window)))
-  (unless dx (setq dx 0))
-  (unless dy (setq dy 0))
 
   (let* ((pos (posn-at-point position window))
          (x-y (posn-x-y pos))
@@ -3928,8 +3999,8 @@ DX and DY specify optional offsets from the top left of the glyph."
          (win-x-y (window-pixel-edges window)))
     ;; adjust for window edges
     (setcar (nthcdr 2 pos)
-            (cons (+ (car x-y) (car  edges) (- (car win-x-y))  dx)
-                  (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) dy)))
+            (cons (+ (car x-y) (car  edges) (- (car win-x-y))  (or dx 0))
+                  (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) (or dy 0))))
     (list 'mouse-1 pos 1)))
 
 
@@ -3951,8 +4022,8 @@ See also `completion-window-inside-posn-at-point' and
   (let ((x-y (posn-x-y (posn-at-point position window)))
         (edges (window-inside-pixel-edges window))
         (win-x-y (window-pixel-edges window)))
-    (cons (+ (car x-y) (car  edges) (- (car win-x-y)) dx)
-          (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) dy))))
+    (cons (+ (car x-y) (car  edges) (- (car win-x-y)) (or dx 0))
+          (+ (cdr x-y) (cadr edges) (- (cadr win-x-y)) (or dy 0)))))
 
 
 
@@ -3970,7 +4041,7 @@ See also `completion-window-posn-at-point' and
   (unless window (setq window (selected-window)))
   (unless position (setq position (window-point window)))
   (let ((x-y (posn-x-y (posn-at-point position window))))
-    (cons (+ (car x-y) dx) (+ (cdr x-y) dy))))
+    (cons (+ (car x-y) (or dx 0)) (+ (cdr x-y) (or dy 0)))))
 
 
 
@@ -3990,8 +4061,8 @@ See also `completion-window-posn-at-point' and
 
   (let ((x-y (posn-x-y (posn-at-point position window)))
         (edges (window-inside-pixel-edges window)))
-    (cons (+ (car x-y) (car  edges) dx)
-          (+ (cdr x-y) (cadr edges) dy))))
+    (cons (+ (car x-y) (car  edges) (or dx 0))
+          (+ (cdr x-y) (cadr edges) (or dy 0)))))
 
 
 
@@ -4043,11 +4114,11 @@ glyph."
                                 (cddr restore))
 
       ;; return pixel position
-      (setf (car pixel-pos) (+ (car pixel-pos) dx)
+      (setf (car pixel-pos) (+ (car pixel-pos) (or dx 0))
 	    (cdr pixel-pos)
 	    (+ (- (cdr pixel-pos)
 		  (/ (frame-char-height (window-frame window)) 2))
-	       dy))
+	       (or dy 0)))
       pixel-pos))
 
 
@@ -4067,8 +4138,6 @@ glyph."
 
     (unless window (setq window (selected-window)))
     (unless position (setq position (window-point window)))
-    (unless dx (setq dx 0))
-    (unless dy (setq dy 0))
 
     ;; get window-relative position in units of characters
     (let* ((x-y (compute-motion (window-start) '(0 . 0)
@@ -4104,8 +4173,8 @@ glyph."
                            (/ (frame-char-height frame) 2)))
 
       ;; return a fake event containing the position
-      (setcar pixel-pos (+ (car pixel-pos) dx))
-      (setcdr pixel-pos (+ (cdr pixel-pos) dy))
+      (setcar pixel-pos (+ (car pixel-pos) (or dx 0)))
+      (setcdr pixel-pos (+ (cdr pixel-pos) (or dy 0)))
       (list 'mouse-1 (list window position pixel-pos))))
 
 
