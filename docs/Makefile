@@ -144,9 +144,9 @@ auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
 %.ps.gz: %.dvi
 	dvips -f $< | gzip -c > $@
 
-html/index.html: $(dir $@).texinfo
+%/html/index.html: %.texinfo
 	makeinfo --html $< -o $(dir $@)
 
-%-html.tar.gz: %.texinfo %/html/index.html
+%-html.tar.gz: %.texinfo html/index.html
 	echo bar $@ $<
 	cd $(dir $<); pwd; tar -cvzf $(notdir $@) html
