@@ -1,1 +1,1 @@
-docs/user-manual/predictive-user-manual.texinfo
+docs/predictive-user-manual/predictive-user-manual.texinfo
