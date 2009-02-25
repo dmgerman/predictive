@@ -843,13 +843,11 @@ to the dictionary, nil if it should not. Only used when
 (unless predictive-map
   (setq predictive-map (make-sparse-keymap))
   ;; M-<tab> and M-/ cycle word at point
-  (define-key predictive-map [?\M-\t] 'complete-or-cycle-word-at-point)
-  (define-key predictive-map "\M-/" 'complete-or-cycle-word-at-point)
+  (define-key predictive-map [?\M-\t] 'complete-predictive)
+  (define-key predictive-map "\M-/" 'complete-predictive)
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
-  (define-key predictive-map [(meta shift iso-lefttab)]
-    'complete-or-cycle-backwards-word-at-point)
-  (define-key predictive-map "\M-?"
-    'complete-or-cycle-backwards-word-at-point))
+  (define-key predictive-map [(meta shift iso-lefttab)] 'complete-predictive)
+  (define-key predictive-map "\M-?" 'complete-predictive))
 
 
 
@@ -1025,20 +1023,30 @@ the word at or next to the point, the following keys can be used:
   \\<predictive-map>
   \\[complete-predictive] \t Complete word at point.
 
-When completing a word, the following keys are available:
+When completing a word, the following keys are available:\
 
   \\<completion-overlay-map>
-  \\[complete-or-cycle-word-at-point] \t\t Cycle through completions.
-  \\[complete-or-cycle-backwards-word-at-point] \t\t Cycle backwards through completions.
-  \\[completion-accept] \t Accept the current completion.
+  \\[completion-cycle] \t\t Cycle through completions.
+  \\[completion-cycle-backwards] \t Cycle backwards through completions.
+  \\[completion-accept] \t\t Accept the current completion.
   \\[completion-reject] \t Reject the current completion.
-  \\[completion-tab-complete] \t\t Insert longest common prefix.
-  \\[completion-scoot-ahead] \t\t Insert completion and re-complete word.
-  \\[completion-show-tooltip] \t Display the completion tooltip.\\<completion-tooltip-map>
-  \\[completion-tooltip-cycle] \t Scroll through completions in the tooltip.
-  \\[completion-tooltip-cycle-backwards] \t\t Scroll backwards through completions in the tooltip.\\<completion-dynamic-map>
-  \\[completion-show-menu] \t Display the completion menu.
-  \\[completion-popup-frame] \t Display the completion pop-up frame."
+  \\[completion-tab-complete] \t\t\t Insert longest common substring.
+  \\[completion-extend-prefix] \t\t Extend the prefix and re-complete.\
+  \\<completion-tooltip-map>
+  \\[completion-activate-tooltip] \t\t Display the completion tooltip.\
+  \\<completion-tooltip-active-map>
+  \\[completion-tooltip-cycle] \t\t Scroll through completions in the tooltip.
+  \\[completion-tooltip-cycle-backwards] \t\t\t Scroll backwards through completions in the tooltip.\
+  \\<completion-menu-map>
+  \\[completion-activate-menu] \t\t Display the completion menu.\
+  \\<completion-popup-frame-map>
+  \\[completion-activate-popup-frame] \t\t Display the completion pop-up frame.
+
+When within a pop-up frame:\
+
+  \\<completion-popup-frame-mode-map>
+  \\[completion-popup-frame-toggle-show-all] \t\t Toggle between displing all completions.
+  \\[completion-popup-frame-dismiss] \t\t Dismiss the completion pop-up frame."
 
   (interactive "P")
 

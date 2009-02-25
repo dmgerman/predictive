@@ -380,7 +380,7 @@ Another useful command is @kbd{C-TAB}. This accepts all the characters
 from the current provisional completion as though you typed them
 yourself, and re-completes the resulting, longer string --- useful if a
 word just needs a suffix adding, for instance.
-@findex completion-scoot-ahead
+@findex completion-extend-prefix
 
 @xref{Basic Completion Commands}, for details of cycling and
 tab-completion.
@@ -672,11 +672,11 @@ common prefix of all candidate completions, and re-complete the
 resulting longer string.
 @findex completion-tab-complete
 
-@item completion-scoot-ahead
+@item completion-extend-prefix
 (@kbd{C-TAB}) Insert the characters from the current completion as
 though typed manually, and look for completions of the resulting, longer
 string.
-@findex completion-scoot-ahead
+@findex completion-extend-prefix
 @end ftable
 
 Note that, apart from the @command{complete-predictive} bindings, none

@@ -226,6 +226,7 @@
 ;;   are related to `auto-completion-mode', `completion-ui-*' are related to
 ;;   user-interface implementation, `completion--*' are intended for internal
 ;;   use only.
+;; * generalised `completion-scoot-ahead' into `completion-extend-prefix'
 ;;
 ;; Version 0.10.2
 ;; * bug-fixes to `completion-replaces-prefix' support (thanks once again to
@@ -1257,9 +1258,9 @@ used if the current Emacs version lacks command remapping support."
   (define-key completion-overlay-map [?\M-\t] 'completion-cycle)
   (define-key completion-overlay-map "\M-/" 'completion-cycle)
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
+  (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
   (define-key completion-overlay-map [(meta shift iso-lefttab)]
     'completion-cycle-backwards)
-  (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
   ;; C-RET accepts, C-DEL rejects
   (define-key completion-overlay-map [(control return)] 'completion-accept)
   (define-key completion-overlay-map [(control backspace)] 'completion-reject)
@@ -1267,7 +1268,7 @@ used if the current Emacs version lacks command remapping support."
   (define-key completion-overlay-map "\t" 'completion-tab-complete)
   ;; C-<tab> scoots ahead
   (define-key completion-overlay-map [(control tab)]
-    'completion-scoot-ahead)
+    'completion-extend-prefix)
   ;; C-<space> abandons
   (define-key completion-overlay-map [?\C- ] 'completion-reject)
   ;; ;; remap the deletion commands
@@ -2681,37 +2682,51 @@ crash through your ceiling."
 
 
 
-(defun completion-scoot-ahead (&optional overlay)
-  "Accept the characters from the current completion,
+(defun completion-extend-prefix (&optional n overlay)
+  "Extend the current prefix by N characters from the current completion,
 and recomplete the resulting string.
 
-When called from Lisp programs, use OVERLAY instead of finding
-one. The point had better be within OVERLAY or the oceans will
-boil away."
-  (interactive)
+If N is null, extend the prefix to the entire current
+completion. If N is negative, remove that many characters from
+the current prefix, and recomplete the resulting string.
+
+When called from Lisp programs, OVERLAY is used if supplied
+instead of finding one. The point had better be within OVERLAY or
+the oceans will boil away."
+  (interactive "P")
 
   ;; look for completion overlay at point if none was specified
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
 
   ;; if there are no characters to accept, do nothing
   (if (or (null overlay) (null (overlay-get overlay 'completion-num)))
-      (message "No completion to scoot-ahead to")
+      (message "No characters with which to extend prefix")
 
-    ;; otherwise, deactivate the interfaces and accept the completion
-    (let ((prefix (overlay-get overlay 'prefix))
-	  (cmpl (nth (overlay-get overlay 'completion-num)
-		     (overlay-get overlay 'completions))))
+    ;; otherwise
+    (let* ((prefix (overlay-get overlay 'prefix))
+	   (len (overlay-get overlay 'prefix-length))
+	   (cmpl (nth (overlay-get overlay 'completion-num)
+		      (overlay-get overlay 'completions)))
+	   (str (if (and n (< (+ len n) (length cmpl)) (> (+ len n) 0))
+		    (substring cmpl 0 (+ len n))
+		  cmpl)))
       (unless (stringp cmpl) (setq cmpl (car cmpl)))
       ;; deactivate interfaces pending update
       (completion-ui-deactivate-interfaces-pre-update overlay)
-      ;; delete the original prefix and insert the completion
+      ;; delete the original prefix
       (delete-region (- (point) (length prefix)) (point))
-      (let ((overwrite-mode nil)) (insert cmpl))
-      ;; update the overlay
-      (move-overlay overlay (point) (point))
-      (completion-ui-setup-overlay cmpl nil nil nil nil nil nil overlay)
-      ;; re-complete
-      (complete-in-buffer nil nil 'not-set 'auto overlay))))
+
+      ;; if prefix has been contracted down to nothing, stop completing
+      (if (and n (<= (+ len n) 0))
+	  (progn
+	    (completion-ui-delete-overlay overlay)
+	    (completion-ui-deactivate-interfaces overlay))
+	;; otherwise, insert the characters, update the overlay, and
+	;; recomplete
+	(let ((overwrite-mode nil)) (insert str))
+	(move-overlay overlay (point) (point))
+	(completion-ui-setup-overlay str nil nil nil nil nil nil overlay)
+	(complete-in-buffer nil nil 'not-set nil overlay)))))
 
 
 
