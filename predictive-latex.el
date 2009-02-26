@@ -557,13 +557,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 	;; add latex dictionaries to main dictionary list
 	(setq predictive-buffer-dict
-	      (append (if predictive-buffer-dict
-			  (if (atom predictive-buffer-dict)
-			      (list predictive-buffer-dict)
-			    predictive-buffer-dict)
-			(if (atom predictive-main-dict)
-			    (list predictive-main-dict)
-			  predictive-main-dict))
+	      (append (cond
+		       (predictive-use-buffer-local-dict
+			(list (predictive-buffer-local-meta-dict-name)))
+		       (predictive-buffer-dict
+			(if (atom predictive-buffer-dict)
+			    (list predictive-buffer-dict)
+			  predictive-buffer-dict))
+		       (t (if (atom predictive-main-dict)
+			      (list predictive-main-dict)
+			    predictive-main-dict)))
 		      predictive-latex-dict))
 
 	;; delete any existing predictive auto-overlay regexps and load latex
@@ -1909,14 +1912,26 @@ Interactively, SECTION is read from the mini-buffer."
 	    (message "Failed to load \"%s\" docclass dictionary\"
  - main dictionary NOT changed" docclass))
 
-	;; otherwise, unload the old main dictionary and change to the new one
+	;; otherwise, unload the old main dictionary...
 	(let ((dicts predictive-buffer-dict)
 	      old-dicts)
 	  (while (prog1
 		     (not (eq (cdr dicts) predictive-latex-dict))
 		   (push (pop dicts) old-dicts)))
 	  (mapc 'predictive-unload-dict old-dicts))
-	(setq predictive-buffer-dict (append dict-list predictive-latex-dict))
+	;; if not using a buffer-local dict, simply set new main dictionary
+	(if (not predictive-use-buffer-local-dict)
+	    (setq predictive-buffer-dict
+		  (append dict-list predictive-latex-dict))
+	  ;; otherwise, re-load the buffer-local dict (which will create a new
+	  ;; meta-dict and set `predictive-buffer-dict') and add latex
+	  ;; dictionaries to list
+	  (predictive-load-buffer-local-dict dict-list)
+	  (setq predictive-buffer-dict
+		(append (if (atom predictive-buffer-dict)
+			    (list predictive-buffer-dict)
+			  predictive-buffer-dict)
+			predictive-latex-dict)))
 	))))
 
 
@@ -1931,7 +1946,19 @@ Interactively, SECTION is read from the mini-buffer."
       (mapc 'predictive-unload-dict dict-list)
       (setq dict-list predictive-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
-      (setq predictive-buffer-dict (append dict-list predictive-latex-dict))
+      ;; if not using a buffer-local dict, simply reset main dictionary
+      (if (not predictive-use-buffer-local-dict)
+	  (setq predictive-buffer-dict
+		(append dict-list predictive-latex-dict))
+	;; otherwise, re-load the buffer-local dict (which will create a new
+	;; meta-dict and set `predictive-buffer-dict') and add latex
+	;; dictionaries to list
+	(predictive-load-buffer-local-dict predictive-main-dict)
+	(setq predictive-buffer-dict
+	      (append (if (atom predictive-buffer-dict)
+			  (list predictive-buffer-dict)
+			predictive-buffer-dict)
+		      predictive-latex-dict)))
       )))
 
 
