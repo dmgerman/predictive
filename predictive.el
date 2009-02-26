@@ -2702,10 +2702,10 @@ there's only one."
 
 
 
-(defun predictive-load-buffer-local-dict ()
+(defun predictive-load-buffer-local-dict (&optional main-dict)
   "Load/create the buffer-local dictionary."
 
-  (let (filename buffer-dict meta-dict insfun rankfun combfun)
+  (let (filename buffer-dict meta-dict dict-list insfun rankfun combfun)
     ;; The rank function compares by weight (larger is "better"), failing that
     ;; by string length (smaller is "better"), and failing that it compares
     ;; the strings alphabetically.
@@ -2716,6 +2716,14 @@ there's only one."
 		    (string< (car a) (car b))
 		  (< (length (car a)) (length (car b))))
 	      (> (cdr a) (cdr b)))))
+    ;; construct list of dictionaries which meta-dict will be based on
+    (setq dict-list (if main-dict
+			(if (atom main-dict)
+			    (list main-dict)
+			  main-dict)
+		      (if (atom predictive-main-dict)
+			  (list predictive-main-dict)
+			predictive-main-dict)))
 
 
     ;; ----- buffer-local dictionary -----
@@ -2731,8 +2739,6 @@ there's only one."
     (if (and filename (file-exists-p filename))
 	(progn
 	  (load filename)
-	  ;; FIXME: probably shouldn't be using an internal dict-tree.el
-	  ;; function
 	  (setf (dictree-filename (eval (predictive-buffer-local-dict-name)))
 		filename)
 	  (setq buffer-dict (eval (predictive-buffer-local-dict-name))))
@@ -2756,12 +2762,17 @@ there's only one."
     (when (buffer-file-name)
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
+		    predictive-auxiliary-file-location
 		    (symbol-name (predictive-buffer-local-meta-dict-name))
 		    ".elc")))
-    ;; if the buffer meta-dictionary exists, load it
-    (when (and filename (file-exists-p filename))
+    ;; if the buffer-local dictionary doesn't exist yet, or need updating,
+    ;; make sure it's unloaded
+    (if (or (null filename) (not (file-exists-p filename)) main-dict)
+	(when (boundp (predictive-buffer-local-meta-dict-name))
+	  (unintern (predictive-buffer-local-meta-dict-name)))
+      ;; if the buffer meta-dictionary exists, and we're basing it on
+      ;; `predictive-main-dict', load it
       (load filename)
-      ;; FIXME: probably shouldn't be using an internal dict-tree.el function
       (setf (dictree-filename (eval (predictive-buffer-local-meta-dict-name)))
 	    filename)
       ;; if the meta-dictionary is not based on the current main dictionary,
@@ -2786,16 +2797,18 @@ there's only one."
       ;; create the buffer-local meta-dictionary
       (setq meta-dict
 	    (dictree-meta-dict-create
-	     (list buffer-dict (if (atom predictive-main-dict)
-				   (eval predictive-main-dict)
-				 (mapcar 'eval predictive-main-dict)))
+	     (append (list buffer-dict)
+		     (mapcar (lambda (dic)
+			       (if (dictree-p dic) dic (eval dic)))
+			     dict-list))
 	     (predictive-buffer-local-meta-dict-name)
 	     filename (when filename t) nil combfun nil nil
 	     nil nil predictive-completion-speed)))
 
     ;; set buffer's dictionary to the meta-dictionary
     (setq predictive-buffer-dict (predictive-buffer-local-meta-dict-name))
-    ;; add meta-dictionary to the list of dictionaries used by buffer
+    ;; add meta-dictionary to the list of dictionaries used by buffer (can't
+    ;; use `add-to-list' because we want comparison with `eq' not `equal')
     (unless (memq meta-dict predictive-used-dict-list)
       (setq predictive-used-dict-list
 	    (cons meta-dict predictive-used-dict-list)))))
