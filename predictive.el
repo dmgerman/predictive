@@ -1076,10 +1076,7 @@ When within a pop-up frame:\
       (predictive-load-buffer-local-dict)
       (add-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict
 		nil 'local))
-    ;; make sure auto-learn/add caches are flushed if buffer is killed, and
-    ;; add auto-learn function to completion and rejection hooks (rejection
-    ;; hook only causes word to be auto-learned/added if prefix arg was
-    ;; supplied)
+    ;; make sure auto-learn/add caches are flushed if buffer is killed
     (add-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches
 	      nil 'local)
 
@@ -1099,7 +1096,6 @@ When within a pop-up frame:\
     ;; turn on auto-completion mode if necessary
     (set (make-local-variable 'auto-completion-source) 'predictive)
     (when predictive-auto-complete (auto-completion-mode 1))
-
     ;; turn on which-dict mode if necessary
     (when predictive-which-dict (predictive-which-dict-mode t))
     ;; setup idle-timer to flush auto-learn and auto-add caches
@@ -1196,7 +1192,7 @@ Remaining arguments are ignored (they are there to allow
 
 (defun predictive-set-main-dict (dict)
   "Set the main dictionary for the current buffer.
-To set it permanently, you should customize
+To set the default main dictionary, you should customize
 `predictive-main-dict' instead."
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
   ;; set main dictionary in current buffer
@@ -1208,7 +1204,7 @@ To set it permanently, you should customize
 	  (setq dict dic)
 	(error "Dictionary %s could not be loaded" dict))))
   (setq dict (intern-soft (dictree-name dict)))
-  (set (make-local-variable 'predictive-main-dict) dict))
+  (setq predictive-buffer-dict dict))
 
 
 
@@ -2790,7 +2786,9 @@ there's only one."
       ;; create the buffer-local meta-dictionary
       (setq meta-dict
 	    (dictree-meta-dict-create
-	     (list buffer-dict (eval predictive-main-dict))
+	     (list buffer-dict (if (atom predictive-main-dict)
+				   (eval predictive-main-dict)
+				 (mapcar 'eval predictive-main-dict)))
 	     (predictive-buffer-local-meta-dict-name)
 	     filename (when filename t) nil combfun nil nil
 	     nil nil predictive-completion-speed)))
