@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11
+;; Version: 0.11.1
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -219,6 +219,7 @@
 ;;   evaluated until we get a function (or a thing-at-point symbol in the case
 ;;   of :word-thing)
 ;; * bug-fixes to `posn-at-point' functions
+;; * allow literal prefix string to be passed to `complete-in-buffer'
 ;;
 ;; Version 0.11
 ;; * Major rewrite: completely modularized the user-interfaces and completion

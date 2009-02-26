@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19
+;; Version: 0.19.1
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -48,6 +48,8 @@
 ;;
 ;; Version 0.19.1
 ;; * bug-fix to `completion-ui-register-source' definition
+;; * allow `predictive-load-buffer-local-dict' to take an optional argument
+;;   specifying the main dictionary on which to base the meta-dict
 ;;
 ;; Version 0.19
 ;; * updated for compatibility with new Completion-UI

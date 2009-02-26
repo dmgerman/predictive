@@ -32,6 +32,8 @@
 ;;
 ;; Version 0.12.1
 ;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
+;; * modified docclass dictionary switching to support
+;;   `predictive-use-buffer-local-dict'
 ;;
 ;; Version 0.12
 ;; * updated for compatibility with new Completion-UI
