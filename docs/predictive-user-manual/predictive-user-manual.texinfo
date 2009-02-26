@@ -2267,10 +2267,6 @@ The following keymaps are defined by predictive mode:
 @item predictive-map
 Main keymap, enabled whenever predictive mode is.
 
-@item completion-map
-Keymap enabled whenever a completion minor mode (including predictive
-mode) is enabled.
-
 @item auto-completion-map
 Keymap enabled whenever @command{auto-completion-mode} is.
 
@@ -2278,15 +2274,26 @@ Keymap enabled whenever @command{auto-completion-mode} is.
 List of hotkey characters to use for selecting completions. Default is
 numerical characters 0 to 9.
 
-@item completion-dynamic-map auto-completion-dynamic-map
-Keymaps assigned to the overlay used to highlight the provisional
-completions inserted when dynamic completion is enabled. Not currently
-used@footnote{Minor mode keymaps override overlay keymaps in the older
-versions (21.x) of Emacs, limiting their use. For these versions, these
-overlay keymaps are simulated by bindings in @env{completion-map} and
-@env{completion-dynamic-map} using the
-@command{completion-run-if-within-overlay} function as a work-around
-(a.k.a. hack!).}. @xref{Dynamic Completion}.
+@item completion-overlay-map auto-completion-overlay-map
+Keymaps active when the point is at or within a completion.
+
+@item completion-dynamic-map
+Keymap used when @env{completion-use-dynamic} is enabled.
+
+@item completion-tooltip-map
+Keymap used when @env{completion-use-tooltip} is enabled.
+
+@item completion-tooltip-active-map
+Keymap active when the completion tooltip is displayed.
+
+@item completion-menu-map
+Keymap used when @env{completion-use-menu} is enabled.
+
+@item completion-popup-frame-map
+Keymap used when @env{completion-use-popup-frame} is enabled.
+
+@item completion-popup-frame-mode-map
+Keymap active in the completion pop-up frame.
 @end vtable
 
 @findex predictive-self-insert
@@ -2295,24 +2302,25 @@ overlay keymaps are simulated by bindings in @env{completion-map} and
 
 The various keymaps define key bindings for different situations that
 arise in predictive mode. The main @env{predictive-map} keymap is
-enabled whenever predictive mode is enabled, as is
-@env{completion-map}. The difference between them is that
-@env{completion-map} is used by all in-buffer completion modes that use
-the @code{completion-UI} library, whereas @env{predictive-map} is
-specific to predictive mode. The @env{auto-completion-map} keymap is
-enabled whenever @command{auto-completion-mode} is enabled. Note: if you
-find yourself thinking of re-binding printable characters in any of
-these keymaps to something other than @command{completion-self-insert},
-don't! (at least not until you've read on a bit). What you probably want
-to change are the @env{completion-dynamic-syntax-alist} and
-@env{completion-dynamic-override-syntax-alist} variables. @xref{Syntax}.
+enabled whenever predictive mode is enabled, and
+@env{auto-completion-map} is enabled whenever
+@command{auto-completion-mode} is. Note: if you find yourself thinking
+of re-binding printable characters in @env{auto-completion-map} to
+something other than @command{completion-self-insert}, don't! (at least
+not until you've read on a bit). What you probably want to change are
+the @env{auto-completion-syntax-alist} and
+@env{auto-completion-override-syntax-alist} variables. @xref{Syntax}.
 
-@env{completion-dynamic-map} and @env{auto-completion-dynamic-map} are
-active within the provisional completions displayed by dynamic
-completion (@pxref{Dynamic Completion}). The former is used when
-@command{auto-completion-mode} is disabled, the latter when it is
+@env{completion-overlay-map} and @env{auto-completion-overlay-map} are
+active when the point is located at a completion. The former is used
+when @command{auto-completion-mode} is disabled, the latter when it is
 enabled. They are used to provide key bindings for most of the
 completion features.
+
+The key bindings in the keymaps enabled by the @env{completion-use-*}
+customization variables are effectively added to
+@env{completion-overlay-map}, so they are active when the point is in a
+completion and the corresponding user-interface is enabled.
 
 If the keymaps are not defined when predictive mode is first loaded
 (@pxref{Obtaining and Installing}), it creates the default keymaps and
@@ -2320,9 +2328,12 @@ loads them into Emacs. Therefore, to completely re-define predictive
 mode key bindings, it is simpler to re-define the keymap variables
 @emph{before} loading predictive mode (e.g. before the @code{(require
 'predictive)} line in your @file{.emacs} file, @pxref{Obtaining and
-Installing}). But if you simply want to modify a few key bindings, as
-will usually be the case, you can do it in the usual Emacs way,
-@emph{after} loading predictive mode in your @file{.emacs} file.
+Installing}). (However, doing this for the
+@env{auto-completion-mode-map} will almost certainly break
+@command{auto-completion-mode} entirely!) But if you simply want to
+modify a few key bindings, as will usually be the case, you can do it in
+the usual Emacs way, @emph{after} loading predictive mode in your
+@file{.emacs} file.
 @cindex .emacs file
 @cindex startup file
 @cindex configuration file
