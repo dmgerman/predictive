@@ -334,8 +334,7 @@
 ;;; ================================================================
 ;;;          Customization variables controling predictive mode
 
-(defgroup predictive '((completion-ui custom-group)
-		       (predictive-latex custom-group))
+(defgroup predictive nil
   "Predictive completion."
   :group 'convenience)
 
@@ -2954,5 +2953,9 @@ minor mode."
 
 
 (provide 'predictive)
+(require 'predictive-latex)
+(require 'predictive-texinfo)
+(require 'predictive-html)
+
 
 ;;; predictive.el ends here

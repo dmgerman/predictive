@@ -159,6 +159,7 @@ as appropriate if you're not using the default install locations):
   (add-to-list 'load-path "~/.emacs.d/predictive/")
   ;; dictionary locations
   (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+  (add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
   (add-to-list 'load-path "~/.emacs.d/predictive/html/")
   ;; load predictive package
   (require 'predictive)
@@ -171,6 +172,7 @@ by replacing the final line as follows:
   (add-to-list 'load-path "~/.emacs.d/predictive/")
   ;; dictionary locations
   (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+  (add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
   (add-to-list 'load-path "~/.emacs.d/predictive/html/")
   ;; load predictive package
   (autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
@@ -248,11 +250,11 @@ following in your .emacs file:
   (add-to-list 'load-path "/path/to/add/")
 
 ***********  Some of the dictionary Lisp files required to support
-* CAREFUL *  specific major-modes (e.g. LaTeX and html) may have been
-***********  created in subdirectories of the predictive/ directory
-(e.g. predictive/latex/ and predictive/html/). Note that Emacs does NOT
-search the `load-path' recursively, so you must also ensure that their
-locations are also in the load-path.
+* CAREFUL *  specific major-modes (e.g. LaTeX, Texinfo and html) may be
+***********  in subdirectories of the predictive/ directory
+(e.g. predictive/latex/, predictive/texinfo/ and predictive/html/). Note
+that Emacs does NOT search the `load-path' recursively, so you must also
+ensure that their locations are also in the load-path.
 
 ***********  The dictionaries are intended to be user-specific, and MUST
 * CAREFUL *  be writable by your user. If you're performing a site-wide
@@ -278,6 +280,14 @@ by putting the following in your .emacs instead:
 (Note that "/path/to/predictive/predictive" is not a typo! The second
 "predictive" refers to the "predictive.el" and "predictive.elc" files,
 minus the final extension.)
+
+
+Note that loading the predictive package also loads predictive support
+for various major modes (currently LaTeX, Texinfo and HTML). If you DON'T
+need support for some of these major-modes, you can save a bit of memory
+by deleting or commenting out the corresponding lines at the end of
+"predictive.el". Don't forget to recompile "predictive.el" after changing
+it!
 
 
 
