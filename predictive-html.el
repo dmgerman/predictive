@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005 2008-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5
+;; Version: 0.5.1
 ;; Keywords: predictive, setup function, html
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.1
+;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
 ;;
 ;; Version 0.5
 ;; * updated for compatibility with new Completion-UI
@@ -66,8 +69,6 @@
 
 ;; variables used to restore local settings of variables when predictive mode
 ;; is disabled in a Html buffer
-(defvar predictive-restore-main-dict nil)
-(make-variable-buffer-local 'predictive-restore-main-dict)
 (defvar predictive-restore-override-syntax-alist nil)
 (make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
@@ -106,9 +107,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ((> arg 0)
     (catch 'load-fail
 
-      ;; save predictive-main-dict; restored when predictive mode is disabled
-      (setq predictive-restore-main-dict predictive-main-dict)
-
       ;; load the dictionaries
       (mapc (lambda (dic)
 	      (unless (predictive-load-dict dic)
@@ -117,11 +115,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    predictive-html-dicts)
 
       ;; add html dictionaries to main dictionary list
-      (make-local-variable 'predictive-main-dict)
-      (when (atom predictive-main-dict)
-	(setq predictive-main-dict (list predictive-main-dict)))
       (setq predictive-main-dict
-	    (append predictive-main-dict '(dict-html dict-html-char-entity)))
+	    (append
+	     (if predictive-buffer-dict
+		 (if (atom predictive-buffer-dict)
+		     (list predictive-buffer-dict)
+		   predictive-buffer-dict)
+	       (if (atom predictive-main-dict)
+		   (list predictive-main-dict)
+		 predictive-main-dict))
+	     '(dict-html dict-html-char-entity)))
 
       ;; save overlays along with buffer
       (add-hook 'after-save-hook 'predictive-html-after-save nil t)
@@ -157,9 +160,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-stop 'predictive nil 'save)
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict to saved setting
-    (kill-local-variable 'predictive-main-dict)
-    (setq predictive-main-dict predictive-restore-main-dict)
-    (kill-local-variable 'predictive-restore-main-dict)
+    (kill-local-variable 'predictive-buffer-dict)
     ;; restore completion-dynamic-override-syntax-alist to saved setting
     (kill-local-variable 'completion-dynamic-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -184,12 +185,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    `(flat :id comment
 	  ("<!--"
 	   :edge start
-	   (dict . predictive-main-dict)
+	   (dict . predictive-buffer-dict)
 	   (priority . 20)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
 	  ("-->"
 	   :edge end
-	   (dict . predictive-main-dict)
+	   (dict . predictive-buffer-dict)
 	   (priority . 20)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
 	  ))

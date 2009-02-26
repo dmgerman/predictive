@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12
+;; Version: 0.12.1
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.1
+;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
 ;;
 ;; Version 0.12
 ;; * updated for compatibility with new Completion-UI
@@ -395,8 +398,6 @@ strings become the sub-menu entries.")
 
 ;; variables used to restore local settings of variables when predictive mode
 ;; is disabled in a LaTeX buffer
-(defvar predictive-restore-main-dict nil)
-(make-variable-buffer-local 'predictive-restore-main-dict)
 (defvar predictive-restore-override-syntax-alist nil)
 (make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
@@ -447,8 +448,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
 		 (predictive-latex-construct-browser-menu overlay)
 	       (completion-construct-menu overlay))))
-      ;; save predictive-main-dict; restored when predictive mode is disabled
-      (setq predictive-restore-main-dict predictive-main-dict)
       ;; store filename for comparison when saving (see
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
@@ -471,7 +470,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (turn-on-predictive-mode)
 	    (setq buff (current-buffer)
 		  used-dicts predictive-used-dict-list
-		  main-dict predictive-main-dict
+		  main-dict predictive-buffer-dict
 		  latex-dict predictive-latex-dict
 		  math-dict predictive-latex-math-dict
 		  preamble-dict predictive-latex-preamble-dict
@@ -481,7 +480,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		  local-section-dict predictive-latex-section-dict))
 	  (auto-overlay-share-regexp-set 'predictive buff)
 	  (setq predictive-used-dict-list used-dicts
-		predictive-main-dict main-dict
+		predictive-buffer-dict main-dict
 		predictive-latex-dict latex-dict
 		predictive-latex-math-dict math-dict
 		predictive-latex-preamble-dict preamble-dict
@@ -557,11 +556,15 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			predictive-latex-local-env-dict)))
 
 	;; add latex dictionaries to main dictionary list
-	(make-local-variable 'predictive-main-dict)
-	(when (atom predictive-main-dict)
-	  (setq predictive-main-dict (list predictive-main-dict)))
-	(setq predictive-main-dict
-	      (append predictive-main-dict predictive-latex-dict))
+	(setq predictive-buffer-dict
+	      (append (if predictive-buffer-dict
+			  (if (atom predictive-buffer-dict)
+			      (list predictive-buffer-dict)
+			    predictive-buffer-dict)
+			(if (atom predictive-main-dict)
+			    (list predictive-main-dict)
+			  predictive-main-dict))
+		      predictive-latex-dict))
 
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
@@ -621,10 +624,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-local-math-dict)
     (kill-local-variable 'predictive-latex-local-env-dict)
     (kill-local-variable 'predictive-latex-section-dict)
-    ;; restore predictive-main-dict to saved setting
-    (kill-local-variable 'predictive-main-dict)
-    (setq predictive-main-dict predictive-restore-main-dict)
-    (kill-local-variable 'predictive-restore-main-dict)
+    ;; restore predictive-main-dict
+    (kill-local-variable 'predictive-buffer-dict)
     ;; restore `auto-completion-override-syntax-alist' to saved setting
     (kill-local-variable 'auto-completion-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -659,23 +660,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (append (auto-completion-lookup-behaviour nil ?w)
 	      (auto-completion-lookup-behaviour nil ?.)
 	      (auto-completion-lookup-behaviour nil ? ))
-  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
-  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-  ;; 	 (whitesp-complete (completion-get-completion-behaviour
-  ;; 			    whitesp-behaviour))
-  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
-  ;; 			   whitesp-behaviour)))
 
     ;; %'s start comments that last till end of line
     (auto-overlay-load-definition
      'predictive
      `(line :id comment
-	    ("%" (dict . predictive-main-dict) (priority . 50) (exclusive . t)
+	    ("%" (dict . predictive-buffer-dict)
+	     (priority . 50) (exclusive . t)
 	     (completion-menu-function
 	      . predictive-latex-construct-browser-menu)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
@@ -781,13 +772,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
 	       :edge start
-	       (dict . predictive-main-dict) (priority . 40)
+	       (dict . predictive-buffer-dict) (priority . 40)
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 ;;; 	      (("^\\(\\\\text{\\)" . 1)
 ;;; 	       :edge start
-;;; 	       (dict . predictive-main-dict) (priority . 40)
+;;; 	       (dict . predictive-buffer-dict) (priority . 40)
 ;;; 	       (completion-menu-function
 ;;; 		. predictive-latex-construct-browser-menu)
 ;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1133,12 +1124,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (append (auto-completion-lookup-behaviour nil ?w)
 	      (auto-completion-lookup-behaviour nil ?.)
 	      (auto-completion-lookup-behaviour nil ? ))
-  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
-  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour)))
 
     ;; make "\", "$", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist
@@ -1163,7 +1148,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 				 (or (eq dic 'predictive-latex-env-dict)
 				     (eq dic 'dict-latex-docclass)))
 			       dict))
-			(complete-in-buffer "" nil nil nil 'auto) 'none)
+			(complete-in-buffer
+			 auto-completion-source "" 'not-set 'auto)
+			'none)
 		       ((and (char-before) (= (char-before) ?\\))
 			',word-complete)
 		       (t 'none)))))
@@ -1404,7 +1391,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (unless predictive-latex-save-section-dict
 	(setf (dictree-autosave predictive-latex-section-dict) nil))
       (setq used-dicts predictive-used-dict-list
-  	    main-dict predictive-main-dict
+  	    main-dict predictive-buffer-dict
   	    latex-dict predictive-latex-dict
   	    math-dict predictive-latex-math-dict
   	    preamble-dict predictive-latex-preamble-dict
@@ -1414,7 +1401,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   	    local-section-dict predictive-latex-section-dict))
     (when (and (boundp 'TeX-master) (stringp TeX-master))
       (setq predictive-used-dict-list used-dicts
-  	    predictive-main-dict main-dict
+  	    predictive-buffer-dict main-dict
   	    predictive-latex-dict latex-dict
   	    predictive-latex-math-dict math-dict
   	    predictive-latex-preamble-dict preamble-dict
@@ -1855,8 +1842,7 @@ Interactively, SECTION is read from the mini-buffer."
     ;; update the main dict
     (predictive-latex-docclass-change-main-dict docclass)
     ;; return the new overlay
-    o-new)
-)
+    o-new))
 
 
 
@@ -1868,8 +1854,7 @@ Interactively, SECTION is read from the mini-buffer."
     ;; delete the overlay
     (auto-o-delete-overlay (overlay-get o-match 'parent))
     ;; unload the dictionary and restore the default main dictionary
-    (predictive-latex-docclass-restore-main-dict docclass))
-)
+    (predictive-latex-docclass-restore-main-dict docclass)))
 
 
 
@@ -1880,8 +1865,7 @@ Interactively, SECTION is read from the mini-buffer."
   ;; functions have been called
   (unless modified
     (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-latex-docclass-update o-self)))
-)
+		 (list 'predictive-latex-docclass-update o-self))))
 
 
 
@@ -1899,8 +1883,7 @@ Interactively, SECTION is read from the mini-buffer."
 	       (not (string= docclass (overlay-get o-match 'docclass))))
       (predictive-latex-docclass-restore-main-dict
        (overlay-get o-match 'docclass))
-      (predictive-latex-docclass-change-main-dict docclass)))
-)
+      (predictive-latex-docclass-change-main-dict docclass))))
 
 
 
@@ -1913,6 +1896,7 @@ Interactively, SECTION is read from the mini-buffer."
     (when dict-list
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
+
       ;; if loading of any of the dictionaries in the list fails, unload those
       ;; which succeeded and don't change dictionary
       (if (not (catch 'failed
@@ -1920,14 +1904,20 @@ Interactively, SECTION is read from the mini-buffer."
 			 (unless (predictive-load-dict dic)
 			   (throw 'failed nil)))
 		       dict-list)))
-	  (mapc 'predictive-unload-dict dict-list)
+	  (progn
+	    (mapc 'predictive-unload-dict dict-list)
+	    (message "Failed to load \"%s\" docclass dictionary\"
+ - main dictionary NOT changed" docclass))
+
 	;; otherwise, unload the old main dictionary and change to the new one
-	(let ((old-dict predictive-restore-main-dict))
-	  (when (atom old-dict) (setq old-dict (list old-dict)))
-	  (mapc 'predictive-unload-dict old-dict))
-	(setq predictive-main-dict (append dict-list predictive-latex-dict))
-	)))
-)
+	(let ((dicts predictive-buffer-dict)
+	      old-dicts)
+	  (while (prog1
+		     (not (eq (cdr dicts) predictive-latex-dict))
+		   (push (pop dicts) old-dicts)))
+	  (mapc 'predictive-unload-dict old-dicts))
+	(setq predictive-buffer-dict (append dict-list predictive-latex-dict))
+	))))
 
 
 
@@ -1939,15 +1929,10 @@ Interactively, SECTION is read from the mini-buffer."
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (mapc 'predictive-unload-dict dict-list)
-      (setq dict-list predictive-restore-main-dict)
+      (setq dict-list predictive-main-dict)
       (when (atom dict-list) (setq dict-list (list dict-list)))
-      (setq predictive-main-dict
-	    (append dict-list predictive-latex-dict
-		    (if (dictree-p predictive-latex-local-latex-dict)
-			(list predictive-latex-local-latex-dict)
-		      predictive-latex-local-latex-dict)))
-      ))
-)
+      (setq predictive-buffer-dict (append dict-list predictive-latex-dict))
+      )))
 
 
 

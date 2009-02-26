@@ -4,7 +4,7 @@
 ;; Copyright (C) 2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3
+;; Version: 0.3.1
 ;; Keywords: predictive, setup function, texinfo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.1
+;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
 ;;
 ;; Version 0.3
 ;; * updated for compatibility with new Completion-UI
@@ -102,8 +105,6 @@ between \\begin{...} and \\end{...} commands."
 
 ;; variables used to restore local settings of variables when predictive mode
 ;; is disabled in a Texinfo buffer
-(defvar predictive-restore-main-dict nil)
-(make-variable-buffer-local 'predictive-restore-main-dict)
 (defvar predictive-restore-override-syntax-alist nil)
 (make-variable-buffer-local 'predictive-restore-override-syntax-alist)
 
@@ -159,8 +160,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (if (string= (substring (overlay-get overlay 'prefix) 0 1) "@")
 		 (predictive-texinfo-construct-browser-menu overlay)
 	       (completion-construct-menu overlay))))
-      ;; save predictive-main-dict; restored when predictive mode is disabled
-      (setq predictive-restore-main-dict predictive-main-dict)
 
       ;; load the Texinfo dictionaries
       (mapc (lambda (dic)
@@ -180,11 +179,14 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (predictive-auto-dict-load "texinfo-local-flag"))
 
       ;; add Texinfo dictionaries to main dictionary list
-      (make-local-variable 'predictive-main-dict)
-      (when (atom predictive-main-dict)
-	(setq predictive-main-dict (list predictive-main-dict)))
       (setq predictive-main-dict
-	    (append predictive-main-dict
+	    (append (if predictive-buffer-dict
+			(if (atom predictive-buffer-dict)
+			    (list predictive-buffer-dict)
+			  predictive-buffer-dict)
+		      (if (atom predictive-main-dict)
+			  (list predictive-main-dict)
+			predictive-main-dict))
 		    '(dict-texinfo predictive-texinfo-local-texinfo-dict)))
 
       ;; delete any existing predictive auto-overlay regexps and load Texinfo
@@ -208,10 +210,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-stop 'predictive nil (when (buffer-file-name)
 					 predictive-auxiliary-file-location))
     (auto-overlay-unload-set 'predictive)
-    ;; restore predictive-main-dict to saved setting
-    (kill-local-variable 'predictive-main-dict)
-    (setq predictive-main-dict predictive-restore-main-dict)
-    (kill-local-variable 'predictive-restore-main-dict)
+    ;; restore predictive-main-dict
+    (kill-local-variable 'predictive-buffer-dict)
     ;; restore `auto-completion-override-syntax-alist' to saved setting
     (kill-local-variable 'auto-completion-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -255,7 +255,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      `(line :id short-comment
 	    ("@c \\|@comment "
-	     (dict . predictive-main-dict)
+	     (dict . predictive-buffer-dict)
 	     (priority . 50)
 	     (exclusive . t)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
@@ -266,13 +266,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      `(flat :id long-comment
 	      ("@ignore[[:blank:]]*$"
 	       :edge start
-	       (dict . predictive-main-dict)
+	       (dict . predictive-buffer-dict)
 	       (priority . 50)
 	       (exclusive . t)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      ("@end ignore$"
 	       :edge end
-	       (dict . predictive-main-dict)
+	       (dict . predictive-buffer-dict)
 	       (priority . 50)
 	       (exclusive . t)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
