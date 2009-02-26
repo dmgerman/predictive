@@ -2338,11 +2338,12 @@ these defaults.
 
 PREFIX-FUNCTION can either be a function that takes zero
 arguments (called to find the prefix at the point), a
-`thing-at-point' symbol (used to find the prefix at point), or
-nil (complete the word at or next to the point). Note that in the
-case of a `thing-at-point' symbol, we require `forward-op' to be
-defined for the \"thing\", which is *not* the case for all
-pre-defined \"things\" in `thing-at-point'.
+`thing-at-point' symbol (used to find the prefix at point), a
+string (complete that string), or nil (complete the word at or
+next to the point). Note that in the case of a `thing-at-point'
+symbol, we require `forward-op' to be defined for the \"thing\",
+which is *not* the case for all pre-defined \"things\" in
+`thing-at-point'.
 
 If NON-PREFIX-COMPLETION is non-null, it indicates that
 COMPLETION-SOURCE does something other than prefix completion,
@@ -2399,30 +2400,33 @@ The remaining arguments are for internal use only."
 	  ;; get completion-function
 	  (setq completion-function
 		(completion-ui-source-completion-function completion-source))
-	  ;; sort out PREFIX-FUNCTION and word-thing
-	  (cond
-	   ((functionp prefix-function))  ; PREFIX-FUNCTION is function
-	   ((symbolp prefix-function)     ; PREFIX-FUNCTION is word-thing
-	    (setq word-thing prefix-function
-	  	  prefix-function nil)))
-	  ;; get prefix function unless already specified in arguments
-	  (unless prefix-function
-	    (setq prefix-function
-	  	  (completion-ui-source-prefix-function completion-source)))
-	  ;; get prefix word-thing unless specified in arguments
-	  (unless word-thing
-	    (setq word-thing
-	  	  (completion-ui-source-word-thing completion-source)))
-	  ;; get non-prefix-completion unless specified in arguments
-	  (unless (and s-npcmpl
-		       (or (null non-prefix-completion)
-			   (eq non-prefix-completion t)))
-	    (setq non-prefix-completion
-	  	  (completion-ui-source-non-prefix-completion
-		   completion-source)))
-	  ;; --- get prefix ---
-	  (let ((completion-word-thing word-thing))
-	    (setq prefix (funcall prefix-function))))
+	  ;; literal PREFIX-FUNCTION takes precedence
+	  (if (stringp prefix-function)
+	      (setq prefix prefix-function)
+	    ;; sort out PREFIX-FUNCTION and word-thing
+	    (cond
+	     ((functionp prefix-function))  ; PREFIX-FUNCTION is function
+	     ((symbolp prefix-function)     ; PREFIX-FUNCTION is word-thing
+	      (setq word-thing prefix-function
+		    prefix-function nil)))
+	    ;; get prefix function unless already specified in arguments
+	    (unless prefix-function
+	      (setq prefix-function
+		    (completion-ui-source-prefix-function completion-source)))
+	    ;; get prefix word-thing unless specified in arguments
+	    (unless word-thing
+	      (setq word-thing
+		    (completion-ui-source-word-thing completion-source)))
+	    ;; get non-prefix-completion unless specified in arguments
+	    (unless (and s-npcmpl
+			 (or (null non-prefix-completion)
+			     (eq non-prefix-completion t)))
+	      (setq non-prefix-completion
+		    (completion-ui-source-non-prefix-completion
+		     completion-source)))
+	    ;; --- get prefix ---
+	    (let ((completion-word-thing word-thing))
+	      (setq prefix (funcall prefix-function)))))
 
 
 	;; if auto-completing, only do so if prefix if it has requisite number
@@ -3171,8 +3175,8 @@ overlays."
 	(completion-ui-delete-overlay overlay)))
 
      ;; if completing...
-     ((or (eq complete-behaviour 'string)
-	  (eq complete-behaviour 'word))
+     ((or (eq complete-behaviour 'word)
+	  (eq complete-behaviour 'string))
       ;; if point is in middle of a word, `completion-overwrite' is set, and
       ;; overwriting hasn't been disabled, delete rest of word prior to
       ;; completing
