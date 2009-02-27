@@ -196,10 +196,10 @@ file. Only the plain-text ``dumped'' format is guaranteed to be portable
 across different versions of predictive mode.
 
 @emph{However}, this version of the predictive completion package
-(version 0.22, or version 0.18 of the @file{predictive.el} library) uses
-a different format than earlier versions, @emph{even} for the ``dumped''
-files! To port a dictionary from older versions to this version, use the
-following procedure:
+(version 0.22 and newer, or more specifically version 0.12 and newer of
+the @file{dict-tree.el} library) uses a different format than earlier
+versions, @emph{even} for the ``dumped'' files! To port a dictionary
+from older versions to this version, use the following procedure:
 
 @enumerate
 @item
@@ -278,6 +278,7 @@ as appropriate if you're not using the default install locations):
 (add-to-list 'load-path "~/.emacs.d/predictive/")
 ;; dictionary locations
 (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+(add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
 (add-to-list 'load-path "~/.emacs.d/predictive/html/")
 ;; load predictive package
 (require 'predictive)
@@ -292,6 +293,7 @@ command), by replacing the final line as follows:
 (add-to-list 'load-path "~/.emacs.d/predictive/")
 ;; dictionary locations
 (add-to-list 'load-path "~/.emacs.d/predictive/latex/")
+(add-to-list 'load-path "~/.emacs.d/predictive/texinfo/")
 (add-to-list 'load-path "~/.emacs.d/predictive/html/")
 ;; load predictive package
 (autoload 'predictive-mode "~/.emacs.d/predictive/predictive"
