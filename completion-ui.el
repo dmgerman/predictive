@@ -80,6 +80,9 @@
 ;;     browse through all possible completion candidates in a hierarchical
 ;;     deck-of-cards menu located below the point
 ;;
+;; * `auto-completion-mode'
+;;     automatically complete words as you type
+;;
 ;;
 ;;
 ;; For Emacs users:
@@ -98,15 +101,29 @@
 ;; USING
 ;; -----
 ;; For each source of completions, Completion-UI provides an interactive
-;; command for completing the thing at or next to the point using the
-;; corresponding source: `complete-dabbrev', `complete-etags',
-;; `complete-elisp', `complete-files', `complete-semantic', `complete-nxml'
-;; and `complete-predictive'.
+;; command that completes the word next to the point using that source, e.g:
+;; `complete-dabbrev' to complete using dabbrevs, `complete-etags' to complete
+;; using etags, `complete-elisp' to complete Elisp symbols, `complete-files'
+;; to complete file names, `complete-semantic' to use Semantic completion,
+;; `complete-nxml' and `complete-predictive' to use nxml-mode and
+;; predictive-mode completion, respectively.
 ;;
-;; These commands are not bound to any key by default. You're free to bind
-;; them to any keys of your choosing (though M-<tab> or M-/ fit best with the
-;; other default bindings). When completing a word, a number of other
-;; key-bindings are enabled. By default, these are:
+;; The `complete-<name>' commands are not bound to any key by default. As with
+;; any Emacs command, you can run them via "M-x complete-<name>", or you can
+;; bind them to keys, either globally or in a minor-mode keymap. E.g. to
+;; globally bind "M-/" to `complete-dabbrev', you would put the following line
+;; in your .emacs file:
+;;
+;;   (global-set-key [?\M-/] 'complete-dabbrev)
+;;
+;; To bind "M-<tab>" to `complete-elisp' in `emacs-lisp-mode', you would bind
+;; the command in the `emacs-lisp-mode-map' keymap:
+;;
+;;   (define-key emacs-lisp-mode-map [?\M-\t] 'complete-elisp)
+;;
+;; You're free to bind the `complete-<name>' commands to any keys of your
+;; choosing, though "M-<tab>" or "M-/" fit best with the default Completion-UI
+;; key bindings that are enabled when you're completing a word. These are:
 ;;
 ;; M-<tab>  M-/
 ;;   Cycle through completions.
@@ -144,18 +161,24 @@
 ;;
 ;; Completion-UI also provides a minor-mode, `auto-completion-mode', which
 ;; automatically completes words as you type them using any one of the
-;; completion sources. To enable and disable it, use:
+;; completion sources. You can select the source to use for
+;; `auto-completion-mode' by customizing `auto-completion-source' (the default
+;; is dabbrev).
+;;
+;; To enable and disable `auto-completion-mode', use:
 ;;
 ;;   M-x auto-completion-mode
 ;;
 ;; Note that `auto-completion-mode' is not very useful if the completion
 ;; source takes a long time to find completions.
-;; <shameless plug> The Predictive completion package (available separately
-;; from the above URL) is designed from the ground up to be extremely fast,
-;; even when a very large number of completion candidates are available, and
-;; learns to predict which completion is the most likely. So it is
-;; particularly suited to being used as the `auto-completion-mode'
-;; source. </shameless plug>
+;;
+;; <shameless plug>
+;; The Predictive completion package (available separately from the above URL)
+;; is designed from the ground up to be extremely fast, even when a very large
+;; number of completion candidates are available. As you type, it also learns
+;; to predict which completion is the most likely. So it is particularly
+;; suited to being used as the `auto-completion-mode' source.
+;; </shameless plug>
 ;;
 ;;
 ;; CUSTOMIZING
@@ -655,7 +678,7 @@ before the `completion-auto-show' interface is activated."
   :group 'completion-ui)
 
 
-(defcustom auto-completion-source nil
+(defcustom auto-completion-source 'dabbrev
   "*Completion source for `auto-completion-mode'."
   :group 'auto-completion-mode
   :type `(choice
@@ -1470,8 +1493,11 @@ A negative prefix argument turns it off.
 
 In auto-completion-mode, Emacs will try to complete words as you
 type, using whatever completion method has been set up (either by the
-major mode, or by another minor mode)."
-  nil                   ; init-value
+major mode, or by another minor mode).
+
+`auto-completion-source' must be set for `auto-completion-mode'
+to work."
+  nil ; init-value
   " Complete"           ; lighter
   auto-completion-map   ; keymap
 
@@ -1479,7 +1505,7 @@ major mode, or by another minor mode)."
    ;; refuse to enable if no source is defined
    ((and auto-completion-mode (null auto-completion-source))
     (setq auto-completion-mode nil)
-    (message (concat "No `auto-completion-souce' set; "
+    (message (concat "`auto-completion-source' is not set; "
 		     "auto-completion-mode NOT enabled")))
 
    ;; run appropriate hook when `auto-completion-mode' is enabled/disabled

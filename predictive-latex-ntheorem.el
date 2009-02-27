@@ -61,17 +61,6 @@
       (append (auto-completion-lookup-behaviour nil ?w)
 	      (auto-completion-lookup-behaviour nil ?.)
 	      (auto-completion-lookup-behaviour nil ? ))
-  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
-  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-  ;; 	 (whitesp-complete (completion-get-completion-behaviour
-  ;; 			    whitesp-behaviour))
-  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
-  ;; 			   whitesp-behaviour)))
 
     ;; \thref
     (auto-overlay-load-regexp
@@ -84,21 +73,21 @@
        (completion-menu . predictive-latex-construct-browser-menu)
        (completion-word-thing . predictive-latex-cleveref-label-word)
        (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
+       					(?_ . (add ,word-complete))
+       					(?  . (whitesp-resolve none))
+       					(?. . (add ,word-complete))
+       					(t  . (reject none))))
        (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
+       	. ((?: . ((lambda ()
+       		    (predictive-latex-completion-add-till-regexp ":")
+       		    nil)
+       		  ,word-complete))
+       	   (?_ . ((lambda ()
+       		    (predictive-latex-completion-add-till-regexp "\\W")
+       		    nil)
+       		  ,word-complete))
+       	   (?, . (,punct-resolve none))
+       	   (?} . (,punct-resolve none))))
        (face . (background-color . ,predictive-overlay-debug-color)))
      t)
 
@@ -117,8 +106,7 @@
        :id newframedtheorem
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newframedtheorem{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-env-dict))))
-    )
-)
+    ))
 
 
 
