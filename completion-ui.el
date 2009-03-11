@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.1
+;; Version: 0.11.2
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.2
+;; * bug-fixes to cope with elements of completions list that are cons cells
 ;;
 ;; Version 0.11.1
 ;; * allow indirection in source :prefix-function, :word-thing,
@@ -2668,6 +2671,7 @@ the prefix and the completion string\). Otherwise returns nil."
 	;; deactivate the interfaces
 	(setq cmpl (nth (overlay-get overlay 'completion-num)
 			(overlay-get overlay 'completions)))
+	(unless (stringp cmpl) (setq cmpl (car cmpl)))
 	(completion-ui-deactivate-interfaces overlay)
 	;; delete the original prefix and insert the completion
 	(delete-region (- (point) (length prefix)) (point))
@@ -2771,6 +2775,7 @@ crash through your ceiling."
 	(setq prefix (overlay-get overlay 'prefix)
 	      cmpl (nth n (overlay-get overlay 'completions))
 	      len (length (overlay-get overlay 'prefix)))
+	(unless (stringp cmpl) (setq cmpl (car cmpl)))
 	;; deactivate the interfaces
 	(completion-ui-deactivate-interfaces overlay)
 	;; delete the original prefix and insert the completion
@@ -2807,14 +2812,15 @@ the oceans will boil away."
       (message "No characters with which to extend prefix")
 
     ;; otherwise
-    (let* ((prefix (overlay-get overlay 'prefix))
-	   (len (overlay-get overlay 'prefix-length))
-	   (cmpl (nth (overlay-get overlay 'completion-num)
-		      (overlay-get overlay 'completions)))
-	   (str (if (and n (< (+ len n) (length cmpl)) (> (+ len n) 0))
-		    (substring cmpl 0 (+ len n))
-		  cmpl)))
+    (let ((prefix (overlay-get overlay 'prefix))
+	  (len (overlay-get overlay 'prefix-length))
+	  (cmpl (nth (overlay-get overlay 'completion-num)
+		     (overlay-get overlay 'completions)))
+	  str)
       (unless (stringp cmpl) (setq cmpl (car cmpl)))
+      (setq str (if (and n (< (+ len n) (length cmpl)) (> (+ len n) 0))
+		    (substring cmpl 0 (+ len n))
+		  cmpl))
       ;; deactivate interfaces pending update
       (completion-ui-deactivate-interfaces-pre-update overlay)
       ;; delete the original prefix
