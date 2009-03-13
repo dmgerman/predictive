@@ -96,12 +96,8 @@ mechanisms for selecting completions are still available."
 ;;;               Other configuration variables
 
 (defvar completion-dynamic-map nil
-  "Keymap active in a dynamic completion overlay.")
-
-(defvar auto-completion-dynamic-map nil
-  "Keymap active in a dynamic completion overlay when
-  auto-completion-mode is enabled.")
-
+  "Keymap used when dynamic completion is enabled.
+These key bindings get added to the completion overlay keymap.")
 
 
 
@@ -162,6 +158,12 @@ cauliflower will start growing out of your ears."
       ;; move point to appropriate position in the overlay
       (completion--position-point-in-overlay overlay))
 
+    ;; enable key-bindings
+    (map-keymap
+     (lambda (key binding)
+       (define-key (overlay-get overlay 'keymap) (vector key) binding))
+     completion-dynamic-map)
+
     ;; delete temporary marker
     (set-marker pos nil)))
 
@@ -183,7 +185,13 @@ cauliflower will start growing out of your ears."
       ;; restore original prefix
       (let ((overwrite-mode nil)) (insert (overlay-get overlay 'prefix)))
       ;; reset overlay
-      (move-overlay overlay (point) (point)))))
+      (move-overlay overlay (point) (point))))
+
+  ;; disable key-bindings
+  (map-keymap
+   (lambda (key binding)
+     (define-key (overlay-get overlay 'keymap) (vector key) nil))
+   completion-dynamic-map))
 
 
 
