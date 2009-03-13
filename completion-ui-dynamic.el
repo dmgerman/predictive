@@ -34,6 +34,7 @@
 ;; * added missing code to activate and deactivate key bindings from
 ;;   `completion-dynamic-map'
 ;; * removed obsolete `auto-completion-dynamic-map'
+;; * support new `completion-auto-update' customization option
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -272,7 +273,8 @@ the end of the common prefix for `accept-common' or
 the end if it is to be accepted."
   (cond
    ;; reject or auto-completion-mode
-   ((or (and auto-completion-mode
+   ((or completion-auto-update
+	(and auto-completion-mode
 	     (eq (overlay-get overlay 'completion-source)
 		 auto-completion-source))
 	(eq completion-accept-or-reject-by-default 'reject))

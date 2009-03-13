@@ -235,6 +235,9 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.11.3
+;; * added `completion-auto-update' customization option
+;;
 ;; Version 0.11.2
 ;; * bug-fixes to cope with elements of completions list that are cons cells
 ;; * bug-fix in `completion-ui-source-word-thing'
@@ -642,6 +645,16 @@ left behind in the buffer:
   "*When non-nil, completing in the middle of a word over-writes
 the rest of the word. `completion-word-thing' determines what is
 considered a word."
+  :group 'completion-ui
+  :type 'boolean)
+
+
+(defcustom completion-auto-update t
+  "*When non-nil, completion candidates are updated automatically
+when characters are typed at the current completion, and the
+completion user-interfaces are updated. \(Effectively, it is as
+though `auto-completion-mode' is temporarily enabled for the
+duration of the completion.\)"
   :group 'completion-ui
   :type 'boolean)
 
@@ -1356,7 +1369,18 @@ used if the current Emacs version lacks command remapping support."
 ;;;       "Insert \"/\" as though it were a word-constituent."
 ;;;       (interactive)
 ;;;       (auto-completion-self-insert ?/ ?w t)))
-)
+
+  ;; if we can remap commands, remap `self-insert-command'
+  (if (fboundp 'command-remapping)
+      (define-key auto-completion-overlay-map
+	[remap self-insert-command]
+	'auto-completion-self-insert)
+    ;; otherwise, rebind all printable characters to
+    ;; `auto-completion-self-insert' manually
+    (completion--bind-printable-chars
+     auto-completion-overlay-map
+     'auto-completion-self-insert))
+  )
 
 
 
@@ -1396,24 +1420,15 @@ used if the current Emacs version lacks command remapping support."
   ;; remap the deletion commands
   (completion--remap-delete-commands completion-map)
 
-  ;; ----- Simulated overlay keybindings -----
-  ;; Note: could remove this and leave it up to the call to the
-  ;;       `completion--simulate-overlay-keybindings' function at the very end
-  ;;       of this file, if only that function could deal with remappings
-
-  ;; If the current Emacs version doesn't support overlay keybindings
-  ;; half decently, have to simulate them using the
-  ;; `completion--run-if-within-overlay' hack.
-;;  (when (<= emacs-major-version 21)
-    ;; if we can remap commands, remap `self-insert-command' to
-    ;; `completion-self-insert'
-    (if (fboundp 'command-remapping)
-        (define-key completion-map [remap self-insert-command]
-          'completion-self-insert)
-      ;; otherwise, rebind all printable characters to
-      ;; `completion-self-insert' manually
-      (completion--bind-printable-chars completion-map
-                                       'completion-self-insert));)
+  ;; if we can remap commands, remap `self-insert-command' to
+  ;; `completion-self-insert'
+  (if (fboundp 'command-remapping)
+      (define-key completion-map [remap self-insert-command]
+	'completion-self-insert)
+    ;; otherwise, rebind all printable characters to
+    ;; `completion-self-insert' manually
+    (completion--bind-printable-chars completion-map
+				      'completion-self-insert))
   )
 
 
@@ -2958,11 +2973,13 @@ green over night."
 	(completion-ui-setup-overlay
 	 str nil nil nil nil nil 'unchanged overlay)
         ;; when auto-completing, do so
-        (if (and auto-completion-mode
-		 (eq (overlay-get overlay 'completion-source)
-		     auto-completion-source))
+        (if (or completion-auto-update
+		(and auto-completion-mode
+		     (eq (overlay-get overlay 'completion-source)
+			 auto-completion-source)))
             (complete-in-buffer
-	     auto-completion-source nil 'not-set 'auto overlay)
+	     (overlay-get overlay 'completion-source)
+	     nil 'not-set 'auto overlay)
           ;; otherwise, update completion interfaces
 	  (completion-ui-update-interfaces overlay))))))
 
@@ -3277,7 +3294,9 @@ enabled, complete what remains of that word."
     ;(combine-after-change-calls
 
       ;; ----- not auto-completing -----
-      (if (not auto-completion-mode)
+      (if (and (not auto-completion-mode)
+	       (not completion-auto-update))
+
           (progn
             ;; if within a completion...
             (when overlay
@@ -3338,6 +3357,9 @@ enabled, complete what remains of that word."
 	    ;; FIXME: should this depend on
 	    ;;        `completion-accept-or-reject-by-default'?
 	    (delete-region (point) (overlay-end overlay))
+	    ;; store position of beginning of prefix
+	    (setq pos (- (overlay-start overlay)
+			 (overlay-get overlay 'prefix-length)))
 	    ;; delete the overlay, effectively accepting (rest of) completion
 	    (completion-ui-delete-overlay overlay)
 	    ;; deactivate the interfaces pending update
@@ -3349,10 +3371,16 @@ enabled, complete what remains of that word."
 
 
 	  (cond
-	   ;; if we're not in or at the end of a word, deactivate any
-	   ;; user-interfaces and cancel any timer that's been set up
-	   ((and (not (completion-within-word-p word-thing))
-		 (not (completion-end-of-word-p word-thing)))
+	   ;; if we're not in or at the end of a word, or we're auto-updating
+	   ;; rather than auto-completing and we've deleted beyond current
+	   ;; completion, deactivate any user-interfaces and cancel any timer
+	   ;; that's been set up
+	   ((or (and (not auto-completion-mode)
+		     (or (not overlay)
+			 (<= (point)
+			    (- pos (overlay-get overlay 'prefix-length)))))
+		(and (not (completion-within-word-p word-thing))
+		     (not (completion-end-of-word-p word-thing))))
 	    (when (timerp completion--backward-delete-timer)
 	      (cancel-timer completion--backward-delete-timer))
 	    (setq completion--backward-delete-timer nil)
@@ -3373,8 +3401,7 @@ enabled, complete what remains of that word."
 		      (completion-ui-source-prefix-function
 		       auto-completion-source overlay))
 		     (prefix (let ((completion-word-thing word-thing))
-			       (funcall prefix-fun)))
-		     (pos (point)))
+			       (funcall prefix-fun))))
 		(completion-ui-setup-overlay
 		 prefix nil nil nil nil nil nil overlay)
 		(move-overlay overlay (point) (point))))
@@ -3693,9 +3720,10 @@ point) are being set."
       (overlay-put overlay 'keymap map)
       (set-keymap-parent
        map
-       (if (and auto-completion-mode
-		(eq (overlay-get overlay 'completion-source)
-		    auto-completion-source))
+       (if (or completion-auto-update
+	       (and auto-completion-mode
+		    (eq (overlay-get overlay 'completion-source)
+			auto-completion-source)))
 	   auto-completion-overlay-map
 	 completion-overlay-map)))
     ;; add overlay to list
