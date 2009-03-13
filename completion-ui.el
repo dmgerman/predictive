@@ -1712,7 +1712,7 @@ is passed one argument, a completion overlay."
 (defmacro completion-ui-interface-deactivate (interface-def overlay)
   ;; Activate interface defined by INTERFACE-DEF for completion OVERLAY
   `(let ((func (completion-ui--interface-deactivate-function ,interface-def)))
-     (when (functionp func)(funcall func ,overlay))))
+     (when (functionp func) (funcall func ,overlay))))
 
 
 (defmacro completion-ui-activate-interfaces (overlay)
@@ -2512,7 +2512,6 @@ called from timer)."
 
   ;; if no overlay supplied, try to find one at point
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-
   ;; cancel any running timer so we don't end up being called twice
   (cancel-timer completion--auto-timer)
 
@@ -2522,16 +2521,25 @@ called from timer)."
 	     overlay
 	     (overlay-buffer overlay)
              (or (null point) (= (point) point)))
-    ;; if delaying, setup timer to call ourselves later
-    (if (and completion-auto-show-delay (null point))
-        (setq completion--auto-timer
-              (run-with-timer completion-auto-show-delay nil
-                              'completion-ui-auto-show
-                              overlay (point)))
-      ;; otherwise, display whatever we're displaying
+    (cond
+
+     ;; ;; if auto-show interface is already active for overlay, update it
+     ;; ((overlay-get overlay 'auto-show)
+     ;;  (completion-ui-call-auto-show-interface-helpers overlay)
+     ;;  (funcall (overlay-get overlay 'auto-show) overlay))
+
+     ;; if delaying, setup timer to call ourselves later
+     ((and completion-auto-show-delay (null point))
+      (setq completion--auto-timer
+	    (run-with-timer completion-auto-show-delay nil
+			    'completion-ui-auto-show
+			    overlay (point))))
+
+     ;; otherwise, display whatever we're displaying
+     (t
       (overlay-put overlay 'auto-show completion-auto-show)
       (completion-ui-call-auto-show-interface-helpers overlay)
-      (funcall completion-auto-show overlay))))
+      (funcall completion-auto-show overlay)))))
 
 
 
@@ -2841,11 +2849,14 @@ the oceans will boil away."
 	(let ((overwrite-mode nil)) (insert str))
 	(move-overlay overlay (point) (point))
 	(completion-ui-setup-overlay str nil nil nil nil nil nil overlay)
-	(complete-in-buffer nil nil 'not-set nil overlay)))))
+	(complete-in-buffer nil nil 'not-set nil overlay)
+	;; reposition point at start of completion, so that user can continue
+	;; extending or contracting the prefix
+	(goto-char (overlay-start overlay))))))
 
 
 
-(defun completion-cycle (&optional n overlay no-auto)
+(defun completion-cycle (&optional n overlay)
   "Cycle through available completions.
 
 Optional argument N specifies the number of completions to cycle
@@ -2854,10 +2865,7 @@ N is the prefix argument.
 
 If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be stuck by
-lightening.
-
-If NO-AUTO is non-nil, the `completion-auto-show' interface will
-*not* be activated."
+lightening."
   (interactive "P")
   (when (null n) (setq n 1))
 
