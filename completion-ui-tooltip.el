@@ -174,7 +174,9 @@ when a tooltip is displayed.")
 (unless completion-tooltip-map
   (setq completion-tooltip-map (make-sparse-keymap))
   ;; S-<down> displays the completion tooltip
-  (define-key completion-tooltip-map [S-down] 'completion-activate-tooltip))
+  (define-key completion-tooltip-map [S-down] 'completion-show-tooltip)
+  ;; S-<up> cancels it
+  (define-key completion-tooltip-map [S-up] 'completion-cancel-tooltip))
 
 
 ;; <up> and <down> cycle the tooltip
@@ -210,10 +212,11 @@ in all your flower-arranging endevours for thirteen years."
     (interactive)
     ;; if no overlay was supplied, try to find one at point
     (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-    ;; deactivate other auto-show interfaces
-    (completion-ui-deactivate-auto-show-interface overlay)
-    ;; show tooltip
-    (completion-show-tooltip overlay))
+    ;; activate tooltip key bindings
+    (completion-activate-tooltip-keys overlay)
+    ;; if tooltip has been displayed manually, re-display it
+    (when (overlay-get overlay 'completion-interactive-tooltip)
+      (completion-show-tooltip overlay)))
 
 
 
@@ -223,9 +226,15 @@ The point had better be within OVERLAY or you'll have bad luck
 in all your flower-arranging endevours for fourteen years.
 
 If OVERLAY is not supplied, try to find one at point."
+  (interactive)
 
   ;; if no overlay was supplied, try to find one at point
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
+  ;; if called manually, flag this in overlay property
+  (when (interactive-p)
+    (overlay-put overlay 'completion-interactive-tooltip t))
+  ;; deactivate other auto-show interfaces
+  (completion-ui-deactivate-auto-show-interface overlay)
 
   ;; if we can display a tooltip and there are completions to display in it...
   (when (and overlay (overlay-get overlay 'completions)
@@ -321,6 +330,10 @@ If OVERLAY is not supplied, try to find one at point."
 (defun completion-cancel-tooltip (&optional overlay)
   "Hide the completion tooltip and cancel timers."
   (interactive)
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
+  ;; unset manually displayed tooltip flag if called interactively
+  (when (interactive-p)
+    (overlay-put overlay 'completion-interactive-tooltip nil))
   ;; cancel timer
   (completion-ui-cancel-auto-show)
   ;; cancel tooltip
@@ -385,7 +398,7 @@ If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be attacked by a mad
 cow."
   (interactive)
-  (completion-cycle n overlay t)
+  (completion-cycle n overlay)
   (completion-show-tooltip))
 
 
@@ -397,7 +410,7 @@ If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be attacked by a mad
 sheep."
   (interactive)
-  (completion-cycle (if n (- n) -1) overlay t)
+  (completion-cycle (if n (- n) -1) overlay)
   (completion-show-tooltip))
 
 
@@ -419,7 +432,7 @@ sheep."
 
 (completion-ui-register-interface
  'completion-use-tooltip
- :activate 'completion-activate-tooltip-keys
+ :activate 'completion-activate-tooltip
  :deactivate 'completion-cancel-tooltip
  :auto-show 'completion-show-tooltip)
 
