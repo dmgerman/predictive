@@ -237,6 +237,8 @@
 ;;
 ;; Version 0.11.2
 ;; * bug-fixes to cope with elements of completions list that are cons cells
+;; * bug-fix in `completion-ui-source-word-thing'
+;; * bug-fix in `completion-ui-resolve-old'
 ;;
 ;; Version 0.11.1
 ;; * allow indirection in source :prefix-function, :word-thing,
@@ -2168,7 +2170,10 @@ pop-up frame. The menu functions should return menu keymaps."
 			    completion-ui-source-definitions))))
 	     ;; evaluate result until we get a thing-at-point symbol
 	     (while (and word-thing
-			 (not (get word-thing 'forward-op))
+			 (not (or (get word-thing 'forward-op)
+				  (fboundp
+				   (intern-soft
+				    (format "forward-%s" word-thing)))))
 			 (boundp word-thing))
 	       (setq word-thing (eval word-thing)))
 	     word-thing))
@@ -3806,7 +3811,7 @@ characters around the point."
 			 (- (overlay-start o)
 			    (if (and (overlay-get o 'non-prefix-completion)
 				     (overlay-get o 'prefix-replaced))
-				0 (overlay-get overlay 'prefix-length)))))
+				0 (overlay-get o 'prefix-length)))))
 		  (completion-reject nil o)
 		;; otherwise, completion overlaps point, so just delete
 		;; provisional completion characters and overlay

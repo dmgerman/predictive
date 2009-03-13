@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, dynamic, hippie
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * added missing code to activate and deactivate key bindings from
+;;   `completion-dynamic-map'
+;; * removed obsolete `auto-completion-dynamic-map'
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -159,10 +164,11 @@ cauliflower will start growing out of your ears."
       (completion--position-point-in-overlay overlay))
 
     ;; enable key-bindings
-    (map-keymap
-     (lambda (key binding)
-       (define-key (overlay-get overlay 'keymap) (vector key) binding))
-     completion-dynamic-map)
+    (when completion-dynamic-map
+      (map-keymap
+       (lambda (key binding)
+	 (define-key (overlay-get overlay 'keymap) (vector key) binding))
+       completion-dynamic-map))
 
     ;; delete temporary marker
     (set-marker pos nil)))
@@ -188,10 +194,11 @@ cauliflower will start growing out of your ears."
       (move-overlay overlay (point) (point))))
 
   ;; disable key-bindings
-  (map-keymap
-   (lambda (key binding)
-     (define-key (overlay-get overlay 'keymap) (vector key) nil))
-   completion-dynamic-map))
+  (when completion-dynamic-map
+    (map-keymap
+     (lambda (key binding)
+       (define-key (overlay-get overlay 'keymap) (vector key) nil))
+     completion-dynamic-map)))
 
 
 
