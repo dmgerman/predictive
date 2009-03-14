@@ -80,7 +80,8 @@
  'all-completions
  :completion-args 1
  :other-args '(obarray)
- :name 'elisp)
+ :name 'elisp
+ :word-thing 'symbol)
 
 
 ;;;=========================================================
