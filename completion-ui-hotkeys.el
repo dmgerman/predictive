@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, hotkey
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * changed `completion-[auto-show]-[de]activate-hotkeys' to cope with
+;;   vectors in `completion-hotkey-list'
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -82,7 +86,8 @@ when `completion-use-hotkeys' is enabled."
   ;; activate keys unless only active when auto-show interface is displayed
   (unless (eq completion-use-hotkeys 'auto-show)
     (dolist (key completion-hotkey-list)
-      (define-key (overlay-get overlay 'keymap) (vector key)
+      (define-key (overlay-get overlay 'keymap)
+	(if (vectorp key) key (vector key))
 	'completion-hotkey-select))))
 
 
@@ -91,14 +96,16 @@ when `completion-use-hotkeys' is enabled."
 when auto-show interface is displayed."
   (when (eq completion-use-hotkeys 'auto-show)
     (dolist (key completion-hotkey-list)
-      (define-key (overlay-get overlay 'keymap) (vector key)
+      (define-key (overlay-get overlay 'keymap)
+	(if (vectorp key) key (vector key))
 	'completion-hotkey-select))))
 
 
 (defun completion-deactivate-hotkeys (overlay)
   "Deactivate completion hotkeys for OVERLAY."
   (dolist (key completion-hotkey-list)
-    (define-key (overlay-get overlay 'keymap) (vector key) nil)))
+    (define-key (overlay-get overlay 'keymap)
+      (if (vectorp key) key (vector key)) nil)))
 
 
 (defun completion-hotkey-select ()
