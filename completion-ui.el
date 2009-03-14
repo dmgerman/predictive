@@ -237,6 +237,7 @@
 ;;
 ;; Version 0.11.3
 ;; * added `completion-auto-update' customization option
+;; * bug-fix to `completion-ui-register-interface' :auto-show-helper
 ;;
 ;; Version 0.11.2
 ;; * bug-fixes to cope with elements of completions list that are cons cells
@@ -1667,7 +1668,8 @@ interface is activated."
 	   (list name activate deactivate)
 	   (when update (list :update update))
 	   (when auto-show (list :auto-show auto-show))
-	   (when auto-show-helper (list :auto-show-helper auto-show))))))
+	   (when auto-show-helper (list :auto-show-helper auto-show-helper))
+	   ))))
 
     ;; construct code to add interface definition to list (or replace existing
     ;; definition)
@@ -1770,14 +1772,14 @@ is passed one argument, a completion overlay."
     overlay))
 
 
-(defmacro completion-ui-call-auto-show-interface-helpers (overlay)
+(defun completion-ui-call-auto-show-interface-helpers (overlay)
   ;; Call auto-show-helpers
-  `(let (func)
+  (let (func)
      (dolist (interface-def completion-ui-interface-definitions)
        (when (and (completion-ui-interface-enabled-p interface-def)
 		  (setq func (completion-ui--interface-auto-show-helper
 			      interface-def)))
-	 (funcall func ,overlay)))))
+	 (funcall func overlay)))))
 
 
 (defmacro completion-ui-deactivate-auto-show-interface (overlay)

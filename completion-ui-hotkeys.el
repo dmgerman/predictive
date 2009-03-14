@@ -147,7 +147,7 @@ internally. It should *never* be bound in a keymap."
  'completion-use-hotkeys
  :activate 'completion-activate-hotkeys
  :deactivate 'completion-deactivate-hotkeys
- :auto-show-helper 'competion-auto-show-activate-hotkeys)
+ :auto-show-helper 'completion-auto-show-activate-hotkeys)
 
 
 
