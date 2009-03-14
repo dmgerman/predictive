@@ -234,15 +234,18 @@ If OVERLAY is not supplied, try to find one at point."
 
   ;; if no overlay was supplied, try to find one at point
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-  ;; if called manually, flag this in overlay property
-  (when (interactive-p)
-    (overlay-put overlay 'completion-interactive-tooltip t))
   ;; deactivate other auto-show interfaces
   (completion-ui-deactivate-auto-show-interface overlay)
-
   ;; if we can display a tooltip and there are completions to display in it...
   (when (and overlay (overlay-get overlay 'completions)
 	     window-system (fboundp 'x-show-tip))
+    ;; if called manually, flag this in overlay property and call
+    ;; auto-show-helpers, since they won't have been called by
+    ;; `completion-ui-auto-show'
+    (when (interactive-p)
+      (overlay-put overlay 'completion-interactive-tooltip t)
+      (completion-ui-call-auto-show-interface-helpers overlay))
+
     ;; calculate tooltip parameters
     (let ((mouse-pos (mouse-pixel-position))
           (pos (save-excursion

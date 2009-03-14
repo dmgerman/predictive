@@ -200,8 +200,9 @@ pop-up frame, rather than just the first few."
   (interactive (list nil current-prefix-arg))
   ;; look for completion overlay at point, unless one was supplied
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-  ;; deactivate other auto-show interfaces
+  ;; deactivate other auto-show interfaces and call auto-show-helpers
   (completion-ui-deactivate-auto-show-interface overlay)
+  (completion-ui-call-auto-show-interface-helpers overlay)
   ;; show the completion menu
   (completion-popup-frame overlay)
   (when all (completion-popup-frame-toggle-show-all)))

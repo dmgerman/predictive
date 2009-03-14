@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.3
+;; Version: 0.11.4
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -235,8 +235,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.11.3
+;; Version 0.11.4
 ;; * added `completion-auto-update' customization option
+;;
+;; Version 0.11.3
 ;; * bug-fix to `completion-ui-register-interface' :auto-show-helper
 ;;
 ;; Version 0.11.2
