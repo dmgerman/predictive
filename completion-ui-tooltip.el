@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -33,6 +33,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * bug-fix to `completion-cancel-tooltip' to prevent
+;;   `completion-tooltip-map' keys from being incorrectly disabled
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -339,8 +343,8 @@ If OVERLAY is not supplied, try to find one at point."
   ;; cancel tooltip
   (when (and window-system (fboundp 'x-show-tip))
     (tooltip-hide)
-    (when (overlayp completion-tooltip-active)
-      (completion-deactivate-tooltip-keys completion-tooltip-active))
+    ;; (when (overlayp completion-tooltip-active)
+    ;;   (completion-deactivate-tooltip-keys completion-tooltip-active))
     (setq completion-tooltip-active nil)))
 
 
