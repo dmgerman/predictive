@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: completion, UI, user interface, sources
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2
+;; * added ispell source (thanks to Henry Weller for initial version)
 ;;
 ;; Version 0.1
 ;; * initial version
@@ -102,6 +105,44 @@
 (completion-ui-register-source
  'completion--filename-wrapper
  :name 'files)
+
+
+;;;=========================================================
+;;;                         ispell
+
+(defun ispell-correct-completion-function (word)
+  (require 'flyspell)
+  (let (suggestions ispell-filter)
+    ;; Now check spelling of word.
+    (ispell-send-string "%\n") ; put in verbose mode
+    (ispell-send-string (concat "^" word "\n")) ; lookup the word
+    ;; Wait until ispell has processed word.
+    (while (progn
+             (accept-process-output ispell-process)
+             (not (string= "" (car ispell-filter)))))
+    ;; Remove leading empty element
+    (setq ispell-filter (cdr ispell-filter))
+    ;; ispell process should return something after word is sent.
+    ;; Tag word as valid (i.e., skip) otherwise
+    (or ispell-filter
+        (setq ispell-filter '(*)))
+    (when (consp ispell-filter)
+      (setq suggestions (ispell-parse-output (car ispell-filter))))
+    (cond
+     ((or (eq suggestions t) (stringp suggestions))
+      (message "Ispell: %s is correct" word)
+      nil)
+     ((null suggestions)
+      (error "Ispell: error in Ispell process")
+      nil)
+     (t	(car (cdr (cdr suggestions)))))))
+
+
+(completion-ui-register-source
+ 'ispell-correct-completion-function
+ :non-prefix-completion t
+ :name 'ispell)
+
 
 
 ;;;=========================================================
