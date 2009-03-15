@@ -338,9 +338,9 @@ INTERACTIVE is supplied, pretend we were called interactively."
 (defun completion-cancel-tooltip (&optional overlay)
   "Hide the completion tooltip and cancel timers."
   (interactive)
-  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   ;; unset manually displayed tooltip flag
-  (overlay-put overlay 'completion-interactive-tooltip nil)
+  (when (or overlay (setq overlay (completion-ui-overlay-at-point)))
+    (overlay-put overlay 'completion-interactive-tooltip nil))
   ;; cancel timer
   (completion-ui-cancel-auto-show)
   ;; cancel tooltip
