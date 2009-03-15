@@ -239,6 +239,9 @@
 ;; * bug-fix in `completion-ui-source-non-prefix-completion'
 ;; * changed `auto-completion-self-insert' to always reject if called due to
 ;;   `completion-auto-update' rather than `auto-completion-mode'
+;; * added `completion-auto-update-self-insert' and
+;;   `completion-auto-update-overlay-map', and separated
+;;   `completion-auto-update' code from `auto-completion-mode' code
 ;;
 ;; Version 0.11.4
 ;; * added `completion-auto-update' customization option
@@ -895,7 +898,11 @@ rejection command was called interactively.")
 
 (defvar auto-completion-overlay-map nil
   "Keymap active in a completion overlay when
-auto-completion-mode is enabled.")
+`auto-completion-mode' is enabled.")
+
+(defvar completion-auto-update-overlay-map nil
+  "Keymap active in a completion overlay when
+`completion-auto-update' is enabled.")
 
 (defvar completion-map nil
   "Keymap active when a Completion-UI is loaded.")
@@ -1387,6 +1394,27 @@ used if the current Emacs version lacks command remapping support."
     (completion--bind-printable-chars
      auto-completion-overlay-map
      'auto-completion-self-insert))
+  )
+
+
+
+;; Set the default bindings for the keymap assigned to the completion overlays
+(unless completion-auto-update-overlay-map
+  ;; inherit all keybindings from completion-overlay-map, then add
+  ;; completion-auto-update specific ones below
+  (setq completion-auto-update-overlay-map (make-sparse-keymap))
+  (set-keymap-parent completion-auto-update-overlay-map
+		     completion-overlay-map)
+  ;; if we can remap commands, remap `self-insert-command'
+  (if (fboundp 'command-remapping)
+      (define-key completion-auto-update-overlay-map
+	[remap self-insert-command]
+	'completion-auto-update-self-insert)
+    ;; otherwise, rebind all printable characters to
+    ;; `auto-completion-self-insert' manually
+    (completion--bind-printable-chars
+     completion-auto-update-overlay-map
+     'completion-auto-update-self-insert))
   )
 
 
@@ -3155,11 +3183,6 @@ overlays."
     (when (functionp resolve-behaviour)
       (setq resolve-behaviour (funcall resolve-behaviour)))
 
-    ;; if we're being called due to `completion-auto-update' rather than
-    ;; `auto-completion-mode', always reject instead of accepting
-    (when (and (not auto-completion-mode) completion-auto-update)
-      (setq resolve-behaviour 'reject))
-
     ;; do whatever action was specified in alists
     (cond
      ;; no-op
@@ -3293,6 +3316,66 @@ overlays."
 
 
 
+(defun completion-auto-update-self-insert ()
+  "Add character to current prefix and recomplete
+based on current syntax table."
+  (interactive)
+
+  (let ((char last-input-event)
+	(syntax (char-syntax last-input-event))
+	(overlay (completion-ui-overlay-at-point))
+	prefix)
+    (when overlay
+      (cond
+
+       ;; word- or symbol-constituent: add to prefix
+       ((or (eq syntax ?w) (eq syntax ?_))
+	;; if point is at start of overlay, update prefix
+	(if (or (and (eq completion-accept-or-reject-by-default 'accept)
+		     (= (point) (overlay-end overlay)))
+		(and (eq completion-accept-or-reject-by-default 'reject)
+		     (= (point) (overlay-start overlay))))
+	    (setq prefix (concat (overlay-get overlay 'prefix) (string char)))
+	  ;; otherwise, add characters up to point and new character to prefix
+	  (setq prefix
+		(concat (buffer-substring-no-properties
+			 (- (overlay-start overlay)
+			    (if (overlay-get overlay 'prefix-replaced)
+				0 (overlay-get overlay 'prefix-length)))
+			 (point))
+			(string char)))
+	  (delete-region (point) (overlay-end overlay))
+	  (overlay-put overlay 'prefix-replaced nil)
+	  (completion-ui-delete-overlay overlay))
+	;; insert character
+	(completion-ui-deactivate-interfaces-pre-update overlay)
+	(if (eq char last-input-event)
+	    (self-insert-command 1)
+	  (insert char))
+	(move-overlay overlay (point) (point))
+	;; re-complete new prefix
+	(completion-ui-setup-overlay prefix nil nil nil nil nil nil overlay)
+	(complete-in-buffer
+	 (overlay-get overlay 'completion-source)
+	 nil 'not-set 'auto overlay))
+
+       ;; anything else: accept up to point, reject rest
+       (t
+	;; if point is at start of overlay, reject completion
+	(if (= (point) (overlay-start overlay))
+	    (completion-reject nil overlay)
+	  ;; otherwise, delete everything following point, and delete overlay
+	  (delete-region (point) (overlay-end overlay))
+	  (completion-ui-delete-overlay overlay)
+	  (completion-ui-deactivate-interfaces overlay))
+	;; insert character
+	(if (eq char last-input-event)
+	    (self-insert-command 1)
+	  (insert char)))))))
+
+
+
+
 
 ;;; ============================================================
 ;;;                  Deletion commands
@@ -3308,8 +3391,7 @@ enabled, complete what remains of that word."
     ;(combine-after-change-calls
 
       ;; ----- not auto-completing -----
-      (if (and (not auto-completion-mode)
-	       (not completion-auto-update))
+      (if (and (not auto-completion-mode) (not completion-auto-update))
 
           (progn
             ;; if within a completion...
@@ -3734,12 +3816,13 @@ point) are being set."
       (overlay-put overlay 'keymap map)
       (set-keymap-parent
        map
-       (if (or completion-auto-update
-	       (and auto-completion-mode
-		    (eq (overlay-get overlay 'completion-source)
-			auto-completion-source)))
-	   auto-completion-overlay-map
-	 completion-overlay-map)))
+       (cond
+	((and auto-completion-mode
+	      (eq (overlay-get overlay 'completion-source)
+		  auto-completion-source))
+	 auto-completion-overlay-map)
+	(completion-auto-update completion-auto-update-overlay-map)
+	(t completion-overlay-map))))
     ;; add overlay to list
     (push overlay completion--overlay-list))
 
