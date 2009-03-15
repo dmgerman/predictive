@@ -52,7 +52,8 @@
   (defun semantic-idle-summary-useful-context-p () nil)
   (defun semantic-ctxt-current-symbol (arg1) nil)
   (defun semantic-analyze-current-context () nil)
-  (defun semantic-analyze-possible-completions (arg1) nil))
+  (defun semantic-analyze-possible-completions (arg1) nil)
+  (require 'ispell))
 
 
 ;;;=========================================================
