@@ -597,7 +597,7 @@
 
 
 (eval-when-compile (require 'cl))
-(require 'auto-overlay-common nil t)
+;;(require 'auto-overlay-common nil t)
 
 
 (defvar completion-ui-interface-definitions nil
@@ -2215,10 +2215,10 @@ pop-up frame. The menu functions should return menu keymaps."
 			    (assq (completion-ui-completion-source source)
 				  completion-ui-source-definitions))))
 		      (auto-overlay-local-binding
-		       'completion-non-prefix-completion))))
-	   (completion-ui--source-def-non-prefix-completion
-  	    (assq (completion-ui-completion-source source)
-  		  completion-ui-source-definitions)))
+		       'completion-non-prefix-completion)))
+	       (completion-ui--source-def-non-prefix-completion
+		(assq (completion-ui-completion-source source)
+		      completion-ui-source-definitions))))
       nil))  ; default fall-back
 
 
