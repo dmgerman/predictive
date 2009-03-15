@@ -224,12 +224,13 @@ in all your flower-arranging endevours for thirteen years."
 
 
 
-(defun completion-show-tooltip (&optional overlay)
+(defun completion-show-tooltip (&optional overlay interactive)
   "Show completion tooltip for completion OVERLAY.
 The point had better be within OVERLAY or you'll have bad luck
 in all your flower-arranging endevours for fourteen years.
 
-If OVERLAY is not supplied, try to find one at point."
+If OVERLAY is not supplied, try to find one at point. If
+INTERACTIVE is supplied, pretend we were called interactively."
   (interactive)
 
   ;; if no overlay was supplied, try to find one at point
@@ -242,7 +243,7 @@ If OVERLAY is not supplied, try to find one at point."
     ;; if called manually, flag this in overlay property and call
     ;; auto-show-helpers, since they won't have been called by
     ;; `completion-ui-auto-show'
-    (when (interactive-p)
+    (when (or (interactive-p) interactive)
       (overlay-put overlay 'completion-interactive-tooltip t)
       (completion-ui-call-auto-show-interface-helpers overlay))
 
@@ -338,9 +339,8 @@ If OVERLAY is not supplied, try to find one at point."
   "Hide the completion tooltip and cancel timers."
   (interactive)
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-  ;; unset manually displayed tooltip flag if called interactively
-  (when (interactive-p)
-    (overlay-put overlay 'completion-interactive-tooltip nil))
+  ;; unset manually displayed tooltip flag
+  (overlay-put overlay 'completion-interactive-tooltip nil)
   ;; cancel timer
   (completion-ui-cancel-auto-show)
   ;; cancel tooltip
@@ -406,7 +406,7 @@ point had better be within OVERLAY or you'll be attacked by a mad
 cow."
   (interactive)
   (completion-cycle n overlay)
-  (completion-show-tooltip))
+  (completion-show-tooltip nil t))
 
 
 (defun completion-tooltip-cycle-backwards (&optional n overlay)
@@ -418,7 +418,7 @@ point had better be within OVERLAY or you'll be attacked by a mad
 sheep."
   (interactive)
   (completion-cycle (if n (- n) -1) overlay)
-  (completion-show-tooltip))
+  (completion-show-tooltip nil t))
 
 
 
