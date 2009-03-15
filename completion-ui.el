@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.4
+;; Version: 0.11.5
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.5
+;; * bug-fix in `completion-ui-source-non-prefix-completion'
+;; * changed `auto-completion-self-insert' to always reject if called due to
+;;   `completion-auto-update' rather than `auto-completion-mode'
 ;;
 ;; Version 0.11.4
 ;; * added `completion-auto-update' customization option
@@ -654,10 +659,9 @@ considered a word."
 
 (defcustom completion-auto-update t
   "*When non-nil, completion candidates are updated automatically
-when characters are typed at the current completion, and the
-completion user-interfaces are updated. \(Effectively, it is as
-though `auto-completion-mode' is temporarily enabled for the
-duration of the completion.\)"
+when characters are added to the current completion prefix.
+\(Effectively, it is as though `auto-completion-mode' is
+temporarily enabled for the duration of the completion.\)"
   :group 'completion-ui
   :type 'boolean)
 
@@ -2205,17 +2209,17 @@ pop-up frame. The menu functions should return menu keymaps."
   ;; return non-prefix-completion setting for SOURCE or OVERLAY at point
   (or (and overlay (overlay-get overlay 'completion-non-prefix-completion))
       (and source
-	   (and (fboundp 'auto-overlay-local-binding)
-  		(let ((completion-non-prefix-completion
-  		       (completion-ui--source-def-non-prefix-completion
-  			(assq (completion-ui-completion-source source)
-  			      completion-ui-source-definitions))))
-  		  (auto-overlay-local-binding
-		   'completion-non-prefix-completion)))
+	   (or (and (fboundp 'auto-overlay-local-binding)
+		    (let ((completion-non-prefix-completion
+			   (completion-ui--source-def-non-prefix-completion
+			    (assq (completion-ui-completion-source source)
+				  completion-ui-source-definitions))))
+		      (auto-overlay-local-binding
+		       'completion-non-prefix-completion))))
 	   (completion-ui--source-def-non-prefix-completion
   	    (assq (completion-ui-completion-source source)
   		  completion-ui-source-definitions)))
-       nil))  ; default fall-back
+      nil))  ; default fall-back
 
 
 (defmacro completion-ui-source-accept-function
@@ -3146,9 +3150,15 @@ overlays."
 
     ;; ----- resolve behaviour -----
     (completion-ui-resolve-old overlay)
+
     ;; if behaviour alist entry is a function, call it
     (when (functionp resolve-behaviour)
       (setq resolve-behaviour (funcall resolve-behaviour)))
+
+    ;; if we're being called due to `completion-auto-update' rather than
+    ;; `auto-completion-mode', always reject instead of accepting
+    (when (and (not auto-completion-mode) completion-auto-update)
+      (setq resolve-behaviour 'reject))
 
     ;; do whatever action was specified in alists
     (cond

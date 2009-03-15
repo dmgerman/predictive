@@ -30,6 +30,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.2
+;; * changed behaviour when `completion-accept-or-reject-by-default' is set to
+;;   'accept-common
+;;
 ;; Version 0.1.1
 ;; * added missing code to activate and deactivate key bindings from
 ;;   `completion-dynamic-map'
@@ -136,7 +140,10 @@ cauliflower will start growing out of your ears."
 	 (- pos
 	    (if (or (null non-prefix-cmpl)
 		    (and (not (overlay-get overlay 'prefix-replaced))
-			 (eq completion-accept-or-reject-by-default 'accept)
+			 (or (eq completion-accept-or-reject-by-default
+				 'accept)
+			     (eq completion-accept-or-reject-by-default
+				 'accept-common))
 			 (overlay-put overlay 'prefix-replaced t)))
 		(overlay-get overlay 'prefix-length) 0))
 	 (overlay-end overlay))
@@ -272,12 +279,13 @@ the start for `auto-completion-mode' or if it is to be rejected,
 the end of the common prefix for `accept-common' or
 the end if it is to be accepted."
   (cond
-   ;; reject or auto-completion-mode
-   ((or completion-auto-update
+   ;; reject, auto-completion-mode, or completion-auto-update
+   ((or (eq completion-accept-or-reject-by-default 'reject)
 	(and auto-completion-mode
 	     (eq (overlay-get overlay 'completion-source)
 		 auto-completion-source))
-	(eq completion-accept-or-reject-by-default 'reject))
+	(and completion-auto-update
+	     (not (overlay-get overlay 'non-prefix-completion))))
     (goto-char (overlay-start overlay)))
 
    ;; accept-common
