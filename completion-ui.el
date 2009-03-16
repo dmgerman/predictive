@@ -3329,45 +3329,31 @@ based on current syntax table."
       (cond
 
        ;; word- or symbol-constituent: add to prefix
-       ((or (eq syntax ?w) (eq syntax ?_))
-	;; if character is inserted at appropriate position, update prefix
-	(cond
-	 ((or (and (eq completion-accept-or-reject-by-default 'accept)
-		   (= (point) (overlay-end overlay)))
-	      (and (eq completion-accept-or-reject-by-default 'reject)
-		   (= (point) (overlay-start overlay))))
-	  (setq prefix (concat (overlay-get overlay 'prefix) (string char))))
-
-	 ;; if we're accepting and character was inserted at start of overlay,
-	 ;; accept completion and don't re-complete below
-	 ((and (or (eq completion-accept-or-reject-by-default 'accept)
-		   (eq completion-accept-or-reject-by-default 'accept-common))
-	       (= (point) (overlay-start overlay)))
-	  (completion-accept nil overlay)
-	  (setq dont-complete t))
-
-	 (t
-	  ;; otherwise, add characters up to point and new character to prefix
-	  (setq prefix
-		(concat (buffer-substring-no-properties
-			 (- (overlay-start overlay)
-			    (if (overlay-get overlay 'prefix-replaced)
-				0 (overlay-get overlay 'prefix-length)))
-			 (point))
-			(string char)))
-	  (delete-region (point) (overlay-end overlay))
-	  (overlay-put overlay 'prefix-replaced nil)
-	  (completion-ui-delete-overlay overlay)))
-
-	;; insert character
+       ;; note: disabled for non-prefix-completion, unless
+       ;;       `completion-accept-or-reject-by-default' is set to 'reject,
+       ;;       because otherwise the prefix being added to is hidden
+       ((and (or (eq syntax ?w) (eq syntax ?_))
+	     (or (not (overlay-get overlay 'non-prefix-completion))
+		 (eq completion-accept-or-reject-by-default 'reject)))
+	;; add characters up to point and new character to prefix
+	(setq prefix
+	      (concat (buffer-substring-no-properties
+		       (- (overlay-start overlay)
+			  (if (overlay-get overlay 'prefix-replaced)
+			      0 (overlay-get overlay 'prefix-length)))
+		       (point))
+		      (string char)))
+	(delete-region (point) (overlay-end overlay))
+	(overlay-put overlay 'prefix-replaced nil)
+	(completion-ui-delete-overlay overlay)
 	(completion-ui-deactivate-interfaces-pre-update overlay)
+	;; insert character
 	(if (eq char last-input-event)
 	    (self-insert-command 1)
 	  (insert char))
-	(move-overlay overlay (point) (point))
-
 	;; re-complete new prefix
 	(unless dont-complete
+	  (move-overlay overlay (point) (point))
 	  (completion-ui-setup-overlay prefix nil nil nil nil nil nil overlay)
 	  (complete-in-buffer
 	   (overlay-get overlay 'completion-source)
