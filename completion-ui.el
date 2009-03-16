@@ -3324,18 +3324,29 @@ based on current syntax table."
   (let ((char last-input-event)
 	(syntax (char-syntax last-input-event))
 	(overlay (completion-ui-overlay-at-point))
-	prefix)
+	prefix dont-complete)
     (when overlay
       (cond
 
        ;; word- or symbol-constituent: add to prefix
        ((or (eq syntax ?w) (eq syntax ?_))
-	;; if point is at start of overlay, update prefix
-	(if (or (and (eq completion-accept-or-reject-by-default 'accept)
-		     (= (point) (overlay-end overlay)))
-		(and (eq completion-accept-or-reject-by-default 'reject)
-		     (= (point) (overlay-start overlay))))
-	    (setq prefix (concat (overlay-get overlay 'prefix) (string char)))
+	;; if character is inserted at appropriate position, update prefix
+	(cond
+	 ((or (and (eq completion-accept-or-reject-by-default 'accept)
+		   (= (point) (overlay-end overlay)))
+	      (and (eq completion-accept-or-reject-by-default 'reject)
+		   (= (point) (overlay-start overlay))))
+	  (setq prefix (concat (overlay-get overlay 'prefix) (string char))))
+
+	 ;; if we're accepting and character was inserted at start of overlay,
+	 ;; accept completion and don't re-complete below
+	 ((and (or (eq completion-accept-or-reject-by-default 'accept)
+		   (eq completion-accept-or-reject-by-default 'accept-common))
+	       (= (point) (overlay-start overlay)))
+	  (completion-accept nil overlay)
+	  (setq dont-complete t))
+
+	 (t
 	  ;; otherwise, add characters up to point and new character to prefix
 	  (setq prefix
 		(concat (buffer-substring-no-properties
@@ -3346,18 +3357,22 @@ based on current syntax table."
 			(string char)))
 	  (delete-region (point) (overlay-end overlay))
 	  (overlay-put overlay 'prefix-replaced nil)
-	  (completion-ui-delete-overlay overlay))
+	  (completion-ui-delete-overlay overlay)))
+
 	;; insert character
 	(completion-ui-deactivate-interfaces-pre-update overlay)
 	(if (eq char last-input-event)
 	    (self-insert-command 1)
 	  (insert char))
 	(move-overlay overlay (point) (point))
+
 	;; re-complete new prefix
-	(completion-ui-setup-overlay prefix nil nil nil nil nil nil overlay)
-	(complete-in-buffer
-	 (overlay-get overlay 'completion-source)
-	 nil 'not-set 'auto overlay))
+	(unless dont-complete
+	  (completion-ui-setup-overlay prefix nil nil nil nil nil nil overlay)
+	  (complete-in-buffer
+	   (overlay-get overlay 'completion-source)
+	   nil 'not-set 'auto overlay)))
+
 
        ;; anything else: accept up to point, reject rest
        (t
