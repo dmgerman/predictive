@@ -720,13 +720,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (auto-completion-override-syntax-alist
 		. ((?:
 		    . ((lambda ()
-			 (predictive-latex-completion-add-till-regexp ":")
-			 nil)
+			 (predictive-latex-completion-add-till-regexp ":"))
 		       ,word-complete))
 		   (?_
 		    . ((lambda ()
-			 (predictive-latex-completion-add-till-regexp "\\W")
-			 nil)
+			 (predictive-latex-completion-add-till-regexp "\\W"))
 		       ,word-complete))
 		   (?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -747,7 +745,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			  (lambda ()
 			    (let ((pos (point)))
 			      (when (re-search-forward
-				     "^[[:alpha:]]+}" (line-end-position) t)
+				     "[[:alpha:]]*?}" (line-end-position) t)
 				(backward-char)
 				(delete-region pos (point))))
 			    ',word-complete)
@@ -766,6 +764,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
+	       (auto-completion-syntax-alist
+		. ((?w . (add
+			  (lambda ()
+			    (let ((pos (point)))
+			      (when (re-search-forward
+				     "[[:alpha:]]*?}" (line-end-position) t)
+				(backward-char)
+				(delete-region pos (point))))
+			    ',word-complete)
+			  t))))
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1346,82 +1354,14 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
 (defun predictive-latex-reparse-buffer ()
-  "Clear all auto-overlays, then reparse buffer from scratch."
+  "Reparse a LaTeX buffer from scratch."
   (interactive)
-
-  ;; stop the predictive auto-overlays without saving to file
-  (auto-overlay-stop 'predictive)
-  ;; kill local modifications to dict lists (dictionaries are added again when
-  ;; usepackage overlays are reparsed)
-  (kill-local-variable 'predictive-latex-dict)
-  (make-local-variable 'predictive-latex-dict)
-  (kill-local-variable 'predictive-latex-math-dict)
-  (make-local-variable 'predictive-latex-math-dict)
-  (kill-local-variable 'predictive-latex-preamble-dict)
-  (make-local-variable 'predictive-latex-preamble-dict)
-  (kill-local-variable 'predictive-latex-env-dict)
-  (make-local-variable 'predictive-latex-env-dict)
-  (kill-local-variable 'predictive-latex-bibstyle-dict)
-  (make-local-variable 'predictive-latex-bibstyle-dict)
-  ;; revert to saved auto-dicts
-  (let (used-dicts main-dict latex-dict math-dict
-  		   preamble-dict env-dict label-dict
-  		   local-env-dict local-section-dict)
-    (save-excursion
-      (when (and (boundp 'TeX-master) (stringp TeX-master))
-  	(set-buffer (concat (file-name-sans-extension TeX-master) ".tex")))
-      (predictive-auto-dict-unload "latex-label" nil
-  				   (buffer-modified-p))
-      (predictive-auto-dict-unload "latex-local-latex" nil
-  				   (buffer-modified-p))
-      (predictive-auto-dict-unload "latex-local-math" nil
-  				   (buffer-modified-p))
-      (predictive-auto-dict-unload "latex-local-env" nil
-  				   (buffer-modified-p))
-      (predictive-auto-dict-unload "latex-section" nil
-  				   (buffer-modified-p))
-      (setq predictive-latex-label-dict
-  	    (predictive-auto-dict-load "latex-label")
-  	    predictive-latex-local-latex-dict
-  	    (predictive-auto-dict-load "latex-local-latex")
-  	    predictive-latex-local-math-dict
-  	    (predictive-auto-dict-load "latex-local-math")
-  	    predictive-latex-local-env-dict
-  	    (predictive-auto-dict-load "latex-local-env")
-  	    predictive-latex-section-dict
-  	    (predictive-auto-dict-load "latex-section"))
-      ;; disable saving of label and section dictionaries to avoid Emacs "bug"
-      (unless predictive-latex-save-label-dict
-	(setf (dictree-autosave predictive-latex-label-dict) nil))
-      (unless predictive-latex-save-section-dict
-	(setf (dictree-autosave predictive-latex-section-dict) nil))
-      (setq used-dicts predictive-used-dict-list
-  	    main-dict predictive-buffer-dict
-  	    latex-dict predictive-latex-dict
-  	    math-dict predictive-latex-math-dict
-  	    preamble-dict predictive-latex-preamble-dict
-  	    env-dict predictive-latex-env-dict
-  	    label-dict predictive-latex-label-dict
-  	    local-env-dict predictive-latex-local-env-dict
-  	    local-section-dict predictive-latex-section-dict))
-    (when (and (boundp 'TeX-master) (stringp TeX-master))
-      (setq predictive-used-dict-list used-dicts
-  	    predictive-buffer-dict main-dict
-  	    predictive-latex-dict latex-dict
-  	    predictive-latex-math-dict math-dict
-  	    predictive-latex-preamble-dict preamble-dict
-  	    predictive-latex-env-dict env-dict
-  	    predictive-latex-label-dict label-dict
-  	    predictive-latex-local-env-dict local-env-dict
-  	    predictive-latex-section-dict local-section-dict)))
-  ;; clear and reload the overlay definitions (have to do this, otherwise some
-  ;; auto-overlays try to add duplicate regexp definitions when reparsed)
-  (setq auto-overlay-regexps nil)
-  (predictive-latex-load-regexps)
-  ;; restart the predictive auto-overlays; we let-bind predictive-mode to
-  ;; prevent duplicate definition warnings
-  (let ((predictive-mode nil))
-    (auto-overlay-start 'predictive nil 'ignore-save-file 'no-regexp-check)))
+  (predictive-mode -1)
+  ;; using an internale auto-overlay function is ugly, but then this command
+  ;; shouldn't be necessary anyway!
+  (delete-file (concat predictive-auxiliary-file-location
+		       (auto-o-overlay-filename 'predictive)))
+  (predictive-mode 1))
 
 
 
@@ -2436,23 +2376,27 @@ Intended to be used as the \"resolve\" entry in
 `completion-dynamic-override-syntax-alist'."
 
   (let (overlay completion)
-    ;; if completion characters contain REGEXP, insert characters up to first
+    ;; if completion characters contain REGEXP, accept characters up to first
     ;; regexp match, and add them to the completion overlay prefix
     (when (and (setq overlay (completion-ui-overlay-at-point))
 	       (setq completion (buffer-substring-no-properties
 				 (overlay-start overlay)
 				 (overlay-end overlay)))
 	       (string-match regexp completion))
-
-      (insert (setq completion (substring completion 0 (match-beginning 0))))
-      (move-overlay overlay (point) (overlay-end overlay))
+      (move-overlay overlay
+		    (+ (overlay-start overlay) (match-beginning 0))
+		    (overlay-end overlay))
       (overlay-put overlay 'prefix
-		   (concat (overlay-get overlay 'prefix) completion)))
+		   (concat (overlay-get overlay 'prefix)
+			   (substring completion 0 (match-beginning 0))))
+      (overlay-put overlay 'prefix-length
+		   (+ (overlay-get overlay 'prefix-length)
+		      (match-beginning 0)))
+      (goto-char (overlay-start overlay))))
 
-    ;; return 'add, causing `completion-self-insert' to add last typed
-    ;; character to the prefix
-    'add)
-)
+  ;; return 'add, causing `completion-self-insert' to add last typed character
+  ;; to the prefix
+  'add)
 
 
 
