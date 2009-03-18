@@ -1942,8 +1942,7 @@ Interactively, SECTION is read from the mini-buffer."
 		 (cons 'predictive-latex-schedule-usepackage-update
 		       (overlay-get o-new 'insert-behind-hooks)))
     ;; return the new overlay
-    o-new)
-)
+    o-new))
 
 
 
@@ -1955,8 +1954,7 @@ Interactively, SECTION is read from the mini-buffer."
     ;; delete the overlay
     (auto-o-delete-overlay (overlay-get o-match 'parent))
     ;; unload package dictionaries and run the unload function
-    (predictive-latex-unload-package package))
-)
+    (predictive-latex-unload-package package)))
 
 
 
@@ -1967,8 +1965,7 @@ Interactively, SECTION is read from the mini-buffer."
   ;; functions have been called
   (unless modified
     (add-to-list 'auto-o-pending-post-suicide
-		 (list 'predictive-latex-usepackage-update o-self)))
-)
+		 (list 'predictive-latex-usepackage-update o-self))))
 
 
 
@@ -2079,7 +2076,6 @@ they exist."
 	       (append (overlay-get o-match 'modification-hooks)
 		       '(predictive-latex-schedule-env-synchronize)))
 
-
   ;; update auto overlays as necessary
   (let* ((overlay-stack (auto-o-nested-stack o-match))
 	 (o (car overlay-stack)))
@@ -2104,9 +2100,7 @@ they exist."
       ;; sort out the overlay stack
       (predictive-latex-env-stack-cascade overlay-stack)
       ;; return newly created overlay
-      (car overlay-stack)))
-    )
-)
+      (car overlay-stack)))))
 
 
 
@@ -2137,8 +2131,7 @@ they exist."
       (overlay-put o-parent (auto-o-edge o-self) nil)
       (overlay-put o-self 'parent nil)
       (predictive-latex-env-stack-cascade overlay-stack))
-     ))
-)
+     )))
 
 
 
@@ -2193,8 +2186,7 @@ they exist."
 		;; protect against recursion is probably redundant.
 		(replace-match env t t nil 1)))
 	    )))
-      ))
-)
+      )))
 
 
 
@@ -2441,9 +2433,7 @@ Intended to be used as the \"resolve\" entry in
 	(when (re-search-forward "\\\\\\|\\w" nil t)
 	  (backward-char))
 	(re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
-	(when (= (char-before) ?\n) (backward-char))))
-    )
-)
+	(when (= (char-before) ?\n) (backward-char))))))
 
 
 
@@ -2475,9 +2465,7 @@ Intended to be used as the \"resolve\" entry in
 			(= (char-syntax (char-after)) ?_)
 			(and (= (char-syntax (char-after)) ?.)
 			     (/= (char-after) ?}))))
-	  (forward-char))))
-    )
-)
+	  (forward-char))))))
 
 
 

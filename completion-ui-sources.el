@@ -32,6 +32,9 @@
 ;;
 ;; Version 0.2
 ;; * added ispell source (thanks to Henry Weller for initial version)
+;; * added `eval-when-compiles' so that correct compilation doesn't rely on
+;;   the non-obvious fact that (require 'completion-ui) in turn pulls in
+;;   "completion-ui-sources.el" at compile-time
 ;;
 ;; Version 0.1
 ;; * initial version
@@ -46,14 +49,19 @@
 ;; get rid of compiler warnings
 (eval-when-compile
   (defvar semanticdb-find-default-throttle nil)
-  (defun dabbrev--reset-global-variables () nil)
-  (defun dabbrev--find-all-expansions (arg1 arg2) nil)
-  (defun tags-lazy-completion-table () nil)
-  (defun semantic-idle-summary-useful-context-p () nil)
-  (defun semantic-ctxt-current-symbol (arg1) nil)
-  (defun semantic-analyze-current-context () nil)
-  (defun semantic-analyze-possible-completions (arg1) nil)
   (require 'ispell))
+(declare-function dabbrev--reset-global-variables "dabbrev.el" nil)
+(declare-function dabbrev--find-all-expansions "dabbrev.el" (arg1 arg2))
+(declare-function tags-lazy-completion-table "etags.el" nil)
+(declare-function semantic-idle-summary-useful-context-p "ext:semantic-idle.el"
+		  nil)
+(declare-function semantic-ctxt-current-symbol "ext:semantic-ctxt.el"
+		  (&optional arg1))
+(declare-function semantic-analyze-current-context "ext:semantic-analyze.el"
+		  nil)
+(declare-function semantic-analyze-possible-completions "ext:semantic-analyze-complete.el"
+		  (arg1))
+
 
 
 ;;;=========================================================
@@ -91,16 +99,17 @@
 ;;;=========================================================
 ;;;                        file names
 
-(defun completion--filename-wrapper (prefix)
-  ;; Return filename completions of prefix
-  (let ((dir (file-name-directory prefix))
-	completions)
-    (mapc (lambda (file)
-	    (unless (or (string= file "../") (string= file "./"))
-	      (push (concat dir file) completions)))
-	  (file-name-all-completions
-	   (file-name-nondirectory prefix) dir))
-    (nreverse completions)))
+(eval-and-compile
+  (defun completion--filename-wrapper (prefix)
+    ;; Return filename completions of prefix
+    (let ((dir (file-name-directory prefix))
+	  completions)
+      (mapc (lambda (file)
+	      (unless (or (string= file "../") (string= file "./"))
+		(push (concat dir file) completions)))
+	    (file-name-all-completions
+	     (file-name-nondirectory prefix) dir))
+      (nreverse completions))))
 
 
 (completion-ui-register-source
@@ -111,36 +120,37 @@
 ;;;=========================================================
 ;;;                         ispell
 
-(defun ispell-correct-completion-function (word)
-  (require 'flyspell)
-  (let (suggestions ispell-filter)
-    ;; Now check spelling of word.
-    (ispell-send-string "%\n") ; put in verbose mode
-    (ispell-send-string (concat "^" word "\n")) ; lookup the word
-    ;; Wait until ispell has processed word.
-    (while (progn
-             (accept-process-output ispell-process)
-             (not (string= "" (car ispell-filter)))))
-    ;; Remove leading empty element
-    (setq ispell-filter (cdr ispell-filter))
-    ;; ispell process should return something after word is sent.
-    ;; Tag word as valid (i.e., skip) otherwise
-    (or ispell-filter
-        (setq ispell-filter '(*)))
-    (when (consp ispell-filter)
-      (setq suggestions (ispell-parse-output (car ispell-filter))))
-    (cond
-     ((or (eq suggestions t) (stringp suggestions))
-      (message "Ispell: %s is correct" word)
-      nil)
-     ((null suggestions)
-      (error "Ispell: error in Ispell process")
-      nil)
-     (t	(car (cdr (cdr suggestions)))))))
+(eval-and-compile
+  (defun completion--ispell-wrapper (word)
+    (require 'flyspell)
+    (let (suggestions ispell-filter)
+      ;; Now check spelling of word.
+      (ispell-send-string "%\n") ; put in verbose mode
+      (ispell-send-string (concat "^" word "\n")) ; lookup the word
+      ;; Wait until ispell has processed word.
+      (while (progn
+	       (accept-process-output ispell-process)
+	       (not (string= "" (car ispell-filter)))))
+      ;; Remove leading empty element
+      (setq ispell-filter (cdr ispell-filter))
+      ;; ispell process should return something after word is sent.
+      ;; Tag word as valid (i.e., skip) otherwise
+      (or ispell-filter
+	  (setq ispell-filter '(*)))
+      (when (consp ispell-filter)
+	(setq suggestions (ispell-parse-output (car ispell-filter))))
+      (cond
+       ((or (eq suggestions t) (stringp suggestions))
+	(message "Ispell: %s is correct" word)
+	nil)
+       ((null suggestions)
+	(error "Ispell: error in Ispell process")
+	nil)
+       (t (car (cdr (cdr suggestions))))))))
 
 
 (completion-ui-register-source
- 'ispell-correct-completion-function
+ 'completion--ispell-wrapper
  :non-prefix-completion t
  :name 'ispell)
 
@@ -149,72 +159,75 @@
 ;;;=========================================================
 ;;;                        NXML
 
-(completion-ui-register-source
- 'rng-complete-qname-function
- :completion-args 1
- :other-args '(t t)
- :name 'nxml)
+(when (require 'nxml nil t)
+  (completion-ui-register-source
+   'rng-complete-qname-function
+   :completion-args 1
+   :other-args '(t t)
+   :name 'nxml))
 
 
 ;;;=========================================================
 ;;;                        Semantic
 
-(defun completion--semantic-prefix-wrapper ()
-  ;; Return prefix at point that Semantic would complete.
-  (require 'semantic-ia)
-  (when (semantic-idle-summary-useful-context-p)
-    (let ((prefix (semantic-ctxt-current-symbol (point))))
-      (setq prefix (nth (1- (length prefix)) prefix))
-      (set-text-properties 0 (length prefix) nil prefix)
-      prefix)))
+(when (require 'semantic nil t)
+
+  (defun completion--semantic-prefix-wrapper ()
+    ;; Return prefix at point that Semantic would complete.
+    (require 'semantic-ia)
+    (when (semantic-idle-summary-useful-context-p)
+      (let ((prefix (semantic-ctxt-current-symbol (point))))
+	(setq prefix (nth (1- (length prefix)) prefix))
+	(set-text-properties 0 (length prefix) nil prefix)
+	prefix)))
 
 
-(defun completion--semantic-wrapper (prefix &optional maxnum)
-  ;; Return list of Semantic completions for PREFIX at point. Optional
-  ;; argument MAXNUM is the maximum number of completions to return.
-  (require 'semantic-ia)
-  (when (semantic-idle-summary-useful-context-p)
-    (let* (
-	   ;; don't go loading in oodles of header libraries for minor
-	   ;; completions if using auto-completion-mode
-	   ;; FIXME: don't do this iff the user invoked completion manually
-	   (semanticdb-find-default-throttle
-	    (when (and (featurep 'semanticdb-find)
-		       auto-completion-mode)
-	      (remq 'unloaded semanticdb-find-default-throttle)))
+  (eval-and-compile
+    (defun completion--semantic-wrapper (prefix &optional maxnum)
+      ;; Return list of Semantic completions for PREFIX at point. Optional
+      ;; argument MAXNUM is the maximum number of completions to return.
+      (require 'semantic-ia)
+      (when (semantic-idle-summary-useful-context-p)
+	(let* (
+	       ;; don't go loading in oodles of header libraries for minor
+	       ;; completions if using auto-completion-mode
+	       ;; FIXME: don't do this iff the user invoked completion manually
+	       (semanticdb-find-default-throttle
+		(when (and (featurep 'semanticdb-find)
+			   auto-completion-mode)
+		  (remq 'unloaded semanticdb-find-default-throttle)))
 
-	   (ctxt (semantic-analyze-current-context))
-	   (acomp (semantic-analyze-possible-completions ctxt)))
-      (when (and maxnum (> (length acomp) maxnum))
-	(setq acomp (butlast acomp (- (length acomp) maxnum))))
-      (mapcar 'semantic-tag-name acomp))))
-
-
-(defun completion--semantic-enable-auto-completion nil
-  ;; set variables buffer-locally when enabling Semantic auto-completion
-  (when (eq auto-completion-source 'Semantic)
-    (set (make-local-variable 'auto-completion-override-syntax-alist)
-	 '((?. . (add word))))))
+	       (ctxt (semantic-analyze-current-context))
+	       (acomp (semantic-analyze-possible-completions ctxt)))
+	  (when (and maxnum (> (length acomp) maxnum))
+	    (setq acomp (butlast acomp (- (length acomp) maxnum))))
+	  (mapcar 'semantic-tag-name acomp)))))
 
 
-(defun completion--semantic-disable-auto-completion nil
-  ;; unset buffer-local variables when disabling Semantic auto-completion
-  (when (eq auto-completion-source 'Semantic)
-    (kill-local-variable 'auto-completion-override-syntax-alist)))
+  (defun completion--semantic-enable-auto-completion nil
+    ;; set variables buffer-locally when enabling Semantic auto-completion
+    (when (eq auto-completion-source 'semantic)
+      (set (make-local-variable 'auto-completion-override-syntax-alist)
+	   '((?. . (add word))))))
 
 
-(add-hook 'auto-completion-mode-enable-hook
-	  'completion--semantic-enable-auto-completion)
-(add-hook 'auto-completion-mode-disable-hook
-	  'completion--semantic-disable-auto-completion)
+  (defun completion--semantic-disable-auto-completion nil
+    ;; unset buffer-local variables when disabling Semantic auto-completion
+    (when (eq auto-completion-source 'semantic)
+      (kill-local-variable 'auto-completion-override-syntax-alist)))
 
 
-;; register the Semantic source
-(completion-ui-register-source
- 'completion--semantic-wrapper
- :prefix-function completion--semantic-prefix-wrapper
- :name 'semantic)
+  (add-hook 'auto-completion-mode-enable-hook
+	    'completion--semantic-enable-auto-completion)
+  (add-hook 'auto-completion-mode-disable-hook
+	    'completion--semantic-disable-auto-completion)
 
 
+  ;; register the Semantic source
+  (completion-ui-register-source
+   'completion--semantic-wrapper
+   :prefix-function completion--semantic-prefix-wrapper
+   :name 'semantic))
 
-;;; completion-ui-examples.el end here
+
+;;; completion-ui-examples.el ends here

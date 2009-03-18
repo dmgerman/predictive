@@ -257,10 +257,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
           (font (face-attribute 'completion-tooltip-face :family))
           params text)
 
-      ;; construct the tooltip text using the "overlay-local" binding
-      ;; of 'tooltip-function, or `completion-tooltip-function' if
-      ;; there is none, or failing that
-      ;; `completion-construct-tooltip-text'
+      ;; construct the tooltip text
       (setq text (funcall (completion-ui-source-tooltip-function nil overlay)
                           (overlay-get overlay 'prefix)
                           (overlay-get overlay 'completions)
@@ -450,7 +447,7 @@ sheep."
 ;; (Note: this is kinda ugly, but setting the default in the defcustom seems
 ;; to conflict with refreshing the defcustom in
 ;; `compeltion-ui-register-interface'. Since Completion-UI is almost
-;; invariably loaded before a user's customization settings, their's will
+;; invariably loaded before a user's customization settings, theirs will
 ;; still take precedence.)
 
 

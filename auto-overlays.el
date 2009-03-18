@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.5
+;; Version: 0.9.6
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.6
+;; * bug-fix in `auto-overlay-load-definition'
 ;;
 ;; Version 0.9.5
 ;; * bug-fixes in `auto-overlay-save-overlays' and `auto-overlay-load-overlays'
@@ -571,7 +574,7 @@ symbol that can be used to uniquely identify REGEXP (see
     (cond
      ;; adding first entry or at start
      ((or (eq pos t) (= (length regexps) 0)
-	  (and (integerp pos) (<= pos (length regexps))))
+	  (and (integerp pos) (<= pos 0)))
       (auto-o-prepend-regexp set-id (list definition-id class)))
      ;; adding at end
      ((or (null pos) (and (integerp pos) (>= pos (length regexps))))
