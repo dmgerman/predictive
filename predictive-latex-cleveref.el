@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.7
+;; Version: 0.8
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8
+;; * cooperate with predictive-latex-varioref.el
 ;;
 ;; Version 0.7
 ;; * added completion browser sub-menu definition
@@ -100,16 +103,18 @@
 ;; variables used to hold old definitions of label regexps
 (defvar predictive-latex-cleveref-restore-label-regexp nil)
 (defvar predictive-latex-cleveref-restore-label-definition nil)
+(defvar predictive-latex-cleveref-restore-vref-regexp nil)
 (make-variable-buffer-local
  'predictive-latex-cleveref-restore-label-regexp)
 (make-variable-buffer-local
  'predictive-latex-cleveref-restore-label-definition)
+(make-variable-buffer-local
+ 'predictive-latex-cleveref-restore-vref-definition)
 
 
 
 (defun predictive-latex-load-cleveref ()
   ;; load cleveref regexps
-
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
@@ -123,10 +128,13 @@
 	  predictive-latex-browser-submenu-alist)
 
     ;; load regexps
-    ;; \cref
+    ;; \cref and \vref
+    (setq predictive-latex-cleveref-restore-vref-regexp
+	  (auto-overlay-unload-regexp 'predictive 'brace 'vref))
     (auto-overlay-load-regexp
      'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[Cc]ref\\(\\|range\\){\\)" . 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[cCvV]ref\\(\\|range\\)\\*?{\\)"
+	. 3)
        :edge start
        :id cref
        (dict . predictive-latex-label-dict)
@@ -182,15 +190,16 @@
 				     predictive-latex-browser-submenu-alist))
   ;; Unload cleveref regexps
   (auto-overlay-unload-regexp 'predictive 'brace 'cref)
-  (auto-overlay-unload-regexp 'predictive 'brace 'Cref)
-  (auto-overlay-unload-regexp 'predictive 'brace 'crefrange)
-  (auto-overlay-unload-regexp 'predictive 'brace 'Crefrange)
+  (when predictive-latex-cleveref-restore-vref-regexp
+    (auto-overlay-load-regexp
+     'predictive 'brace predictive-latex-cleveref-restore-vref-regexp t))
   (auto-overlay-unload-regexp 'predictive 'brace 'label)
   (auto-overlay-unload-definition 'predictive 'label)
   (auto-overlay-load-regexp
    'predictive 'brace predictive-latex-cleveref-restore-label-regexp t)
   (auto-overlay-load-definition
    'predictive predictive-latex-cleveref-restore-label-definition)
+  (kill-local-variable 'predictive-latex-cleveref-restore-vref-regexp)
   (kill-local-variable 'predictive-latex-cleveref-restore-label-regexp)
   (kill-local-variable 'predictive-latex-cleveref-restore-label-definition))
 
