@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.1
+;; Version: 0.12.2
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.2
+;; * fixed `predictive-latex-jump-to-definition' and
+;;   `predictive-latex-jump-to-label-definition' to use overlay-local binding
+;;   of `completion-word-thing' when determining label at point
 ;;
 ;; Version 0.12.1
 ;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
@@ -1391,7 +1396,10 @@ definition of the same thing."
 				      (eq set-id predictive)
 				      (eq definition-id label))))))
 	  ;; look for label at point
-	  (setq word (thing-at-point 'predictive-latex-label-word))
+	  (setq word
+		(thing-at-point
+		 (let ((completion-word-thing 'predictive-latex-label-word))
+		   (auto-overlay-local-binding 'completion-word-thing))))
 	  (set-text-properties 0 (length word) nil word)
 	  (setq type "label"))
 
@@ -1474,7 +1482,10 @@ the label at point (if any)."
 				  nil '((identity auto-overlay)
 					(eq set-id predictive)
 					(eq definition-id label))))))
-	(setq label (thing-at-point 'predictive-latex-label-word))
+	(setq label
+	      (thing-at-point
+	       (let ((completion-word-thing 'predictive-latex-label-word))
+		 (auto-overlay-local-binding 'completion-word-thing))))
 	(when label (set-text-properties 0 (length label) nil label))))
 
     ;; interactively, read label from minibuffer, defaulting to what we've
