@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.5
+;; Version: 0.11.6
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.6
+;; * added `completion-fill-paragraph', plus key bindings to override
+;;   standard `fill-paragraph'
 ;;
 ;; Version 0.11.5
 ;; * bug-fix in `completion-ui-source-non-prefix-completion'
@@ -1341,7 +1345,8 @@ used if the current Emacs version lacks command remapping support."
 
 
 ;; Set the default bindings for the keymap assigned to the completion overlays
-;; if it hasn't been defined already (most likely in an init file).
+;; in `auto-completion-mode', if it hasn't been defined already (most likely
+;; in an init file).
 (unless auto-completion-overlay-map
   ;; inherit all keybindings from completion-overlay-map, then add
   ;; auto-completion specific ones below
@@ -1414,8 +1419,7 @@ used if the current Emacs version lacks command remapping support."
     ;; `auto-completion-self-insert' manually
     (completion--bind-printable-chars
      completion-auto-update-overlay-map
-     'completion-auto-update-self-insert))
-  )
+     'completion-auto-update-self-insert)))
 
 
 
@@ -1455,6 +1459,12 @@ used if the current Emacs version lacks command remapping support."
   ;; remap the deletion commands
   (completion--remap-delete-commands completion-map)
 
+  ;; remap `fill-paragraph', or rebind M-q if we can't remap
+  (if (fboundp 'command-remapping)
+      (define-key completion-map [remap fill-paragraph]
+	'completion-fill-paragraph)
+    (define-key completion-map "\M-q" 'completion-fill-paragraph))
+
   ;; if we can remap commands, remap `self-insert-command' to
   ;; `completion-self-insert'
   (if (fboundp 'command-remapping)
@@ -1462,8 +1472,7 @@ used if the current Emacs version lacks command remapping support."
 	'completion-self-insert)
     ;; otherwise, rebind all printable characters to
     ;; `completion-self-insert' manually
-    (completion--bind-printable-chars completion-map
-				      'completion-self-insert))
+    (completion--bind-printable-chars completion-map 'completion-self-insert))
   )
 
 
@@ -1495,7 +1504,12 @@ used if the current Emacs version lacks command remapping support."
     (completion--bind-printable-chars auto-completion-map
                                      'auto-completion-self-insert))
   ;; remap the deletion commands
-  (completion--remap-delete-commands auto-completion-map))
+  (completion--remap-delete-commands auto-completion-map)
+  ;; remap `fill-paragraph', or rebind M-q if we can't remap
+  (if (fboundp 'command-remapping)
+      (define-key auto-completion-map [remap fill-paragraph]
+	'completion-fill-paragraph)
+    (define-key auto-completion-map "\M-q" 'completion-fill-paragraph)))
 
 
 
@@ -2445,10 +2459,6 @@ The remaining arguments are for internal use only."
   ;; any of these without setting NON-PRFIX-COMPLETION, use any value for the
   ;; latter that is neither null nor t.
 
-  ;; set `completion-ui--activated' (buffer-locally) to enable `completion-map'
-  ;; work-around hacks
-  (setq completion-ui--activated t)
-
   ;; cancel any timer so that we don't have two running at once
   (cancel-timer completion--auto-timer)
 
@@ -2539,7 +2549,11 @@ The remaining arguments are for internal use only."
 	    (if update
 		(completion-ui-update-interfaces overlay)
 	      (completion-ui-activate-interfaces overlay))
-	    (when completion-auto-show (completion-ui-auto-show overlay))))
+	    (when completion-auto-show (completion-ui-auto-show overlay)))
+
+	  ;; set `completion-ui--activated' (buffer-locally) to enable
+	  ;; `completion-map' work-around hacks
+	  (setq completion-ui--activated t))
 	))))
 
 
@@ -3373,6 +3387,25 @@ based on current syntax table."
 	(if (eq char last-input-event)
 	    (self-insert-command 1)
 	  (insert char)))))))
+
+
+
+
+
+;;; ============================================================
+;;;                  Fill commands
+
+(defun completion-fill-paragraph (&optional justify region)
+  "Fill paragraph at or after point.
+This command first sorts out any provisional completions, before
+calling `fill-paragraph', passing any argument straight through."
+
+  ;; interactive spec copied from `fill-paragraph'
+  (interactive (progn
+		 (barf-if-buffer-read-only)
+		 (list (if current-prefix-arg 'full) t)))
+  (completion-ui-resolve-old)
+  (fill-paragraph justify region))
 
 
 
