@@ -1,8 +1,8 @@
 
-# Copyright (C) 2004-2008 Toby Cubitt
+# Copyright (C) 2004-2009 Toby Cubitt
 
 # Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-# Version: 0.6
+# Version: 0.6.1
 # URL: http://www.dr-qubit.org/emacs.php
 
 # This file is part of the Emacs Predictive Completion package.
@@ -24,8 +24,8 @@
 
 
 EMACS = emacs
-DESTDIR = ~/.emacs.d/predictive
-DICTDIR = ~/.emacs.d/predictive
+DESTDIR = $(HOME)/.emacs.d/predictive
+DICTDIR = $(HOME)/.emacs.d/predictive
 INFODIR = /usr/share/info
 
 
