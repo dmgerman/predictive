@@ -58,14 +58,17 @@
 
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\[vV]ref\\(range\\|\\)" 'predictive-latex-label-dict)
+    (push (cons "\\\\[vV]\\(\\|page\\)ref\\(range\\|\\)"
+		'predictive-latex-label-dict)
+	  predictive-latex-browser-submenu-alist)
+    (push (cons "\\\\fullref" 'predictive-latex-label-dict)
 	  predictive-latex-browser-submenu-alist)
 
     ;; load regexps
     ;; \vref
     (auto-overlay-load-regexp
      'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[vV]ref\\(\\|range\\)\\*?{\\)" . 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[vV]\\(\\|page\\)ref\\(\\|range\\)\\*?{\\)" . 3)
        :edge start
        :id vref
        (dict . predictive-latex-label-dict)
@@ -86,17 +89,47 @@
 	   (?, . (,punct-resolve none))
 	   (?} . (,punct-resolve none))))
        (face . (background-color . ,predictive-overlay-debug-color)))
-     t)))
+     t)
+    ;; \fullref
+    (auto-overlay-load-regexp
+     'predictive 'brace
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\fullref{\\)" . 3)
+       :edge start
+       :id fullref
+       (dict . predictive-latex-label-dict)
+       (priority . 40)
+       (completion-menu . predictive-latex-construct-browser-menu)
+       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
+					(?_ . (add ,word-complete))
+					(?  . (,whitesp-resolve none))
+					(?. . (add ,word-complete))
+					(t  . (reject none))))
+       (auto-completion-override-syntax-alist
+	. ((?: . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp ":"))
+		  ,word-complete))
+	   (?_ . ((lambda ()
+		    (predictive-latex-completion-add-till-regexp "\\W"))
+		  ,word-complete))
+	   (?, . (,punct-resolve none))
+	   (?} . (,punct-resolve none))))
+       (face . (background-color . ,predictive-overlay-debug-color)))
+     t)
+    ))
 
 
 
 (defun predictive-latex-unload-varioref ()
   ;; remove browser sub-menu definition
   (setq predictive-latex-browser-submenu-alist
-	(predictive-assoc-delete-all "\\\\[vV]ref\\(range\\|\\)"
+	(predictive-assoc-delete-all "\\\\[vV]\\(\\|page\\)ref\\(range\\|\\)"
+				     predictive-latex-browser-submenu-alist))
+  (setq predictive-latex-browser-submenu-alist
+	(predictive-assoc-delete-all "\\\\fullref"
 				     predictive-latex-browser-submenu-alist))
   ;; Unload cleveref regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'cref))
+  (auto-overlay-unload-regexp 'predictive 'brace 'vref)
+  (auto-overlay-unload-regexp 'predictive 'brace 'fullref))
 
 
 ;;; predictive-latex-varioref ends here
