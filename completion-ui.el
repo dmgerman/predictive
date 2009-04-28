@@ -2490,7 +2490,9 @@ The remaining arguments are for internal use only."
 	    (setq completion-function
 		    (completion-ui-source-completion-function nil update)
 		  prefix
-		    (overlay-get update 'prefix))
+		    (overlay-get update 'prefix)
+		  non-prefix-completion
+		    (overlay-get update 'non-prefix-completion))
 
 	  ;; otherwise, sort out arguments...
 	  ;; get completion-function
@@ -2513,16 +2515,17 @@ The remaining arguments are for internal use only."
 	    (unless word-thing
 	      (setq word-thing
 		    (completion-ui-source-word-thing completion-source)))
-	    ;; get non-prefix-completion unless specified in arguments
-	    (unless (and s-npcmpl
-			 (or (null non-prefix-completion)
-			     (eq non-prefix-completion t)))
-	      (setq non-prefix-completion
-		    (completion-ui-source-non-prefix-completion
-		     completion-source)))
 	    ;; --- get prefix ---
 	    (let ((completion-word-thing word-thing))
-	      (setq prefix (funcall prefix-function)))))
+	      (setq prefix (funcall prefix-function))))
+
+	  ;; get non-prefix-completion unless specified in arguments
+	  (unless (and s-npcmpl
+		       (or (null non-prefix-completion)
+			   (eq non-prefix-completion t)))
+	    (setq non-prefix-completion
+		  (completion-ui-source-non-prefix-completion
+		   completion-source))))
 
 
 	;; if auto-completing, only do so if prefix if it has requisite number
