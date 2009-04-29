@@ -238,6 +238,7 @@
 ;; Version 0.11.6
 ;; * added `completion-fill-paragraph', plus key bindings to override
 ;;   standard `fill-paragraph'
+;; * bug-fix in `complete-in-buffer'
 ;;
 ;; Version 0.11.5
 ;; * bug-fix in `completion-ui-source-non-prefix-completion'
