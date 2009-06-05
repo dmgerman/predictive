@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.1
+;; Version: 0.19.2
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.2
+;; * bug-fix in `predictive-complete'
 ;;
 ;; Version 0.19.1
 ;; * bug-fix to `completion-ui-register-source' definition
@@ -1212,9 +1215,10 @@ To set the default main dictionary, you should customize
 (defun predictive-load-dict (dict)
   "Load the dictionary DICT into the current buffer.
 
-DICT must be the name of a dictionary to be found somewhere in
-the load path. Returns the dictionary, or nil if dictionary fails
-to load. Interactively, it is read from the mini-buffer."
+DICT must either be the name of a loaded dictionary, or the name
+of a dictionary to be found somewhere in the load path. Returns
+the dictionary, or nil if dictionary fails to
+load. Interactively, it is read from the mini-buffer."
 
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
   ;; sort out argument
@@ -2343,9 +2347,16 @@ for uncapitalized version."
       (when (and predictive-ignore-initial-caps
 		 (predictive-capitalized-p prefix))
 	(setq completions
-	      (mapcar (lambda (cmpl)
-			(concat (char-to-string (upcase (aref cmpl 0)))
-				(substring cmpl 1)))
+	      (mapcar (if (eq (car pfx) 'regexp)
+			  (lambda (cmpl)
+			    (cons
+			     (concat
+			      (char-to-string (upcase (aref (car cmpl) 0)))
+			      (substring (car cmpl) 1))
+			     (cdr cmpl)))
+			(lambda (cmpl)
+			  (concat (char-to-string (upcase (aref cmpl 0)))
+				  (substring cmpl 1))))
 		      completions)))
       ;; return the completions
       completions)))
