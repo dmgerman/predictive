@@ -668,9 +668,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
+	(append (auto-completion-lookup-behaviour nil ?w 'no-overlay)
+	      (auto-completion-lookup-behaviour nil ?. 'no-overlay)
+	      (auto-completion-lookup-behaviour nil ?  'no-overlay))
 
     ;; %'s start comments that last till end of line
     (auto-overlay-load-definition
