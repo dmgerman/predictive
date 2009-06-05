@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.6
+;; Version: 0.11.7
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.8
+;; * added M-\ word-constituent binding
+;;
+;; Version 0.11.7
+;; * bug-fixes in `auto-completion-self-insert' and
+;;   `completion-backward-delete'
 ;;
 ;; Version 0.11.6
 ;; * added `completion-fill-paragraph', plus key bindings to override
@@ -1382,6 +1389,13 @@ used if the current Emacs version lacks command remapping support."
       "Insert \"-\" as though it were a word-constituent."
       (interactive)
       (auto-completion-self-insert ?- ?w t)))
+
+  ;; M-\ inserts "\" as a word-constituent
+  (define-key auto-completion-overlay-map "\M-\\"
+    (lambda ()
+      "Insert \"\\\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?\\ ?w t)))
 
 ;;;   ;; M-/ inserts "/" as a word-constituent
 ;;;   (define-key auto-completion-overlay-map "\M-/"
@@ -3043,7 +3057,7 @@ green over night."
 ;;; ===============================================================
 ;;;                Self-insert functions
 
-(defun auto-completion-lookup-behaviour (&optional char syntax)
+(defun auto-completion-lookup-behaviour (&optional char syntax no-overlay)
   "Return syntax-dependent behaviour
 of character CHAR and/or syntax-class SYNTAX. At least one of
 these must be supplied. If both are supplied, SYNTAX overrides the
@@ -3054,19 +3068,25 @@ Returns a three-element list:
   (RESOLVE COMPLETE INSERT)
 
 containing the resolve-behaviour, completion-behaviour and
-insert-behaviour."
+insert-behaviour.
+
+The \"overlay-local\" bindings of `auto-completion-syntax-alist'
+and `auto-completion-override-syntax-alist' are used when they
+exist, unless NO-OVERLAY is non-nil."
 
   ;; SYNTAX defaults to syntax-class of CHAR
   (when (and char (not syntax)) (setq syntax (char-syntax char)))
 
   ;; get syntax alists
   (let ((syntax-alist
-         (if (fboundp 'auto-overlay-local-binding)
+         (if (and (fboundp 'auto-overlay-local-binding)
+		  (not no-overlay))
              (auto-overlay-local-binding
               'auto-completion-syntax-alist)
            auto-completion-syntax-alist))
         (override-alist
-         (if (fboundp 'auto-overlay-local-binding)
+         (if (and (fboundp 'auto-overlay-local-binding)
+		  (not no-overlay))
              (auto-overlay-local-binding
               'auto-completion-override-syntax-alist)
            auto-completion-override-syntax-alist))
@@ -3247,9 +3267,13 @@ overlays."
 	;; words being deleted
 	(if (= (point) (overlay-start overlay))
 	    (progn
-	      (setq prefix (concat (overlay-get overlay 'prefix) (string char))
+	      (setq prefix (concat (overlay-get overlay 'prefix)
+				   (string char))
 		    wordstart t)
-	      (completion-ui-deactivate-interfaces-pre-update overlay))
+	      (completion-ui-deactivate-interfaces-pre-update overlay)
+	      (completion-ui-setup-overlay
+	       prefix (when overlay (1+ (overlay-get overlay 'prefix-length)))
+	       nil nil nil nil nil overlay))
 	  ;; otherwise, delete overlay (effectively accepting the old
 	  ;; completion) and behave as if no completion was in progress
 	  (completion-ui-delete-overlay overlay)
@@ -3304,12 +3328,8 @@ overlays."
 	(completion-overwrite-word-at-point word-thing))
 
       (cond
-       ;; if a prefix has been set, setup overlay with the prefix, and do
-       ;; completion
+       ;; if a prefix has been set, do completion
        (prefix
-	(completion-ui-setup-overlay
-	 prefix (when overlay (1+ (overlay-get overlay 'prefix-length)))
-	 nil nil nil nil nil overlay)
 	(complete-in-buffer
 	 auto-completion-source nil 'not-set 'auto overlay))
 
@@ -3536,8 +3556,10 @@ enabled, complete what remains of that word."
 		       auto-completion-source overlay))
 		     (prefix (let ((completion-word-thing word-thing))
 			       (funcall prefix-fun))))
-		(completion-ui-setup-overlay
-		 prefix nil nil nil nil nil nil overlay)
+		(setq overlay
+		      (completion-ui-setup-overlay
+		       prefix nil nil nil auto-completion-source
+		       nil nil overlay))
 		(move-overlay overlay (point) (point))))
 
 	    ;; if there's no existing timer, set one up to complete remainder
