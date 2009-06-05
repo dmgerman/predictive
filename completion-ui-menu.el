@@ -331,8 +331,7 @@ and OVERLAY. They should return menu keymaps."
   (let* ((completions
 	  (funcall (completion-ui-source-completion-function nil overlay)
 		   (overlay-get overlay 'prefix)))
-	 (menu (funcall sub-menu-func
-			(overlay-get overlay 'completions)
+	 (menu (funcall sub-menu-func completions
 			menu-item-func sub-menu-func overlay)))
     ;; ... with an item added for switching to the basic completion
     ;; menu
