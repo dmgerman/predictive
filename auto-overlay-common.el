@@ -45,10 +45,11 @@
 
 
 (defun auto-overlays-at-point (&optional point prop-test inactive)
-  "Return overlays overlapping POINT (or the point, if POINT is
-null). If PROP-TEST is supplied, it should be a list which
-specifies a property test with one of the following forms (or a
-list of such lists if more than one property test is required):
+  "Return overlays overlapping POINT
+(or the point, if POINT is null). If PROP-TEST is supplied, it
+should be a list which specifies a property test with one of the
+following forms (or a list of such lists if more than one
+property test is required):
 
   (FUNCTION PROPERTY)
 
@@ -59,7 +60,7 @@ list of such lists if more than one property test is required):
 where PROPERTY indicates an overlay property name (a symbol), and
 VALUE indicates an arbitrary value or lisp expression.
 
-For each overlay between START and END, first the values
+For each overlay overlapping POINT, first the values
 corresponding to the property names are retrieved from the
 overlay, then FUNCTION is called with the properties values
 followed by the other values as its arguments. The test is
