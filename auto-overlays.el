@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.6
+;; Version: 0.9.7
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.7
+;; * added `auto-o-schedule-delete-in-front-or-behind-suicide' to simulate
+;;   missing `delete-in-front-hooks' and `delete-behind-hooks' overlay
+;;   properties
 ;;
 ;; Version 0.9.6
 ;; * bug-fix in `auto-overlay-load-definition'
@@ -815,12 +820,16 @@ refinitions are the same as when the overlays were saved."
     (when buffer (set-buffer buffer))
     ;; run initialisation hooks
     (run-hooks 'auto-overlay-load-hook)
-    ;; add hook to runs all the various functions scheduled be run after a
+    ;; add hook to run all the various functions scheduled be run after a
     ;; buffer modification
     (add-hook 'after-change-functions 'auto-o-run-after-change-functions
 	      nil t)
     ;; add hook to schedule an update after a buffer modification
     (add-hook 'after-change-functions 'auto-o-schedule-update nil t)
+    ;; add hook to simulate missing `delete-in-front-hooks' and
+    ;; `delete-behind-hooks' overlay properties
+    (add-hook 'after-change-functions
+	      'auto-o-schedule-delete-in-front-or-behind-suicide nil t)
 
     ;; set enabled flag for regexp set, and make sure buffer is in buffer list
     ;; for the regexp set
@@ -842,9 +851,8 @@ refinitions are the same as when the overlays were saved."
 	     (+ i 1) lines))
 	  (auto-overlay-update nil nil set-id)
 	  (forward-line 1))
-	(message "Scanning for auto-overlays...done"))
-      ))
-)
+	(message "Scanning for auto-overlays...done")))
+    ))
 
 
 
@@ -1183,8 +1191,18 @@ overlays were saved."
 		  (>= (1+ (cdar pending)) (car (cadr pending))))
 	(setcdr (car pending) (max (cdar pending) (cdr (cadr pending))))
 	(setcdr pending (cddr pending)))
-      ))
-)
+      )))
+
+
+
+(defun auto-o-schedule-delete-in-front-or-behind-suicide (start end len)
+  ;; Schedule `auto-o-suicide' for any overlay that has had characters deleted
+  ;; in front or behind it, to simulate missing `delete-in-front-hooks' and
+  ;; `delete-behind-hooks' overlay properties
+  (unless (= len 0)
+    (dolist (o (auto-overlays-at-point nil '(identity auto-overlay-match)))
+      (when (or (= (overlay-end o) start) (= (overlay-start o) end))
+	(add-to-list 'auto-o-pending-suicides o)))))
 
 
 
@@ -1192,8 +1210,7 @@ overlays were saved."
   ;; Schedule `auto-o-suicide' to run after buffer modification is
   ;; complete. It will be run by `auto-o-run-after-change-functions'. Assigned
   ;; to overlay modification and insert in-front/behind hooks.
-  (unless modified (add-to-list 'auto-o-pending-suicides o-self))
-)
+  (unless modified (add-to-list 'auto-o-pending-suicides o-self)))
 
 
 
@@ -1330,8 +1347,8 @@ overlays were saved."
 		      ;; same one again, it will just be ignored)
 		      (goto-char (+ (match-beginning 0) 1)))))
 		(forward-line 1))
-	      ))))))
-)
+	      )))
+	))))
 
 
 
