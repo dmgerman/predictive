@@ -31,6 +31,13 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.3.2
+;; * changed `predictive-auto-dict-unload' to use `predictive-unload-dict'
+;;   instead of `dictree-unload', so that in the rare event of an auto-dict
+;;   being shared between buffers (can happen e.g. when different versions of
+;;   a file under version control are loaded) the dictionary isn't unloaded if
+;;   it's still needed
+;;
 ;; Version 0.3.1
 ;; * updated for compatibility with new dict-tree.el
 ;; * reinstate fixed `predictive-auto-dict-suicide' function, since it's
@@ -280,7 +287,8 @@
 (defun predictive-auto-dict-unload (name &optional file dont-save)
   "Unload and possibly save the current buffer's NAME dictionary."
   (when (buffer-file-name)
-    (dictree-unload (eval (predictive-auto-dict-name name file)) dont-save)))
+    (predictive-unload-dict
+     (eval (predictive-auto-dict-name name file)) dont-save)))
 
 
 (defun predictive-auto-dict-save (name &optional file)
