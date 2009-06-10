@@ -32,11 +32,13 @@
 ;;; Change Log:
 ;;
 ;; Version 0.3.2
-;; * changed `predictive-auto-dict-unload' to use `predictive-unload-dict'
+;; * modified `predictive-auto-dict-unload' to use `predictive-unload-dict'
 ;;   instead of `dictree-unload', so that in the rare event of an auto-dict
 ;;   being shared between buffers (can happen e.g. when different versions of
 ;;   a file under version control are loaded) the dictionary isn't unloaded if
 ;;   it's still needed
+;; * modified `predictive-auto-dict-name' to base auto-dict name on complete
+;;   file name, including extension
 ;;
 ;; Version 0.3.1
 ;; * updated for compatibility with new dict-tree.el
@@ -216,8 +218,9 @@
   ;; Return a dictionary name constructed from NAME and the buffer name
   `(intern
     (concat "dict-" ,name "-"
-	    (file-name-sans-extension
-	     (file-name-nondirectory (or ,file (buffer-file-name)))))))
+	    (replace-regexp-in-string
+	     "\\." "-" (file-name-nondirectory
+			(or ,file (buffer-file-name)))))))
 
 
 
