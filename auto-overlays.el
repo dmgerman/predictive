@@ -457,8 +457,7 @@ Comparison is done with 'eq."
       (while (setq el (nth i alist))
 	(when (eq key (car el)) (throw 'found i))
 	(setq i (1+ i))
-	nil)))
-)
+	nil))))
 
 
 
@@ -471,8 +470,7 @@ Comparison is done with 'equal."
       (while (setq el (nth i list))
 	(when (equal item el) (throw 'found i))
 	(setq i (1+ i))
-	nil)))
-)
+	nil))))
 
 
 
@@ -493,9 +491,13 @@ If START or END is negative, it counts from the end."
       (while (< start end)
 	(push (nth start list) res)
 	(setq start (1+ start)))
-      (nreverse res)))
-)
+      (nreverse res))))
 
+
+(defmacro auto-o-adjoin (item list)
+  "Cons ITEM onto front of LIST if it's not already there.
+Comparison is done with `eq'."
+  `(if (memq ,item ,list) ,list (setf ,list (cons ,item ,list))))
 
 
 
@@ -1202,7 +1204,7 @@ overlays were saved."
   (unless (= len 0)
     (dolist (o (auto-overlays-at-point nil '(identity auto-overlay-match)))
       (when (or (= (overlay-end o) start) (= (overlay-start o) end))
-	(add-to-list 'auto-o-pending-suicides o)))))
+	(auto-o-adjoin o auto-o-pending-suicides)))))
 
 
 
@@ -1210,7 +1212,7 @@ overlays were saved."
   ;; Schedule `auto-o-suicide' to run after buffer modification is
   ;; complete. It will be run by `auto-o-run-after-change-functions'. Assigned
   ;; to overlay modification and insert in-front/behind hooks.
-  (unless modified (add-to-list 'auto-o-pending-suicides o-self)))
+  (unless modified (auto-o-adjoin o-self auto-o-pending-suicides)))
 
 
 
