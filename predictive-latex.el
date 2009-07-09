@@ -774,8 +774,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		. ((?w . (add
 			  (lambda ()
 			    (let ((pos (point)))
-			      (when (re-search-forward
-				     "[[:alpha:]]*?}" (line-end-position) t)
+			      (when (and (re-search-forward
+					  "[[:alpha:]]*?}"
+					  (line-end-position) t)
+					 (= (match-beginning 0) pos))
 				(backward-char)
 				(delete-region pos (point))))
 			    ',word-complete)
