@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.2
+;; Version: 0.12.3
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,11 +30,14 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.12.3
+;; * fixed "\" `auto-completion-override-alist' definition
+;;
 ;; Version 0.12.2
 ;; * fixed `predictive-latex-jump-to-definition' and
 ;;   `predictive-latex-jump-to-label-definition' to use overlay-local binding
 ;;   of `completion-word-thing' when determining label at point
-;; * Fixed completion behaviour after single-character LaTeX commands
+;; * fixed completion behaviour after single-character LaTeX commands
 ;;
 ;; Version 0.12.1
 ;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
@@ -1150,11 +1153,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (setq auto-completion-override-syntax-alist
 	  (append
 	   `((?\\ . ((lambda ()
-		       (if (and (char-before) (= (char-before) ?\\)
-				(or (not (char-before (1- (point))))
-				    (not (= (char-before (1- (point)))
-					    ?\\))))
-			   'add ',punct-resolve))
+		       (let ((i 0))
+			 (save-excursion
+			   (while (= (char-before) ?\\)
+			     (backward-char)
+			     (incf i)))
+			 (if (oddp i) 'add ',punct-resolve)))
 		     ,word-complete))
 	     (?$ . (,punct-resolve none))
 	     (?_ . (,punct-resolve none))
