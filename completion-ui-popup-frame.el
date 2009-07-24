@@ -257,7 +257,8 @@ If no OVERLAY is supplied, tries to find one at point."
            (frame
             (or (overlay-get overlay 'popup-frame)
                 (make-frame
-                 `((user-size . t)
+                 `((name . "*completion-ui*")
+		   (user-size . t)
                    (user-position . t)
                    (minibuffer . nil)
                    (left-fringe . 0)
