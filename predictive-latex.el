@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.3
+;; Version: 0.12.4
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.4
+;; * Tried (yet again!) to fix bug in "\begin{" regexp's
+;;   `auto-completion-syntax-alist' definition that caused characters on same
+;;   line as "\begin{" to be deleted
 ;;
 ;; Version 0.12.3
 ;; * fixed "\" `auto-completion-override-alist' definition
@@ -753,10 +758,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		. ((?w . (add
 			  (lambda ()
 			    (let ((pos (point)))
-			      (when (re-search-forward
-				     "[[:alpha:]]*?}" (line-end-position) t)
+			      (when (and
+				     (re-search-forward
+				      "[[:alpha:]]*?}" (line-end-position) t)
+				     (= (match-beginning 0) pos))
 				(backward-char)
-				(delete-region pos (point))))
+				(delete-region pos (point)))
+			      (goto-char pos))
 			    ',word-complete)
 			  t))))
 	       ;; (auto-completion-override-syntax-alist
