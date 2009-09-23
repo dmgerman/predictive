@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.7
+;; Version: 0.11.9
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.9
+;; * added C-@ binding (produced by C-<space> in terminals)
+;; * fixed compile warning in `completion-ui-register-source'
 ;;
 ;; Version 0.11.8
 ;; * added M-\ word-constituent binding
@@ -1345,8 +1349,9 @@ used if the current Emacs version lacks command remapping support."
   ;; C-<tab> scoots ahead
   (define-key completion-overlay-map [(control tab)]
     'completion-extend-prefix)
-  ;; C-<space> abandons
+  ;; C-<space> abandons (C-<space> produces C-@ in terminals)
   (define-key completion-overlay-map [?\C- ] 'completion-reject)
+  (define-key completion-overlay-map "\C-@" 'completion-reject)
   ;; ;; remap the deletion commands
   (completion--remap-delete-commands completion-overlay-map)
   )
@@ -2052,10 +2057,10 @@ pop-up frame. The menu functions should return menu keymaps."
  	   (arglist (cond
  		     ;; compiled function
  		     ((byte-code-function-p funcdef)
- 		      (setq arglist (aref funcdef 0)))
+ 		      (aref funcdef 0))
  		     ;; uncompiled function
  		     ((and (listp funcdef) (eq (car funcdef) 'lambda))
- 		      (setq arglist (nth 1 funcdef)))
+ 		      (nth 1 funcdef))
  		     (t (error "completion-ui-register-source:\
  missing :completion-args or invalid completion function, %s"
  			       completion-function)))))
