@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.2
+;; Version: 0.19.3
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.3
+;; * dictionary-related commands now default to the current dict
+;; * added informative messages indicating outcome of dictionary-related
+;;   commands
 ;;
 ;; Version 0.19.2
 ;; * bug-fix in `predictive-complete'
@@ -398,8 +403,8 @@ lost when the dictionary is unloaded. See also
   "*Whether to save dictionaries when a buffer is killed.
 
 If non-nil, modifications to dictionaries that are used by a
-buffer will automatically be saved when the buffer is killed, for
-dictionaries that have their autosave flag set (see
+buffer will automatically be saved when the buffer is killed,
+for dictionaries that have their autosave flag set (see
 `predictive-dict-autosave')."
   :group 'predictive
   :type 'boolean)
@@ -1478,7 +1483,13 @@ If saved to a file, the dumped data can be used to populate a
 dictionary when creating it using `predictive-create-dict'. See
 also `predictive-dump-dict-to-file'."
 
-  (interactive (list (read-dict "Dictionary to dump: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary to dump (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary to dump: "))
+		      (car (predictive-current-dict)))
 		     (read-buffer "Buffer to dump to: "
 				  (buffer-name (current-buffer)))))
   (dictree-dump-to-buffer dict buffer 'string))
@@ -1499,7 +1510,13 @@ The dumped data can be used to populate a dictionary when
 creating it using `predictive-create-dict'. See also
 `predictive-dump-dict-to-buffer'."
 
-  (interactive (list (read-dict "Dictionary to dump: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary to dump (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary to dump: "))
+		      (car (predictive-current-dict)))
 		     (read-file-name "File to dump to: ")
 		     current-prefix-arg))
   (dictree-dump-to-file dict filename 'string overwrite))
@@ -1516,7 +1533,13 @@ will be incremented by WEIGHT \(or by 1 if WEIGHT is not supplied).
 
 Interactively, WORD and DICT are read from the minibuffer, and WEIGHT is
 specified by the prefix argument."
-  (interactive (list (read-dict "Dictionary to add to: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary to add to (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary to add to: "))
+		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to add"
 			      (let ((str (thing-at-point 'word)))
@@ -1526,8 +1549,6 @@ specified by the prefix argument."
 
   ;; if called interactively, sort out arguments
   (when (interactive-p)
-    ;; throw error if no dict supplied
-    (unless dict (error "No dictionary supplied"))
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
@@ -1583,7 +1604,13 @@ specified by the prefix argument."
 (defun predictive-remove-from-dict (dict word)
   "Delete WORD from predictive mode dictionary DICT.
 Interactively, WORD and DICT are read from the minibuffer."
-  (interactive (list (read-dict "Dictionary to delete from: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary to delete from (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary to delete from: "))
+		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to delete"
 			      (let ((str (thing-at-point 'word)))
@@ -1592,8 +1619,6 @@ Interactively, WORD and DICT are read from the minibuffer."
 
   ;; if called interactively, sort out arguments
   (when (interactive-p)
-    ;; throw error if no dict supplied
-    (unless dict (error "No dictionary supplied"))
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
@@ -1617,7 +1642,13 @@ Interactively, WORD and DICT are read from the minibuffer."
   "Add PREFIX to the list of prefixes for WORD in dictionary DICT.
 The weight of PREFIX will automatically be kept at least as large
 as the weight of WORD."
-  (interactive (list (read-dict "Dictionary: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary: "))
+		      (car (predictive-current-dict)))
 		     (setq word (read-string
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
@@ -1659,8 +1690,14 @@ as the weight of WORD."
 
       (let ((prefixes (dictree-get-property dict word :prefixes)))
 	;; unless prefix is already defined, define it
-	(unless (member prefix prefixes)
-	  (dictree-put-property dict word :prefixes (cons prefix prefixes))))
+	(if (member prefix prefixes)
+	    (when (interactive-p)
+	      (message "\"%s\" is already a prefix of \"%s\" in dictionary %s"
+		       prefix word (dictree-name dict)))
+	  (dictree-put-property dict word :prefixes (cons prefix prefixes))
+	  (when (interactive-p)
+	    (message "Defined \"%s\" as prefix of \"%s\" in dictionary %s"
+		     prefix word (dictree-name dict)))))
 
       ;; make sure prefix's weight is at least as large as word's
       (let ((weight (dictree-lookup dict word))
@@ -1691,7 +1728,13 @@ See `predictive-define-prefix' and 'predictive-guess-prefix-suffixes'."
   "Remove PREFIX from list of prefixes for WORD in dictionary DICT.
 The weight of PREFIX will no longer automatically be kept at
 least as large as the weight of WORD."
-  (interactive (list (read-dict "Dictionary: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary: "))
+		      (car (predictive-current-dict)))
 		     (setq word (read-string
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
@@ -1717,10 +1760,12 @@ least as large as the weight of WORD."
   ;; delete prefix, displaying message if called interactively
   (let ((prefixes (dictree-get-property dict word :prefixes)))
     (if (and (interactive-p) (not (member prefix prefixes)))
-	(message "\"%s\" is not defined as a prefix of \"%s\"" prefix word)
+	(message "\"%s\" is not a prefix of \"%s\" in dictionary %s"
+		 prefix word (dictree-name dict))
       (dictree-put-property dict word :prefixes (delete prefix prefixes))
       (when (interactive-p)
-	(message "Prefix \"%s\" of \"%s\" removed" prefix word)))))
+	(message "Prefix \"%s\" of \"%s\" removed from dictionary %s"
+		 prefix word (dictree-name dict))))))
 
 
 
@@ -1739,7 +1784,13 @@ it is zero or negative, all prefix words will be included.
 
 Interactively, DICT and PREFIX are read from the minibuffer, and
 LENGTH is the integer prefix argument."
-  (interactive (list (read-dict "Dictionary: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary: "))
+		      (car (predictive-current-dict)))
 		     (read-string "Prefix (leave blank for all): ")
 		     (prefix-numeric-value current-prefix-arg)))
 
@@ -1806,7 +1857,13 @@ is greater than that of other words.
 
 If PREFIX is null, remove all prefix relationships (prompting for
 confirmation first if called interactively)."
-  (interactive (list (read-dict "Dictionary: ")
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary: "))
+		      (car (predictive-current-dict)))
 		     (setq prefix (read-string "Prefix: "))))
 
   ;; sort out arguments
