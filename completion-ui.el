@@ -1511,18 +1511,27 @@ used if the current Emacs version lacks command remapping support."
 ;; already (most likely in an init file). This keymap is active when
 ;; `auto-completion-mode' is enabled.
 (unless auto-completion-map
-  ;; if we can remap commands, remap `self-insert-command'
+  ;; if we can remap commands, remap `self-insert-command' and
+  ;; `mouse-yank-at-click'
   (if (fboundp 'command-remapping)
       (progn
         (setq auto-completion-map (make-sparse-keymap))
         (define-key auto-completion-map [remap self-insert-command]
-          'auto-completion-self-insert))
+          'auto-completion-self-insert)
+	(define-key auto-completion-map [remap mouse-yank-at-click]
+	  'auto-completion-mouse-yank-at-click))
     ;; otherwise, create a great big keymap where all printable characters run
     ;; `auto-completion-self-insert', which decides what to do based on the
     ;; character's syntax
     (setq auto-completion-map (make-keymap))
     (completion--bind-printable-chars auto-completion-map
-                                     'auto-completion-self-insert))
+                                     'auto-completion-self-insert)
+    (define-key auto-completion-map [mouse-2]
+      'auto-completion-mouse-yank-at-click)
+    (define-key auto-completion-map [left-fringe mouse-2]
+      'auto-completion-mouse-yank-at-click)
+    (define-key auto-completion-map [right-fringe mouse-2]
+      'auto-completion-mouse-yank-at-click))
   ;; remap the deletion commands
   (completion--remap-delete-commands auto-completion-map)
   ;; remap `fill-paragraph', or rebind M-q if we can't remap
@@ -3435,6 +3444,22 @@ calling `fill-paragraph', passing any argument straight through."
 		 (list (if current-prefix-arg 'full) t)))
   (completion-ui-resolve-old)
   (fill-paragraph justify region))
+
+
+
+
+
+;;; ============================================================
+;;;                  Commands
+
+(defun auto-completion-mouse-yank-at-click (click arg)
+  "Insert the last stretch of killed text at the position clicked on.
+Temporarily disables `auto-completion-mode', then calls
+`mouse-yank-at-click'."
+
+  (interactive "e\nP")
+  (let ((auto-completion-mode nil))
+    (mouse-yank-at-click click arg)))
 
 
 
