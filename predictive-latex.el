@@ -2458,12 +2458,17 @@ Intended to be used as the \"resolve\" entry in
 	  (when (= (mod pos 2) 1) (backward-char))))
       ;; go forward, counting \ as part of word, \\ as entire word
       (dotimes (i (or n 1))
-	(when (re-search-forward "\\\\\\|\\w" nil t)
-	  (backward-char))
-	(re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
-	(cond
-	 ((= (char-before) ?\n) (backward-char))
-	 ((= (char-after) ?*) (forward-char)))))))
+	(if (or (and (= (char-before) ?\\)
+		     (not (= (char-syntax (char-before)) ?w)))
+		(and (= (char-syntax (char-before)) ?w)
+		     (= (char-after) ?*)))
+	    (forward-char)
+	  (when (re-search-forward "\\\\\\|\\w" nil t)
+	    (backward-char))
+	  (re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
+	  (cond
+	   ((= (char-before) ?\n) (backward-char))
+	   ((= (char-after) ?*) (forward-char))))))))
 
 
 
