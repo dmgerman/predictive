@@ -50,6 +50,9 @@
 ;; * dictionary-related commands now default to the current dict
 ;; * added informative messages indicating outcome of dictionary-related
 ;;   commands
+;; * added `predictive-forward-char', `predictive-backward-char',
+;;   `predictive-next-line' and `predictive-previous-line' commands to move
+;;   point and then display any help text
 ;;
 ;; Version 0.19.2
 ;; * bug-fix in `predictive-complete'
@@ -1178,24 +1181,53 @@ When within a pop-up frame:\
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
 
-(defun predictive-display-help (dummy1 word &rest ignored)
+(defun predictive-display-help (&optional dummy1 word &rest ignored)
   "Display any help for WORD from the current dictionary.
 Remaining arguments are ignored (they are there to allow
 `predictive-display-help' to be used in the
 `completion-accept-functions' hook)."
-  (interactive (list nil
-		     (thing-at-point
-		      (completion-ui-source-word-thing 'predictive))))
 
-  (when word
-    (let ((dict (predictive-current-dict))
-	  help)
-      ;; if current dict is a list of dicts, wrap them in temporary meta-dict
-      (when (listp dict)
-	(setq dict
-	      (dictree-meta-dict-create dict nil nil nil t (lambda (a b) a))))
-      (when (setq help (dictree-get-property dict word :help))
-	(message help)))))
+  (unless word
+    (setq word
+	  (thing-at-point (completion-ui-source-word-thing 'predictive))))
+
+  (let ((dict (predictive-current-dict))
+	help)
+    ;; if current dict is a list of dicts, wrap them in temporary meta-dict
+    (when (listp dict)
+      (setq dict
+	    (dictree-meta-dict-create dict nil nil nil t (lambda (a b) a))))
+    (when (setq help (dictree-get-property dict word :help))
+      (message help))))
+
+
+(defun predictive-forward-char (&optional n)
+  "Call `forward-char', then display any help for LaTeX command at point."
+  (interactive "p")
+  (forward-char n)
+  (predictive-display-help))
+
+
+(defun predictive-backward-char (&optional n)
+  "Call `backward-char', then display any help for LaTeX command at point."
+  (interactive "p")
+  (backward-char n)
+  (predictive-display-help))
+
+
+(defun predictive-next-line (&optional n try-vscroll)
+  "Call `next-line', then display any help for LaTeX command at point."
+  (interactive "p")
+  (next-line n try-vscroll)
+  (predictive-display-help))
+
+
+(defun predictive-previous-line (&optional n try-vscroll)
+  "Call `previous-line', then display any help for LaTeX command at point."
+  (interactive "p")
+  (previous-line n try-vscroll)
+  (predictive-display-help))
+
 
 
 

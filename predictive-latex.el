@@ -36,6 +36,7 @@
 ;;   line as "\begin{" to be deleted
 ;; * fixed `predictive-latex-forward-word' so that it treats "*" at end of
 ;;   word as part of word
+;; * remap motion commands to predictive versions that display any help text
 ;;
 ;; Version 0.12.3
 ;; * fixed "\" `auto-completion-override-alist' definition
@@ -703,23 +704,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (dict . t)
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      ("^\\\\usepackage{"
-;;; 	       :edge start
-;;; 	       (dict . t)
-;;; 	       (priority . 40)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\label{\\)" . 3)
 	       :edge start
 	       :id label
 	       (dict . t)
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      ("^\\\\label{"
-;;; 	       :edge start
-;;; 	       :id label-bol
-;;; 	       (dict . t)
-;;; 	       (priority . 40)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(eq\\)?ref{\\)" . 3)
 	       :edge start
@@ -749,10 +740,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       :edge start
 	       (dict . t) (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\cite{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . t) (priority . 40)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
@@ -774,12 +762,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\begin{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . predictive-latex-env-dict) (priority . 40)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 3)
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
@@ -798,36 +781,21 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\end{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . predictive-latex-env-dict) (priority . 40)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
 	       :edge start
 	       (dict . predictive-buffer-dict) (priority . 40)
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\text{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . predictive-buffer-dict) (priority . 40)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
 	       (dict . dict-latex-docclass) (priority . 40)
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . dict-latex-docclass) (priority . 40)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
 	       (dict . dict-latex-bibstyle)
@@ -835,31 +803,14 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . dict-latex-bibstyle)
-;;; 	       (priority . 40)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      ;; Note: the following regexps contain a lot of \'s because they
 	      ;; have to check whether number of \'s in front of { is even or
-	      ;; odd. Also, since auto-overlay regexps aren't allowed to match
-	      ;; across lines, we have to deal with the case of { or } at the
-	      ;; start of a line separately.
-;;; 	      (("^\\({\\)" . 1)
-;;; 	       :edge start
-;;; 	       (priority . 40)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+	      ;; odd.
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\({\\)" . 3)
 	       :edge start
 	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(}\\)" . 1)
-;;; 	       :edge end
-;;; 	       (priority . 40)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(}\\)" . 3)
 	       :edge end
 	       (priority . 40)
@@ -887,22 +838,11 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\\\[\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . predictive-latex-math-dict) (priority . 30)
-;;; 	       (completion-menu-function
-;;; 		. predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
 	       :edge end
 	       (dict . predictive-latex-math-dict) (priority . 30)
 	       (completion-menu-function . predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-;;; 	      (("^\\(\\\\\\]\\)" . 1)
-;;; 	       :edge end
-;;; 	       (dict . predictive-latex-math-dict) (priority . 30)
-;;; 	       (completion-menu-function . predictive-latex-construct-browser-menu)
-;;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      ))
 
 
@@ -915,24 +855,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (dict . predictive-latex-preamble-dict)
 	       (priority . 20)
 	       (completion-menu-function . predictive-latex-construct-browser-menu))
-;;; 	      (("^\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 1)
-;;; 	       :edge start
-;;; 	       (dict . predictive-latex-preamble-dict)
-;;; 	       (priority . 20)
-;;; 	       (completion-menu-function
-;;;	        . predictive-latex-construct-browser-menu))
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
 	       :edge end
 	       (dict . predictive-latex-preamble-dict)
 	       (priority . 20)
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu))
-;;; 	      (("^\\(\\\\begin{document}\\)" . 1)
-;;; 	       :edge end
-;;; 	       (dict . predictive-latex-preamble-dict)
-;;; 	       (priority . 20)
-;;; 	       (completion-menu-function
-;;;	        . predictive-latex-construct-browser-menu))
 	      ))
 
 
@@ -955,14 +883,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (priority . 10)
        (completion-menu-function . predictive-latex-construct-browser-menu)
        (face . (background-color . ,predictive-overlay-debug-colour))))
-;;;     (auto-overlay-load-regexp
-;;;      'predictive 'environment
-;;;      `(("^\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
-;;;        :edge start
-;;;        (dict . predictive-latex-math-dict)
-;;;        (priority . 10)
-;;;        (completion-menu-function . predictive-latex-construct-browser-menu)
-;;;        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
      `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
@@ -971,14 +891,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (priority . 10)
        (completion-menu-function . predictive-latex-construct-browser-menu)
        (face . (background-color . ,predictive-overlay-debug-colour))))
-;;;     (auto-overlay-load-regexp
-;;;      'predictive 'environment
-;;;      `(("^\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 1)
-;;;        :edge end
-;;;        (dict . predictive-latex-math-dict)
-;;;        (priority . 10)
-;;;        (completion-menu-function . predictive-latex-construct-browser-menu)
-;;;        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
      '(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
@@ -986,13 +898,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (priority . 10)
        (dict . nil)
        (face . nil)))
-;;;     (auto-overlay-load-regexp
-;;;      'predictive 'environment
-;;;      '(("^\\\\begin{\\(.*?\\)}" 0 1)
-;;;        :edge start
-;;;        (priority . 10)
-;;;        (dict . nil)
-;;;        (face . nil)))
     (auto-overlay-load-regexp
      'predictive 'environment
      `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 3)
@@ -1000,13 +905,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (priority . 10)
        (dict . nil)
        (face . nil)))
-;;;     (auto-overlay-load-regexp
-;;;      'predictive 'environment
-;;;      `(("^\\\\end{\\(.*?\\)}" 0 1)
-;;;        :edge end
-;;;        (priority . 10)
-;;;        (dict . nil)
-;;;        (face . nil)))
 
 
     ;; \documentclass defines the document type. Through the use of a special
@@ -1017,10 +915,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      '(predictive-latex-docclass
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-latex-docclass
-;;;        (("^\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
 
 
     ;; \usepackage loads a latex package. Through the use of a special
@@ -1031,10 +925,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      '(predictive-latex-usepackage
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}"
 	 . 4))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-latex-usepackage
-;;;        (("^\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 2))))
 
 
     ;; \label creates a cross-reference label. Through the use of a special
@@ -1046,12 +936,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id label
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-label-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id label-bol
-;;;        (("^\\\\label{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-label-dict))))
 
     ;; \newcommand defines a new command. Through the use of a special
     ;; "auto-dict" regexp class defined below, this automagically adds the
@@ -1064,12 +948,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id newcommand
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newcommand\\*?{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-latex-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id newcommand-bol
-;;;        (("^\\\\newcommand\\*?{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-local-latex-dict))))
 
     ;; \newenvironment and \newtheorem define new environments. Through the use
     ;; of a special "auto-dict" regexp class defined below, this automagically
@@ -1080,24 +958,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id newenvironment
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newenvironment{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-env-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id newenvironment-bol
-;;;        (("^\\\\newenvironment{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-local-env-dict))))
     (auto-overlay-load-definition
      'predictive
      '(predictive-auto-dict
        :id newtheorem
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newtheorem{\\(.*?\\)}" . 3)
 	(auto-dict . predictive-latex-local-env-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id newtheorem-bol
-;;;        (("^\\\\newtheorem{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-local-env-dict))))
 
     ;; \DeclareMathOperator defines a new math-mode command. Through the use of
     ;; a special "auto-dict" regexp class defined below, this automagically adds
@@ -1109,12 +975,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\DeclareMathOperator\\*?{\\(.*?\\)}"
 	 . 3)
 	(auto-dict . predictive-latex-local-math-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id DeclareMathOperator-bol
-;;;        (("^\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-local-math-dict))))
 
     ;; the sectioning commands automagically add the section names to a local
     ;; sections dictionary, purely for navigation
@@ -1124,12 +984,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id section
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
 	(auto-dict . predictive-latex-section-dict))))
-;;;     (auto-overlay-load-definition
-;;;      'predictive
-;;;      '(predictive-auto-dict
-;;;        :id DeclareMathOperator-bol
-;;;        (("^\\\\DeclareMathOperator\\*?{\\(.*?\\)}" . 1)
-;;; 	(auto-dict . predictive-latex-local-math-dict))))
     )
 )
 
@@ -1146,6 +1000,16 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (define-key predictive-map [?^]  'completion-self-insert)
   (define-key predictive-map [?\\] 'completion-self-insert)
   (define-key predictive-map [?-]  'completion-self-insert)
+  ;; remap motion commands to also display any help text at point
+  (when (fboundp 'command-remapping)
+    (define-key predictive-map [remap forward-char]
+      'predictive-forward-char)
+    (define-key predictive-map [remap backward-char]
+      'predictive-backward-char)
+    (define-key predictive-map [remap previous-line]
+      'predictive-previous-line)
+    (define-key predictive-map [remap next-line]
+      'predictive-next-line))
 
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
