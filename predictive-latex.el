@@ -31,9 +31,11 @@
 ;;; Change Log:
 ;;
 ;; Version 0.12.4
-;; * Tried (yet again!) to fix bug in "\begin{" regexp's
+;; * tried (yet again!) to fix bug in "\begin{" regexp's
 ;;   `auto-completion-syntax-alist' definition that caused characters on same
 ;;   line as "\begin{" to be deleted
+;; * fixed `predictive-latex-forward-word' so that it treats "*" at end of
+;;   word as part of word
 ;;
 ;; Version 0.12.3
 ;; * fixed "\" `auto-completion-override-alist' definition
@@ -2424,7 +2426,7 @@ Intended to be used as the \"resolve\" entry in
       (unless (bobp)
 	(dotimes (i (- n))
 	  ;; make sure we're at the end of a word
-	  (when (re-search-backward "\\\\\\|\\w" nil t)
+	  (when (re-search-backward "\\\\\\|\\w\\|\\*" nil t)
 	    (forward-char))
 	  ;; if point is within or just after a sequence of \'s, go
 	  ;; backwards for the correct number of \'s
@@ -2459,7 +2461,9 @@ Intended to be used as the \"resolve\" entry in
 	(when (re-search-forward "\\\\\\|\\w" nil t)
 	  (backward-char))
 	(re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
-	(when (= (char-before) ?\n) (backward-char))))))
+	(cond
+	 ((= (char-before) ?\n) (backward-char))
+	 ((= (char-after) ?*) (forward-char)))))))
 
 
 
