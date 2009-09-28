@@ -67,6 +67,7 @@
 "\\matnormHS" 0 (:prefixes ("\\matnorm"))
 "\\matnormTr" 0 (:prefixes ("\\matnorm"))
 "\\order" 0
+"\\ox" 0
 "\\partition" 0
 "\\pfaf" 0
 "\\prj" 0

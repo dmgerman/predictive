@@ -1181,6 +1181,10 @@ When within a pop-up frame:\
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
 
+(defvar predictive-display-help-timer nil
+  "Timer used to display help text.")
+
+
 (defun predictive-display-help (&optional dummy1 word &rest ignored)
   "Display any help for WORD from the current dictionary.
 Remaining arguments are ignored (they are there to allow
@@ -1204,29 +1208,41 @@ Remaining arguments are ignored (they are there to allow
 (defun predictive-forward-char (&optional n)
   "Call `forward-char', then display any help for LaTeX command at point."
   (interactive "p")
+  (when (timerp predictive-display-help-timer)
+    (cancel-timer predictive-display-help-timer))
   (forward-char n)
-  (predictive-display-help))
+  (setq predictive-display-help-timer
+	(run-with-idle-timer 1 nil 'predictive-display-help)))
 
 
 (defun predictive-backward-char (&optional n)
   "Call `backward-char', then display any help for LaTeX command at point."
   (interactive "p")
+  (when (timerp predictive-display-help-timer)
+    (cancel-timer predictive-display-help-timer))
   (backward-char n)
-  (predictive-display-help))
+  (setq predictive-display-help-timer
+	(run-with-idle-timer 1 nil 'predictive-display-help)))
 
 
 (defun predictive-next-line (&optional n try-vscroll)
   "Call `next-line', then display any help for LaTeX command at point."
   (interactive "p")
+  (when (timerp predictive-display-help-timer)
+    (cancel-timer predictive-display-help-timer))
   (next-line n try-vscroll)
-  (predictive-display-help))
+  (setq predictive-display-help-timer
+	(run-with-idle-timer 1 nil 'predictive-display-help)))
 
 
 (defun predictive-previous-line (&optional n try-vscroll)
   "Call `previous-line', then display any help for LaTeX command at point."
   (interactive "p")
+  (when (timerp predictive-display-help-timer)
+    (cancel-timer predictive-display-help-timer))
   (previous-line n try-vscroll)
-  (predictive-display-help))
+  (setq predictive-display-help-timer
+	(run-with-idle-timer 1 nil 'predictive-display-help)))
 
 
 
