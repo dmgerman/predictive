@@ -37,6 +37,7 @@
 ;; * fixed `predictive-latex-forward-word' so that it treats "*" at end of
 ;;   word as part of word
 ;; * remap motion commands to predictive versions that display any help text
+;; * added `predictive-latex-query-replace-math' command
 ;;
 ;; Version 0.12.3
 ;; * fixed "\" `auto-completion-override-alist' definition
@@ -984,8 +985,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        :id section
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
 	(auto-dict . predictive-latex-section-dict))))
-    )
-)
+    ))
 
 
 
@@ -1236,6 +1236,24 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (setq predictive-latex-previous-filename (buffer-file-name))
   ;; repeat file save nessage (overwritten by overlay and dict save messages)
   (message "Wrote %s and saved predictive-mode state" (buffer-file-name)))
+
+
+
+
+;;;=======================================================================
+;;;                  Miscelaneous interactive commands
+
+(defun predictive-latex-query-replace-math
+  (from-string to-string &optional delimited)
+  "Query-replace in LaTeX math environments."
+  (interactive "sQuery replace math: \nsReplace with: \nP")
+  (when delimited
+    (setq from-string (concat "\\b" (regexp-quote from-string) "\\b")))
+  (while (or (and delimited (re-search-forward from-string nil t))
+	     (and (not delimited) (search-forward from-string)))
+    (when (and (memq dict-latex-math (predictive-current-dict))
+	       (save-match-data (y-or-n-p "Replace? ")))
+      (replace-match to-string nil t))))
 
 
 
