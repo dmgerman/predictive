@@ -172,6 +172,7 @@
 "\\max" 0
 "\\mho" 0
 "\\mid" 0
+"\\middle" 0 (:prefixes ("\\mid"))
 "\\min" 0
 "\\mod" 0
 "\\models" 0 (:prefixes ("\\mod"))
