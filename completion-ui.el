@@ -238,6 +238,8 @@
 ;; Version 0.11.9
 ;; * added C-@ binding (produced by C-<space> in terminals)
 ;; * fixed compile warning in `completion-ui-register-source'
+;; * fixed interactive spec in `completion-cycle' and
+;;   `completion-cycle-backwards'
 ;;
 ;; Version 0.11.8
 ;; * added M-\ word-constituent binding
@@ -2963,8 +2965,7 @@ N is the prefix argument.
 If OVERLAY is supplied, use that instead of finding one. The
 point had better be within OVERLAY or you'll be stuck by
 lightening."
-  (interactive "P")
-  (when (null n) (setq n 1))
+  (interactive "p")
 
   ;; if we haven't been passed one, get completion overlay at point
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
@@ -3000,7 +3001,7 @@ lightening."
 Optional argument N specifies the number of completions to cycle
 backwards \(forwards if negative\). Default is 1. Interactively,
 N is the prefix argument."
-  (interactive "P")
+  (interactive "p")
   (completion-cycle (- n)))
 
 
