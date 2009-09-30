@@ -1190,18 +1190,19 @@ When within a pop-up frame:\
 Remaining arguments are ignored (they are there to allow
 `predictive-display-help' to be used in the
 `completion-accept-functions' hook)."
+  (interactive)
 
   (unless word
-    (setq word
-	  (thing-at-point (completion-ui-source-word-thing 'predictive))))
+    (setq word (thing-at-point
+		(completion-ui-source-word-thing 'predictive)))
+    (set-text-properties 0 (length word) nil word))
 
   (let ((dict (predictive-current-dict))
 	help)
-    ;; if current dict is a list of dicts, wrap them in temporary meta-dict
-    (when (listp dict)
-      (setq dict
-	    (dictree-meta-dict-create dict nil nil nil t (lambda (a b) a))))
-    (when (setq help (dictree-get-property dict word :help))
+    (when (catch 'found-help
+	    (dolist (dic dict)
+	      (when (setq help (dictree-get-property dic word :help))
+		(throw 'found-help t))))
       (message help))))
 
 
@@ -1212,7 +1213,7 @@ Remaining arguments are ignored (they are there to allow
     (cancel-timer predictive-display-help-timer))
   (forward-char n)
   (setq predictive-display-help-timer
-	(run-with-idle-timer 1 nil 'predictive-display-help)))
+	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 
 
 (defun predictive-backward-char (&optional n)
@@ -1222,7 +1223,7 @@ Remaining arguments are ignored (they are there to allow
     (cancel-timer predictive-display-help-timer))
   (backward-char n)
   (setq predictive-display-help-timer
-	(run-with-idle-timer 1 nil 'predictive-display-help)))
+	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 
 
 (defun predictive-next-line (&optional n try-vscroll)
@@ -1232,7 +1233,7 @@ Remaining arguments are ignored (they are there to allow
     (cancel-timer predictive-display-help-timer))
   (next-line n try-vscroll)
   (setq predictive-display-help-timer
-	(run-with-idle-timer 1 nil 'predictive-display-help)))
+	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 
 
 (defun predictive-previous-line (&optional n try-vscroll)
@@ -1242,7 +1243,7 @@ Remaining arguments are ignored (they are there to allow
     (cancel-timer predictive-display-help-timer))
   (previous-line n try-vscroll)
   (setq predictive-display-help-timer
-	(run-with-idle-timer 1 nil 'predictive-display-help)))
+	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 
 
 
@@ -1758,7 +1759,6 @@ as the weight of WORD."
 (defun predictive-guess-prefix (word)
   "Guess a likely prefix for WORD.
 See `predictive-define-prefix' and 'predictive-guess-prefix-suffixes'."
-
   (let ((suffix
 	 (catch 'found
 	   (dolist (sfx predictive-guess-prefix-suffixes)
@@ -1912,7 +1912,7 @@ confirmation first if called interactively)."
 				    (dictree-name dic) "): ")
 			  "Dictionary: "))
 		      (car (predictive-current-dict)))
-		     (setq prefix (read-string "Prefix: "))))
+		     (read-string "Prefix (leave blank for all): ")))
 
   ;; sort out arguments
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
