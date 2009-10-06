@@ -50,17 +50,29 @@
 (eval-when-compile
   (defvar semanticdb-find-default-throttle nil)
   (require 'ispell))
-(declare-function dabbrev--reset-global-variables "dabbrev.el" nil)
-(declare-function dabbrev--find-all-expansions "dabbrev.el" (arg1 arg2))
-(declare-function tags-lazy-completion-table "etags.el" nil)
-(declare-function semantic-idle-summary-useful-context-p "ext:semantic-idle.el"
-		  nil)
-(declare-function semantic-ctxt-current-symbol "ext:semantic-ctxt.el"
-		  (&optional arg1))
-(declare-function semantic-analyze-current-context "ext:semantic-analyze.el"
-		  nil)
-(declare-function semantic-analyze-possible-completions "ext:semantic-analyze-complete.el"
-		  (arg1))
+(if (fboundp 'declare-function)
+    (progn
+      (declare-function dabbrev--reset-global-variables
+			"dabbrev.el" nil)
+      (declare-function dabbrev--find-all-expansions
+			"dabbrev.el" (arg1 arg2))
+      (declare-function tags-lazy-completion-table
+			"etags.el" nil)
+      (declare-function semantic-idle-summary-useful-context-p
+			"ext:semantic-idle.el" nil)
+      (declare-function semantic-ctxt-current-symbol
+			"ext:semantic-ctxt.el" (&optional arg1))
+      (declare-function semantic-analyze-current-context
+			"ext:semantic-analyze.el" nil)
+      (declare-function semantic-analyze-possible-completions
+			"ext:semantic-analyze-complete.el" (arg1)))
+  (defun dabbrev--reset-global-variables nil)
+  (defun dabbrev--find-all-expansions (arg1 arg2))
+  (defun tags-lazy-complete-table nil)
+  (defun semantic-idle-summary-useful-context-p nil)
+  (defun semantic-ctxt-current-symbol (&optional arg1))
+  (defun semantic-analyze-current-context nil)
+  (defun semantic-analyze-possible-completions (arg1)))
 
 
 
