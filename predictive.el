@@ -1207,7 +1207,7 @@ Remaining arguments are ignored (they are there to allow
 
 
 (defun predictive-forward-char (&optional n)
-  "Call `forward-char', then display any help for LaTeX command at point."
+  "Call `forward-char', then display any help for word at point."
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
@@ -1217,7 +1217,7 @@ Remaining arguments are ignored (they are there to allow
 
 
 (defun predictive-backward-char (&optional n)
-  "Call `backward-char', then display any help for LaTeX command at point."
+  "Call `backward-char', then display any help for word at point."
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
@@ -1227,7 +1227,7 @@ Remaining arguments are ignored (they are there to allow
 
 
 (defun predictive-next-line (&optional n try-vscroll)
-  "Call `next-line', then display any help for LaTeX command at point."
+  "Call `next-line', then display any help text for word at point."
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
@@ -1237,7 +1237,7 @@ Remaining arguments are ignored (they are there to allow
 
 
 (defun predictive-previous-line (&optional n try-vscroll)
-  "Call `previous-line', then display any help for LaTeX command at point."
+  "Call `previous-line', then display any help for word at point."
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
@@ -1684,6 +1684,67 @@ Interactively, WORD and DICT are read from the minibuffer."
     (when (interactive-p)
       (message "\"%s\" not found in dictionary %s" word
 	       (dictree-name dict)))))
+
+
+
+(defun predictive-reset-weight (dict word &optional weight)
+  "Reset the weight of WORD in dictionary DICT to 0.
+
+If WORD is null, reset weights of all words in the
+dictionary (prompting for confirmation first if this is called
+interactively).
+
+If WEIGHT is supplied, reset to that value instead of
+0. Interactively, WEIGHT is the numerical prefix argument."
+
+  (interactive (list (read-dict
+		      (let ((dic (car (predictive-current-dict))))
+			(if dic
+			    (concat "Dictionary (default "
+				    (dictree-name dic) "): ")
+			  "Dictionary: "))
+		      (car (predictive-current-dict)))
+		     (read-string
+		      "Word to reset (leave blank to reset all words): ")
+		     current-prefix-arg))
+
+  ;; sort out arguments
+  (when (and (stringp word) (string= word "")) (setq word nil))
+  (cond
+   ((null weight) (setq weight 0))
+   ((interactive-p) (setq weight (prefix-numeric-value weight))))
+
+  ;; confirm interactive reset of all weights
+  (when (or word
+	    (not (interactive-p))
+	    (yes-or-no-p
+	     (format "Really reset weights of all words in dictionary %s? "
+		     (dictree-name dict))))
+    ;; if a word was specified, reset its weight to 0
+    (if word
+	(and (dictree-insert dict word weight (lambda (a b) a))
+	     (interactive-p)
+	     (message "Weight of \"%s\" in %s reset to 0"
+		      word (dictree-name dict)))
+      ;; if no word was specified, reset all weights to 0
+      (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
+	(when (interactive-p)
+	  (message "Resetting word weights in %s...(word 1 of %d)"
+		   (dictree-name dict) count))
+	(dictree-mapc
+	 (if (interactive-p)
+	     (lambda (word ignored)
+	       (setq i (1+ i))
+	       (when (= (mod i 10) 0)
+		 (message "Resetting word weights in %s...(word %d of %d)"
+			  (dictree-name dict) i count))
+	       (dictree-insert dict word weight (lambda (a b) a)))
+	   (lambda (word ignored)
+	     (dictree-insert dict word weight (lambda (a b) a))))
+	 dict)
+	(when (interactive-p)
+	  (message "Resetting word weights in %s...done" (dictree-name dict)))
+	))))
 
 
 
@@ -2342,61 +2403,6 @@ entirely of word- or symbol-constituent characters."
       ;; learn from the buffer
       (predictive-fast-learn-or-add-from-buffer buff dict all)
       (unless visiting (kill-buffer buff)))))
-
-
-
-(defun predictive-reset-weight (dict word &optional weight)
-  "Reset the weight of WORD in dictionary DICT to 0.
-
-If WORD is null, reset weights of all words in the
-dictionary (prompting for confirmation first if this is called
-interactively).
-
-If WEIGHT is supplied, reset to that value instead of
-0. Interactively, WEIGHT is the numerical prefix argument."
-
-  (interactive (list (read-dict "Dictionary: " nil)
-		     (read-string
-		      "Word to reset (leave blank to reset all words): ")
-		     current-prefix-arg))
-
-  ;; sort out arguments
-  (when (and (stringp word) (string= word "")) (setq word nil))
-  (cond
-   ((null weight) (setq weight 0))
-   ((interactive-p) (setq weight (prefix-numeric-value weight))))
-
-  ;; confirm interactive reset of all weights
-  (when (or word
-	    (not (interactive-p))
-	    (yes-or-no-p
-	     (format "Really reset weights of all words in dictionary %s? "
-		     (dictree-name dict))))
-    ;; if a word was specified, reset its weight to 0
-    (if word
-	(and (dictree-insert dict word weight (lambda (a b) a))
-	     (interactive-p)
-	     (message "Weight of \"%s\" in %s reset to 0"
-		      word (dictree-name dict)))
-      ;; if no word was specified, reset all weights to 0
-      (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
-	(when (interactive-p)
-	  (message "Resetting word weights in %s...(word 1 of %d)"
-		   (dictree-name dict) count))
-	(dictree-mapc
-	 (if (interactive-p)
-	     (lambda (word ignored)
-	       (setq i (1+ i))
-	       (when (= (mod i 10) 0)
-		 (message "Resetting word weights in %s...(word %d of %d)"
-			  (dictree-name dict) i count))
-	       (dictree-insert dict word weight (lambda (a b) a)))
-	   (lambda (word ignored)
-	     (dictree-insert dict word weight (lambda (a b) a))))
-	 dict)
-	(when (interactive-p)
-	  (message "Resetting word weights in %s...done" (dictree-name dict)))
-	))))
 
 
 
