@@ -5,7 +5,7 @@
 ;; Copyright (C) 2005-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.7
+;; Version: 0.9.8
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.8
+;; * modified `auto-o-run-after-change-functions' to ignore all changes that
+;;   aren't either insertions or deletions (was this behind some of the
+;;   undo-related bugs?!?)
 ;;
 ;; Version 0.9.7
 ;; * added `auto-o-schedule-delete-in-front-or-behind-suicide' to simulate
@@ -1101,40 +1106,42 @@ overlays were saved."
 ;;;=============================================================
 ;;;               auto-overlay overlay functions
 
-(defun auto-o-run-after-change-functions (&rest unused)
+(defun auto-o-run-after-change-functions (beg end len)
   ;; Assigned to the `after-change-functions' hook. Run all the various
   ;; functions that should run after a change to the buffer, in the correct
   ;; order.
 
-  ;; repeat until all the pending functions have been cleared (it may be
-  ;; necessary to run multiple times since the pending functions may
-  ;; themselves cause more functions to be added to the pending lists)
-  (while (or auto-o-pending-pre-suicide auto-o-pending-suicides
-	     auto-o-pending-post-suicide auto-o-pending-updates
-	     auto-o-pending-post-update)
-    ;; run pending pre-suicide functions
-    (when auto-o-pending-pre-suicide
-      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
-      (setq auto-o-pending-pre-suicide nil))
-    ;; run pending suicides
-    (when auto-o-pending-suicides
-      (mapc 'auto-o-suicide auto-o-pending-suicides)
-      (setq auto-o-pending-suicides nil))
-    ;; run pending post-suicide functions
-    (when auto-o-pending-post-suicide
-      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
-      (setq auto-o-pending-post-suicide nil))
-    ;; run updates
-    (when auto-o-pending-updates
-      (mapc (lambda (l) (auto-overlay-update (car l) (cdr l)))
-	    auto-o-pending-updates)
-      (setq auto-o-pending-updates nil))
-    ;; run pending post-update functions
-    (when auto-o-pending-post-update
-      (mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
-      (setq auto-o-pending-post-update nil))
-    )
-)
+  ;; ignore changes that aren't either insertions or deletions
+  (when (or (and (/= beg end) (=  len 0))   ; insertion
+	    (and (=  beg end) (/= len 0)))  ; deletion
+    ;; repeat until all the pending functions have been cleared (it may be
+    ;; necessary to run multiple times since the pending functions may
+    ;; themselves cause more functions to be added to the pending lists)
+    (while (or auto-o-pending-pre-suicide auto-o-pending-suicides
+	       auto-o-pending-post-suicide auto-o-pending-updates
+	       auto-o-pending-post-update)
+      ;; run pending pre-suicide functions
+      (when auto-o-pending-pre-suicide
+	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
+	(setq auto-o-pending-pre-suicide nil))
+      ;; run pending suicides
+      (when auto-o-pending-suicides
+	(mapc 'auto-o-suicide auto-o-pending-suicides)
+	(setq auto-o-pending-suicides nil))
+      ;; run pending post-suicide functions
+      (when auto-o-pending-post-suicide
+	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
+	(setq auto-o-pending-post-suicide nil))
+      ;; run updates
+      (when auto-o-pending-updates
+	(mapc (lambda (l) (auto-overlay-update (car l) (cdr l)))
+	      auto-o-pending-updates)
+	(setq auto-o-pending-updates nil))
+      ;; run pending post-update functions
+      (when auto-o-pending-post-update
+	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
+	(setq auto-o-pending-post-update nil))
+      )))
 
 
 
