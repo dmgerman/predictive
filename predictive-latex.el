@@ -30,6 +30,14 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.12.5
+;; * modified overlay-local `auto-completion-override-syntax-alist'
+;;   definitions to make "'" behave as punctuation in maths mode
+;; * added "@" to global `auto-completion-override-syntax-alist' to cater for
+;;   "\@" (force-sentence-space-after-punctuation command)
+;; * added `predictive-latex-query-replace-math' and
+;;   `predictive-latex-query-replace-regexp-math' commands
+;;
 ;; Version 0.12.4
 ;; * tried (yet again!) to fix bug in "\begin{" regexp's
 ;;   `auto-completion-syntax-alist' definition that caused characters on same
@@ -824,7 +832,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      `(self :id inline-math
 	    ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
-	     (completion-menu-function . predictive-latex-construct-browser-menu)
+	     (completion-menu-function
+	      . predictive-latex-construct-browser-menu)
+	     (auto-completion-override-syntax-alist
+	      . ((?' . (,punct-resolve none t))))
 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
 
     ;; ...as do \[ and \], but not \\[ and \\] etc.
@@ -842,7 +853,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
 	       :edge end
 	       (dict . predictive-latex-math-dict) (priority . 30)
-	       (completion-menu-function . predictive-latex-construct-browser-menu)
+	       (completion-menu-function
+		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      ))
 
@@ -883,6 +895,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (dict . predictive-latex-math-dict)
        (priority . 10)
        (completion-menu-function . predictive-latex-construct-browser-menu)
+       (auto-completion-override-syntax-alist
+	. ((?' . (,punct-resolve none t))))
        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
@@ -1093,6 +1107,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       (if (and (char-before (1- (point)))
 				(= (char-before (1- (point))) ?\\))
 			   ',word-complete 'none))))
+	     (?@ . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',punct-resolve))
+		    (lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  ',word-complete 'none))))
 	     (?+ . ((lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
 			  'add ',punct-resolve))
@@ -1254,6 +1274,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (when (and (memq dict-latex-math (predictive-current-dict))
 	       (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string nil t))))
+
+
+
+(defun predictive-latex-query-replace-regexp-math
+  (regexp to-string &optional delimited)
+  "Query-replace-regexp in LaTeX math environments."
+  (interactive "sQuery replace math regexp: \nsReplace with: \nP")
+  (when delimited
+    (setq regexp (concat "\\b" regexp "\\b")))
+  (while (re-search-forward regexp nil t)
+    (when (and (memq dict-latex-math (predictive-current-dict))
+	       (save-match-data (y-or-n-p "Replace? ")))
+      (replace-match to-string))))
 
 
 
