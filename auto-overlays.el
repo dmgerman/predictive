@@ -32,8 +32,11 @@
 ;;
 ;; Version 0.9.8
 ;; * modified `auto-o-run-after-change-functions' to ignore all changes that
-;;   aren't either insertions or deletions (was this behind some of the
+;;   aren't either insertions or deletions (were these behind some of the
 ;;   undo-related bugs?!?)
+;; * added horrible hack to `auto-o-run-after-change-functions' to delete all
+;;   marker update entries in most recent `buffer-undo-list' change group,
+;;   since undoing these can badly mess up the overlays
 ;;
 ;; Version 0.9.7
 ;; * added `auto-o-schedule-delete-in-front-or-behind-suicide' to simulate
@@ -599,8 +602,7 @@ symbol that can be used to uniquely identify REGEXP (see
     (dolist (regexp (cdr definition))
       (auto-overlay-load-regexp set-id definition-id regexp))
 
-    definition-id)  ; return new entry ID
-)
+    definition-id))  ; return new entry ID
 
 
 
@@ -684,8 +686,7 @@ symbol that can be used to uniquely identify REGEXP (see
       (setcdr (nthcdr (1- pos) (cddr defs))
 	      (nconc (list regexp) (nthcdr pos (cddr defs))))))
 
-    regexp-id)  ; return new subentry ID
-)
+    regexp-id))  ; return new subentry ID
 
 
 
@@ -697,8 +698,7 @@ symbol that can be used to uniquely identify REGEXP (see
   (when (auto-o-enabled-p set-id)
     (auto-overlay-stop set-id))
   (auto-o-delete-from-buffer-list set-id (current-buffer))
-  (auto-o-delete-set set-id)
-)
+  (auto-o-delete-set set-id))
 
 
 
@@ -740,8 +740,7 @@ from the current buffer. Returns the deleted definition."
 	      (append olddef
 		      (list (append (list regexp :edge edge :id regexp-id)
 				    props)))))
-      olddef))  ; return deleted definition
-)
+      olddef)))  ; return deleted definition
 
 
 
@@ -801,8 +800,7 @@ other. TO-BUFFER defaults to the current buffer."
       (push regexps auto-overlay-regexps)
       ;; add TO-BUFFER to list of buffers using regexp set SET-ID
       (auto-o-add-to-buffer-list set-id to-buffer)
-      ))
-)
+      )))
 
 
 
@@ -893,13 +891,13 @@ is about to be killed in which case it speeds things up a bit\)."
     ;; delete overlays unless told not to bother
     (unless leave-overlays
       (mapc 'delete-overlay
-	    (auto-overlays-in
-	     (point-min) (point-max)
-	     (list
-	      (list (lambda (overlay match) (or overlay match))
-		    '(auto-overlay auto-overlay-match))
-	      (list 'eq 'set-id set-id))
-	     nil 'inactive)))
+      	    (auto-overlays-in
+      	     (point-min) (point-max)
+      	     (list
+      	      (list (lambda (overlay match) (or overlay match))
+      		    '(auto-overlay auto-overlay-match))
+      	      (list 'eq 'set-id set-id))
+      	     nil 'inactive)))
 
     ;; if there are no more active auto-overlay definitions...
     (unless (catch 'enabled
@@ -915,8 +913,7 @@ is about to be killed in which case it speeds things up a bit\)."
 		   'auto-o-run-after-change-functions t)
       (setq auto-o-pending-suicides nil
 	    auto-o-pending-updates nil
-	    auto-o-pending-post-suicide nil)))
-)
+	    auto-o-pending-post-suicide nil))))
 
 
 
@@ -988,8 +985,7 @@ The overlays can be loaded again later using
 	(set-buffer buff)
 	(write-file file))
       (kill-buffer buff))
-    )
-)
+    ))
 
 
 
@@ -1097,8 +1093,8 @@ overlays were saved."
 	      (message "Loading auto-overlays...(%d of %d)" i lines)))
 
 	  (kill-buffer buff)
-	  t))))  ; return t to indicate successful loading)
-)
+	  t)))))  ; return t to indicate successful loading)
+
 
 
 
@@ -1112,8 +1108,9 @@ overlays were saved."
   ;; order.
 
   ;; ignore changes that aren't either insertions or deletions
-  (when (or (and (/= beg end) (=  len 0))   ; insertion
-	    (and (=  beg end) (/= len 0)))  ; deletion
+  (when ;(and (not undo-in-progress)
+	     (or (and (/= beg end) (=  len 0))    ; insertion
+		 (and (=  beg end) (/= len 0)));)  ; deletion
     ;; repeat until all the pending functions have been cleared (it may be
     ;; necessary to run multiple times since the pending functions may
     ;; themselves cause more functions to be added to the pending lists)
@@ -1122,7 +1119,8 @@ overlays were saved."
 	       auto-o-pending-post-update)
       ;; run pending pre-suicide functions
       (when auto-o-pending-pre-suicide
-	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-pre-suicide)
+	(mapc (lambda (f) (apply (car f) (cdr f)))
+	      auto-o-pending-pre-suicide)
 	(setq auto-o-pending-pre-suicide nil))
       ;; run pending suicides
       (when auto-o-pending-suicides
@@ -1130,7 +1128,8 @@ overlays were saved."
 	(setq auto-o-pending-suicides nil))
       ;; run pending post-suicide functions
       (when auto-o-pending-post-suicide
-	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-suicide)
+	(mapc (lambda (f) (apply (car f) (cdr f)))
+	      auto-o-pending-post-suicide)
 	(setq auto-o-pending-post-suicide nil))
       ;; run updates
       (when auto-o-pending-updates
@@ -1139,9 +1138,23 @@ overlays were saved."
 	(setq auto-o-pending-updates nil))
       ;; run pending post-update functions
       (when auto-o-pending-post-update
-	(mapc (lambda (f) (apply (car f) (cdr f))) auto-o-pending-post-update)
+	(mapc (lambda (f) (apply (car f) (cdr f)))
+	      auto-o-pending-post-update)
 	(setq auto-o-pending-post-update nil))
-      )))
+      ))
+
+  ;; FIXME: horrible hack to delete all marker update entries in latest
+  ;;        `buffer-undo-list' change group, since undoing these can badly
+  ;;        mess up the overlays
+  (while (and (consp (car buffer-undo-list))
+	      (markerp (caar buffer-undo-list)))
+    (setq buffer-undo-list (cdr buffer-undo-list)))
+  (let ((p buffer-undo-list))
+    (while (cadr p)
+      (if (and (consp (cadr p)) (markerp (car (cadr p))))
+  	  (setcdr p (cddr p))
+  	(setq p (cdr p)))))
+  )
 
 
 
@@ -1153,9 +1166,6 @@ overlays were saved."
   ;; after buffer modification is complete. This function is assigned to
   ;; `after-change-functions'.
 
-  ;; FIXME: we should do more to avoid doing multiple, redundant
-  ;;        updates. Currently, only updates for identical regions are
-  ;;        filtered (by add-to-list), not updates for overlapping regions.
   (save-restriction
     (widen)   ; need to widen, since goto-line goes to absolute line
     (setq start (line-number-at-pos start))
@@ -1194,8 +1204,7 @@ overlays were saved."
 	))
 
       ;; merge new entry with successive entries until end of merged entry is
-      ;; before start of next entry
-      ;; (See above note about O(n) vs. O(log n))
+      ;; before start of next entry (see above note about O(n) vs. O(log n))
       (while (and (cdr pending)
 		  (>= (1+ (cdar pending)) (car (cadr pending))))
 	(setcdr (car pending) (max (cdar pending) (cdr (cadr pending))))
@@ -1407,8 +1416,7 @@ overlays were saved."
 	(auto-o-schedule-update (overlay-start o-self))
 	;; delete ourselves
 	(delete-overlay o-self));)
-    )
-)
+    ))
 
 
 
@@ -1517,8 +1525,7 @@ overlays were saved."
 		    (overlay-put o 'regexp-id
 				 (overlay-get o-match 'regexp-id)))
 		  o-new)))))
-     ))
-)
+     )))
 
 
 
@@ -1543,8 +1550,7 @@ overlays were saved."
     (overlay-put o-match 'insert-in-front-hooks '(auto-o-schedule-suicide))
     (overlay-put o-match 'insert-behind-hooks '(auto-o-schedule-suicide))
     ;; return the new match overlay
-    o-match)
-)
+    o-match))
 
 
 
@@ -1709,8 +1715,7 @@ properties)."
 	   ((and (> end old-end) exclusive)
 	    (auto-o-update-exclusive set-id old-end end nil priority))))
 	 )))
-    )
-)
+    ))
 
 
 
@@ -1750,8 +1755,7 @@ overlay changes."
 	(overlay-put o-match 'parent nil))
       (when (setq o-match (overlay-get overlay 'end))
 	(overlay-put o-match 'parent nil)))
-    )
-)
+    ))
 
 
 
@@ -1772,8 +1776,7 @@ overlay changes."
 		(setq o-match o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
-    o-match)
-)
+    o-match))
 
 
 
@@ -1820,8 +1823,7 @@ overlay changes."
 		(setq o-overlap o)
 		(throw 'match t)))
 	    (overlays-in beg end)))
-    o-overlap)
-)
+    o-overlap))
 
 
 
@@ -1832,14 +1834,12 @@ overlay changes."
 (unless (fboundp 'line-number-at-pos)
   (require 'auto-overlays-compat)
   (defalias 'line-number-at-pos
-            'auto-overlays-compat-line-number-at-pos)
-)
+            'auto-overlays-compat-line-number-at-pos))
 
 
 (unless (fboundp 'replace-regexp-in-string)
   (require 'auto-overlays-compat)
   (defalias 'replace-regexp-in-string
-    'auto-overlays-compat-replace-regexp-in-string)
-)
+    'auto-overlays-compat-replace-regexp-in-string))
 
 ;;; auto-overlays.el ends here
