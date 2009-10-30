@@ -1231,7 +1231,8 @@ Remaining arguments are ignored (they are there to allow
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
-  (next-line n try-vscroll)
+  ;; we really do want to call `next-line', so suppress compiler warnings
+  (with-no-warnings (next-line n try-vscroll))
   (setq predictive-display-help-timer
 	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 
@@ -1241,7 +1242,8 @@ Remaining arguments are ignored (they are there to allow
   (interactive "p")
   (when (timerp predictive-display-help-timer)
     (cancel-timer predictive-display-help-timer))
-  (previous-line n try-vscroll)
+  ;; we really do want to call `previous-line', so suppress compiler warnings
+  (with-no-warnings (previous-line n try-vscroll))
   (setq predictive-display-help-timer
 	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
 

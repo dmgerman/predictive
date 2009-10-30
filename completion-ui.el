@@ -1597,7 +1597,7 @@ major mode, or by another minor mode).
 
 `auto-completion-source' must be set for `auto-completion-mode'
 to work."
-  nil ; init-value
+  nil                   ; init-value
   " Complete"           ; lighter
   auto-completion-map   ; keymap
 

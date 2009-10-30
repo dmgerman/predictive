@@ -103,8 +103,7 @@
       (auto-o-nested-stack-cascade overlay-stack)
       ;; return newly created overlay
       (car overlay-stack)))
-    )
-)
+    ))
 
 
 
@@ -136,8 +135,7 @@
       (overlay-put o-parent (auto-o-edge o-self) nil)
       (overlay-put o-self 'parent nil)
       (auto-o-nested-stack-cascade overlay-stack))
-     ))
-)
+     )))
 
 
 
@@ -169,8 +167,7 @@
       (auto-o-match-overlay o-new 'unmatched o-match)))
 
     ;; return the new overlay
-    o-new)
-)
+    o-new))
 
 
 
