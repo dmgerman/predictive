@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.9
+;; Version: 0.11.10
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.10
+;; * fall back to global `auto-completion-override-alist' if character not
+;;   specified in overlay-local version, in `auto-completion-lookup-behaviour'
 ;;
 ;; Version 0.11.9
 ;; * added C-@ binding (produced by C-<space> in terminals)
@@ -3096,8 +3100,7 @@ exist, unless NO-OVERLAY is non-nil."
   (let ((syntax-alist
          (if (and (fboundp 'auto-overlay-local-binding)
 		  (not no-overlay))
-             (auto-overlay-local-binding
-              'auto-completion-syntax-alist)
+             (auto-overlay-local-binding 'auto-completion-syntax-alist)
            auto-completion-syntax-alist))
         (override-alist
          (if (and (fboundp 'auto-overlay-local-binding)
@@ -3129,15 +3132,20 @@ exist, unless NO-OVERLAY is non-nil."
 	     )))
 
     ;; extract behaviours from syntax alists
-    (setq behaviour (or (when char (cdr (assq char override-alist)))
-                        (cdr (assq syntax syntax-alist))
-                        (cdr (assq t syntax-alist))
-			;; fall back to global values if not defined in
-			;; overlay-local ones
-			(cdr (assq char auto-completion-override-syntax-alist))
-			(cdr (assq syntax global-syntax-alist))))
-    (when (= (length behaviour) 2)
-      (setq behaviour (append behaviour '(t))))
+    (setq behaviour
+	  (or
+	   ;; if char is specified, check override-alist
+	   (and char
+		(or (cdr (assq char override-alist))
+		    ;; fall back to global override-alist
+		    (cdr (assq char auto-completion-override-syntax-alist))))
+	   ;; check syntax-alist
+	   (cdr (assq syntax syntax-alist))
+	   (cdr (assq t syntax-alist))
+	   ;; fall back to global syntax-alist
+	   (cdr (assq syntax global-syntax-alist))
+	   (cdr (assq t global-syntax-alist))))
+    (when (= (length behaviour) 2) (setq behaviour (append behaviour '(t))))
     ;; return behaviour
     behaviour))
 
