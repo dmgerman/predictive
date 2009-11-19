@@ -94,17 +94,15 @@
 		 (cons 'auto-o-schedule-extend-line
 		       (overlay-get o-new 'modification-hooks)))
     ;; return new overlay
-    o-new)
-)
+    o-new))
 
 
 (defun auto-o-schedule-extend-line (o-self modified &rest unused)
   ;; All line overlay modification hooks are set to this function, which
   ;; schedules `auto-o-extend-line' to run after any suicide functions have
   ;; been called, but before the overlays are updated.
-  (unless modified (add-to-list 'auto-o-pending-post-suicide
-				(list 'auto-o-extend-line o-self)))
-)
+  (unless modified
+    (push (list 'auto-o-extend-line o-self) auto-o-pending-post-suicide)))
 
 
 
@@ -140,8 +138,7 @@
 	  (auto-o-update-exclusive (overlay-get o-self 'set-id)
 				   (overlay-end o-self) end
 				   (overlay-get o-self 'priority) nil))
-	 ))))
-)
+	 )))))
 
 
 ;; auto-overlay-line.el ends here
