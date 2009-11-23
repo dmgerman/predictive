@@ -1,0 +1,32 @@
+2009-11-23    <toby-predictive@dr-qubit.org>
+
+	* avl-tree.el (avl-tree--switch-dir, avl-tree--dir-to-sign)
+	(avl-tree--sign-to-dir): New functions
+
+	* avl-tree.el (avl-tree--del-balance1, avl-tree--del-balance2):
+	Replaced with avl-tree--del-balance
+	* avl-tree.el (avl-tree--del-balance): New function
+	* avl-tree.el (avl-tree--do-del-internal): Use
+	avl-tree--del-balance
+	* avl-tree.el (avl-tree--do-delete, avl-tree-delete): New args
+	TEST and NILFLAG
+
+	* avl-tree.el (avl-tree--enter-balance1)
+	(avl-tree--enter-balance2): Replaced with avl-tree--enter-balance
+	* avl-tree.el (avl-tree--enter-balance): New function
+	* avl-tree.el (avl-tree--do-enter, avl-tree-enter): New arg
+	UPDATEFUN
+
+	* avl-tree.el (avl-tree-member): New arg NILFLAG
+	* avl-tree.el (avl-tree-member-p): New function
+
+	* avl-tree.el (avl-tree--mapc): New arg DIR; modified all callers
+	* avl-tree.el (avl-tree-map): Use DIR arg of avl-tree--mapc
+	* avl-tree.el (avl-tree-mapc, avl-tree-mapf, avl-tree-mapcar): New
+	functions
+
+	* avl-tree.el (avl-tree--stack): New struct
+	* avl-tree.el (avl-tree-stack, avl-tree-stack-p)
+	(avl-tree-stack-pop, avl-tree-stack-first, avl-tree-stack-empty-p)
+	(avl-tree--stack-create, avl-tree--stack-repopulate): New
+	functions

@@ -1,5 +1,5 @@
---- avl-tree.el	2009-11-22 22:10:09.000000000 +0000
-+++ avl-tree1.el	2009-11-23 09:37:10.000000000 +0000
+--- avl-tree.el	2009-11-23 15:47:52.000000000 +0000
++++ avl-tree1.el	2009-11-23 15:42:54.000000000 +0000
 @@ -3,11 +3,13 @@
  ;; Copyright (C) 1995, 2007, 2008, 2009  Free Software Foundation, Inc.
  
@@ -17,7 +17,7 @@
  
  ;; This file is part of GNU Emacs.
  
-@@ -24,174 +26,189 @@
+@@ -24,174 +26,190 @@
  ;; You should have received a copy of the GNU General Public License
  ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
  
@@ -196,23 +196,23 @@
 +;; tried to access the underlying setter function, but this wouldn't be
 +;; portable either.
 +(defsetf avl-tree--node-branch aset)
++
  
 -(defun avl-tree--del-balance2 (node branch)
-+
 +
 +;; ----------------------------------------------------------------
 +;; Convenience macros
 +
 +(defmacro avl-tree--switch-dir (dir)
-+  ;; Return opposite direction to DIR (0 = left, 1 = right).
++  "Return opposite direction to DIR (0 = left, 1 = right)."
 +  `(- 1 ,dir))
 +
 +(defmacro avl-tree--dir-to-sign (dir)
-+  ;; Convert direction (0,1) to sign factor (-1,+1)
++  "Convert direction (0,1) to sign factor (-1,+1)."
 +  `(1- (* 2 ,dir)))
 +
 +(defmacro avl-tree--sign-to-dir (dir)
-+  ;; Convert sign factor (-x,+x) to direction (0,1)
++  "Convert sign factor (-x,+x) to direction (0,1)."
 +  `(if (< ,dir 0) 0 1))
 +
 +
@@ -220,10 +220,11 @@
 +;;                          Deleting data
 +
 +(defun avl-tree--del-balance (node branch dir)
-+  ;; Rebalance a tree at the left (BRANCH=0) or right (BRANCH=1) child
-+  ;; of NODE after deleting from the left (DIR=0) or right (DIR=1)
-+  ;; sub-tree of that child [or is it vice-versa?]. Return t if the
-+  ;; height of the tree has shrunk.
++  "Rebalance a tree after deleting
++from the left (DIR=0) or right (DIR=1) sub-tree of the
++left (BRANCH=0) or right (BRANCH=1) child of NODE.
++Return t if the height of the tree has shrunk."
++;;; (or is it vice-versa for BRANCH?)
    (let ((br (avl-tree--node-branch node branch))
 -        p1 b1 p2 b2 result)
 +	;; opposite direction: 0,1 -> 1,0
@@ -318,7 +319,7 @@
        t)))
  
  (defun avl-tree--do-delete (cmpfun root branch data)
-@@ -203,102 +220,79 @@
+@@ -203,102 +221,79 @@
  
       ((funcall cmpfun data (avl-tree--node-data br))
        (if (avl-tree--do-delete cmpfun br 0 data)
@@ -358,10 +359,10 @@
 -(defun avl-tree--enter-balance1 (node branch)
 -  ;; Rebalance a tree and return t if the height of the tree has grown.
 +(defun avl-tree--enter-balance (node branch dir)
-+  ;; Rebalance tree at the left (BRANCH=0) or right (BRANCH=1) child of
-+  ;; NODE after an insertion into the left (DIR=0) or right (DIR=1)
-+  ;; sub-tree of that child. Return t if the height of the tree has
-+  ;; grown.
++  "Rebalance tree after an insertion
++into the left (DIR=0) or right (DIR=1) sub-tree of the
++left (BRANCH=0) or right (BRANCH=1) child of NODE.
++Return t if the height of the tree has grown."
    (let ((br (avl-tree--node-branch node branch))
 +	;; opposite direction: 0,1 -> 1,0
 +	(opp (avl-tree--switch-dir dir))
@@ -463,7 +464,7 @@
        nil))))
  
  (defun avl-tree--do-enter (cmpfun root branch data)
-@@ -313,11 +307,11 @@
+@@ -313,11 +308,11 @@
  
       ((funcall cmpfun data (avl-tree--node-data br))
        (and (avl-tree--do-enter cmpfun br 0 data)
@@ -477,19 +478,25 @@
  
       (t
        (setf (avl-tree--node-data br) data)
-@@ -325,28 +319,31 @@
+@@ -325,33 +320,38 @@
  
  ;; ----------------------------------------------------------------
  
 -(defun avl-tree--mapc (map-function root)
-+(defun avl-tree--mapc (map-function root dir)
-   ;; Apply MAP-FUNCTION to all nodes in the tree starting with ROOT.
+-  ;; Apply MAP-FUNCTION to all nodes in the tree starting with ROOT.
 -  ;; The function is applied in-order.
-+  ;; The function is applied in-order, either ascending (DIR=0) or
-+  ;; descending (DIR=1).
-   ;;
-   ;; Note: MAP-FUNCTION is applied to the node and not to the data itself.
-   ;; INTERNAL USE ONLY.
+-  ;;
+-  ;; Note: MAP-FUNCTION is applied to the node and not to the data itself.
+-  ;; INTERNAL USE ONLY.
++
++;;; INTERNAL USE ONLY
++(defun avl-tree--mapc (map-function root dir)
++  "Apply MAP-FUNCTION to all nodes in the tree starting with ROOT.
++The function is applied in-order, either ascending (DIR=0) or
++descending (DIR=1).
++
++Note: MAP-FUNCTION is applied to the node and not to the data
++itself."
    (let ((node root)
          (stack nil)
 -        (go-left t))
@@ -518,8 +525,15 @@
 +			node (avl-tree--switch-dir dir))
                       (pop stack)))))))
  
++;;; INTERNAL USE ONLY
  (defun avl-tree--do-copy (root)
-@@ -360,14 +357,19 @@
+-  ;; Copy the avl tree with ROOT as root.
+-  ;; Highly recursive. INTERNAL USE ONLY.
++  "Copy the avl tree with ROOT as root. Highly recursive."
+   (if (null root)
+       nil
+     (avl-tree--node-create
+@@ -360,10 +360,17 @@
       (avl-tree--node-data root)
       (avl-tree--node-balance root))))
  
@@ -528,22 +542,17 @@
  ;; ================================================================
  ;;; The public functions which operate on AVL trees.
  
--(defalias 'avl-tree-compare-function 'avl-tree--cmpfun
--  "Return the comparison function for the avl tree TREE.
 +;; define public alias for constructors so that we can set docstring
 +(defalias 'avl-tree-create 'avl-tree--create
 +  "Create an empty avl tree.
 +COMPARE-FUNCTION is a function which takes two arguments, A and B,
 +and returns non-nil if A is less than B, and nil otherwise.")
- 
--\(fn TREE)")
 +
-+(defalias 'avl-tree-compare-function 'avl-tree--cmpfun
-+  "Return the comparison function for the avl tree TREE.")
++
+ (defalias 'avl-tree-compare-function 'avl-tree--cmpfun
+   "Return the comparison function for the avl tree TREE.
  
- (defun avl-tree-empty (tree)
-   "Return t if avl tree TREE is emtpy, otherwise return nil."
-@@ -377,9 +379,9 @@
+@@ -377,9 +384,9 @@
    "In the avl tree TREE insert DATA.
  Return DATA."
    (avl-tree--do-enter (avl-tree--cmpfun tree)
@@ -556,7 +565,7 @@
    data)
  
  (defun avl-tree-delete (tree data)
-@@ -398,28 +400,31 @@
+@@ -398,28 +405,31 @@
  
  If there is no such element in the tree, the value is nil."
    (let ((node (avl-tree--root tree))
@@ -604,7 +613,7 @@
  
  (defun avl-tree-first (tree)
    "Return the first element in TREE, or nil if TREE is empty."
-@@ -445,19 +450,18 @@
+@@ -445,19 +455,18 @@
  
  (defun avl-tree-flatten (tree)
    "Return a sorted list containing all elements of TREE."

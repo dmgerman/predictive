@@ -136,15 +136,15 @@ NODE is the node, and BRANCH is the branch.
 ;; Convenience macros
 
 (defmacro avl-tree--switch-dir (dir)
-  ;; Return opposite direction to DIR (0 = left, 1 = right).
+  "Return opposite direction to DIR (0 = left, 1 = right)."
   `(- 1 ,dir))
 
 (defmacro avl-tree--dir-to-sign (dir)
-  ;; Convert direction (0,1) to sign factor (-1,+1)
+  "Convert direction (0,1) to sign factor (-1,+1)."
   `(1- (* 2 ,dir)))
 
 (defmacro avl-tree--sign-to-dir (dir)
-  ;; Convert sign factor (-x,+x) to direction (0,1)
+  "Convert sign factor (-x,+x) to direction (0,1)."
   `(if (< ,dir 0) 0 1))
 
 
@@ -152,10 +152,11 @@ NODE is the node, and BRANCH is the branch.
 ;;                          Deleting data
 
 (defun avl-tree--del-balance (node branch dir)
-  ;; Rebalance a tree at the left (BRANCH=0) or right (BRANCH=1) child
-  ;; of NODE after deleting from the left (DIR=0) or right (DIR=1)
-  ;; sub-tree of that child [or is it vice-versa?]. Return t if the
-  ;; height of the tree has shrunk.
+  "Rebalance a tree after deleting
+from the left (DIR=0) or right (DIR=1) sub-tree of the
+left (BRANCH=0) or right (BRANCH=1) child of NODE.
+Return t if the height of the tree has shrunk."
+;;; (or is it vice-versa for BRANCH?)
   (let ((br (avl-tree--node-branch node branch))
 	;; opposite direction: 0,1 -> 1,0
 	(opp (avl-tree--switch-dir dir))
@@ -219,9 +220,12 @@ NODE is the node, and BRANCH is the branch.
       t)))
 
 (defun avl-tree--do-delete (cmpfun root branch data test nilflag)
-  ;; Return (<shrunk> . <data>), where <shrunk> is t if the height of
-  ;; the tree has shrunk and nil otherwise, and <data> is the releted
-  ;; data.
+  "Delete DATA from BRANCH of node ROOT.
+\(See `avl-tree-delete' for TEST and NILFLAG).
+
+Return cons cell (<shrunk> . <data>), where <shrunk> is t if the
+height of the tree has shrunk and nil otherwise, and <data> is
+the releted data."
   (let ((br (avl-tree--node-branch root branch)))
     (cond
      ;; DATA not in tree.
@@ -266,10 +270,10 @@ NODE is the node, and BRANCH is the branch.
 ;;                           Entering data
 
 (defun avl-tree--enter-balance (node branch dir)
-  ;; Rebalance tree at the left (BRANCH=0) or right (BRANCH=1) child of
-  ;; NODE after an insertion into the left (DIR=0) or right (DIR=1)
-  ;; sub-tree of that child. Return t if the height of the tree has
-  ;; grown.
+  "Rebalance tree after an insertion
+into the left (DIR=0) or right (DIR=1) sub-tree of the
+left (BRANCH=0) or right (BRANCH=1) child of NODE.
+Return t if the height of the tree has grown."
   (let ((br (avl-tree--node-branch node branch))
 	;; opposite direction: 0,1 -> 1,0
 	(opp (avl-tree--switch-dir dir))
@@ -316,9 +320,12 @@ NODE is the node, and BRANCH is the branch.
       nil))))
 
 (defun avl-tree--do-enter (cmpfun root branch data &optional updatefun)
-  ;; Return cons cell (<grew> . <data>), where <grew> is t if height of
-  ;; tree ROOT has grown and nil otherwise, and <data> is the inserted
-  ;; data.
+  "Enter DATA in BRANCH of ROOT node.
+\(See `avl-tree-enter' for UPDATEFUN).
+
+Return cons cell (<grew> . <data>), where <grew> is t if height
+of tree ROOT has grown and nil otherwise, and <data> is the
+inserted data."
   (let ((br (avl-tree--node-branch root branch)))
     (cond
      ((null br)
@@ -354,13 +361,14 @@ NODE is the node, and BRANCH is the branch.
 
 ;; ----------------------------------------------------------------
 
+;;; INTERNAL USE ONLY
 (defun avl-tree--mapc (map-function root dir)
-  ;; Apply MAP-FUNCTION to all nodes in the tree starting with ROOT.
-  ;; The function is applied in-order, either ascending (DIR=0) or
-  ;; descending (DIR=1).
-  ;;
-  ;; Note: MAP-FUNCTION is applied to the node and not to the data itself.
-  ;; INTERNAL USE ONLY.
+  "Apply MAP-FUNCTION to all nodes in the tree starting with ROOT.
+The function is applied in-order, either ascending (DIR=0) or
+descending (DIR=1).
+
+Note: MAP-FUNCTION is applied to the node and not to the data
+itself."
   (let ((node root)
         (stack nil)
         (go-dir t))
@@ -381,9 +389,9 @@ NODE is the node, and BRANCH is the branch.
 			node (avl-tree--switch-dir dir))
                      (pop stack)))))))
 
+;;; INTERNAL USE ONLY
 (defun avl-tree--do-copy (root)
-  ;; Copy the avl tree with ROOT as root.
-  ;; Highly recursive. INTERNAL USE ONLY.
+  "Copy the avl tree with ROOT as root. Highly recursive."
   (if (null root)
       nil
     (avl-tree--node-create
@@ -428,7 +436,9 @@ and returns non-nil if A is less than B, and nil otherwise.")
 
 
 (defalias 'avl-tree-compare-function 'avl-tree--cmpfun
-  "Return the comparison function for the avl tree TREE.")
+  "Return the comparison function for the avl tree TREE.
+
+\(fn TREE)")
 
 (defun avl-tree-empty (tree)
   "Return t if avl tree TREE is emtpy, otherwise return nil."
@@ -484,15 +494,14 @@ returned. Optional argument NILFLAG specifies a value to return
 instead of nil in this case. This allows non-existent elements to
 be distinguished from a null element. (See also
 `avl-tree-member-p', which does this for you.)"
-  (let ((node (avl-tree--root tree)))
+  (let ((node (avl-tree--root tree))
+	(compare-function (avl-tree--cmpfun tree)))
     (catch 'found
       (while node
 	(cond
-	 ((funcall (avl-tree--cmpfun tree)
-		   data (avl-tree--node-data node))
+	 ((funcall compare-function data (avl-tree--node-data node))
 	  (setq node (avl-tree--node-left node)))
-	 ((funcall (avl-tree--cmpfun tree)
-		   (avl-tree--node-data node) data)
+	 ((funcall compare-function (avl-tree--node-data node) data)
 	  (setq node (avl-tree--node-right node)))
 	 (t (throw 'found (avl-tree--node-data node)))))
       nilflag)))

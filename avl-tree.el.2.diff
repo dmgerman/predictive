@@ -1,5 +1,5 @@
---- avl-tree1.el	2009-11-23 09:37:10.000000000 +0000
-+++ avl-tree2.el	2009-11-23 09:37:10.000000000 +0000
+--- avl-tree1.el	2009-11-23 15:42:54.000000000 +0000
++++ avl-tree2.el	2009-11-23 15:54:52.000000000 +0000
 @@ -6,7 +6,7 @@
  ;;         Inge Wallin <inge@lysator.liu.se>
  ;;         Thomas Bellman <bellman@lysator.liu.se>
@@ -23,16 +23,19 @@
  ;; Version 0.1
  ;; * simplified rebalancing code
  ;; * added optional direction argument to `avl-tree-map'
-@@ -211,36 +218,49 @@
+@@ -212,36 +219,52 @@
                (avl-tree--node-left br))
        t)))
  
 -(defun avl-tree--do-delete (cmpfun root branch data)
 -  ;; Return t if the height of the tree has shrunk.
 +(defun avl-tree--do-delete (cmpfun root branch data test nilflag)
-+  ;; Return (<shrunk> . <data>), where <shrunk> is t if the height of
-+  ;; the tree has shrunk and nil otherwise, and <data> is the releted
-+  ;; data.
++  "Delete DATA from BRANCH of node ROOT.
++\(See `avl-tree-delete' for TEST and NILFLAG).
++
++Return cons cell (<shrunk> . <data>), where <shrunk> is t if the
++height of the tree has shrunk and nil otherwise, and <data> is
++the releted data."
    (let ((br (avl-tree--node-branch root branch)))
      (cond
 +     ;; DATA not in tree.
@@ -95,16 +98,19 @@
  
  ;; ----------------------------------------------------------------
  ;;                           Entering data
-@@ -295,27 +315,42 @@
+@@ -296,30 +319,47 @@
  	       (avl-tree--node-branch node branch)) 0))
        nil))))
  
 -(defun avl-tree--do-enter (cmpfun root branch data)
 -  ;; Return t if height of tree ROOT has grown.  INTERNAL USE ONLY.
 +(defun avl-tree--do-enter (cmpfun root branch data &optional updatefun)
-+  ;; Return cons cell (<grew> . <data>), where <grew> is t if height of
-+  ;; tree ROOT has grown and nil otherwise, and <data> is the inserted
-+  ;; data.
++  "Enter DATA in BRANCH of ROOT node.
++\(See `avl-tree-enter' for UPDATEFUN).
++
++Return cons cell (<grew> . <data>), where <grew> is t if height
++of tree ROOT has grown and nil otherwise, and <data> is the
++inserted data."
    (let ((br (avl-tree--node-branch root branch)))
      (cond
       ((null br)
@@ -143,11 +149,14 @@
 +	(setf (avl-tree--node-data br) newdata)
 +	(cons nil newdata))  ; return value
 +      ))))
-+
  
- ;; ----------------------------------------------------------------
+-;; ----------------------------------------------------------------
  
-@@ -357,6 +392,30 @@
++;; ----------------------------------------------------------------
+ 
+ ;;; INTERNAL USE ONLY
+ (defun avl-tree--mapc (map-function root dir)
+@@ -360,6 +400,30 @@
       (avl-tree--node-data root)
       (avl-tree--node-balance root))))
  
@@ -178,7 +187,7 @@
  
  ;; ================================================================
  ;;; The public functions which operate on AVL trees.
-@@ -375,30 +434,56 @@
+@@ -380,30 +444,56 @@
    "Return t if avl tree TREE is emtpy, otherwise return nil."
    (null (avl-tree--root tree)))
  
@@ -201,7 +210,8 @@
 -                       data))
 +(defun avl-tree-enter (tree data &optional updatefun)
 +  "Insert DATA into the avl tree TREE.
-+
+ 
+-(defun avl-tree-member (tree data)
 +If an element that matches DATA (according to the tree's
 +comparison function, see `avl-tree-create') already exists in
 +TREE, it will be replaced by DATA by default.
@@ -237,8 +247,7 @@
 +  (cdr (avl-tree--do-delete (avl-tree--cmpfun tree)
 +			    (avl-tree--dummyroot tree)
 +			    0 data test nilflag)))
- 
--(defun avl-tree-member (tree data)
++
 +
 +(defun avl-tree-member (tree data &optional nilflag)
    "Return the element in the avl tree TREE which matches DATA.
@@ -255,7 +264,7 @@
    (let ((node (avl-tree--root tree))
  	(compare-function (avl-tree--cmpfun tree)))
      (catch 'found
-@@ -409,7 +494,16 @@
+@@ -414,7 +504,16 @@
  	 ((funcall compare-function (avl-tree--node-data node) data)
  	  (setq node (avl-tree--node-right node)))
  	 (t (throw 'found (avl-tree--node-data node)))))
@@ -273,7 +282,7 @@
  
  (defun avl-tree-map (__map-function__ tree &optional reverse)
    "Modify all elements in the avl tree TREE by applying FUNCTION.
-@@ -426,6 +520,57 @@
+@@ -431,6 +530,57 @@
     (avl-tree--root tree)
     (if reverse 1 0)))
  
@@ -331,7 +340,7 @@
  (defun avl-tree-first (tree)
    "Return the first element in TREE, or nil if TREE is empty."
    (let ((node (avl-tree--root tree)))
-@@ -468,6 +613,65 @@
+@@ -473,6 +623,65 @@
    "Clear the avl tree TREE."
    (setf (avl-tree--root tree) nil))
  
