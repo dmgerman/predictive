@@ -1,5 +1,5 @@
 --- avl-tree.el	2009-11-22 22:10:09.000000000 +0000
-+++ avl-tree1.el	2009-11-22 22:15:47.000000000 +0000
++++ avl-tree1.el	2009-11-23 09:37:10.000000000 +0000
 @@ -3,11 +3,13 @@
  ;; Copyright (C) 1995, 2007, 2008, 2009  Free Software Foundation, Inc.
  
@@ -17,12 +17,9 @@
  
  ;; This file is part of GNU Emacs.
  
-@@ -22,176 +24,191 @@
- ;; GNU General Public License for more details.
- 
+@@ -24,174 +26,189 @@
  ;; You should have received a copy of the GNU General Public License
--;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
-+;; along with GNU Emacs. If not, see <http://www.gnu.org/licenses/>.
+ ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
  
 -;;; Commentary:
  
@@ -199,9 +196,9 @@
 +;; tried to access the underlying setter function, but this wouldn't be
 +;; portable either.
 +(defsetf avl-tree--node-branch aset)
-+
  
 -(defun avl-tree--del-balance2 (node branch)
++
 +
 +;; ----------------------------------------------------------------
 +;; Convenience macros
@@ -538,9 +535,9 @@
 +  "Create an empty avl tree.
 +COMPARE-FUNCTION is a function which takes two arguments, A and B,
 +and returns non-nil if A is less than B, and nil otherwise.")
-+
  
 -\(fn TREE)")
++
 +(defalias 'avl-tree-compare-function 'avl-tree--cmpfun
 +  "Return the comparison function for the avl tree TREE.")
  
@@ -559,11 +556,10 @@
    data)
  
  (defun avl-tree-delete (tree data)
-@@ -397,29 +399,33 @@
- `avl-tree-create' when TREE was created.
+@@ -398,28 +400,31 @@
  
  If there is no such element in the tree, the value is nil."
--  (let ((node (avl-tree--root tree))
+   (let ((node (avl-tree--root tree))
 -        (compare-function (avl-tree--cmpfun tree))
 -        found)
 -    (while (and node
@@ -577,15 +573,13 @@
 -        (setq found t))))
 -    (if node
 -        (avl-tree--node-data node)
-+  (let ((node (avl-tree--root tree)))
++	(compare-function (avl-tree--cmpfun tree)))
 +    (catch 'found
 +      (while node
 +	(cond
-+	 ((funcall (avl-tree--cmpfun tree)
-+		   data (avl-tree--node-data node))
++	 ((funcall compare-function data (avl-tree--node-data node))
 +	  (setq node (avl-tree--node-left node)))
-+	 ((funcall (avl-tree--cmpfun tree)
-+		   (avl-tree--node-data node) data)
++	 ((funcall compare-function (avl-tree--node-data node) data)
 +	  (setq node (avl-tree--node-right node)))
 +	 (t (throw 'found (avl-tree--node-data node)))))
        nil)))
@@ -610,7 +604,7 @@
  
  (defun avl-tree-first (tree)
    "Return the first element in TREE, or nil if TREE is empty."
-@@ -445,19 +451,18 @@
+@@ -445,19 +450,18 @@
  
  (defun avl-tree-flatten (tree)
    "Return a sorted list containing all elements of TREE."

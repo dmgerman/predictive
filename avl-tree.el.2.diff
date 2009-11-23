@@ -1,5 +1,5 @@
---- avl-tree1.el	2009-11-22 22:15:16.000000000 +0000
-+++ avl-tree2.el	2009-11-22 22:15:20.000000000 +0000
+--- avl-tree1.el	2009-11-23 09:37:10.000000000 +0000
++++ avl-tree2.el	2009-11-23 09:37:10.000000000 +0000
 @@ -6,7 +6,7 @@
  ;;         Inge Wallin <inge@lysator.liu.se>
  ;;         Thomas Bellman <bellman@lysator.liu.se>
@@ -252,11 +252,11 @@
 +instead of nil in this case. This allows non-existent elements to
 +be distinguished from a null element. (See also
 +`avl-tree-member-p', which does this for you.)"
-   (let ((node (avl-tree--root tree)))
+   (let ((node (avl-tree--root tree))
+ 	(compare-function (avl-tree--cmpfun tree)))
      (catch 'found
-       (while node
-@@ -410,7 +495,16 @@
- 		   (avl-tree--node-data node) data)
+@@ -409,7 +494,16 @@
+ 	 ((funcall compare-function (avl-tree--node-data node) data)
  	  (setq node (avl-tree--node-right node)))
  	 (t (throw 'found (avl-tree--node-data node)))))
 -      nil)))
@@ -273,7 +273,7 @@
  
  (defun avl-tree-map (__map-function__ tree &optional reverse)
    "Modify all elements in the avl tree TREE by applying FUNCTION.
-@@ -427,6 +521,57 @@
+@@ -426,6 +520,57 @@
     (avl-tree--root tree)
     (if reverse 1 0)))
  
@@ -331,7 +331,7 @@
  (defun avl-tree-first (tree)
    "Return the first element in TREE, or nil if TREE is empty."
    (let ((node (avl-tree--root tree)))
-@@ -469,6 +614,65 @@
+@@ -468,6 +613,65 @@
    "Clear the avl tree TREE."
    (setf (avl-tree--root tree) nil))
  
