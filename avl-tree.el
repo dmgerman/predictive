@@ -1,27 +1,27 @@
 ;;; avl-tree.el --- balanced binary trees, AVL-trees
 
-;; Copyright (C) 1995, 2007-2009  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 2007, 2008, 2009  Free Software Foundation, Inc.
 
 ;; Author: Per Cederqvist <ceder@lysator.liu.se>
 ;;         Inge Wallin <inge@lysator.liu.se>
 ;;         Thomas Bellman <bellman@lysator.liu.se>
 ;;         modified by Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.2
 ;; Maintainer: FSF
 ;; Created: 10 May 1991
 ;; Keywords: extensions, data structures, AVL, tree
 
 ;; This file is part of GNU Emacs.
 
-;; GNU Emacs is free software: you can redistribute it and/or modify it
-;; under the terms of the GNU General Public License as published by the
-;; Free Software Foundation, either version 3 of the License, or (at
-;; your option) any later version.
+;; GNU Emacs is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 
-;; GNU Emacs is distributed in the hope that it will be useful, but
-;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-;; General Public License for more details.
+;; GNU Emacs is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs. If not, see <http://www.gnu.org/licenses/>.
@@ -54,14 +54,16 @@
 
 ;;; Change log:
 ;;
-;; Version 0.1
-;; * drop-in replacement for the version included with Emacs
-;; * simplified rebalancing code
-;; * added new optional arguments to `avl-tree-member',
-;;   `avl-tree-enter', `avl-tree-delete' and `avl-tree-map'
+;; Version 0.2
+;; * added new optional arguments to `avl-tree-member', `avl-tree-enter'
+;;   and `avl-tree-delete'
 ;; * added `avl-tree-member-p', `avl-tree-mapc', `avl-tree-mapcar',
 ;;  `avl-tree-mapf', `avl-tree-stack', `avl-tree-stack-pop' and
 ;;  `avl-tree-stack-first' functions
+;;
+;; Version 0.1
+;; * simplified rebalancing code
+;; * added optional direction argument to `avl-tree-map'
 
 
 ;;; Code:
@@ -104,7 +106,7 @@
 
 (defstruct (avl-tree--node
             ;; We force a representation without tag so it matches the
-            ;; pre-defstruct representation.  Also we use the underlying
+            ;; pre-defstruct representation. Also we use the underlying
             ;; representation in the implementation of
             ;; avl-tree--node-branch.
             (:type vector)
@@ -327,12 +329,12 @@ NODE is the node, and BRANCH is the branch.
 
      ((funcall cmpfun data (avl-tree--node-data br))
       (let ((ret (avl-tree--do-enter cmpfun br 0 data updatefun)))
-	(cons (if (car ret) (avl-tree--enter-balance root branch 0))
+	(cons (and (car ret) (avl-tree--enter-balance root branch 0))
 	      (cdr ret))))
 
      ((funcall cmpfun (avl-tree--node-data br) data)
       (let ((ret (avl-tree--do-enter cmpfun br 1 data updatefun)))
-	(cons (if (car ret) (avl-tree--enter-balance root branch 1))
+	(cons (and (car ret) (avl-tree--enter-balance root branch 1))
 	      (cdr ret))))
 
      ;; Data already in tree, update it.
@@ -357,8 +359,8 @@ NODE is the node, and BRANCH is the branch.
   ;; The function is applied in-order, either ascending (DIR=0) or
   ;; descending (DIR=1).
   ;;
-  ;; Note: MAP-FUNCTION is applied to the node and not to the data
-  ;;       itself.  INTERNAL USE ONLY.
+  ;; Note: MAP-FUNCTION is applied to the node and not to the data itself.
+  ;; INTERNAL USE ONLY.
   (let ((node root)
         (stack nil)
         (go-dir t))
@@ -504,7 +506,7 @@ previously specified in `avl-tree-create' when TREE was created."
     (not (eq (avl-tree-member tree data flag) flag))))
 
 
-(defun avl-tree-map (avl-tree-function tree &optional reverse)
+(defun avl-tree-map (__map-function__ tree &optional reverse)
   "Modify all elements in the avl tree TREE by applying FUNCTION.
 
 Each element is replaced by the return value of FUNCTION applied
@@ -515,12 +517,12 @@ descending order if REVERSE is non-nil."
   (avl-tree--mapc
    (lambda (node)
      (setf (avl-tree--node-data node)
-           (funcall avl-tree-function (avl-tree--node-data node))))
+           (funcall __map-function__ (avl-tree--node-data node))))
    (avl-tree--root tree)
    (if reverse 1 0)))
 
 
-(defun avl-tree-mapc (avl-tree-function tree &optional reverse)
+(defun avl-tree-mapc (__map-function__ tree &optional reverse)
   "Apply FUNCTION to all elements in avl tree TREE,
 for side-effect only.
 
@@ -528,13 +530,13 @@ FUNCTION is applied to the elements in ascending order, or
 descending order if REVERSE is non-nil."
   (avl-tree--mapc
    (lambda (node)
-     (funcall avl-tree-function (avl-tree--node-data node)))
+     (funcall __map-function__ (avl-tree--node-data node)))
    (avl-tree--root tree)
    (if reverse 1 0)))
 
 
 (defun avl-tree-mapf
-  (avl-tree-function combinator tree &optional reverse)
+  (__map-function__ combinator tree &optional reverse)
   "Apply FUNCTION to all elements in avl tree TREE,
 and combine the results using COMBINATOR.
 
@@ -545,7 +547,7 @@ order, or descending order if REVERSE is non-nil."
      (lambda (node)
        (setq avl-tree-mapf--accumulate
 	     (funcall combinator
-		      (funcall avl-tree-function
+		      (funcall __map-function__
 			       (avl-tree--node-data node))
 		      avl-tree-mapf--accumulate)))
      (avl-tree--root tree)
@@ -553,7 +555,7 @@ order, or descending order if REVERSE is non-nil."
      (nreverse avl-tree-mapf--accumulate)))
 
 
-(defun avl-tree-mapcar (avl-tree-function tree &optional reverse)
+(defun avl-tree-mapcar (__map-function__ tree &optional reverse)
   "Apply FUNCTION to all elements in avl tree TREE,
 and make a list of the results.
 
@@ -567,7 +569,7 @@ then
   (avl-tree-mapf function 'cons tree (not reverse))
 
 is more efficient."
-  (nreverse (avl-tree-mapf avl-tree-function 'cons tree reverse)))
+  (nreverse (avl-tree-mapf __map-function__ 'cons tree reverse)))
 
 
 (defun avl-tree-first (tree)
@@ -589,8 +591,7 @@ is more efficient."
 (defun avl-tree-copy (tree)
   "Return a copy of the avl tree TREE."
   (let ((new-tree (avl-tree-create (avl-tree--cmpfun tree))))
-    (setf (avl-tree--root new-tree)
-	  (avl-tree--do-copy (avl-tree--root tree)))
+    (setf (avl-tree--root new-tree) (avl-tree--do-copy (avl-tree--root tree)))
     new-tree))
 
 (defun avl-tree-flatten (tree)
@@ -598,8 +599,7 @@ is more efficient."
    (let ((treelist nil))
      (avl-tree--mapc
       (lambda (node) (push (avl-tree--node-data node) treelist))
-      (avl-tree--root tree)
-      1)
+      (avl-tree--root tree) 1)
      treelist))
 
 (defun avl-tree-size (tree)
@@ -675,10 +675,4 @@ element stored in the AVL tree.)"
 
 (provide 'avl-tree)
 
-
-;;; Local Variables:
-;;; fill-column: 72
-;;; End:
-
 ;;; avl-tree.el ends here
-
