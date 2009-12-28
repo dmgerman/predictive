@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, echo area, help-echo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * fixed `completion-echo' to quote "%" characters in message text
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -64,7 +67,8 @@
 (defun completion-echo (overlay)
   "Display completion candidates in the echo-area."
   (let ((message-log-max nil))
-    (message (completion-construct-echo-text overlay)))
+    (message (replace-regexp-in-string
+	      "%" "%%" (completion-construct-echo-text overlay))))
   (overlay-put overlay 'help-echo 'completion-construct-help-echo-text))
 
 
