@@ -1949,11 +1949,10 @@ COMPLETION-FUNCTION, removing \"completion-ui-\" or
 
 The optional :completion-args and :other-args keyword arguments
 are useful when using a COMPLETION-FUNCTION that takes additional
-arguments that should be ignored by
-Completion-UI.
+arguments that should be ignored by Completion-UI.
 
 If :completion-args is 0, 1 or 2, COMPLETION-FUNCTION will be
-passed that many arguments, as described above, and as null
+passed that many arguments, as described above, and as many null
 values will be added to the end of the argument list as necessary
 to fill any remaining mandatory arguments (but see :other-args,
 below).
