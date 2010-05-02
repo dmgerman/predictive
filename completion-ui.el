@@ -3250,7 +3250,9 @@ overlays."
 
      ;; accept
      ((eq resolve-behaviour 'accept)
-      (setq prefix (string char))
+      ;; CHAR might not be a character if `last-input-event' included a
+      ;; modifier (e.g. S-<space>)
+      (when (characterp char) (setq prefix (string char)))
       (setq wordstart t)
       ;; if there is a completion at point...
       (when overlay
@@ -3265,7 +3267,9 @@ overlays."
 
      ;; reject
      ((eq resolve-behaviour 'reject)
-      (setq prefix (string char))
+      ;; CHAR might not be a character if `last-input-event' included a
+      ;; modifier (e.g. S-<space>)
+      (when (characterp char) (setq prefix (string char)))
       (setq wordstart t)
       ;; if there is a completion at point...
       (when overlay
