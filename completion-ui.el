@@ -3223,8 +3223,17 @@ overlays."
   ;; if CHAR or SYNTAX were supplied, use them; otherwise get character
   ;; and syntax from last input event (which relies on sensible key
   ;; bindings being used for this command)
-  (when (null char) (setq char last-input-event))
-  (when (null syntax) (setq syntax (char-syntax last-input-event)))
+  (when (null char)
+    (if (characterp last-input-event)
+	(setq char last-input-event)
+      ;; if `last-input-event' is not a character, look at
+      ;; `this-single-command-keys' instead in case we get a character after
+      ;; translation (as e.g. for "\S- ")
+      (setq char (this-single-command-keys))
+      (if (= (length char) 1) (setq char (aref char 0))
+	(error "`auto-completion-self-insert'\
+ bound to non-printable character"))))
+  (when (null syntax) (setq syntax (char-syntax char)))
 
   (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour
 		       overlay word-thing wordstart prefix)
@@ -3252,7 +3261,7 @@ overlays."
      ((eq resolve-behaviour 'accept)
       ;; CHAR might not be a character if `last-input-event' included a
       ;; modifier (e.g. S-<space>)
-      (when (characterp char) (setq prefix (string char)))
+      (setq prefix (string char))
       (setq wordstart t)
       ;; if there is a completion at point...
       (when overlay
@@ -3269,7 +3278,7 @@ overlays."
      ((eq resolve-behaviour 'reject)
       ;; CHAR might not be a character if `last-input-event' included a
       ;; modifier (e.g. S-<space>)
-      (when (characterp char) (setq prefix (string char)))
+      (setq prefix (string char))
       (setq wordstart t)
       ;; if there is a completion at point...
       (when overlay
