@@ -238,6 +238,7 @@
 ;; Version 0.11.10
 ;; * fall back to global `auto-completion-override-alist' if character not
 ;;   specified in overlay-local version, in `auto-completion-lookup-behaviour'
+;; * fixed `completion-cycle' to cope gracefully with null argument
 ;;
 ;; Version 0.11.9
 ;; * added C-@ binding (produced by C-<space> in terminals)
@@ -654,6 +655,7 @@
   'accept:        automatically accept the completion
   'accept-common: automatically accept the common part of the completion
   'reject:        automatically reject the completion"
+  :group 'completion-ui
   :type '(choice (const :tag "accept" accept)
                  (const :tag "reject" reject)
                  (const :tag "accept-common" accept-common)))
@@ -1582,6 +1584,16 @@ Comparison is done with 'equal."
 	       (setq i (1+ i))
 	       (setq list (cdr list))))
       nil)))
+
+
+
+
+;;; =======================================================
+;;;         Compatibility functions and aliases
+
+(unless (fboundp 'characterp)
+  (defalias 'characterp 'char-valid-p))
+
 
 
 
@@ -2966,9 +2978,10 @@ forwards \(backwards if negative\). Default is 1. Interactively,
 N is the prefix argument.
 
 If OVERLAY is supplied, use that instead of finding one. The
-point had better be within OVERLAY or you'll be stuck by
+point had better be within OVERLAY or you'll be struck by
 lightening."
   (interactive "p")
+  (unless (numberp n) (setq n 1))
 
   ;; if we haven't been passed one, get completion overlay at point
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
@@ -4555,6 +4568,7 @@ in WINDOW'S frame."
   (completion--simulate-overlay-bindings auto-completion-overlay-map
                                         auto-completion-map
                                         'auto-completion-mode t))
+
 
 
 
