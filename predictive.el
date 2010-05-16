@@ -968,6 +968,13 @@ Return modified alist."
 
 
 
+(defun predictive-lookup-word-p (word ignored)
+  "Return non-nil if WORD is found by `lookup-words', nil otherwise.
+Potentially useful as a `predictive-auto-add-filter'."
+  (member word (lookup-words word)))
+
+
+
 
 ;;; ===============================================================
 ;;;                   The minor mode definition
