@@ -1,81 +1,88 @@
-"\\Abs" 0 (:help #("\\Abs{<x>}  Absolute value |x| with automatically sized delimiters" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face))))
-"\\Anticomm" 0 (:help #("\\Anticomm{<x>}{<y>}  Anti-commutator {x,y} with automatically sized delimiters" 0 9 (face (font-lock-keyword-face font-latex-sedate-face)) 10 13 (face (font-lock-variable-name-face)) 15 18 (face (font-lock-variable-name-face))))
-"\\BigAbs" 0 (:help #("\\BigAbs{<x>}  Absolute value |x| with \\Big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face))))
-"\\BigBra" 0 (:help #("\\BigBra[<s>]{<x>}  Bra <x|_s with \\Big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\BigExpect" 0 (:help #("\\BigExpect{<x>}  Expectation value <x> with \\Big delimiters" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\BigKet" 0 (:help #("\\BigKet[<s>]{<x>}  Ket |x>_s with \\Big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\BigMatnorm" 0 (:help #("\\BigMatnorm{<x>} Matrix norm ||x|| with \\Big delimiters" 0 11 (face (font-lock-keyword-face font-latex-sedate-face)) 12 15 (face (font-lock-variable-name-face))))
-"\\BiggAbs" 0 (:help #("\\BiggAbs{<x>}  Absolute value |x| with \\Bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face))))
-"\\BiggBra" 0 (:help #("\\BiggBra[<s>]{<x>}  Bra <x|_s with \\Bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face)) 14 17 (face (font-lock-variable-name-face))))
-"\\BiggExpect" 0 (:help #("\\BiggExpect{<x>}  Expectation value <x> with \\Bigg delimiters" 0 11 (face (font-lock-keyword-face font-latex-sedate-face)) 12 15 (face (font-lock-variable-name-face))))
-"\\BiggKet" 0 (:help #("\\BiggKet[<s>]{<x>}  Ket |x>_s with \\Bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face)) 14 17 (face (font-lock-variable-name-face))))
-"\\BiggMatnorm" 0 (:help #("\\BiggMatnorm{<x>} Matrix norm ||x|| with \\Bigg delimiters" 0 12 (face (font-lock-keyword-face font-latex-sedate-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\Bra" 0 (:help #("\\Bra[<s>]{<x>}  Bra <x|_s with automatically sized delimiters" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\BraKet" 0 (:prefixes ("\\Bra") :help #("\\BraKet{<x>}{<y>}{<z>}  Matrix element <x|y|z> with automatically sized delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\Braket" 0 (:prefixes ("\\Bra") :help #("\\Braket[<s>]{<x>}{<y>}  Overlap <x|y>_s with automatically sized delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\CC" 0 (:help #("\\CC  Complex field" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Comm" 0 (:help #("\\Comm{<x>}{<y>}  Commutator [x,y] with automatically sized delimiters" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\EE" 0 (:help #("\\EE  Expectation" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Expect" 0 (:help #("\\Expect{<x>}  Expectation value <x> with automatically sized delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face))))
-"\\FF" 0 (:help #("\\FF  Flip operator" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Ket" 0 (:help #("\\Ket[<s>]{<x>}  Ket |x>_s with automatically sized delimiters" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\Ketbra" 0 (:prefixes ("\\Ket") :help #("\\Ketbra[<s>]{<x>}{<y>}  Ketbra |x><y|_s with automatically sized delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\Matnorm" 0 (:help #("\\Matnorm{<x>}  Matrix norm ||x|| with automatically sized delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face))))
-"\\MatnormHS" 0 (:prefixes ("\\Matnorm") :help #("\\MatnormHS{<x>}  Hilbert-Schmidt norm ||x||_HS with automatically sized delimiters" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\MatnormTr" 0 (:prefixes ("\\Matnorm") :help #("\\MatnormTr{<x>}  Trace norm ||x||_Tr with automatically sized delimiters" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\NN" 0 (:help #("\\NN  Natural number field" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Order" 0 (:help #("\\Order{<x>}  Big-Oh O(x) notation with automatically sizedc delimiters" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 10 (face (font-lock-variable-name-face))))
-"\\PP" 0 (:help #("\\PP  Projectification" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Proj" 0 (:help #("\\Proj{<x>}  Projector |x><x| with automatically sized delimiters" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face))))
-"\\QQ" 0 (:help #("\\QQ  Rational number field" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\RR" 0 (:help #("\\RR  Real number field" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\Span" 0 (:help #("\\Span{<x>}  Linear span of {x} with automatically sized delimiters" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face))))
-"\\UU" 0 (:help #("\\UU  Blackboard-bold U" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\wlog" 0 (:help #("\\wlog  w.l.o.g" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\ZZ" 0 (:help #("\\ZZ  Integer number field" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\abs" 0 (:help #("\\abs{<x>}  Absolute value |x|" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face))))
-"\\anticomm" 0 (:help #("\\anticomm{<x>}{<y>}  Anti-commutator {x,y}" 0 9 (face (font-lock-keyword-face font-latex-sedate-face)) 10 13 (face (font-lock-variable-name-face)) 15 18 (face (font-lock-variable-name-face))))
-"\\bigAbs" 0 (:help #("\\bigAbs{<x>}  Absolute value |x| with \\big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face))))
-"\\bigBra" 0 (:help #("\\bigBra[<s>]{<x>}  Bra <x|_s with \\big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\bigExpect" 0 (:help #("\\bigExpect{<x>}  Expectation value <x> with \\big delimiters" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\bigKet" 0 (:help #("\\bigKet[<s>]{<x>}  Ket |x>_s with \\big delimiters" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\bigMatnorm" 0 (:help #("\\bigMatnorm{<x>} Matrix norm ||x|| with \\big delimiters" 0 11 (face (font-lock-keyword-face font-latex-sedate-face)) 12 15 (face (font-lock-variable-name-face))))
-"\\biggAbs" 0 (:help #("\\biggAbs{<x>}  Absolute value |x| with \\bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face))))
-"\\biggBra" 0 (:help #("\\biggBra[<s>]{<x>}  Bra <x|_s with \\bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face)) 14 17 (face (font-lock-variable-name-face))))
-"\\biggExpect" 0 (:help #("\\biggExpect{<x>}  Expectation value <x> with \\bigg delimiters" 0 11 (face (font-lock-keyword-face font-latex-sedate-face)) 12 15 (face (font-lock-variable-name-face))))
-"\\biggKet" 0 (:help #("\\biggKet[<s>]{<x>}  Ket |x>_s with \\bigg delimiters" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face)) 14 17 (face (font-lock-variable-name-face))))
-"\\biggMatnorm" 0 (:help #("\\biggMatnorm{<x>} Matrix norm ||x|| with \\bigg delimiters" 0 12 (face (font-lock-keyword-face font-latex-sedate-face)) 13 16 (face (font-lock-variable-name-face))))
-"\\bipartition" 0 (:help #("\\bipartition{<x>}{<y>}  Bipartition x|y" 0 12 (face (font-lock-keyword-face font-latex-sedate-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\bra" 0 (:help #("\\bra[<s>]{<x>}  Bra <x|_s" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\braKet" 0 (:prefixes ("\\bra") :help #("\\braKet{<x>}{<y>}{<z>}  Matrix element <x|y|z>" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\braket" 0 (:prefixes ("\\bra") :help #("\\braket[<s>]{<x>}{<y>}  Overlap <x|y>_s" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\clap" 0 (:help #("\\clap{<x>}  Typeset argument with width set to 0 (text mode)" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face))))
-"\\comm" 0 (:help #("\\comm{<x>}{<y>}  Commutator [x,y]" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\dd" 0 (:help #("\\dd  Differential d" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\diag" 0 (:help #("\\diag  Diagonal matrix / diagonal part" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\dt" 0 (:help #("\\dt  Differential dt" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\ebit" 0 (:help #("\\ebit  Unit of entanglement" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\expect" 0 (:help #("\\expect{<x>}  Expectation value <x>" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face))))
-"\\hc" 0 (:help #("\\hc  Abbreviation for Hermitian conjugate" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\id" 0 (:help #("\\id  Identity operator" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\identity" 0 (:help #("\\identity  Identity operator" 0 9 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\imag" 0 (:help #("\\imag  Imaginary part" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\ket" 0 (:help #("\\ket[<s>]{<x>}  Ket |x>_s" 0 4 (face (font-lock-keyword-face font-latex-sedate-face)) 5 8 (face (font-lock-variable-name-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\ketbra" 0 (:prefixes ("\\ket") :help #("\\ketbra[<s>]{<x>}{<y>}  Ketbra |x><y|_s" 0 7 (face (font-lock-keyword-face font-latex-sedate-face)) 8 11 (face (font-lock-variable-name-face)) 13 16 (face (font-lock-variable-name-face)) 18 21 (face (font-lock-variable-name-face))))
-"\\mathclap" 0 (:help #("\\mathclap{<x>}  Typeset argument with width set to 0 (math mode)" 0 9 (face (font-lock-keyword-face font-latex-sedate-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\mathllap" 0 (:help #("\\mathllap{<x>}  Typeset argument with width of left-hand-side set to 0 (math mode)" 0 9 (face (font-lock-keyword-face font-latex-sedate-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\mathrlap" 0 (:help #("\\mathrlap{<x>}  Typeset argument with width of right-hand-side set to 0 (math mode)" 0 9 (face (font-lock-keyword-face font-latex-sedate-face)) 10 13 (face (font-lock-variable-name-face))))
-"\\matnorm" 0 (:help #("\\matnorm{<x>}  Matrix norm ||x||" 0 8 (face (font-lock-keyword-face font-latex-sedate-face)) 9 12 (face (font-lock-variable-name-face))))
-"\\matnormHS" 0 (:prefixes ("\\matnorm") :help #("\\matnormHS{<x>}  Hilbert-Schmidt norm ||x||_HS" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\matnormTr" 0 (:prefixes ("\\matnorm") :help #("\\matnormTr{<x>}  Trace norm ||x||_Tr" 0 10 (face (font-lock-keyword-face font-latex-sedate-face)) 11 14 (face (font-lock-variable-name-face))))
-"\\order" 0 (:help #("\\order{<x>}  Big-Oh notation" 0 6 (face (font-lock-keyword-face font-latex-sedate-face)) 7 10 (face (font-lock-variable-name-face))))
-"\\ox" 0 (:help #("\\ox  Shorthand for \\otimes" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\pfaf" 0 (:help #("\\pfaf  Pfaffian" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\prj" 0 (:help #("\\prj  Projector" 0 4 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\proj" 0 (:help #("\\proj{<x>}  Projector |x><x|" 0 5 (face (font-lock-keyword-face font-latex-sedate-face)) 6 9 (face (font-lock-variable-name-face))))
-"\\rank" 0 (:help #("\\rank  Rank" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\real" 0 (:help #("\\real  Real part" 0 5 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\schmidt" 0 (:help #("\\schmidt  Schmidt rank" 0 8 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\sgn" 0 (:help #("\\sgn  Signum" 0 4 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\tr" 0 (:help #("\\tr  Trace" 0 3 (face (font-lock-keyword-face font-latex-sedate-face))))
-"\\vspan" 0 (:help #("\\vspan  Linear span" 0 6 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\Abs" 0
+"\\Anticomm" 0
+"\\BigAbs" 0
+"\\BigBra" 0
+"\\BigExpect" 0
+"\\BigKet" 0
+"\\BigMatnorm" 0
+"\\BigOrder" 0
+"\\BiggAbs" 0
+"\\BiggBra" 0
+"\\BiggExpect" 0
+"\\BiggKet" 0
+"\\BiggMatnorm" 0
+"\\BiggOrder" 0
+"\\Bra" 0
+"\\BraKet" 0 (:prefixes ("\\Bra"))
+"\\Braket" 0 (:prefixes ("\\Bra"))
+"\\CC" 0
+"\\Comm" 0
+"\\EE" 0
+"\\Expect" 0
+"\\FF" 0
+"\\HS" 0
+"\\Ket" 0
+"\\Ketbra" 0 (:prefixes ("\\Ket"))
+"\\Matnorm" 0
+"\\MatnormHS" 0 (:prefixes ("\\Matnorm"))
+"\\MatnormTr" 0 (:prefixes ("\\Matnorm"))
+"\\NN" 0
+"\\Order" 0
+"\\PP" 0
+"\\Proj" 0
+"\\QQ" 0
+"\\RR" 0
+"\\Span" 0
+"\\UU" 0
+"\\WLOG" 0
+"\\Wlog" 0
+"\\ZZ" 0
+"\\abs" 0
+"\\anticomm" 0
+"\\bigAbs" 0
+"\\bigBra" 0
+"\\bigExpect" 0
+"\\bigKet" 0
+"\\bigMatnorm" 0
+"\\bigOrder" 0
+"\\biggAbs" 0
+"\\biggBra" 0
+"\\biggExpect" 0
+"\\biggKet" 0
+"\\biggMatnorm" 0
+"\\biggOrder" 0
+"\\bra" 0
+"\\braket" 0 (:prefixes ("\\bra"))
+"\\clap" 0
+"\\comm" 0
+"\\dd" 0
+"\\diag" 0
+"\\dt" 0
+"\\ebit" 0
+"\\expect" 0
+"\\expectation" 0
+"\\hc" 0
+"\\id" 0
+"\\identity" 0
+"\\imag" 0
+"\\ket" 0
+"\\ketbra" 0 (:prefixes ("\\ket"))
+"\\mathclap" 0
+"\\mathllap" 0
+"\\mathrlap" 0
+"\\matnorm" 0
+"\\matnormHS" 0 (:prefixes ("\\matnorm"))
+"\\matnormTr" 0 (:prefixes ("\\matnorm"))
+"\\order" 0
+"\\ox" 0
+"\\partition" 0
+"\\pfaf" 0
+"\\prj" 0
+"\\prob" 0
+"\\proj" 0
+"\\rank" 0
+"\\real" 0
+"\\schmidt" 0
+"\\sgn" 0
+"\\tr" 0
+"\\vspan" 0
