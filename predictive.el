@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.3
+;; Version: 0.19.4
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.4
+;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
+;;   functions, for use as `predictive-auto-add-filter's.
 ;;
 ;; Version 0.19.3
 ;; * dictionary-related commands now default to the current dict
@@ -335,6 +339,7 @@
 (require 'dict-tree)
 (require 'auto-overlays)
 (require 'timerfunctions)
+(require 'ispell)
 
 ;; use dynamic byte compilation to save memory
 ;;(eval-when-compile (setq byte-compile-dynamic t))
@@ -968,10 +973,37 @@ Return modified alist."
 
 
 
-(defun predictive-lookup-word-p (word ignored)
+(defun predictive-lookup-word-p (word &optional ignored)
   "Return non-nil if WORD is found by `lookup-words', nil otherwise.
-Potentially useful as a `predictive-auto-add-filter'."
+Potentially useful as a `predictive-auto-add-filter' (hence the
+ignored second argument)."
   (member word (lookup-words word)))
+
+
+(defun predictive-ispell-word-p (word &optional ignored)
+  "Return non-nil if WORD is accepted by `ispell', nil otherwise.
+Potentially useful as a `predictive-auto-add-filter' (hence the
+ignored second argument)."
+  ;; --- Code copied and adapted from `ispell-word' in ispell.el ---
+  (ispell-init-process)
+  (ispell-set-spellchecker-params)    ; Initialize variables and dicts alists
+  (ispell-accept-buffer-local-defs)   ; use the correct dictionary
+  (ispell-send-string "%\n")	      ; put in verbose mode
+  (let (poss)
+    (ispell-send-string (concat "^" word "\n"))
+    ;; wait until ispell has processed word
+    (while (progn
+	     (ispell-accept-output)
+	     (not (string= "" (car ispell-filter)))))
+    ;;(ispell-send-string "!\n") ;back to terse mode.
+    (setq ispell-filter (cdr ispell-filter)) ; remove extra \n
+    (if (and ispell-filter (listp ispell-filter))
+	(if (> (length ispell-filter) 1)
+	    (error "Ispell and its process have different character maps")
+	  (setq poss (ispell-parse-output (car ispell-filter)))))
+    ;; return t if word is correct
+    (when (null poss) (message "Error in ispell process"))
+    (or (eq poss t) (stringp poss) t)))
 
 
 
