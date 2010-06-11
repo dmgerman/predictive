@@ -1037,7 +1037,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (auto-completion-lookup-behaviour nil ?.)
 	      (auto-completion-lookup-behaviour nil ? ))
 
-    ;; make "\", "$", "{" and "}" do the right thing
+    ;; make "\", "$", "_", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist
 	  (append
 	   `((?\\ . ((lambda ()
@@ -1049,7 +1049,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			 (if (oddp i) 'add ',punct-resolve)))
 		     ,word-complete))
 	     (?$ . (,punct-resolve none))
-	     (?_ . (,punct-resolve none))
+	     (?_ . ((lambda ()
+		      (if (and (char-before) (= (char-before) ?\\))
+			  'add ',punct-resolve))
+		    (lambda ()
+		       (if (and (char-before (1- (point)))
+				(= (char-before (1- (point))) ?\\))
+			   ',word-complete 'none))))
 	     (?^ . (,punct-resolve none))
 	     (?{ . ((lambda ()
 		      (if (and (char-before) (= (char-before) ?\\))
@@ -1059,7 +1065,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		       ((auto-overlays-at-point
 			 nil '((lambda (dic)
 				 (or (eq dic 'predictive-latex-env-dict)
-				     (eq dic 'dict-latex-docclass)))
+				     (eq dic 'dict-latex-docclass)
+				     (eq dic 'dict-latex-bibstyle)))
 			       dict))
 			(complete-in-buffer
 			 auto-completion-source "" 'not-set 'auto)
