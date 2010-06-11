@@ -635,9 +635,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	;; TeX-master itself will be in list of buffers sharing regexp set, so
 	;; need to filter it out
 	(unless (eq buff (current-buffer))
-	  (save-excursion
-	    (set-buffer buff)
-	    (predictive-mode -1)))))
+	  (with-current-buffer buff (predictive-mode -1)))))
 
     ;; stop predictive auto overlays
     (auto-overlay-stop 'predictive nil (when (buffer-file-name)
@@ -1222,9 +1220,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	;; need to filter it out; test for null buffer name avoids deleted
 	;; buffers, though this should never occur.
 	(unless (or (eq buff (current-buffer)) (null (buffer-name buff)))
-	  (save-excursion
-	    (set-buffer buff)
-	    (predictive-mode -1))))
+	  (with-current-buffer buff (predictive-mode -1))))
       ;; unload local dicts, saving if buffer is saved
       (predictive-auto-dict-unload "latex-label" nil (buffer-modified-p))
       (predictive-auto-dict-unload "latex-local-latex" nil (buffer-modified-p))
