@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8
+;; Version: 0.8.1
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.8.1
+;; * modified `auto-completion-syntax-alist' for "\cref{" etc. so that typing
+;;   a word-constituent deletes everything from point up to the end of the
+;;   argument.
 ;;
 ;; Version 0.8
 ;; * cooperate with predictive-latex-varioref.el
@@ -141,11 +146,23 @@
        (priority . 40)
        (completion-menu . predictive-latex-construct-browser-menu)
        (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-					(?_ . (add ,word-complete))
-					(?  . (,whitesp-resolve none))
-					(?. . (add ,word-complete))
-					(t  . (reject none))))
+       (auto-completion-syntax-alist
+	. ((?w . (add
+		  (lambda ()
+		    (let ((pos (point)))
+		      (when (and
+			     (re-search-forward
+			      "[^}]*?}" (line-end-position) t)
+			     (= (match-beginning 0) pos))
+			(backward-char)
+			(delete-region pos (point)))
+		      (goto-char pos))
+		    ',word-complete)
+		  t))
+	   (?_ . (add ,word-complete))
+	   (?  . (,whitesp-resolve none))
+	   (?. . (add ,word-complete))
+	   (t  . (reject none))))
        (auto-completion-override-syntax-alist
 	. ((?: . ((lambda ()
 		    (predictive-latex-completion-add-till-regexp ":"))

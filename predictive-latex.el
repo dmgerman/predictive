@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.4
+;; Version: 0.12.6
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.6
+;; * modified `auto-completion-syntax-alist' definitions for  "\ref{",
+;;   "\documentclass{" and "\bibliographystyle{" so that typing a
+;;   word-constituent deletes everything from point up to the end of the
+;;   argument.
 ;;
 ;; Version 0.12.5
 ;; * modified overlay-local `auto-completion-override-syntax-alist'
@@ -726,11 +732,23 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (completion-word-thing . predictive-latex-label-word)
-	       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-						(?_ . (add ,word-complete))
-						(?  . (,whitesp-resolve none))
-						(?. . (add ,word-complete))
-						(t  . (reject none))))
+	       (auto-completion-syntax-alist
+		. ((?w . (add
+			  (lambda ()
+			    (let ((pos (point)))
+			      (when (and
+				     (re-search-forward
+				      "[^}]*?}" (line-end-position) t)
+				     (= (match-beginning 0) pos))
+				(backward-char)
+				(delete-region pos (point)))
+			      (goto-char pos))
+			    ',word-complete)
+			  t))
+		   (?_ . (add ,word-complete))
+		   (?  . (,whitesp-resolve none))
+		   (?. . (add ,word-complete))
+		   (t  . (reject none))))
 	       (auto-completion-override-syntax-alist
 		. ((?:
 		    . ((lambda ()
@@ -799,6 +817,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
 	       (dict . dict-latex-docclass) (priority . 40)
+	       (auto-completion-syntax-alist
+		. ((?w . (add
+			  (lambda ()
+			    (let ((pos (point)))
+			      (when (and
+				     (re-search-forward
+				      "[[:alpha:]]*?}" (line-end-position) t)
+				     (= (match-beginning 0) pos))
+				(backward-char)
+				(delete-region pos (point)))
+			      (goto-char pos))
+			    ',word-complete)
+			  t))))
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -807,6 +838,19 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       :edge start
 	       (dict . dict-latex-bibstyle)
 	       (priority . 40)
+	       (auto-completion-syntax-alist
+		. ((?w . (add
+			  (lambda ()
+			    (let ((pos (point)))
+			      (when (and
+				     (re-search-forward
+				      "[[:alpha:]]*?}" (line-end-position) t)
+				     (= (match-beginning 0) pos))
+				(backward-char)
+				(delete-region pos (point)))
+			      (goto-char pos))
+			    ',word-complete)
+			  t))))
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
