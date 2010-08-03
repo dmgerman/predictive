@@ -1,10 +1,16 @@
-"\\|" 0
-"\\," 0
-"\\;" 0
-"\\:" 0
 "\\!" 0
-"\\{" 0
-"\\}" 0
+"\\," 0
+"\\:" 0
+"\\;" 0
+"\\Arrowvert" 0
+"\\Biggl" 0
+"\\Biggr" 0 (:prefixes ("\\Biggl"))
+"\\Bigl" 0
+"\\Bigr" 0 (:prefixes ("\\Bigl"))
+"\\Box" 0
+"\\Delta" 0
+"\\Diamond" 0
+"\\Downarrow" 0
 "\\\\" 0
 "\\acute" 0
 "\\aleph" 0
@@ -17,7 +23,6 @@
 "\\arctan" 0
 "\\arg" 0
 "\\arrowvert" 0
-"\\Arrowvert" 0
 "\\ast" 0
 "\\asymp" 0
 "\\backslash" 0
@@ -28,16 +33,12 @@
 "\\bigcirc" 0
 "\\bigcup" 0
 "\\biggl" 0
-"\\Biggl" 0
 "\\biggr" 0 (:prefixes ("\\biggl"))
-"\\Biggr" 0 (:prefixes ("\\Biggl"))
 "\\bigl" 0
-"\\Bigl" 0
 "\\bigodot" 0
 "\\bigoplus" 0
 "\\bigotimes" 0
 "\\bigr" 0 (:prefixes ("\\bigl"))
-"\\Bigr" 0 (:prefixes ("\\Bigl"))
 "\\bigsqcup" 0
 "\\bigtriangledown" 0
 "\\bigtriangleup" 0
@@ -47,7 +48,6 @@
 "\\bmod" 0
 "\\bot" 0
 "\\bowtie" 0
-"\\Box" 0
 "\\bracevert" 0
 "\\breve" 0
 "\\bullet" 0
@@ -75,18 +75,19 @@
 "\\ddots" 0 (:prefixes ("\\ddot"))
 "\\deg" 0
 "\\delta" 0
-"\\Delta" 0
 "\\det" 0
 "\\diamond" 0
-"\\Diamond" 0
 "\\diamondsuit" 0
 "\\digamma" 0
 "\\dim" 0
+"\\displaybreak" 0
 "\\div" 0
 "\\dot" 0
 "\\doteq" 0 (:prefixes ("\\dot"))
 "\\downarrow" 0
-"\\Downarrow" 0
+"\\{" 0
+"\\|" 0
+"\\}" 0
 "\\ell" 0
 "\\emptyset" 0
 "\\end" 0
@@ -164,6 +165,7 @@
 "\\mapsto" 0
 "\\mathbf" 0
 "\\mathcal" 0
+"\\mathfrak" 0
 "\\mathit" 0
 "\\mathnormal" 0
 "\\mathrm" 0
@@ -261,6 +263,7 @@
 "\\star" 0
 "\\subset" 0
 "\\subseteq" 0 (:prefixes ("\\subset"))
+"\\substack" 0
 "\\succ" 0
 "\\succeq" 0 (:prefixes ("\\succ"))
 "\\sum" 0
