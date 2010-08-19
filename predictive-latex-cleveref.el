@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2008 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.8.1
+;; Version: 0.9
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9
+;; * Updated to include \namecref and \labelcref from latest cleveref package
 ;;
 ;; Version 0.8.1
 ;; * modified `auto-completion-syntax-alist' for "\cref{" etc. so that typing
@@ -138,7 +141,7 @@
 	  (auto-overlay-unload-regexp 'predictive 'brace 'vref))
     (auto-overlay-load-regexp
      'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\[cCvV]ref\\(\\|range\\)\\*?{\\)"
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\([cCvV]ref\\(\\|range\\)\\*?\\|\\(name\\|label\\)[cC]ref\\){\\)"
 	. 3)
        :edge start
        :id cref
