@@ -816,8 +816,8 @@ user when the completion was accepted interactively.")
       (when arg (predictive-auto-learn prefix word))))
   "Hook run after a predictive completion is rejected.
 The functions are called with two or three arguments: the prefix,
-the accepted completion, and any prefix argument supplied by the
-user when the completion was accepted interactively.")
+the rejected completion, and any prefix argument supplied by the
+user when the completion was rejected interactively.")
 
 
 (defvar predictive-menu-function 'completion-construct-menu
@@ -2096,7 +2096,7 @@ must be sprecified.
 Interactively, BUFFER and DICT are read from the mini-buffer, and ALL is
 specified by the presence of a prefix argument.
 
-See also `predictive-fast-learn-from-buffer'."
+See also `predictive-fast-learn-or-add-from-buffer'."
 
   (interactive (list (read-buffer "Buffer to learn from: "
 				  (buffer-name (current-buffer)) t)
