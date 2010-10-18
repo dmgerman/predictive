@@ -2,10 +2,10 @@
 ;;; completion-ui.el --- in-buffer completion user interface
 
 
-;; Copyright (C) 2006-2009 Toby Cubitt
+;; Copyright (C) 2006-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.10
+;; Version: 0.11.11
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.11
+;; * bug-fix in `completion-reject': used to run `completion-accept-functions'
+;;   instead of `completion-reject-functions'!
 ;;
 ;; Version 0.11.10
 ;; * fall back to global `auto-completion-override-alist' if character not
@@ -2835,7 +2839,7 @@ the prefix and the completion string\). Otherwise returns nil."
   ;; ;; resolve any other old provisional completions
   ;; (completion-ui-resolve-old overlay)
 
-  ;; if we ain't found an overlay, can't reject nuffink!
+  ;; if we ain't found no overlay, we can't reject nuffink!
   (unless (or (null overlay)
 	      (and (null (overlay-get overlay 'completion-num))
 		   (progn (completion-ui-delete-overlay overlay) t)))
@@ -2846,7 +2850,7 @@ the prefix and the completion string\). Otherwise returns nil."
       ;; deactivate the interfaces
       (completion-ui-deactivate-interfaces overlay)
       ;; run reject hooks
-      (completion-ui-source-run-accept-function overlay prefix cmpl arg)
+      (completion-ui-source-run-reject-function overlay prefix cmpl arg)
       (run-hook-with-args 'completion-reject-functions prefix cmpl arg)
       ;; delete overlay
       (completion-ui-delete-overlay overlay)
