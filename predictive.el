@@ -2,10 +2,10 @@
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
 
-;; Copyright (C) 2004-2009 Toby Cubitt
+;; Copyright (C) 2004-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.4
+;; Version: 0.19.5
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,16 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.5
+;; * fixed bug in `predictive-save-used-dicts', which passed
+;;   `predictive-dict-compilation' in the wrong arugment of
+;;   `dictree-save-modified'
+;; * added optional NO-FAIL-QUERY argment to `predictive-save-used-dicts' to
+;;   pass on to `dictree-save-modified'
+;; * removed `predictive-save-used-dicts' from `kill-buffer-hook' and added it
+;;   instead to `kill-buffer-query-functions', so that dictionary save
+;;   failures don't make it impossible to kill the buffer
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
@@ -1120,7 +1130,8 @@ When within a pop-up frame:\
     ;; make sure modified dictionaries used in the buffer are saved when the
     ;; bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
-      (add-hook 'kill-buffer-hook 'predictive-save-used-dicts nil 'local))
+      (add-hook 'kill-buffer-query-functions
+		'predictive-save-used-dicts nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
     (when predictive-use-buffer-local-dict
@@ -1173,7 +1184,7 @@ When within a pop-up frame:\
 
     ;; save the dictionaries
     (when predictive-dict-autosave-on-mode-disable
-      (predictive-save-used-dicts))
+      (predictive-save-used-dicts 'no-save-query))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
 
@@ -1197,7 +1208,8 @@ When within a pop-up frame:\
 
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
-    (remove-hook 'kill-buffer-hook 'predictive-save-used-dicts 'local)
+    (remove-hook 'kill-buffer-query-functions
+		 'predictive-save-used-dicts 'local)
     (remove-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict 'local)
 
     ;; delete local variable bindings
@@ -2994,10 +3006,12 @@ there's only one."
 
 
 
-(defun predictive-save-used-dicts ()
-  "Save all dictionaries used by the current buffer."
+(defun predictive-save-used-dicts (&optional no-fail-query)
+  "Save all dictionaries used by the current buffer.
+NO-FAIL-QUERY is passed on to `dictree-save-modified'."
   (dictree-save-modified predictive-used-dict-list
-			 predictive-dict-compilation))
+			 nil predictive-dict-compilation
+			 nil no-fail-query))
 
 
 
