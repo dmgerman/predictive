@@ -24,6 +24,7 @@
 "\\Ket" 0
 "\\Ketbra" 0 (:prefixes ("\\Ket"))
 "\\Matnorm" 0
+"\\MatnormF" 0 (:prefixes ("\\Matnorm"))
 "\\MatnormHS" 0 (:prefixes ("\\Matnorm"))
 "\\MatnormTr" 0 (:prefixes ("\\Matnorm"))
 "\\NN" 0
@@ -71,6 +72,7 @@
 "\\mathllap" 0
 "\\mathrlap" 0
 "\\matnorm" 0
+"\\matnormF" 0 (:prefixes ("\\matnorm"))
 "\\matnormHS" 0 (:prefixes ("\\matnorm"))
 "\\matnormTr" 0 (:prefixes ("\\matnorm"))
 "\\order" 0
