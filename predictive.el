@@ -1656,10 +1656,11 @@ specified by the prefix argument."
       (let ((str (thing-at-point 'word)))
 	(if (null str)
 	    (error "No word supplied")
-	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     ;; sort out weight argument
     (unless (null weight) (setq weight (prefix-numeric-value weight))))
+  ;; strip any text properties from word
+  (set-text-properties 0 (length word) nil word)
 
   ;; insert word
   (let* ((defpref (and predictive-auto-define-prefixes
