@@ -1,10 +1,10 @@
 ;;; predictive-texinfo.el --- predictive mode Texinfo setup function
 
 
-;; Copyright (C) 2008 Toby Cubitt
+;; Copyright (C) 2008, 2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.1
+;; Version: 0.3.2
 ;; Keywords: predictive, setup function, texinfo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.3.2
+;; * simplified dictionary handling with advent of the new
+;;   `predictive-auxiliary-dict' predictive-mode variable
 ;;
 ;; Version 0.3.1
 ;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
@@ -179,16 +183,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    predictive-texinfo-local-flag-dict
 	    (predictive-auto-dict-load "texinfo-local-flag"))
 
-      ;; add Texinfo dictionaries to main dictionary list
-      (setq predictive-main-dict
-	    (append (if predictive-buffer-dict
-			(if (atom predictive-buffer-dict)
-			    (list predictive-buffer-dict)
-			  predictive-buffer-dict)
-		      (if (atom predictive-main-dict)
-			  (list predictive-main-dict)
-			predictive-main-dict))
-		    '(dict-texinfo predictive-texinfo-local-texinfo-dict)))
+      ;; set Texinfo dictionary to be used alongside main dictionary
+      (setq predictive-auxiliary-dict
+	    '(dict-texinfo predictive-texinfo-local-texinfo-dict))
 
       ;; delete any existing predictive auto-overlay regexps and load Texinfo
       ;; auto-overlay regexps
@@ -212,7 +209,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 					 predictive-auxiliary-file-location))
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict
-    (kill-local-variable 'predictive-buffer-dict)
+    (kill-local-variable 'predictive-auxiliary-dict)
     ;; restore `auto-completion-override-syntax-alist' to saved setting
     (kill-local-variable 'auto-completion-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -256,7 +253,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      'predictive
      `(line :id short-comment
 	    ("@c \\|@comment "
-	     (dict . predictive-buffer-dict)
+	     (dict . predictive-main-dict)
 	     (priority . 50)
 	     (exclusive . t)
 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
@@ -267,13 +264,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
      `(flat :id long-comment
 	      ("@ignore[[:blank:]]*$"
 	       :edge start
-	       (dict . predictive-buffer-dict)
+	       (dict . predictive-main-dict)
 	       (priority . 50)
 	       (exclusive . t)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 	      ("@end ignore$"
 	       :edge end
-	       (dict . predictive-buffer-dict)
+	       (dict . predictive-main-dict)
 	       (priority . 50)
 	       (exclusive . t)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))

@@ -2,10 +2,10 @@
 ;;; predictive-html.el --- predictive mode HTML setup function
 
 
-;; Copyright (C) 2005 2008-2009 Toby Cubitt
+;; Copyright (C) 2005 2008-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5.1
+;; Version: 0.5.2
 ;; Keywords: predictive, setup function, html
 
 ;; This file is part of the Emacs Predictive Completion package.
@@ -28,6 +28,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.5.2
+;; * simplified dictionary handling with advent of the new
+;;   `predictive-auxiliary-dict' predictive-mode variable
 ;;
 ;; Version 0.5.1
 ;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
@@ -114,17 +118,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		(throw 'load-fail nil)))
 	    predictive-html-dicts)
 
-      ;; add html dictionaries to main dictionary list
-      (setq predictive-main-dict
-	    (append
-	     (if predictive-buffer-dict
-		 (if (atom predictive-buffer-dict)
-		     (list predictive-buffer-dict)
-		   predictive-buffer-dict)
-	       (if (atom predictive-main-dict)
-		   (list predictive-main-dict)
-		 predictive-main-dict))
-	     '(dict-html dict-html-char-entity)))
+      ;; set html dictionaries to be used alongside main dictionary
+      (setq predictive-auxiliary-dict '(dict-html dict-html-char-entity))
 
       ;; save overlays along with buffer
       (add-hook 'after-save-hook 'predictive-html-after-save nil t)
@@ -160,7 +155,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-stop 'predictive nil 'save)
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict to saved setting
-    (kill-local-variable 'predictive-buffer-dict)
+    (kill-local-variable 'predictive-auxiliary-dict)
     ;; restore completion-dynamic-override-syntax-alist to saved setting
     (kill-local-variable 'completion-dynamic-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -185,12 +180,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    `(flat :id comment
 	  ("<!--"
 	   :edge start
-	   (dict . predictive-buffer-dict)
+	   (dict . predictive-main-dict)
 	   (priority . 20)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
 	  ("-->"
 	   :edge end
-	   (dict . predictive-buffer-dict)
+	   (dict . predictive-main-dict)
 	   (priority . 20)
 	   (face . (background-color . ,predictive-overlay-debug-color)))
 	  ))

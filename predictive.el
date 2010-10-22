@@ -56,6 +56,11 @@
 ;;   instead to `kill-buffer-query-functions', so that dictionary save
 ;;   failures don't make it impossible to kill the buffer
 ;; * ensure text-properties are stripped from word in `predictive-add-to-dict'
+;; * fixed `predictive-set-main-dict' so that it only unloads old main dicts
+;;   if new one was been successfully loaded
+;; * added buffer-local `predictive-auxiliary-dict' variable to store
+;;   dictionaries to be used alongside the main dict,  and modified
+;;   `predictive-current-dict' accordingly
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
@@ -905,9 +910,14 @@ to the dictionary, nil if it should not. Only used when
 ;;; ==============================================================
 ;;;          Internal variables to do with dictionaries
 
-;; when set, overrides predictive-main-dict in a buffer
+;; when set, overrides `predictive-main-dict' in a buffer
 (defvar predictive-buffer-dict nil)
 (make-variable-buffer-local 'predictive-buffer-dict)
+
+;; when set, used in addition to `predictive-main-dict' or
+;; `predictive-buffer-dict'
+(defvar predictive-auxiliary-dict nil)
+(make-variable-buffer-local 'predictive-auxiliary-dict)
 
 ;; variables storing lists of used dictionaries
 (defvar predictive-global-used-dict-list nil)
@@ -1123,11 +1133,8 @@ When within a pop-up frame:\
 
    ;; ----- enabling predictive mode -----
    ((not predictive-mode)
-    ;; make sure main dictionary is loaded
-    (when predictive-main-dict
-      (if (atom predictive-main-dict)
-	  (predictive-load-dict predictive-main-dict)
-	(mapc 'predictive-load-dict predictive-main-dict)))
+    ;; make sure main dictionaries are loaded
+    (mapc 'predictive-load-dict (predictive-main-dict))
     ;; make sure modified dictionaries used in the buffer are saved when the
     ;; bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
@@ -1307,14 +1314,22 @@ Remaining arguments are ignored (they are there to allow
 To set the default main dictionary, you should customize
 `predictive-main-dict' instead."
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
-  ;; set main dictionary in current buffer
-  (predictive-unload-dict predictive-main-dict)
   ;; if DICT is a string, load DICT
   (when (stringp dict)
     (let ((dic (predictive-load-dict dict)))
       (if (dictree-p dic)
 	  (setq dict dic)
 	(error "Dictionary %s could not be loaded" dict))))
+  ;; unload previous main dictionary
+  (mapc 'predictive-unload-dict
+	(if predictive-buffer-dict
+	    (if (listp predictive-main-dict)
+		predictive-main-dict
+	      (list predictive-main-dict))
+	  (if (listp predictive-buffer-dict)
+	      predictive-buffer-dict
+	    (list predictive-buffer-dict))))
+  ;; set new main dictionary
   (setq dict (intern-soft (dictree-name dict)))
   (setq predictive-buffer-dict dict))
 
@@ -2817,6 +2832,20 @@ Usually called after a completion is accepted."
     (> (cdr a) (cdr b))))
 
 
+(defun predictive-main-dict ()
+  ;; Return concatenation of `predictive-buffer-dict' or
+  ;; `predictive-main-dict' with `predictive-auxiliary-dict'
+  (append
+   (if predictive-buffer-dict
+       (if (listp predictive-buffer-dict)
+	   predictive-buffer-dict
+	 (list predictive-buffer-dict))
+     (if (listp predictive-main-dict)
+	 predictive-main-dict
+       (list predictive-main-dict)))
+   predictive-auxiliary-dict))
+
+
 (defun predictive-current-dict (&optional point)
   "Return the currently active dictionary(ies) at POINT
 \(defaults to the point\). Always returns a list of dictionaries, even if
@@ -2830,14 +2859,16 @@ there's only one."
 		  point '(identity dict)))
 	dict generate)
     (if (null overlay)
-	(setq dict (or predictive-buffer-dict predictive-main-dict))
+	(setq dict (predictive-main-dict))
       (setq dict (overlay-get overlay 'dict))
-      (when (symbolp dict) (setq dict (eval dict))))
+      (cond
+       ((functionp dict) (setq dict (funcall dict)))
+       ((symbolp dict) (setq dict (eval dict)))))
 
     ;; t indicates no active dictionary, so return nil
     (if (eq dict t) nil
       ;; otherwise bundle the dictionary inside a list for mapcar
-      (unless (and (listp dict) (not (dictree-p dict))) (setq dict (list dict)))
+      (unless (listp dict) (setq dict (list dict)))
 
       (mapcar
        (lambda (dic)
@@ -2881,7 +2912,12 @@ there's only one."
 
 
 (defun predictive-load-buffer-local-dict (&optional main-dict)
-  "Load/create the buffer-local dictionary."
+  "Load/create the buffer-local dictionary.
+
+If MAIN-DICT is a dictionary or a list of dictionaries, it
+specifies the dictionaries on which the buffer-local
+meta-dictionary will be based, instead of
+`predictive-main-dict'."
 
   (let (filename buffer-dict meta-dict dict-list insfun rankfun combfun)
     ;; The rank function compares by weight (larger is "better"), failing that
@@ -2896,12 +2932,12 @@ there's only one."
 	      (> (cdr a) (cdr b)))))
     ;; construct list of dictionaries which meta-dict will be based on
     (setq dict-list (if main-dict
-			(if (atom main-dict)
-			    (list main-dict)
-			  main-dict)
-		      (if (atom predictive-main-dict)
-			  (list predictive-main-dict)
-			predictive-main-dict)))
+			(if (listp main-dict)
+			    main-dict
+			  (list main-dict))
+		      (if (listp predictive-main-dict)
+			  predictive-main-dict
+			(list predictive-main-dict))))
 
 
     ;; ----- buffer-local dictionary -----
@@ -2943,7 +2979,7 @@ there's only one."
 		    predictive-auxiliary-file-location
 		    (symbol-name (predictive-buffer-local-meta-dict-name))
 		    ".elc")))
-    ;; if the buffer-local dictionary doesn't exist yet, or need updating,
+    ;; if the buffer-local dictionary doesn't exist yet, or needs updating,
     ;; make sure it's unloaded
     (if (or (null filename) (not (file-exists-p filename)) main-dict)
 	(when (boundp (predictive-buffer-local-meta-dict-name))
@@ -3088,8 +3124,8 @@ minor mode."
 	    (setq list nil)
 	  (setq name (concat name "..."))
 	  (setq list (mapconcat 'dictree-name dict "\n"))
-	  ;; filter list to remove "-dict-" and "-predictive-" prefixes
-	  (while (string-match "-*dict-*\\|-*predictive-*" list)
+	  ;; filter list to remove "dict-" and "predictive-" prefixes
+	  (while (string-match "^dict-*\\|^predictive-*" list)
 	    (setq list (replace-match "" nil nil list)))))
 
       ;; update the mode line

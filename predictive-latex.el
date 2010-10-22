@@ -2,10 +2,10 @@
 ;;;                         (assumes AMSmath)
 
 
-;; Copyright (C) 2004-2009 Toby Cubitt
+;; Copyright (C) 2004-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.6
+;; Version: 0.12.7
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.7
+;; * simplified dictionary handling with advent of the new
+;;   `predictive-auxiliary-dict' predictive-mode variable
 ;;
 ;; Version 0.12.6
 ;; * modified `auto-completion-syntax-alist' definitions for  "\ref{",
@@ -491,9 +495,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        ;; if we're not the TeX master, visit the TeX master buffer, enable
        ;; predictive mode in it, and share buffer-local settings with it
        ((and (boundp 'TeX-master) (stringp TeX-master))
-	(let (filename buff used-dicts main-dict latex-dict math-dict
-		       preamble-dict env-dict label-dict
-		       local-env-dict local-section-dict)
+	(let (filename buff used-dicts main-dict aux-dict
+		       latex-dict math-dict preamble-dict env-dict
+		       label-dict local-env-dict local-section-dict)
 	  (setq filename
 		(concat (file-name-sans-extension
 			 (expand-file-name TeX-master))
@@ -505,6 +509,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (setq buff (current-buffer)
 		  used-dicts predictive-used-dict-list
 		  main-dict predictive-buffer-dict
+		  aux-dict predictive-auxiliary-dict
 		  latex-dict predictive-latex-dict
 		  math-dict predictive-latex-math-dict
 		  preamble-dict predictive-latex-preamble-dict
@@ -515,6 +520,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (auto-overlay-share-regexp-set 'predictive buff)
 	  (setq predictive-used-dict-list used-dicts
 		predictive-buffer-dict main-dict
+		predictive-auxiliary-dict aux-dict
 		predictive-latex-dict latex-dict
 		predictive-latex-math-dict math-dict
 		predictive-latex-preamble-dict preamble-dict
@@ -589,19 +595,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 			  (list predictive-latex-local-env-dict)
 			predictive-latex-local-env-dict)))
 
-	;; add latex dictionaries to main dictionary list
-	(setq predictive-buffer-dict
-	      (append (cond
-		       (predictive-use-buffer-local-dict
-			(list (predictive-buffer-local-meta-dict-name)))
-		       (predictive-buffer-dict
-			(if (atom predictive-buffer-dict)
-			    (list predictive-buffer-dict)
-			  predictive-buffer-dict))
-		       (t (if (atom predictive-main-dict)
-			      (list predictive-main-dict)
-			    predictive-main-dict)))
-		      predictive-latex-dict))
+	;; set latex dictionaries to be used alongside main dictionaries
+	(setq predictive-auxiliary-dict predictive-latex-dict)
 
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
@@ -659,8 +654,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-local-math-dict)
     (kill-local-variable 'predictive-latex-local-env-dict)
     (kill-local-variable 'predictive-latex-section-dict)
-    ;; restore predictive-main-dict
+    ;; restore main and auxiliary dicts
     (kill-local-variable 'predictive-buffer-dict)
+    (kill-local-variable 'predictive-auxiliary-dict)
     ;; restore `auto-completion-override-syntax-alist' to saved setting
     (kill-local-variable 'auto-completion-override-syntax-alist)
     (setq auto-completion-override-syntax-alist
@@ -685,7 +681,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
 
-
 (defun predictive-latex-load-regexps ()
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
 
@@ -700,7 +695,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (auto-overlay-load-definition
      'predictive
      `(line :id comment
-	    ("%" (dict . predictive-buffer-dict)
+	    ("%" (dict . predictive-main-dict)
 	     (priority . 50) (exclusive . t)
 	     (completion-menu-function
 	      . predictive-latex-construct-browser-menu)
@@ -809,7 +804,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
 	       :edge start
-	       (dict . predictive-buffer-dict) (priority . 40)
+	       (dict . predictive-main-dict) (priority . 40)
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1844,26 +1839,21 @@ Interactively, SECTION is read from the mini-buffer."
 	    (message "Failed to load \"%s\" docclass dictionary\"
  - main dictionary NOT changed" docclass))
 
-	;; otherwise, unload the old main dictionary...
-	(let ((dicts predictive-buffer-dict)
-	      old-dicts)
-	  (while (prog1
-		     (not (eq (cdr dicts) predictive-latex-dict))
-		   (push (pop dicts) old-dicts)))
-	  (mapc 'predictive-unload-dict old-dicts))
+	;; if loading was successful, unload the old main dictionary
+	(mapc 'predictive-unload-dict
+	      (if predictive-buffer-dict
+		  (if (listp predictive-buffer-dict)
+		      predictive-buffer-dict
+		    (list predictive-buffer-dict))
+		(if (listp predictive-main-dict)
+		    predictive-main-dict
+		  (list predictive-main-dict))))
 	;; if not using a buffer-local dict, simply set new main dictionary
 	(if (not predictive-use-buffer-local-dict)
-	    (setq predictive-buffer-dict
-		  (append dict-list predictive-latex-dict))
+	    (setq predictive-buffer-dict dict-list)
 	  ;; otherwise, re-load the buffer-local dict (which will create a new
-	  ;; meta-dict and set `predictive-buffer-dict') and add latex
-	  ;; dictionaries to list
-	  (predictive-load-buffer-local-dict dict-list)
-	  (setq predictive-buffer-dict
-		(append (if (atom predictive-buffer-dict)
-			    (list predictive-buffer-dict)
-			  predictive-buffer-dict)
-			predictive-latex-dict)))
+	  ;; meta-dict and set `predictive-buffer-dict' appropriately)
+	  (predictive-load-buffer-local-dict dict-list))
 	))))
 
 
@@ -1876,21 +1866,13 @@ Interactively, SECTION is read from the mini-buffer."
       (setq dict-list (cdr dict-list))
       (when (atom dict-list) (setq dict-list (list dict-list)))
       (mapc 'predictive-unload-dict dict-list)
-      (setq dict-list predictive-main-dict)
-      (when (atom dict-list) (setq dict-list (list dict-list)))
       ;; if not using a buffer-local dict, simply reset main dictionary
       (if (not predictive-use-buffer-local-dict)
-	  (setq predictive-buffer-dict
-		(append dict-list predictive-latex-dict))
+	  (setq predictive-buffer-dict nil)
 	;; otherwise, re-load the buffer-local dict (which will create a new
 	;; meta-dict and set `predictive-buffer-dict') and add latex
 	;; dictionaries to list
-	(predictive-load-buffer-local-dict predictive-main-dict)
-	(setq predictive-buffer-dict
-	      (append (if (atom predictive-buffer-dict)
-			  (list predictive-buffer-dict)
-			predictive-buffer-dict)
-		      predictive-latex-dict)))
+	(predictive-load-buffer-local-dict))
       )))
 
 
