@@ -55,6 +55,7 @@
 ;; * removed `predictive-save-used-dicts' from `kill-buffer-hook' and added it
 ;;   instead to `kill-buffer-query-functions', so that dictionary save
 ;;   failures don't make it impossible to kill the buffer
+;; * ensure text-properties are stripped from word in `predictive-add-to-dict'
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
