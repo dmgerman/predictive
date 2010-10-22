@@ -2,10 +2,10 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
 
-;; Copyright (C) 2005-2008 Toby Cubitt
+;; Copyright (C) 2005-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.8
+;; Version: 0.9.9
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.9
+;; * added missing (eval-when-compile (require 'cl))
 ;;
 ;; Version 0.9.8
 ;; * modified `auto-o-run-after-change-functions' to ignore all changes that
@@ -164,6 +167,7 @@
 (defvar auto-overlay-unload-hook nil)
 
 
+(eval-when-compile (require 'cl))
 (require 'auto-overlay-common)
 (provide 'auto-overlays)
 
