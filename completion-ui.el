@@ -238,6 +238,8 @@
 ;; Version 0.11.11
 ;; * bug-fix in `completion-reject': used to run `completion-accept-functions'
 ;;   instead of `completion-reject-functions'!
+;; * pass nil instead of empty string to `read-key-sequence' in
+;;   `completion--run-if-condition'
 ;;
 ;; Version 0.11.10
 ;; * fall back to global `auto-completion-override-alist' if character not
@@ -951,8 +953,8 @@ This variable enables the global `completion-map' keymap, which
 contains hacks to work-around poor overlay keymap support in
 older versions of Emacs.
 
-It only ever be disabled when debugging Completion-UI and the
-`completion-map' bindings are causing problems.")
+It should only ever be disabled when debugging Completion-UI and
+the `completion-map' bindings are causing problems.")
 
 (make-variable-buffer-local 'completion-ui--activated)
 
@@ -4201,7 +4203,7 @@ sequence in a keymap."
       ;; we add (this-command-keys) to `unread-command-events' and then
       ;; re-read it in order to ensure key sequence translation takes place
       (setq unread-command-events (listify-key-sequence (this-command-keys)))
-      (setq command (key-binding (read-key-sequence "") t))
+      (setq command (key-binding (read-key-sequence nil) t))
       (unwind-protect
           (when (commandp command)
             (command-execute command)
