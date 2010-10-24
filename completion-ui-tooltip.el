@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.2
 ;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -34,6 +34,10 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.2
+;; * use pos-tip.el library to display tooltips instead of `x-show-tip'
+;;   (thanks to Seweryn Kokot)
+;;
 ;; Version 0.1.1
 ;; * bug-fix to `completion-cancel-tooltip' to prevent
 ;;   `completion-tooltip-map' keys from being incorrectly disabled
@@ -48,6 +52,7 @@
 
 (provide 'completion-ui-tooltip)
 (require 'completion-ui)
+(require 'pos-tip)
 
 
 
@@ -65,22 +70,19 @@
   :type 'boolean)
 
 
-(defcustom completion-tooltip-timeout 86400
+(defcustom completion-tooltip-timeout -1
   "*Number of seconds for wihch to display completion tooltip.
-Unfortunately, there is no way to display a tooltip indefinitely
-in Emacs. You can work around this by using a very large
-number. (The completion tooltip disapears automatically as soon
-as you do anything other than cycling through completions.)"
+A negative value means don't hide the tooltip automatically."
   :group 'completion-ui-tooltip
   :type 'integer)
 
 
-(defcustom completion-tooltip-offset '(0 . 0)
-  "Pixel offset for tooltip.
-This sometimes needs to be tweaked manually to get the tooltip in
-the correct position under different window systems."
-  :group 'completion-ui-tooltip
-  :type '(cons (integer :tag "x") (integer :tag "y")))
+;; (defcustom completion-tooltip-offset '(0 . 0)
+;;   "Pixel offset for tooltip.
+;; This sometimes needs to be tweaked manually to get the tooltip in
+;; the correct position under different window systems."
+;;   :group 'completion-ui-tooltip
+;;   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
 (defface completion-tooltip-face
@@ -239,7 +241,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
   (completion-ui-deactivate-auto-show-interface overlay)
   ;; if we can display a tooltip and there are completions to display in it...
   (when (and overlay (overlay-get overlay 'completions)
-	     window-system (fboundp 'x-show-tip))
+             window-system (fboundp 'x-show-tip))
     ;; if called manually, flag this in overlay property and call
     ;; auto-show-helpers, since they won't have been called by
     ;; `completion-ui-auto-show'
@@ -248,66 +250,32 @@ INTERACTIVE is supplied, pretend we were called interactively."
       (completion-ui-call-auto-show-interface-helpers overlay))
 
     ;; calculate tooltip parameters
-    (let ((mouse-pos (mouse-pixel-position))
-          (pos (save-excursion
-                 (goto-char (overlay-start overlay))
-                 (completion-frame-posn-at-point)))
-          (fg (face-attribute 'completion-tooltip-face :foreground))
+    (let ((fg (face-attribute 'completion-tooltip-face :foreground))
           (bg (face-attribute 'completion-tooltip-face :background))
-          (font (face-attribute 'completion-tooltip-face :family))
-          params text)
+          text w-h)
 
       ;; construct the tooltip text
       (setq text (funcall (completion-ui-source-tooltip-function nil overlay)
                           (overlay-get overlay 'prefix)
                           (overlay-get overlay 'completions)
                           (overlay-get overlay 'completion-num)))
+      (when (string= (substring text -1) "\n")
+        (setq text (substring text 0 -1)))
+      (setq w-h (pos-tip-string-width-height text))
+      ;; work-around an apparent bug in tooltips under windows, which appears
+      ;; to add an extra space to the end of each line
+      (when (eq window-system 'w32) (incf (car w-h)))
 
-      ;; mouse position can be nil if mouse is outside Emacs frame in
-      ;; certain window systems (e.g. windows); in this case, we move
-      ;; mouse into frame (there's no way to restore its position
-      ;; afterwards, since we can't find out its position)
-      (unless (and (numberp (cadr mouse-pos))
-                   (numberp (cddr mouse-pos)))
-        (set-mouse-position (selected-frame) 1 0)
-        (setq mouse-pos (mouse-pixel-position)))
-
-      ;; set face and frame parameters
-      (when (stringp fg)
-        (setq params
-              (tooltip-set-param params 'foreground-color fg))
-        (setq params (tooltip-set-param params 'border-color fg)))
-      (when (stringp bg)
-        (setq params
-              (tooltip-set-param params 'background-color bg)))
-      (when (stringp font)
-        (setq params (tooltip-set-param params 'font font)))
-      (setq params
-            (tooltip-set-param params 'internal-border-width 0))
-      (setq params
-            (tooltip-set-param params 'border-width 0))
-;;      (setq params
-;;            (tooltip-set-param
-;;             params 'left
-;;             (+ (car pos) completion-tooltip-x-offset)))
-;;      (setq params
-;;            (tooltip-set-param
-;;             params 'top
-;;             (+ (cdr pos) completion-tooltip-y-offset)))
-
-      ;; make sure tooltip is cancelled before displaying it, otherwise
-      ;; x-show-tip "magically" moves it to the top of the frame!
-      (completion-cancel-tooltip)
       ;; show tooltip
-      ;; Note: there's no reliable way to directly display a tooltip at the
-      ;; *screen* position (which is what x-show-tip requires) of point, so we
-      ;; use the kludge of calculating an offset from the mouse position and
-      ;; displaying the tooltip relative to the mouse
-      (x-show-tip text nil params completion-tooltip-timeout
-                  (+ (- (car pos) (cadr mouse-pos))
-                     (car completion-tooltip-offset))
-                  (+ (- (cdr pos) (cddr mouse-pos)) (frame-char-height)
-                     (cdr completion-tooltip-offset)))
+      ;; (let ((pos-tip-border-width 0)
+      ;; 	    (pos-tip-internal-border-width 0))
+	(pos-tip-show-no-propertize
+	 text 'completion-tooltip-face nil nil completion-tooltip-timeout
+	 (pos-tip-tooltip-width (car w-h) (frame-char-width))
+	 (pos-tip-tooltip-height (cdr w-h) (frame-char-height)))
+	 ;; (car completion-tooltip-offset)
+	 ;; (+ (frame-char-height) (cdr completion-tooltip-offset)))
+      ;; )
 
       ;; set flag to indicate tooltip is active for this overlay (this should
       ;; enable tooltip-related key bindings, but doesn't when tooltip is
