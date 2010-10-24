@@ -61,6 +61,8 @@
 ;; * added buffer-local `predictive-auxiliary-dict' variable to store
 ;;   dictionaries to be used alongside the main dict,  and modified
 ;;   `predictive-current-dict' accordingly
+;; * reimplemented and simplified `predictive-which-dict-mode', avoiding any
+;;   need for an idle-timer
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
@@ -718,18 +720,10 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
   :type 'number)
 
 
-(defcustom predictive-which-dict nil
+(defcustom predictive-which-dict-mode t
   "*If non-nil, display the predictive mode dictionary in the mode line."
   :group 'predictive
   :type 'boolean)
-
-
-(defcustom predictive-which-dict-delay 0.5
-  "*Number of seconds of idle time before which-dict display is updated.
-
-See also `predictive-which-dict-mode' and `predictive-which-dict'."
-  :group 'predictive
-  :type 'integer)
 
 
 (defcustom predictive-guess-prefix-suffixes
@@ -925,17 +919,6 @@ to the dictionary, nil if it should not. Only used when
 (make-variable-buffer-local 'predictive-used-dict-list)
 
 
-;; Stores current dictionary names for display in mode line
-(defvar predictive-which-dict-name nil)
-(defvar predictive-which-dict-list nil)
-(make-variable-buffer-local 'predictive-which-dict-name)
-(make-variable-buffer-local 'predictive-which-dict-list)
-
-;; Stores idle-timer that updates the current dictionary name
-(defvar predictive-which-dict-timer nil)
-(make-variable-buffer-local 'predictive-which-dict-timer)
-
-
 
 
 ;;; ================================================================
@@ -1048,16 +1031,16 @@ Setting this variable directly will have no effect. Use
 ;; setup the mode-line indicator
 (add-to-list 'minor-mode-alist
 	     '(predictive-mode
-	       (" Predict" (predictive-which-dict-mode
-			    ("["
-			     (:eval
-			      (let ((str predictive-which-dict-name))
-				(add-text-properties
-				 0 (length str)
-				 `(help-echo ,predictive-which-dict-list)
-				 str)
-				str))
-			     "]")))))
+	       (" Predict"
+		(predictive-which-dict-mode
+		 ("["
+		  (:eval
+		   (let ((name (predictive-which-dict-name)))
+		     (add-text-properties
+		      0 (length (car name)) `(help-echo ,(cdr name))
+		      (car name))
+		     (car name)))
+		  "]")))))
 
 
 ;; add the minor mode keymap to the list
@@ -1166,8 +1149,6 @@ When within a pop-up frame:\
     ;; turn on auto-completion mode if necessary
     (set (make-local-variable 'auto-completion-source) 'predictive)
     (when predictive-auto-complete (auto-completion-mode 1))
-    ;; turn on which-dict mode if necessary
-    (when predictive-which-dict (predictive-which-dict-mode t))
     ;; setup idle-timer to flush auto-learn and auto-add caches
     (setq predictive-flush-auto-learn-timer
 	  (tf-run-with-idle-timer predictive-flush-auto-learn-delay t
@@ -1184,8 +1165,6 @@ When within a pop-up frame:\
     ;; turn off auto-completion mode if necessary
     (kill-local-variable 'auto-completion-source)
     (when predictive-auto-complete (auto-completion-mode -1))
-    ;; turn off which-dict mode
-    (predictive-which-dict-mode -1)
     ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)
     (predictive-flush-auto-learn-caches)
@@ -3061,78 +3040,49 @@ NO-FAIL-QUERY is passed on to `dictree-save-modified'."
     "Toggle predictive mode's which dictionary mode.
 With no argument, this command toggles the mode.
 A positive prefix argument turns the mode on.
-A negative prefix argument turns it off.
-
-Note that simply setting the minor-mode variable
-`predictive-which-dict-mode' is *not* sufficient to enable the
-minor mode."
-
-    ;; initial value, mode-line indicator, and keymap
-    nil nil nil
-
-    ;; if which-dict mode has been turned on, setup the timer to update the
-    ;; mode-line indicator
-    (if predictive-which-dict-mode
-	(progn
-	  (when (timerp predictive-which-dict-timer)
-	    (cancel-timer predictive-which-dict-timer))
-	  (setq predictive-which-dict-timer
-		(run-with-idle-timer predictive-which-dict-delay
-				     t 'predictive-update-which-dict)))
-
-      ;; if which-dict mode has been turned off, cancel the timer and reset
-      ;; variables
-      (when predictive-which-dict-timer
-	(cancel-timer predictive-which-dict-timer)
-	(setq predictive-which-dict-timer nil)
-	(setq predictive-which-dict-name nil)
-	(setq predictive-which-dict-list nil))))
+A negative prefix argument turns it off.")
 
 
 
-(defun predictive-update-which-dict ()
-  ;; Updates the `predictive-which-dict-name' variable used in the mode
-  ;; line. Runs automatically from an idle timer setup by the minor mode
-  ;; function.
+(defun predictive-which-dict-name ()
+  ;; Returns the current dictionary name. Used by the
+  ;; `predictive-which-dict-mode' mode-line format to display the current
+  ;; dictionary the mode line.
 
   ;; only run if predictive mode is enabled and point has moved since last run
-  (when predictive-mode
-    (let ((dict (predictive-current-dict)) name list)
-      (when (dictree-p dict) (setq dict (list dict)))
+  (let ((dict (predictive-current-dict)) name list)
+    (when (dictree-p dict) (setq dict (list dict)))
 
-      ;; get current dictionary name(s)
-      (if (null dict)
-	  (setq name "" list nil)
+    ;; get current dictionary name(s)
+    (if (null dict)
+	(setq name "" list nil)
 
-	;; if dict is the buffer-local meta-dictioary, display name of main
-	;; dictionary it's based on instead
-	(if (and (string= (dictree-name (car dict))
-			  (predictive-buffer-local-dict-name))
-		 (dictree-meta-dict-p (car dict)))
-	    (setq name (dictree-name (nth 1 (dictree-meta-dict-dictlist
-					     (car dict)))))
-	  (setq name (dictree-name (car dict))))
-;;; 	;; truncate to 15 characters
-;;; 	(when (> (length name) 15) (setq name (substring name 0 15)))
-	;; filter list to remove "-dict-" and "-predictive-" prefixes
-	(when (string-match "-*dict-*\\|-*predictive-*" name)
-	  (setq name (replace-match "" nil nil name)))
+      ;; if dict is the buffer-local meta-dictioary, display name of main
+      ;; dictionary it's based on instead
+      (if (and (string= (dictree-name (car dict))
+			(predictive-buffer-local-dict-name))
+	       (dictree-meta-dict-p (car dict)))
+	  (setq name (dictree-name (nth 1 (dictree-meta-dict-dictlist
+					   (car dict)))))
+	(setq name (dictree-name (car dict))))
+;;;   ;; truncate to 15 characters
+;;;   (when (> (length name) 15) (setq name (substring name 0 15)))
+      ;; filter list to remove "-dict-" and "-predictive-" prefixes
+      (when (string-match "-*dict-*\\|-*predictive-*" name)
+	(setq name (replace-match "" nil nil name)))
 
-	;; if current dictionary is a list, add "..." to end of name, and
-	;; construct list of all dictionary names for help-echo text
-	(if (= (length dict) 1)
-	    (setq list nil)
-	  (setq name (concat name "..."))
-	  (setq list (mapconcat 'dictree-name dict "\n"))
-	  ;; filter list to remove "dict-" and "predictive-" prefixes
-	  (while (string-match "^dict-*\\|^predictive-*" list)
-	    (setq list (replace-match "" nil nil list)))))
+      ;; if current dictionary is a list, add "..." to end of name, and
+      ;; construct list of all dictionary names for help-echo text
+      (if (= (length dict) 1)
+	  (setq list nil)
+	(setq name (concat name "..."))
+	(setq list (mapconcat 'dictree-name dict "\n"))
+	;; filter list to remove "dict-" and "predictive-" prefixes
+	(while (string-match "^dict-*\\|^predictive-*" list)
+	  (setq list (replace-match "" nil nil list)))))
 
-      ;; update the mode line
-      (setq predictive-which-dict-name name)
-      (setq predictive-which-dict-list list)
-      (force-mode-line-update)
-      )))
+    ;; return the dictionary name
+    (cons name list)))
 
 
 
