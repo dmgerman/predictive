@@ -1,0 +1,51 @@
+"\\ArrowBetweenLines" 0 (:help #("\\ArrowBetweenLines[<symbol>]" 0 18 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\ArrowBetweenLines*" 0 (:help #("\\ArrowBetweenLines[<symbol>]" 0 19 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\Colonapprox" 0
+"\\Coloneq" 0
+"\\Coloneqq" 0
+"\\Colonsim" 0
+"\\Eqcolon" 0
+"\\Eqqcolon" 0
+"\\LaTeXoverbrace" 0
+"\\LaTeXunderbrace" 0
+"\\MoveEqLeft" 0 (:help #("\\MoveEqLeft[<dimen>]" 0 11 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\adjustlimits" 0 (:help #("\\adjustlimits{<operator1>}_{<limit1>} {<operator2>}_{<limit2>}" 0 13 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\clap" 0
+"\\colonapprox" 0
+"\\coloneq" 0
+"\\coloneqq" 0
+"\\colonsim" 0
+"\\cramped" 0 (:help #("\\cramped[<mathstyle>]{<math>}" 0 8 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\dblcolon" 0
+"\\eqcolon" 0
+"\\eqqcolon" 0
+"\\lparen" 0
+"\\mathclap" 0 (:help #("\\mathclap[<mathstyle>]{<math>}" 0 9 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\mathllap" 0 (:help #("\\mathllap[<mathstyle>]{<math>}" 0 9 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\mathmakebox" 0 (:help #("\\mathmakebox[<width>][<pos>]{<math>}" 0 12 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\mathmbox" 0
+"\\mathrlap" 0 (:help #("\\mathrlap[<mathstyle>]{<math>}" 0 9 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\overbracket" 0 (:help #("\\overbracket[<rule thickness>][<bracket height>]{<arg>}" 0 12 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\prescript" 0 (:help #("\\prescript{<sup>}{<sub>}{<arg>}" 0 10 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\rparen" 0
+"\\shortintertext" 0
+"\\shoveleft" 0 (:help #("\\shoveleft[<dimen>]{<arg>}" 0 10 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\shoveright" 0 (:help #("\\shoveright{<dimen>}{<arg>}" 0 11 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\smashoperator" 0 (:help #("\\smashoperator[<pos>]{<operator with limits>}" 0 14 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\splitdfrac" 0 (:help #("\\splitfrac{<numer>}{<demon>}" 0 11 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\splitfrac" 0 (:help #("\\splitfrac{<numer>}{<demon>}" 0 10 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\underbracket" 0 (:help #("\\underbracket[<rule thickness>][<bracket height>]{<arg>}" 0 13 (face (font-lock-keyword-face font-latex-sedate-face))))
+"\\vcentcolon" 0
+"\\xLeftarrow" 0
+"\\xLeftrightarrow" 0
+"\\xRightarrow" 0
+"\\xhookleftarrow" 0
+"\\xhookrightarrow" 0
+"\\xleftharpoondown" 0
+"\\xleftharpoonup" 0
+"\\xleftrightarrow" 0
+"\\xleftrightharpoons" 0
+"\\xmapsto" 0
+"\\xrightharpoondown" 0
+"\\xrightharpoonup" 0
+"\\xrightleftharpoons" 0
