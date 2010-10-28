@@ -63,6 +63,8 @@
 ;;   `predictive-current-dict' accordingly
 ;; * reimplemented and simplified `predictive-which-dict-mode', avoiding any
 ;;   need for an idle-timer
+;; * fixed minor bug in message displayed by `predictive-reset-weight', which
+;;   reported that the weight was reset to 0 even when a weight was supplied
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
@@ -1773,8 +1775,8 @@ If WEIGHT is supplied, reset to that value instead of
     (if word
 	(and (dictree-insert dict word weight (lambda (a b) a))
 	     (interactive-p)
-	     (message "Weight of \"%s\" in %s reset to 0"
-		      word (dictree-name dict)))
+	     (message "Weight of \"%s\" in %s reset to %d"
+		      word (dictree-name dict) weight))
       ;; if no word was specified, reset all weights to 0
       (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
 	(when (interactive-p)
