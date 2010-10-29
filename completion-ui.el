@@ -998,7 +998,7 @@ by the Emacs user.")
 ;;; ===============================================================
 ;;;                  Keybinding functions
 
-(defun completion--define-word-constituent-binding
+(defun completion-define-word-constituent-binding
   (key char &optional syntax no-syntax-override)
   "Setup key binding for KEY so that it inserts character CHAR as
 though it's syntax were SYNTAX. SYNTAX defaults to
@@ -1388,6 +1388,11 @@ used if the current Emacs version lacks command remapping support."
       (completion-reject arg)
       (insert " ")))
 
+  ;; Note: the only reason we don't use
+  ;;       `completion-define-word-constituent-binding' here is that the
+  ;;       lambda expressions it creates wouldn't be byte-compiled. Anywhere
+  ;;       else, `completion-define-word-constituent-binding' should be used.
+
   ;; M-S-<space> inserts a space as a word-constituent
   (define-key auto-completion-overlay-map [?\M-\S- ]
     (lambda ()
@@ -1422,6 +1427,34 @@ used if the current Emacs version lacks command remapping support."
 ;;;       "Insert \"/\" as though it were a word-constituent."
 ;;;       (interactive)
 ;;;       (auto-completion-self-insert ?/ ?w t)))
+
+  ;; M-( inserts "(" as a word-constituent
+  (define-key auto-completion-overlay-map "\M-("
+    (lambda ()
+      "Insert \"(\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?\( ?w t)))
+
+  ;; M-( inserts ")" as a word-constituent
+  (define-key auto-completion-overlay-map "\M-)"
+    (lambda ()
+      "Insert \")\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?\) ?w t)))
+
+  ;; M-{ inserts "{" as a word-constituent
+  (define-key auto-completion-overlay-map "\M-{"
+    (lambda ()
+      "Insert \"{\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?{ ?w t)))
+
+  ;; M-} inserts "}" as a word-constituent
+  (define-key auto-completion-overlay-map "\M-("
+    (lambda ()
+      "Insert \"}\" as though it were a word-constituent."
+      (interactive)
+      (auto-completion-self-insert ?} ?w t)))
 
   ;; if we can remap commands, remap `self-insert-command'
   (if (fboundp 'command-remapping)
