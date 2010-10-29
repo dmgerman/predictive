@@ -65,6 +65,7 @@
 ;;   need for an idle-timer
 ;; * fixed minor bug in message displayed by `predictive-reset-weight', which
 ;;   reported that the weight was reset to 0 even when a weight was supplied
+;; * fixed `predictive-create-dict' so that autosave can be set to nil
 ;;
 ;; Version 0.19.4
 ;; * added `predictive-lookup-word-p' and `predictive-ispell-word-p'
@@ -1451,9 +1452,9 @@ POPULATE is specified, populate the dictionary from that file
 \(see `dict-populate-from-file').
 
 If the optional argument AUTOSAVE is t, the dictionary will
-automatically be saved when it is unloaded. If nil, all unsaved
-changes are lost when it is unloaded. Defaults to
-`predictive-dict-autosave'.
+automatically be saved when it is unloaded. If it is any other
+value, all unsaved changes are lost when it is unloaded. Defaults
+to `predictive-dict-autosave'.
 
 The optional argument SPEED sets the desired speed with which
 string should be completed using the dictionary, in seconds. It
@@ -1501,7 +1502,7 @@ respectively."
 
     (let (dict
 	  (complete-speed (if speed speed predictive-completion-speed))
-	  (autosave (if autosave autosave predictive-dict-autosave)))
+	  (autosave (if autosave (eq autosave t) predictive-dict-autosave)))
 
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave nil
