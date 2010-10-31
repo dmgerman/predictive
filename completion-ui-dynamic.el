@@ -2,10 +2,10 @@
 ;;; completion-ui-tooltip.el --- dynamic user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.3
 ;; Keywords: completion, user interface, dynamic, hippie
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.3
+;; * Minor change to `completion-deactivate-dynamic' to make it more robust
+;;   against the overlay being in an inconsistent state
 ;;
 ;; Version 0.1.2
 ;; * changed behaviour when `completion-accept-or-reject-by-default' is set to
@@ -188,18 +192,20 @@ cauliflower will start growing out of your ears."
   ;; delete dynamic completion and prefix, unless prefix has been replaced
   (when (overlay-buffer overlay)
     (goto-char (overlay-start overlay))
-    (let ((pos (point)))
-      (delete-region
-       (- (overlay-start overlay)
-	  (if (and (overlay-get overlay 'non-prefix-completion)
-		   (overlay-get overlay 'prefix-replaced)
-		   (not (overlay-put overlay 'prefix-replaced nil)))
-	      0 (overlay-get overlay 'prefix-length)))
-       (overlay-end overlay))
-      ;; restore original prefix
-      (let ((overwrite-mode nil)) (insert (overlay-get overlay 'prefix)))
-      ;; reset overlay
-      (move-overlay overlay (point) (point))))
+    (let (pos)
+      (when (> (setq pos (- (overlay-start overlay)
+			    (if (and (overlay-get
+				      overlay 'non-prefix-completion)
+				     (overlay-get overlay 'prefix-replaced)
+				     (not (overlay-put
+					   overlay 'prefix-replaced nil)))
+				0 (overlay-get overlay 'prefix-length))))
+	       0)
+      (delete-region pos (overlay-end overlay))))
+    ;; restore original prefix
+    (let ((overwrite-mode nil)) (insert (overlay-get overlay 'prefix)))
+    ;; reset overlay
+    (move-overlay overlay (point) (point)))
 
   ;; disable key-bindings
   (when completion-dynamic-map
