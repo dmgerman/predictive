@@ -260,15 +260,16 @@ copied to the @file{/path/to/install/} directory.
 The dictionaries are intended to be user-specific, and @emph{must} be
 writable by your user. If you're performing a site-wide installation of
 the predictive package, the dictionary files (all files starting with
-the prefix @file{dict-} and ending in @file{.elc} or @file{.el}) need to
-be copied to a separate writable directory for each user. For this
-reason, the dictionaries will still be installed under
-@file{~/.emacs.d/predictive/} even if @kbd{DESTDIR} is specified (you
-will have to copy them manually for any other users who want to use
-predictive). If you want to change the dictionary install location, use
-@kbd{make install DICTDIR=/path/to/dictionaries/}. This can of course be
-combined with the @kbd{DESTDIR} option: @kbd{make install
-DESTDIR=/path/to/install/ DICTDIR=/path/to/dictionaries/}.
+the prefix @file{dict-} and ending in @file{.elc} or @file{.el},
+@emph{except} @file{dict-tree.el}) need to be copied to a separate
+writable directory for each user. For this reason, the dictionaries will
+still be installed under @file{~/.emacs.d/predictive/} even if
+@kbd{DESTDIR} is specified. (You will have to copy them manually for any
+other users who want to use predictive.) If you want to change the
+dictionary install location, use @kbd{make install
+DICTDIR=/path/to/dictionaries/}. This can of course be combined with the
+@kbd{DESTDIR} option: @kbd{make install DESTDIR=/path/to/install/
+DICTDIR=/path/to/dictionaries/}.
 
 Finally, put the following lines in your .emacs file (replace the paths
 as appropriate if you're not using the default install locations):
@@ -1387,8 +1388,8 @@ most likely completions first.
 
 As you type, predictive mode learns which words you use more frequently,
 so that the predictions improve. It can automatically ensure certain
-words are always ranked higher than others (useful when one word is a
-prefix for another).
+words are always ranked higher than others (useful e.g. when one word is
+a prefix for another).
 
 Predictive mode is not restricted to using one dictionary at a time; it
 can use many dictionaries in parallel, and can automatically switch
@@ -1491,7 +1492,7 @@ form:
 @lisp
 (:prefixes ("@var{prefix1}" "@var{prefix2}" @dots{}))
 @end lisp
-
+Note that trailing whitespace on any line is @emph{not} allowed.
 
 @noindent
 The following variables set defaults for other dictionary properties. To
@@ -1503,11 +1504,15 @@ afterwards.
 @item predictive-completion-speed
 Sets the default completion speed of dictionaries created with
 @command{predictive-create-dict}. This is the desired upper limit on the
-time it takes to find completions; there is no guarantee it will be
-achieved! If it takes longer than this to find a particular completion,
-the results are cached so that they can be retrieved faster next
-time. Thus lower values result in faster completion, at the expense of
-dictionaries taking up more memory.
+time it takes to find completions. If it takes longer than this to find
+a particular completion, the results are cached so that they can be
+retrieved faster next time. Thus lower values result in faster
+completion, at the expense of dictionaries taking up more memory.
+
+Due to the efficient data structures used by the dictionaries, it is
+typically safe to set this quite low (the default is 0.1 seconds). Most
+completions will be found faster than this even on slow computers, and
+only a few of the very slowest will need to be cached.
 
 @item predictive-dict-autosave
 Sets the default autosave property for dictionaries created with
@@ -1656,6 +1661,11 @@ file. Similarly, dictionaries are usually associated with a dictionary
 file. The @command{predictive-save-dict} command saves any changes back
 to that file. The @command{predictive-write-dict} command is analogous
 to the Emacs @command{write-file} command.
+
+You should @emph{never} rename a dictionary file. (Moving a dictionary
+file to another directory in your @env{load-path} is fine, but you
+cannot rename the file itself.) The correct way to rename a dictionary
+is to supply a new file name to @command{predictive-write-dict}.
 
 Dictionaries can be modified by adding words to them with the
 @command{predictive-add-to-dict} command (@pxref{Creating
