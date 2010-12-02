@@ -2656,7 +2656,7 @@ Which one is shown depends on the setting of
 non-nil, the auto-show interface will only be displayed after a
 delay.
 
-If OVERLAY is not supplies, tries to find one at point.
+If OVERLAY is not supplied, tries to find one at point.
 
 If POINT is supplied, the auto-show interface will be displayed
 immediately, but only if point is at POINT (used internally when
