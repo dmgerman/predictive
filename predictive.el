@@ -506,6 +506,9 @@ the string."
 			 "AÂÀ" "EÉÊÈ" "IÎ" "OÔ" "UÛ" "CÇ"))
 		 (const :tag "German"
 			("aä" "oö" "uü" "AÄ" "OÖ" "UÜ"))
+		 (const :tag "keypad"
+			("2abc" "3def" "4ghi" "5jkl" "6mno"
+			 "7pqrs" "8tuv" "9wxyz" "0 "))
 		 (repeat :tag "custom" string)))
 
 
@@ -550,11 +553,13 @@ latter take precedence."
 (defcustom predictive-auto-correction-no-completion nil
   "*When non-nil, predictive mode will only auto-correct typed words,
 not complete them. This is only useful when one or more
-`predictive-prefix-expansions' are defined.
+`predictive-prefix-expansions' or
+`predictive-equivalent-characters' are defined.
 
 Setting this option disables completion entirely. Predictive mode
 will only auto-correct typed words, using the definitions in
-`predictive-prefix-expansions'. For example, if the latter
+`predictive-prefix-expansions' and
+`predictive-equivalent-characters'. For example, if the latter
 expands characters into character alternatives containing all
 accented and unaccented variants of that character, then
 predictive mode will auto-correct accents, but without offering
