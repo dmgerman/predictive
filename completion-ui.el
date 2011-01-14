@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2010 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.11
+;; Version: 0.11.12
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,13 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.12
+;; * modified `completion-ui-resolve-old' to take optional arguments
+;;   limiting region in which to resolve completions
+;; * added new `completion-resolve-before-undo' to `before-change-functions'
+;;   hook in `auto-completion-mode' to resolve completions in text region
+;;   modified by an undo, since undo screws up the completion overlay
 ;;
 ;; Version 0.11.11
 ;; * bug-fix in `completion-reject': used to run `completion-accept-functions'
@@ -1665,8 +1672,10 @@ to work."
 
    ;; run appropriate hook when `auto-completion-mode' is enabled/disabled
    (auto-completion-mode
+    (add-hook 'before-change-functions 'completion-resolve-before-undo nil t)
     (run-hooks 'auto-completion-mode-enable-hook))
    ((not auto-completion-mode)
+    (remove-hook 'before-change-functions 'completion-resolve-before-undo t)
     (run-hooks 'auto-completion-mode-disable-hook))))
 
 
@@ -3504,13 +3513,32 @@ based on current syntax table."
 
 
 ;;; ============================================================
-;;;                  Fill commands
+;;;                          Undo
+
+(defun completion-resolve-before-undo (beg end)
+  "Resolve completions betweeh BEG and END before undoing.
+Added to `before-change-functions' hook."
+  ;; check if current command is an undo
+  (when undo-in-progress
+    ;; replace 'leave behaviour by 'accept, since we have to get rid of the
+    ;; completion overlay before the undo
+    (let ((completion-how-to-resolve-old-completions
+	   (if (eq completion-how-to-resolve-old-completions 'leave)
+	       'accept
+	     completion-how-to-resolve-old-completions)))
+      (completion-ui-resolve-old nil beg end))))
+
+
+
+
+
+;;; ============================================================
+;;;                      Fill commands
 
 (defun completion-fill-paragraph (&optional justify region)
   "Fill paragraph at or after point.
 This command first sorts out any provisional completions, before
 calling `fill-paragraph', passing any argument straight through."
-
   ;; interactive spec copied from `fill-paragraph'
   (interactive (progn
 		 (barf-if-buffer-read-only)
@@ -3523,13 +3551,12 @@ calling `fill-paragraph', passing any argument straight through."
 
 
 ;;; ============================================================
-;;;                  Commands
+;;;                      Yank Commands
 
 (defun auto-completion-mouse-yank-at-click (click arg)
   "Insert the last stretch of killed text at the position clicked on.
 Temporarily disables `auto-completion-mode', then calls
 `mouse-yank-at-click'."
-
   (interactive "e\nP")
   (let ((auto-completion-mode nil))
     (mouse-yank-at-click click arg)))
@@ -3539,7 +3566,7 @@ Temporarily disables `auto-completion-mode', then calls
 
 
 ;;; ============================================================
-;;;                  Deletion commands
+;;;                    Deletion commands
 
 (defun completion-backward-delete (command &rest args)
   "Call backward-delete COMMAND, passing it ARGS.
@@ -4062,74 +4089,88 @@ associated with OVERLAY."
 
 
 
-(defun completion-ui-resolve-old (&optional overlay)
+(defun completion-ui-resolve-old (&optional overlay beg end)
   "Resolve old completions according to the setting of
-`completion-how-to-resolve-old-completions'. Any completion
-overlay specified by OVERLAY will be left alone, and completions
-near the point are dealt with specially, so as not to modify
-characters around the point."
-  ;; temporarily remove ignored overlay from list
-  (setq completion--overlay-list
-        (delq overlay completion--overlay-list))
+`completion-how-to-resolve-old-completions'.
 
-  (save-excursion
-    (cond
-     ;; leave old completions (but accept zero-length ones)
-     ((eq completion-how-to-resolve-old-completions 'leave)
-      (mapc (lambda (o)
-	      (when (= (overlay-start o) (overlay-end o))
-		(completion-accept nil o)))
-	    completion--overlay-list))
+Any completion overlay specified by OVERLAY will be left alone,
+and completions near the point are dealt with specially, so as
+not to modify characters around the point.
 
-     ;; accept old completions
-     ((eq completion-how-to-resolve-old-completions 'accept)
-      (mapc (lambda (o)
-	      ;; if completion is nowhere near point, accept it
-	      (if (or (> (point) (overlay-end o))
-		      (< (point)
-			 (- (overlay-start o)
-			    (if (and (overlay-get o 'non-prefix-completion)
-				     (overlay-get o 'prefix-replaced))
-				0 (overlay-get o 'prefix-length)))))
-		  (completion-accept nil o)
-		;; otherwise, completion overlaps point, so just delete
-		;; overlay, effectively accepting whatever is there
-		(completion-ui-delete-overlay o)
-		(completion-ui-deactivate-interfaces o)))
-	    completion--overlay-list))
+If BEG and END are specified, only completions between BEG and
+END are resolved. If only one of BEG or END is specified, the
+other defaults to `point-max' or `point-min', respectively."
+  (cond
+   ((and beg (not end)) (setq end (point-max)))
+   ((and (not beg) end) (setq beg (point-min))))
 
-     ;; reject old completions
-     ((eq completion-how-to-resolve-old-completions 'reject)
-      (mapc (lambda (o)
-	      ;; if completion is nowhere near point, reject it
-	      (if (or (> (point) (overlay-end o))
-		      (< (point)
-			 (- (overlay-start o)
-			    (if (and (overlay-get o 'non-prefix-completion)
-				     (overlay-get o 'prefix-replaced))
-				0 (overlay-get o 'prefix-length)))))
-		  (completion-reject nil o)
-		;; otherwise, completion overlaps point, so just delete
-		;; provisional completion characters and overlay
-		(delete-region (overlay-start o) (overlay-end o))
-		(completion-ui-delete-overlay o)
-		(completion-ui-deactivate-interfaces o)))
-	    completion--overlay-list))
+  (let (overlay-list)
+    ;; ignore OVERLAY and any overlays not between BEG and END (if specified)
+    (if beg
+	(dolist (o completion--overlay-list)
+	  (unless (or (eq o overlay)
+		      (< (overlay-end o) beg)
+		      (> (overlay-start o) end))
+	    (push o overlay-list)))
+      (setq overlay-list (delq overlay completion--overlay-list)))
 
-     ;; ask 'em
-     ((eq completion-how-to-resolve-old-completions 'ask)
-      (save-excursion
+
+    (save-excursion
+      (cond
+       ;; leave old completions (but accept zero-length ones)
+       ((eq completion-how-to-resolve-old-completions 'leave)
 	(mapc (lambda (o)
-		(goto-char (overlay-end o))
-		;; FIXME: remove hard-coded face
-		(overlay-put o 'face '(background-color . "red"))
-		(if (y-or-n-p "Accept completion? ")
-		    (completion-accept nil o)
-		  (completion-reject nil o)))
-	      completion--overlay-list)))))
+		(when (= (overlay-start o) (overlay-end o))
+		  (completion-accept nil o)))
+	      overlay-list))
 
-  ;; add ignored overlay back into the list
-  (when (overlayp overlay) (push overlay completion--overlay-list))
+       ;; accept old completions
+       ((eq completion-how-to-resolve-old-completions 'accept)
+	(mapc (lambda (o)
+		;; if completion is nowhere near point, accept it
+		(if (or (> (point) (overlay-end o))
+			(< (point)
+			   (- (overlay-start o)
+			      (if (and (overlay-get o 'non-prefix-completion)
+				       (overlay-get o 'prefix-replaced))
+				  0 (overlay-get o 'prefix-length)))))
+		    (completion-accept nil o)
+		  ;; otherwise, completion overlaps point, so just delete
+		  ;; overlay, effectively accepting whatever is there
+		  (completion-ui-delete-overlay o)
+		  (completion-ui-deactivate-interfaces o)))
+	      overlay-list))
+
+       ;; reject old completions
+       ((eq completion-how-to-resolve-old-completions 'reject)
+	(mapc (lambda (o)
+		;; if completion is nowhere near point, reject it
+		(if (or (> (point) (overlay-end o))
+			(< (point)
+			   (- (overlay-start o)
+			      (if (and (overlay-get o 'non-prefix-completion)
+				       (overlay-get o 'prefix-replaced))
+				  0 (overlay-get o 'prefix-length)))))
+		    (completion-reject nil o)
+		  ;; otherwise, completion overlaps point, so just delete
+		  ;; provisional completion characters and overlay
+		  (delete-region (overlay-start o) (overlay-end o))
+		  (completion-ui-delete-overlay o)
+		  (completion-ui-deactivate-interfaces o)))
+	      overlay-list))
+
+       ;; ask 'em
+       ((eq completion-how-to-resolve-old-completions 'ask)
+	(save-excursion
+	  (mapc (lambda (o)
+		  (goto-char (overlay-end o))
+		  ;; FIXME: remove hard-coded face
+		  (overlay-put o 'face '(background-color . "red"))
+		  (if (y-or-n-p "Accept completion? ")
+		      (completion-accept nil o)
+		    (completion-reject nil o)))
+		overlay-list))))))
+
   (when (null completion--overlay-list)
     (setq completion-ui--activated nil)))
 
