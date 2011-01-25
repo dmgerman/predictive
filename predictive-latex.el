@@ -286,6 +286,9 @@
 (add-to-list 'predictive-major-mode-alist
 	     '(latex-mode . predictive-setup-latex))
 
+(unless (fboundp 'oddp)
+  (defun oddp (i) (and (integerp i) (= (mod i 2) 1))))
+
 
 
 ;;;============================================================
