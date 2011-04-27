@@ -321,7 +321,9 @@ When a document class is in the list, "
 
 
 (defcustom predictive-latex-display-help t
-  "*When non-nil, display help on LaTeX commands."
+  "*When non-nil, display help on LaTeX commands.
+\(This relies on suitable help text being defined in the LaTeX
+dictionaries.\)"
   :group 'predictive-latex
   :type 'boolean)
 
@@ -471,16 +473,6 @@ strings become the sub-menu entries.")
 (define-key predictive-latex-map [?^]  'completion-self-insert)
 (define-key predictive-latex-map [?\\] 'completion-self-insert)
 (define-key predictive-latex-map [?-]  'completion-self-insert)
-;; remap motion commands to also display any help text at point
-(when (fboundp 'command-remapping)
-  (define-key predictive-latex-map [remap forward-char]
-    'predictive-forward-char)
-  (define-key predictive-latex-map [remap backward-char]
-    'predictive-backward-char)
-  (define-key predictive-latex-map [remap previous-line]
-    'predictive-previous-line)
-  (define-key predictive-latex-map [remap next-line]
-    'predictive-next-line))
 
 
 
@@ -528,10 +520,12 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
 
-      ;; display help if first character of accepted completion is "\"
+      ;; display help if first character of accepted completion is "\" and
+      ;; after point motion
       (when predictive-latex-display-help
 	(add-hook 'predictive-accept-functions 'predictive-display-help
-		  nil t))
+		  nil t)
+	(add-hook 'post-command-hook 'predictive-display-help nil t))
 
       ;; use latex browser menu if first character of prefix is "\"
       (set (make-local-variable 'predictive-menu-function)
@@ -726,9 +720,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (kill-local-variable 'predictive-latex-env-dict)
     (kill-local-variable 'predictive-map)
     (kill-local-variable 'predictive-latex-previous-filename)
-    ;; remove hook that displays help
+    ;; remove hooks that display help
     (when predictive-latex-display-help
-      (remove-hook 'predictive-accept-functions 'predictive-display-help t))
+      (remove-hook 'predictive-accept-functions 'predictive-display-help t)
+      (remove-hook 'post-command-hook 'predictive-display-help t))
     ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-latex-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)

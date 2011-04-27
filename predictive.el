@@ -1227,75 +1227,6 @@ When within a pop-up frame:\
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
 
-(defvar predictive-display-help-timer nil
-  "Timer used to display help text.")
-
-
-(defun predictive-display-help (&optional dummy1 word &rest ignored)
-  "Display any help for WORD from the current dictionary.
-Remaining arguments are ignored (they are there to allow
-`predictive-display-help' to be used in the
-`completion-accept-functions' hook)."
-  (interactive)
-
-  (unless word
-    (setq word (thing-at-point
-		(completion-ui-source-word-thing 'predictive)))
-    (set-text-properties 0 (length word) nil word))
-
-  (let ((dict (predictive-current-dict))
-	help)
-    (when (catch 'found-help
-	    (dolist (dic dict)
-	      (when (setq help (dictree-get-property dic word :help))
-		(throw 'found-help t))))
-      (message help))))
-
-
-(defun predictive-forward-char (&optional n)
-  "Call `forward-char', then display any help for word at point."
-  (interactive "p")
-  (when (timerp predictive-display-help-timer)
-    (cancel-timer predictive-display-help-timer))
-  (forward-char n)
-  (setq predictive-display-help-timer
-	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
-
-
-(defun predictive-backward-char (&optional n)
-  "Call `backward-char', then display any help for word at point."
-  (interactive "p")
-  (when (timerp predictive-display-help-timer)
-    (cancel-timer predictive-display-help-timer))
-  (backward-char n)
-  (setq predictive-display-help-timer
-	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
-
-
-(defun predictive-next-line (&optional n try-vscroll)
-  "Call `next-line', then display any help text for word at point."
-  (interactive "p")
-  (when (timerp predictive-display-help-timer)
-    (cancel-timer predictive-display-help-timer))
-  ;; we really do want to call `next-line', so suppress compiler warnings
-  (with-no-warnings (next-line n try-vscroll))
-  (setq predictive-display-help-timer
-	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
-
-
-(defun predictive-previous-line (&optional n try-vscroll)
-  "Call `previous-line', then display any help for word at point."
-  (interactive "p")
-  (when (timerp predictive-display-help-timer)
-    (cancel-timer predictive-display-help-timer))
-  ;; we really do want to call `previous-line', so suppress compiler warnings
-  (with-no-warnings (previous-line n try-vscroll))
-  (setq predictive-display-help-timer
-	(run-with-idle-timer 0.1 nil 'predictive-display-help)))
-
-
-
-
 (defun predictive-set-main-dict (dict)
   "Set the main dictionary for the current buffer.
 To set the default main dictionary, you should customize
@@ -2460,6 +2391,40 @@ entirely of word- or symbol-constituent characters."
       ;; learn from the buffer
       (predictive-fast-learn-or-add-from-buffer buff dict all)
       (unless visiting (kill-buffer buff)))))
+
+
+
+(defun predictive-display-help (&optional dummy1 word &rest ignored)
+  "Display any help for WORD from the current dictionary.
+
+If WORD is not supplied, display any help for word at point if
+the last command was a point motion command (this is so that the
+function can be used in `post-command-hook').
+
+Remaining arguments are ignored (they are there to allow
+`predictive-display-help' to be used in the
+`completion-accept-functions' hook). "
+  (interactive)
+
+  (when (and (not word)
+	     (or (eq last-command 'previous-line)
+		 (eq last-command 'next-line)
+		 (eq last-command 'backward-char)
+		 (eq last-command 'forward-char)
+		 (eq last-command 'left-char)
+		 (eq last-command 'right-char)))
+    (setq word (thing-at-point
+		(completion-ui-source-word-thing 'predictive)))
+    (set-text-properties 0 (length word) nil word))
+
+  (when word
+    (let ((dict (predictive-current-dict))
+	  help)
+      (when (catch 'found-help
+	      (dolist (dic dict)
+		(when (setq help (dictree-get-property dic word :help))
+		  (throw 'found-help t))))
+	(message help)))))
 
 
 
