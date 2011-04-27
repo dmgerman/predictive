@@ -935,7 +935,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; load the regexps into the list
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
        :edge start
        (dict . predictive-latex-math-dict)
        (priority . 10)
@@ -945,7 +945,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        (face . (background-color . ,predictive-overlay-debug-colour))))
     (auto-overlay-load-regexp
      'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
        :edge end
        (dict . predictive-latex-math-dict)
        (priority . 10)
