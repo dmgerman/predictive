@@ -1,10 +1,10 @@
 ;;; predictive-texinfo.el --- predictive mode Texinfo setup function
 
 
-;; Copyright (C) 2008, 2010 Toby Cubitt
+;; Copyright (C) 2008, 2010-2011 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.2
+;; Version: 0.3.3
 ;; Keywords: predictive, setup function, texinfo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -28,6 +28,14 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.2
+;; * Added `predictive-texinfo-map', and `predictive-texinfo-mode' variable to
+;;   enable it. Define texinfo-specific `predictive-mode' bindings there instead
+;;   of in `predictive-map'. This fixes a bug that caused the supposedly
+;;   texinfo-specific bindings to be enabled in all `predictive-mode' buffers.
+;;   (The `make-local-variable' used previously doesn't have the desired
+;;   effect for keymaps.)
 ;;
 ;; Version 0.3.2
 ;; * simplified dictionary handling with advent of the new
@@ -108,6 +116,28 @@ between \\begin{...} and \\end{...} commands."
 (make-variable-buffer-local 'predictive-texinfo-local-flag-dict)
 
 
+;; variable used to enable `predictive-texinfo-map' minor-mode keymap
+;; (we don't use `define-minor-mode' because we explicitly don't want an
+;; interactive minor-mode toggling command)
+(defvar predictive-texinfo-mode nil)
+(make-variable-buffer-local 'predictive-texinfo-mode)
+
+;; keymap used for texinfo-specific `predictive-mode' key bindings
+(defvar predictive-texinfo-map (make-sparse-keymap))
+
+(push (cons 'predictive-texinfo-mode predictive-texinfo-map)
+      minor-mode-map-alist)
+
+;; override AUCTeX bindings so completion works
+(define-key predictive-texinfo-map [?$]  'completion-self-insert)
+(define-key predictive-texinfo-map [?\"] 'completion-self-insert)
+(define-key predictive-texinfo-map [?_]  'completion-self-insert)
+(define-key predictive-texinfo-map [?^]  'completion-self-insert)
+(define-key predictive-texinfo-map [?\\] 'completion-self-insert)
+(define-key predictive-texinfo-map [?-]  'completion-self-insert)
+
+
+
 ;; variables used to restore local settings of variables when predictive mode
 ;; is disabled in a Texinfo buffer
 (defvar predictive-restore-override-syntax-alist nil)
@@ -155,6 +185,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ;; ----- enabling Texinfo setup -----
    ((> arg 0)
     (catch 'load-fail
+
+      ;; enable `predictive-texinfo-map' keymap
+      (setq predictive-texinfo-mode t)
+
       ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-texinfo-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
@@ -204,6 +238,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 
    ((< arg 0)
+    ;; disable `predictive-texinfo-map' keymap
+    (setq predictive-texinfo-mode nil)
     ;; stop predictive auto overlays
     (auto-overlay-stop 'predictive nil (when (buffer-file-name)
 					 predictive-auxiliary-file-location))
@@ -573,16 +609,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-texinfo-load-keybindings ()
   "Load the predictive mode Texinfo key bindings."
-
-  ;; override AUCTeX bindings so completion works
-  (make-local-variable 'predictive-map)
-  (define-key predictive-map [?$]  'completion-self-insert)
-  (define-key predictive-map [?\"] 'completion-self-insert)
-  (define-key predictive-map [?_]  'completion-self-insert)
-  (define-key predictive-map [?^]  'completion-self-insert)
-  (define-key predictive-map [?\\] 'completion-self-insert)
-  (define-key predictive-map [?-]  'completion-self-insert)
-
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)

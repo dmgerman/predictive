@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2011 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.8
+;; Version: 0.12.9
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,15 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.9
+;; * added "displaymath" to math environment auto-overlay regexp
+;; * Added `predictive-latex-map', and `predictive-latex-mode' variable to
+;;   enable it. Define latex-specific `predictive-mode' bindings there instead
+;;   of in `predictive-map'. This fixes a bug that caused the supposedly
+;;   latex-specific bindings to be enabled in all `predictive-mode' buffers.
+;;   (The `make-local-variable' used previously doesn't have the desired
+;;   effect for keymaps.)
 ;;
 ;; Version 0.12.8
 ;; * use `eq' instead of = when testing return value of `char-before' or
@@ -442,6 +451,39 @@ strings become the sub-menu entries.")
     (predictive-latex-env-dict . "dict-latex-env-")))
 
 
+
+;; variable used to enable `predictive-latex-map' minor-mode keymap
+;; (we don't use `define-minor-mode' because we explicitly don't want an
+;; interactive minor-mode toggling command)
+(defvar predictive-latex-mode nil)
+(make-variable-buffer-local 'predictive-latex-mode)
+
+;; keymap used for latex-specific `predictive-mode' key bindings
+(defvar predictive-latex-map (make-sparse-keymap))
+
+(push (cons 'predictive-latex-mode predictive-latex-map)
+      minor-mode-map-alist)
+
+;; override AUCTeX bindings so completion works
+(define-key predictive-latex-map [?$]  'completion-self-insert)
+(define-key predictive-latex-map [?\"] 'completion-self-insert)
+(define-key predictive-latex-map [?_]  'completion-self-insert)
+(define-key predictive-latex-map [?^]  'completion-self-insert)
+(define-key predictive-latex-map [?\\] 'completion-self-insert)
+(define-key predictive-latex-map [?-]  'completion-self-insert)
+;; remap motion commands to also display any help text at point
+(when (fboundp 'command-remapping)
+  (define-key predictive-latex-map [remap forward-char]
+    'predictive-forward-char)
+  (define-key predictive-latex-map [remap backward-char]
+    'predictive-backward-char)
+  (define-key predictive-latex-map [remap previous-line]
+    'predictive-previous-line)
+  (define-key predictive-latex-map [remap next-line]
+    'predictive-next-line))
+
+
+
 ;; variables used to restore local settings of variables when predictive mode
 ;; is disabled in a LaTeX buffer
 (defvar predictive-restore-override-syntax-alist nil)
@@ -478,6 +520,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
     (catch 'load-fail
+
+      ;; enable `predictive-latex-map' keymap
+      (setq predictive-latex-mode t)
 
       ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
@@ -636,6 +681,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
    ;; ----- Disabling LaTeX setup -----
    ((< arg 0)
+    ;; disable `predictive-latex-map' keymap
+    (setq predictive-texinfo-mode nil)
+
     ;; if we're the TeX-master, first disable predictive mode in all related
     ;; LaTeX buffers, which we find by looking for buffers that share the
     ;; auto-overlays 'predictive regexp set
@@ -1050,26 +1098,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-latex-load-keybindings ()
   "Load the predictive mode LaTeX key bindings."
-
-  ;; override AUCTeX bindings so completion works
-  (make-local-variable 'predictive-map)
-  (define-key predictive-map [?$]  'completion-self-insert)
-  (define-key predictive-map [?\"] 'completion-self-insert)
-  (define-key predictive-map [?_]  'completion-self-insert)
-  (define-key predictive-map [?^]  'completion-self-insert)
-  (define-key predictive-map [?\\] 'completion-self-insert)
-  (define-key predictive-map [?-]  'completion-self-insert)
-  ;; remap motion commands to also display any help text at point
-  (when (fboundp 'command-remapping)
-    (define-key predictive-map [remap forward-char]
-      'predictive-forward-char)
-    (define-key predictive-map [remap backward-char]
-      'predictive-backward-char)
-    (define-key predictive-map [remap previous-line]
-      'predictive-previous-line)
-    (define-key predictive-map [remap next-line]
-      'predictive-next-line))
-
   (setq predictive-restore-override-syntax-alist
 	auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)
