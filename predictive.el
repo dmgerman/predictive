@@ -2,10 +2,10 @@
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
 
-;; Copyright (C) 2004-2010 Toby Cubitt
+;; Copyright (C) 2004-2011 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.5
+;; Version: 0.19.6
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.6
+;; * fixed interactive argument handling bugs in
+;;   `predictive-fast-learn-from-file'
 ;;
 ;; Version 0.19.5
 ;; * fixed bug in `predictive-save-used-dicts', which passed
@@ -2205,8 +2209,9 @@ the buffer's syntax table."
 				  (buffer-name (current-buffer)) t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
-		      nil)
+		      t)
 		     current-prefix-arg))
+  (when (and (interactive-p) (eq dict t)) (setq dict nil))
 
   ;; sanity check arguments
   (when (and all (null dict))
@@ -2223,7 +2228,10 @@ the buffer's syntax table."
       ;; step through each word in buffer...
       (goto-char (point-min))
       (setq percent 0)
-      (message "Learning words for dictionary %s...(0%%)" (dictree-name dict))
+      (if dict
+	  (message "Learning words for dictionary %s...(0%%)"
+		   (dictree-name dict))
+	(message "Learning words...(0%%)"))
       (while (re-search-forward "\\b\\(\\sw\\|\\s_\\)+\\b" nil t)
 	(setq word (match-string-no-properties 0))
 	(when (and predictive-ignore-initial-caps
@@ -2326,17 +2334,25 @@ the buffer's syntax table."
 
 	(when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
 	  (setq percent (/ (float (point)) (point-max)))
-	  (message "Learning words for dictionary %s...(%s%%)"
-		   (dictree-name dict)
-		   (progn
-		     (string-match ".*\\..?.?"
-				   (prin1-to-string (* 100 percent)))
-		     (match-string 0 (prin1-to-string (* 100 percent))))
-		   ))
+	  (if dict
+	      (message "Learning words for dictionary %s...(%s%%)"
+		       (dictree-name dict)
+		       (progn
+			 (string-match ".*\\..?.?"
+				       (prin1-to-string (* 100 percent)))
+			 (match-string 0 (prin1-to-string (* 100 percent)))))
+	    (message "Learning words...(%s%%)"
+		     (progn
+		       (string-match ".*\\..?.?"
+				     (prin1-to-string (* 100 percent)))
+		       (match-string 0 (prin1-to-string (* 100 percent)))))))
 	)  ; end while loop
 
       (unless (or all restore-mode) (predictive-mode -1))
-      (message "Learning words for dictionary %s...done" (dictree-name dict))
+      (if dict
+	  (message "Learning words for dictionary %s...done"
+		   (dictree-name dict))
+	(message "Learning words...done"))
       )))
 
 
@@ -2379,8 +2395,9 @@ entirely of word- or symbol-constituent characters."
   (interactive (list (read-file-name "File to learn from: " nil nil t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
-		      nil)
+		      t)
 		     current-prefix-arg))
+  (when (and (interactive-p) (eq dict t)) (setq dict nil))
 
   (save-excursion
     ;; open file in a buffer
