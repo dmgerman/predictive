@@ -1662,7 +1662,7 @@ Interactively, SECTION is read from the mini-buffer."
 
     ;; if we haven't found a match overlay, display a message
     (if (not o-match)
-	(message "Not at a LaTeX delimeter")
+	(message "Not at a LaTeX delimiter")
       ;; otherwise, if other edge of its parent is not matched, display
       ;; message
       (if (not (and (setq o-parent (overlay-get o-match 'parent))
@@ -1671,7 +1671,7 @@ Interactively, SECTION is read from the mini-buffer."
 				       (if (eq o-match
 					       (overlay-get o-parent 'start))
 					   'end 'start)))))
-	  (message "Unmatched LaTeX delimeter")
+	  (message "Unmatched LaTeX delimiter")
 	;; otherwise, move point to the other edge
 	(push-mark)
 	(goto-char (overlay-get o-other

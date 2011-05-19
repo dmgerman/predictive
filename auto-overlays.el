@@ -551,7 +551,7 @@ The REGEXP's should be lists of the form:
 RGXP is either a single regular expression (a string), or a cons
 cell of the form (RGXP . GROUP) where RGXP is a regular
 expression and GROUP is an integer specifying which group in the
-regular expression forms the delimeter for the auto-overlay. The
+regular expression forms the delimiter for the auto-overlay. The
 rest of the PROPERTY entries should be cons cells of the
 form (NAME . VALUE) where NAME is an overlay property name (a
 symbol) and VALUE is its value.
@@ -628,7 +628,7 @@ REGEXP should be a list of the form:
 RGXP is either a single regular expression (a string), or a cons
 cell of the form (RGXP . GROUP) where RGXP is a regular
 expression and GROUP is an integer specifying which group in the
-regular expression forms the delimeter for the auto-overlay. The
+regular expression forms the delimiter for the auto-overlay. The
 rest of the PROPERTY entries should be cons cells of the
 form (NAME . VALUE) where NAME is an overlay property name (a
 symbol) and VALUE is its value.
@@ -1810,7 +1810,7 @@ overlay changes."
 
 (defun auto-o-overlapping-match (beg end set-id definition-id regexp-id edge)
   ;; Returns any match overlay corresponding to same SET-ID, DEFINITION-ID and
-  ;; EDGE but different REGEXP-ID whose delimeter overlaps region from BEG to
+  ;; EDGE but different REGEXP-ID whose delimiter overlaps region from BEG to
   ;; END. (Only returns first one it finds; which is returned if more than one
   ;; exists is undefined.)
   (let (o-overlap)
@@ -1821,7 +1821,7 @@ overlay changes."
 			 (eq (overlay-get o 'definition-id) definition-id)
 			 (not (eq (overlay-get o 'regexp-id) regexp-id))
 			 (eq (auto-o-edge o) edge)
-			 ;; check delimeter (not just o) overlaps BEG to END
+			 ;; check delimiter (not just o) overlaps BEG to END
 			 (< (overlay-get o 'delim-start) end)
 			 (> (overlay-get o 'delim-end) beg))
 		(setq o-overlap o)
