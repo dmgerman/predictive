@@ -999,27 +999,32 @@ ignored second argument)."
 (defun predictive-ispell-word-p (word &optional ignored)
   "Return non-nil if WORD is accepted by `ispell', nil otherwise.
 Potentially useful as a `predictive-auto-add-filter' (hence the
-ignored second argument)."
+ignored second argument).
+
+WARNING! `predictive-ispell-word-p' can sometimes cause Emacs to
+hang if it is used as a `predictive-auto-add-filter' and
+`predictive-use-auto-learn-cache' is enabled. If this happens,
+use C-g to terminate `predictive-ispell-word-p', then consider
+disabling `predictive-use-auto-learn-cache'."
   ;; --- Code copied and adapted from `ispell-word' in ispell.el ---
-  (ispell-init-process)
-  (ispell-set-spellchecker-params)    ; Initialize variables and dicts alists
-  (ispell-accept-buffer-local-defs)   ; use the correct dictionary
-  (ispell-send-string "%\n")	      ; put in verbose mode
   (let (poss)
+    (ispell-set-spellchecker-params)    ; Initialize variables and dicts alists
+    (ispell-accept-buffer-local-defs)   ; use the correct dictionary
+    (ispell-send-string "%\n")	      ; put in verbose mode
     (ispell-send-string (concat "^" word "\n"))
     ;; wait until ispell has processed word
-    (while (progn
-	     (ispell-accept-output)
-	     (not (string= "" (car ispell-filter)))))
+    (with-local-quit
+      (while (progn
+	       (ispell-accept-output)
+	       (not (string= "" (car ispell-filter))))))
     ;;(ispell-send-string "!\n") ;back to terse mode.
     (setq ispell-filter (cdr ispell-filter)) ; remove extra \n
-    (if (and ispell-filter (listp ispell-filter))
-	(if (> (length ispell-filter) 1)
-	    (error "Ispell and its process have different character maps")
-	  (setq poss (ispell-parse-output (car ispell-filter)))))
+    (when (and ispell-filter (listp ispell-filter)
+	       (<= (length ispell-filter) 1))
+      (setq poss (ispell-parse-output (car ispell-filter))))
     ;; return t if word is correct
-    (when (null poss) (message "Error in ispell process"))
-    (or (eq poss t) (stringp poss) t)))
+    ;;(when (null poss) (message "Error in ispell process"))
+    (or (eq poss t) (stringp poss))))
 
 
 
