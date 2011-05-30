@@ -5,7 +5,7 @@
 ;; Copyright (C) 2004-2011 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.9
+;; Version: 0.12.10
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.10
+;; * fixed missing copying of `predictive-latex-local-latex-dict' and
+;;   `predictive-latex-local-math-dict' to value in TeX-master in
+;;   `predictive-setup-latex'
 ;;
 ;; Version 0.12.9
 ;; * added "displaymath" to math environment auto-overlay regexp
@@ -562,6 +567,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		  preamble-dict predictive-latex-preamble-dict
 		  env-dict predictive-latex-env-dict
 		  label-dict predictive-latex-label-dict
+		  local-latex-dict predictive-latex-local-latex-dict
+		  local-math-dict predictive-latex-local-math-dict
 		  local-env-dict predictive-latex-local-env-dict
 		  local-section-dict predictive-latex-section-dict))
 	  (auto-overlay-share-regexp-set 'predictive buff)
@@ -573,6 +580,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		predictive-latex-preamble-dict preamble-dict
 		predictive-latex-env-dict env-dict
 		predictive-latex-label-dict label-dict
+		predictive-latex-local-latex-dict local-latex-dict
+		predictive-latex-local-latex-dict local-math-dict
 		predictive-latex-local-env-dict local-env-dict
 		predictive-latex-section-dict local-section-dict)
 	  ;; start the auto-overlays, restoring buffer's modified flag
