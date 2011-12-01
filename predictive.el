@@ -835,7 +835,7 @@ user when the completion was accepted interactively.")
 
 (defvar predictive-reject-functions
   '((lambda (prefix word &optional arg)
-      (when arg (predictive-auto-learn prefix word))))
+      (when arg (predictive-auto-learn nil prefix))))
   "Hook run after a predictive completion is rejected.
 The functions are called with two or three arguments: the prefix,
 the rejected completion, and any prefix argument supplied by the
