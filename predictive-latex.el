@@ -1316,7 +1316,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     (setq from-string (concat "\\b" (regexp-quote from-string) "\\b")))
   (while (or (and delimited (re-search-forward from-string nil t))
 	     (and (not delimited) (search-forward from-string)))
-    (when (and (memq dict-latex-math (predictive-current-dict))
+    (when (and (save-excursion
+		 (backward-char)
+		 (memq dict-latex-math (predictive-current-dict)))
 	       (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string nil t))))
 
@@ -1329,8 +1331,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (when delimited
     (setq regexp (concat "\\b" regexp "\\b")))
   (while (re-search-forward regexp nil t)
-    (when (and (memq dict-latex-math (predictive-current-dict))
-	       (save-match-data (y-or-n-p "Replace? ")))
+      (when (and (save-excursion
+		   (backward-char)
+		   (memq dict-latex-math (predictive-current-dict)))
+		 (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string))))
 
 
