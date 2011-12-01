@@ -71,10 +71,6 @@ With no argument, this command toggles the mode.
 A non-null prefix argument turns the mode on.
 A null prefix argument turns it off.
 
-Note that simply setting the minor-mode variable
-`show-point-mode' is not sufficient to enable show-point-mode
-mode.
-
 When enabled, the value of `point' is displayed in the
 mode-line (after the line and column numbers, if those are being
 displayed too).")
