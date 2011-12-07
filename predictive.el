@@ -492,7 +492,7 @@ prefixes. Note that case is significant.
 A typical use of this is to define all variants of a particular
 character, regardless of accents or other diacritics, to be
 equivalent. See also `predictive-auto-correction-no-completion'
-and `completion-highlight-prefix-alterations'.
+and `completion-dynamic-highlight-prefix-alterations'.
 
 `predictive-equivalent-characters' works by substituting a
 character alternative listing all the equivalent characters

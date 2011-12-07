@@ -242,4 +242,4 @@
    :name 'semantic))
 
 
-;;; completion-ui-examples.el ends here
+;;; completion-ui-sources.el ends here
