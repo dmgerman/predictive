@@ -3,10 +3,10 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2004-2008 Toby Cubitt
+;; Copyright (C) 2004-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9
+;; Version: 0.9.1
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -31,8 +31,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.9.1
+;; * fixed deletion behaviour inside \cref{...} etc.
+;;
 ;; Version 0.9
-;; * Updated to include \namecref and \labelcref from latest cleveref package
+;; * updated to include \namecref and \labelcref from latest cleveref package
 ;;
 ;; Version 0.8.1
 ;; * modified `auto-completion-syntax-alist' for "\cref{" etc. so that typing
@@ -150,18 +153,13 @@
        (completion-menu . predictive-latex-construct-browser-menu)
        (completion-word-thing . predictive-latex-cleveref-label-word)
        (auto-completion-syntax-alist
-	. ((?w . (add
-		  (lambda ()
-		    (let ((pos (point)))
-		      (when (and
-			     (re-search-forward
-			      "[^}]*?}" (line-end-position) t)
-			     (= (match-beginning 0) pos))
-			(backward-char)
-			(delete-region pos (point)))
-		      (goto-char pos))
-		    ',word-complete)
-		  t))
+	. ((?w . ((lambda ()
+		    (let ((label (bounds-of-thing-at-point
+				  'predictive-latex-cleveref-label-word)))
+		      (when (and label (= (point) (car label)))
+			(delete-region (car label) (cdr label))))
+		    'add)
+		  ,word-complete t))
 	   (?_ . (add ,word-complete))
 	   (?  . (,whitesp-resolve none))
 	   (?. . (add ,word-complete))

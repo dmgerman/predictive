@@ -2,10 +2,10 @@
 ;;;                         (assumes AMSmath)
 
 
-;; Copyright (C) 2004-2011 Toby Cubitt
+;; Copyright (C) 2004-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.12.10
+;; Version: 0.12.11
 ;; Keywords: predictive, setup function, latex
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12.11
+;; * fixed deletion behaviour inside \ref{...}, \begin{...} and \end{...}
+;; * replaced obsolete `interactive-p' with `called-interactively-p'
 ;;
 ;; Version 0.12.10
 ;; * fixed missing copying of `predictive-latex-local-latex-dict' and
@@ -559,31 +563,31 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (find-file filename)
 	    (turn-on-predictive-mode)
 	    (setq buff (current-buffer)
-		  used-dicts predictive-used-dict-list
-		  main-dict predictive-buffer-dict
-		  aux-dict predictive-auxiliary-dict
-		  latex-dict predictive-latex-dict
-		  math-dict predictive-latex-math-dict
-		  preamble-dict predictive-latex-preamble-dict
-		  env-dict predictive-latex-env-dict
-		  label-dict predictive-latex-label-dict
-		  local-latex-dict predictive-latex-local-latex-dict
-		  local-math-dict predictive-latex-local-math-dict
-		  local-env-dict predictive-latex-local-env-dict
+		  used-dicts         predictive-used-dict-list
+		  main-dict          predictive-buffer-dict
+		  aux-dict           predictive-auxiliary-dict
+		  latex-dict         predictive-latex-dict
+		  math-dict          predictive-latex-math-dict
+		  preamble-dict      predictive-latex-preamble-dict
+		  env-dict           predictive-latex-env-dict
+		  label-dict         predictive-latex-label-dict
+		  local-latex-dict   predictive-latex-local-latex-dict
+		  local-math-dict    predictive-latex-local-math-dict
+		  local-env-dict     predictive-latex-local-env-dict
 		  local-section-dict predictive-latex-section-dict))
 	  (auto-overlay-share-regexp-set 'predictive buff)
-	  (setq predictive-used-dict-list used-dicts
-		predictive-buffer-dict main-dict
-		predictive-auxiliary-dict aux-dict
-		predictive-latex-dict latex-dict
-		predictive-latex-math-dict math-dict
-		predictive-latex-preamble-dict preamble-dict
-		predictive-latex-env-dict env-dict
-		predictive-latex-label-dict label-dict
+	  (setq predictive-used-dict-list         used-dicts
+		predictive-buffer-dict            main-dict
+		predictive-auxiliary-dict         aux-dict
+		predictive-latex-dict             latex-dict
+		predictive-latex-math-dict        math-dict
+		predictive-latex-preamble-dict    preamble-dict
+		predictive-latex-env-dict         env-dict
+		predictive-latex-label-dict       label-dict
 		predictive-latex-local-latex-dict local-latex-dict
 		predictive-latex-local-latex-dict local-math-dict
-		predictive-latex-local-env-dict local-env-dict
-		predictive-latex-section-dict local-section-dict)
+		predictive-latex-local-env-dict   local-env-dict
+		predictive-latex-section-dict     local-section-dict)
 	  ;; start the auto-overlays, restoring buffer's modified flag
 	  ;; afterwards, since automatic synchronization of LaTeX envionments
 	  ;; can modify buffer without actually changing buffer text
@@ -788,18 +792,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 		. predictive-latex-construct-browser-menu)
 	       (completion-word-thing . predictive-latex-label-word)
 	       (auto-completion-syntax-alist
-		. ((?w . (add
-			  (lambda ()
-			    (let ((pos (point)))
-			      (when (and
-				     (re-search-forward
-				      "[^}]*?}" (line-end-position) t)
-				     (= (match-beginning 0) pos))
-				(backward-char)
-				(delete-region pos (point)))
-			      (goto-char pos))
-			    ',word-complete)
-			  t))
+		. ((?w . ((lambda ()
+			    (let ((label (bounds-of-thing-at-point
+					  'predictive-latex-label-word)))
+			      (when (and label (= (point) (car label)))
+				(delete-region (car label) (cdr label))))
+			    'add)
+			  ,word-complete t))
 		   (?_ . (add ,word-complete))
 		   (?  . (,whitesp-resolve none))
 		   (?. . (add ,word-complete))
@@ -825,18 +824,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (auto-completion-syntax-alist
-		. ((?w . (add
-			  (lambda ()
-			    (let ((pos (point)))
-			      (when (and
-				     (re-search-forward
-				      "[[:alpha:]]*?}" (line-end-position) t)
-				     (= (match-beginning 0) pos))
-				(backward-char)
-				(delete-region pos (point)))
-			      (goto-char pos))
-			    ',word-complete)
-			  t))))
+		. ((?w . ((lambda ()
+			    (let ((env (bounds-of-thing-at-point
+					  'predictive-latex-word)))
+			      (when (and env (= (point) (car env)))
+				(delete-region (car env) (cdr env))))
+			    'add)
+			  ,word-complete t))))
 	       ;; (auto-completion-override-syntax-alist
 	       ;;  . ((?* . (add ,word-complete t))))
 	       (completion-menu-function
@@ -847,17 +841,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	       :edge start
 	       (dict . predictive-latex-env-dict) (priority . 40)
 	       (auto-completion-syntax-alist
-		. ((?w . (add
-			  (lambda ()
-			    (let ((pos (point)))
-			      (when (and (re-search-forward
-					  "[[:alpha:]]*?}"
-					  (line-end-position) t)
-					 (= (match-beginning 0) pos))
-				(backward-char)
-				(delete-region pos (point))))
-			    ',word-complete)
-			  t))))
+		. ((?w . ((lambda ()
+			    (let ((env (bounds-of-thing-at-point
+					  'predictive-latex-word)))
+			      (when (and env (= (point) (car env)))
+				(delete-region (car env) (cdr env))))
+			    'add)
+			  ,word-complete t))))
 	       (completion-menu-function
 		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
@@ -1471,7 +1461,7 @@ the label at point (if any)."
 
     ;; interactively, read label from minibuffer, defaulting to what we've
     ;; found
-    (when (interactive-p)
+    (when (called-interactively-p 'interactive)
       (let ((label-tmp
 	     (completing-read
 	      (if label
@@ -1537,7 +1527,7 @@ that are defined in the document's preamble."
 
     ;; interactively, read command from minibuffer, defaulting to what we've
     ;; found
-    (when (interactive-p)
+    (when (called-interactively-p 'interactive)
       (let ((command-tmp
 	     (completing-read
 	      (if command
@@ -1595,7 +1585,7 @@ environments that are defined in the document's preamble."
 
     ;; interactively, read environment from minibuffer, defaulting to what
     ;; we've found
-    (when (interactive-p)
+    (when (called-interactively-p 'interactive)
       (let ((env-tmp
 	     (completing-read
 	      (if env
@@ -1633,7 +1623,7 @@ Interactively, SECTION is read from the mini-buffer."
   (let ((dict predictive-latex-section-dict))
     ;; interactively, read section name from minibuffer, defaulting to what
     ;; we've found
-    (when (interactive-p)
+    (when (called-interactively-p 'interactive)
       (setq section
 	    (completing-read
 	     "Section: "
