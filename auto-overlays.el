@@ -2,10 +2,10 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
 
-;; Copyright (C) 2005-2010 Toby Cubitt
+;; Copyright (C) 2005-2010, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.9
+;; Version: 0.9.10
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.9.10
+;; * use `with-current-buffer' instead of `save-excursion' + `set-buffer' to
+;;   get rid of byte-compiler message
 ;;
 ;; Version 0.9.9
 ;; * added missing (eval-when-compile (require 'cl))
@@ -794,8 +798,7 @@ other. TO-BUFFER defaults to the current buffer."
   (unless to-buffer (setq to-buffer (current-buffer)))
   (let (regexps)
     ;; get regexp set from FROM-BUFFER
-    (save-excursion
-      (set-buffer from-buffer)
+    (with-current-buffer from-buffer
       (setq regexps (assq set-id auto-overlay-regexps))
       ;; delete any existing set with same ID, and add regexp set to TO-BUFFER
       (set-buffer to-buffer)
@@ -985,9 +988,7 @@ The overlays can be loaded again later using
 	    overlay-list)
 
       ;; save the buffer and kill it
-      (save-excursion
-	(set-buffer buff)
-	(write-file file))
+      (with-current-buffer buff (write-file file))
       (kill-buffer buff))
     ))
 
@@ -1039,9 +1040,7 @@ overlays were saved."
 	    (i 0))
 
 	;; read md5 digests from first two lines of FILE
-	(save-excursion
-	  (set-buffer buff)
-	  (goto-char (point-min)))
+	(with-current-buffer buff (goto-char (point-min)))
 	(setq md5-buff (read buff))
 	(setq md5-regexp (read buff))
 
@@ -1057,8 +1056,7 @@ overlays were saved."
 	    (progn (kill-buffer buff) nil)
 
 	  ;; count number of overlays, for progress message
-	  (save-excursion
-	    (set-buffer buff)
+	  (with-current-buffer buff
 	    (setq lines (count-lines (point) (point-max))))
 
 	  ;; read overlay data from FILE until we reach the end

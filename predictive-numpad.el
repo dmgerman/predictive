@@ -1,4 +1,6 @@
 
+(require 'predictive)
+
 (defun predictive-setup-numpad ()
   "Configure current buffer for predictive text entry via the numpad.
 \(Similar to the predictive text feature found on many mobile

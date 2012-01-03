@@ -1,10 +1,10 @@
 ;;; predictive-texinfo.el --- predictive mode Texinfo setup function
 
 
-;; Copyright (C) 2008, 2010-2011 Toby Cubitt
+;; Copyright (C) 2008, 2010-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.3.3
+;; Version: 0.3.4
 ;; Keywords: predictive, setup function, texinfo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,7 +29,10 @@
 
 ;;; Change Log:
 ;;
-;; Version 0.2.2
+;; Version 0.3.4
+;; * replaced obsolete `interactive-p' with `called-interactively-p'
+;;
+;; Version 0.3.3
 ;; * Added `predictive-texinfo-map', and `predictive-texinfo-mode' variable to
 ;;   enable it. Define texinfo-specific `predictive-mode' bindings there instead
 ;;   of in `predictive-map'. This fixes a bug that caused the supposedly
@@ -974,7 +977,7 @@ the node name at point (if any)."
 
     ;; interactively, read node from minibuffer, defaulting to what we've
     ;; found
-    (when (interactive-p)
+    (when (called-interactively-p 'any)
       (let ((node-tmp
 	     (completing-read
 	      (if node
@@ -1032,7 +1035,7 @@ the command at point (if any)."
 
     ;; interactively, read command from minibuffer, defaulting to what we've
     ;; found
-    (when (interactive-p)
+    (when (called-interactively-p 'any)
       (let ((command-tmp
 	     (completing-read
 	      (if command
@@ -1085,7 +1088,7 @@ the flag at point (if any)."
 
     ;; interactively, read flag from minibuffer, defaulting to what we've
     ;; found
-    (when (interactive-p)
+    (when (called-interactively-p 'any)
       (let ((flag-tmp
 	     (completing-read
 	      (if flag

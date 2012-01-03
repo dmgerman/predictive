@@ -553,7 +553,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
        ((and (boundp 'TeX-master) (stringp TeX-master))
 	(let (filename buff used-dicts main-dict aux-dict
 		       latex-dict math-dict preamble-dict env-dict
-		       label-dict local-env-dict local-section-dict)
+		       label-dict local-latex-dict local-math-dict
+		       local-env-dict local-section-dict)
 	  (setq filename
 		(concat (file-name-sans-extension
 			 (expand-file-name TeX-master))
@@ -1308,7 +1309,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (and (not delimited) (search-forward from-string)))
     (when (and (save-excursion
 		 (backward-char)
-		 (memq dict-latex-math (predictive-current-dict)))
+		 (memq 'dict-latex-math (predictive-current-dict)))
 	       (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string nil t))))
 
@@ -1323,7 +1324,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (while (re-search-forward regexp nil t)
       (when (and (save-excursion
 		   (backward-char)
-		   (memq dict-latex-math (predictive-current-dict)))
+		   (memq 'dict-latex-math (predictive-current-dict)))
 		 (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string))))
 

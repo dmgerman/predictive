@@ -2,10 +2,10 @@
 ;;; predictive.el --- predictive completion minor mode for Emacs
 
 
-;; Copyright (C) 2004-2011 Toby Cubitt
+;; Copyright (C) 2004-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.19.6
+;; Version: 0.19.7
 ;; Keywords: predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,6 +45,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.7
+;; * replaced obsolete `interactive-p' with `called-interactively-p'
 ;;
 ;; Version 0.19.6
 ;; * fixed interactive argument handling bugs in
@@ -1290,7 +1293,7 @@ load. Interactively, it is read from the mini-buffer."
     (let ((dic (dictree-load dict)))
       (if (dictree-p dic)
 	  (setq dict dic)
-	(if (interactive-p)
+	(if (called-interactively-p 'any)
 	    (error "Dictionary %s could not be loaded" dict)
 	  (setq dict nil))))))
 
@@ -1435,7 +1438,7 @@ respectively."
 				      (eval (intern-soft dictname))
 				    (void-variable nil))))
 		 (setq dictname (intern dictname)))
-	    (and (or (null (interactive-p))
+	    (and (or (null (called-interactively-p 'any))
 		     (and (y-or-n-p
 			   (format (concat
 				    "Dictionary %s already exists. Replace "
@@ -1455,10 +1458,11 @@ respectively."
 				 nil nil complete-speed nil complete-speed))
       ;; populate it
       (if (null populate)
-	  (when (interactive-p) (message "Created dictionary %s" dictname))
+	  (when (called-interactively-p 'interactive)
+	    (message "Created dictionary %s" dictname))
 	(dictree-populate-from-file dict populate nil nil
 				    (lambda (data) (or data 0)))
-	(when (interactive-p)
+	(when (called-interactively-p 'interactive)
 	  (message "Created dictionary %s and populated it from file %s"
 		   dictname populate)))
 
@@ -1487,7 +1491,7 @@ The other arguments are as for `predictive-create-dict'."
 	 (read-file-name "File to save to \(optional): " nil "")))
 
   ;; sort out arguments
-  (when (interactive-p)
+  (when (called-interactively-p 'any)
     (when (< (length dictlist) 2)
       (error "Can't see any point in creating a meta-dictionary\
  based on less than two dictionaries"))
@@ -1502,7 +1506,7 @@ The other arguments are as for `predictive-create-dict'."
 				      (eval (intern-soft name))
 				    (void-variable nil))))
 		 (setq name (intern name)))
-	    (or (null (interactive-p))
+	    (or (null (called-interactively-p 'any))
 		(and (y-or-n-p
 		      (format "Dictionary %s already exists. Replace it? "
 			      name))
@@ -1593,7 +1597,7 @@ specified by the prefix argument."
 		     current-prefix-arg))
 
   ;; if called interactively, sort out arguments
-  (when (interactive-p)
+  (when (called-interactively-p 'any)
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
@@ -1642,7 +1646,7 @@ specified by the prefix argument."
 	   ((< pweight newweight)
 	    (dictree-insert dict prefix newweight (lambda (a b) a))))))))
 
-  (when (interactive-p)
+  (when (called-interactively-p 'interactive)
     (message "\"%s\" added to dictionary %s" word (dictree-name dict))))
 
 
@@ -1664,7 +1668,7 @@ Interactively, WORD and DICT are read from the minibuffer."
 			      ": "))))
 
   ;; if called interactively, sort out arguments
-  (when (interactive-p)
+  (when (called-interactively-p 'any)
     ;; sort out word argument
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
@@ -1675,10 +1679,10 @@ Interactively, WORD and DICT are read from the minibuffer."
 
   ;; delete word
   (if (dictree-delete dict word)
-      (when (interactive-p)
+      (when (called-interactively-p 'any)
 	(message "\"%s\" deleted from dictionary %s" word
 		 (dictree-name dict)))
-    (when (interactive-p)
+    (when (called-interactively-p 'any)
       (message "\"%s\" not found in dictionary %s" word
 	       (dictree-name dict)))))
 
@@ -1709,27 +1713,30 @@ If WEIGHT is supplied, reset to that value instead of
   (when (and (stringp word) (string= word "")) (setq word nil))
   (cond
    ((null weight) (setq weight 0))
-   ((interactive-p) (setq weight (prefix-numeric-value weight))))
+   ((called-interactively-p 'any)
+    (setq weight (prefix-numeric-value weight))))
 
   ;; confirm interactive reset of all weights
   (when (or word
-	    (not (interactive-p))
+	    (not (called-interactively-p 'any))
 	    (yes-or-no-p
 	     (format "Really reset weights of all words in dictionary %s? "
 		     (dictree-name dict))))
     ;; if a word was specified, reset its weight to 0
     (if word
 	(and (dictree-insert dict word weight (lambda (a b) a))
-	     (interactive-p)
+	     (called-interactively-p 'interactive)
 	     (message "Weight of \"%s\" in %s reset to %d"
 		      word (dictree-name dict) weight))
       ;; if no word was specified, reset all weights to 0
-      (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
-	(when (interactive-p)
+      (let ((i 0)
+	    (count (when (called-interactively-p 'interactive)
+		     (dictree-size dict))))
+	(when (called-interactively-p 'interactive)
 	  (message "Resetting word weights in %s...(word 1 of %d)"
 		   (dictree-name dict) count))
 	(dictree-mapc
-	 (if (interactive-p)
+	 (if (called-interactively-p 'interactive)
 	     (lambda (word ignored)
 	       (setq i (1+ i))
 	       (when (= (mod i 10) 0)
@@ -1739,7 +1746,7 @@ If WEIGHT is supplied, reset to that value instead of
 	   (lambda (word ignored)
 	     (dictree-insert dict word weight (lambda (a b) a))))
 	 dict)
-	(when (interactive-p)
+	(when (called-interactively-p 'interactive)
 	  (message "Resetting word weights in %s...done" (dictree-name dict)))
 	))))
 
@@ -1768,7 +1775,7 @@ as the weight of WORD."
 		     ))
 
   ;; when called interactively, sort out arguments
-  (when (interactive-p)
+  (when (called-interactively-p 'any)
     ;; default to word at point
     (when (or (null word) (string= word ""))
       (let ((str (thing-at-point 'word)))
@@ -1787,7 +1794,7 @@ as the weight of WORD."
     ;; prompt for confirmation if prefix isn't really a prefix for word
     (when (and (dictree-member-p dict word)
 	       (dictree-member-p dict prefix)
-	       (or (not (interactive-p))
+	       (or (not (called-interactively-p 'any))
 		   (and (> (length word) (length prefix))
 			(string= (substring word 0 (length prefix)) prefix))
 		   (y-or-n-p
@@ -1798,11 +1805,11 @@ as the weight of WORD."
       (let ((prefixes (dictree-get-property dict word :prefixes)))
 	;; unless prefix is already defined, define it
 	(if (member prefix prefixes)
-	    (when (interactive-p)
+	    (when (called-interactively-p 'interactive)
 	      (message "\"%s\" is already a prefix of \"%s\" in dictionary %s"
 		       prefix word (dictree-name dict)))
 	  (dictree-put-property dict word :prefixes (cons prefix prefixes))
-	  (when (interactive-p)
+	  (when (called-interactively-p 'interactive)
 	    (message "Defined \"%s\" as prefix of \"%s\" in dictionary %s"
 		     prefix word (dictree-name dict)))))
 
@@ -1853,7 +1860,7 @@ least as large as the weight of WORD."
 		     ))
 
   ;; when called interactively, sort out arguments
-  (when (interactive-p)
+  (when (called-interactively-p 'any)
     (when (or (null word) (string= word ""))
       (let ((str (thing-at-point 'word)))
 	(if (null str)
@@ -1865,11 +1872,12 @@ least as large as the weight of WORD."
 
   ;; delete prefix, displaying message if called interactively
   (let ((prefixes (dictree-get-property dict word :prefixes)))
-    (if (and (interactive-p) (not (member prefix prefixes)))
+    (if (and (called-interactively-p 'interactive)
+	     (not (member prefix prefixes)))
 	(message "\"%s\" is not a prefix of \"%s\" in dictionary %s"
 		 prefix word (dictree-name dict))
       (dictree-put-property dict word :prefixes (delete prefix prefixes))
-      (when (interactive-p)
+      (when (called-interactively-p 'interactive)
 	(message "Prefix \"%s\" of \"%s\" removed from dictionary %s"
 		 prefix word (dictree-name dict))))))
 
@@ -1924,13 +1932,15 @@ LENGTH is the integer prefix argument."
 	      )))
 
     ;; display informative messages if called interactively
-    (when (interactive-p)
+    (when (called-interactively-p 'interactive)
       (if prefix
 	  (message "Defining prefix \"%s\" in %s..."
 		   prefix (dictree-name dict))
       (message "Defining prefixes in %s..." (dictree-name dict))))
-    (let ((i 0) (count (when (interactive-p) (dictree-size dict))))
-      (when (and (interactive-p) prefix)
+    (let ((i 0)
+	  (count (when (called-interactively-p 'interactive)
+		   (dictree-size dict))))
+      (when (and (called-interactively-p 'interactive) prefix)
 	(message "Defining prefixes in %s...(word 1 of %d)"
 		 (dictree-name dict) count))
 
@@ -1940,14 +1950,16 @@ LENGTH is the integer prefix argument."
 	;; define all prefixes
 	(dictree-mapc
 	 (lambda (word weight)
-	   (when (and (interactive-p) (setq i (1+ i)) (= 0 (mod i 50)))
+	   (when (and (called-interactively-p 'interactive)
+		      (setq i (1+ i))
+		      (= 0 (mod i 50)))
 	     (message "Defining prefixes in %s...(word %d of %d)"
 		      (dictree-name dict) i count))
 	   ;; ignore word if it's too short
 	   (unless (< (length word) length) (funcall prefix-fun word)))
 	 dict 'string))
 
-      (when (interactive-p)
+      (when (called-interactively-p 'interactive)
 	(if prefix
 	    (message "Defining prefix \"%s\" in %s...done"
 		     prefix (dictree-name dict))
@@ -1975,7 +1987,7 @@ confirmation first if called interactively)."
   ;; sort out arguments
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
   ;; prompt for confirmation if called interactively to remove all prefixes
-  (when (or (not (interactive-p))
+  (when (or (not (called-interactively-p 'any))
 	    prefix
 	    (y-or-n-p
 	     (format
@@ -1989,8 +2001,9 @@ confirmation first if called interactively)."
 		 prefix (dictree-name dict))
       (message "Undefining prefixes in %s..." (dictree-name dict)))
 
-    (let ((count (when (interactive-p) (dictree-size dict)))
-	  (interactive (interactive-p))
+    (let ((count (when (called-interactively-p 'interactive)
+		   (dictree-size dict)))
+	  (interactive (called-interactively-p 'interactive))
 	  (i 0) prefix-fun prefix-list)
 
       ;; define function to be mapped over dictionary words, for removing
@@ -2019,14 +2032,14 @@ confirmation first if called interactively)."
 
 
       ;; do actual work...
-      (when (interactive-p)
+      (when (called-interactively-p 'interactive)
 	(if prefix
 	    (message "Undefining prefix \"%s\" in %s...(word 1 of %d)"
 		     prefix (dictree-name dict) count)
 	  (message "Undefining prefixes in %s...(word 1 of %d)"
 		   (dictree-name dict) count)))
       (dictree-mapc prefix-fun dict 'string)
-      (when (interactive-p)
+      (when (called-interactively-p 'interactive)
 	(if prefix
 	    (message "Undefining prefix \"%s\" in %s...done"
 		     prefix (dictree-name dict))
@@ -2216,7 +2229,7 @@ the buffer's syntax table."
 		      "Dictionary to update (defaults to all in use): "
 		      t)
 		     current-prefix-arg))
-  (when (and (interactive-p) (eq dict t)) (setq dict nil))
+  (when (and (called-interactively-p 'any) (eq dict t)) (setq dict nil))
 
   ;; sanity check arguments
   (when (and all (null dict))
@@ -2402,7 +2415,7 @@ entirely of word- or symbol-constituent characters."
 		      "Dictionary to update (defaults to all in use): "
 		      t)
 		     current-prefix-arg))
-  (when (and (interactive-p) (eq dict t)) (setq dict nil))
+  (when (and (called-interactively-p 'any) (eq dict t)) (setq dict nil))
 
   (save-excursion
     ;; open file in a buffer

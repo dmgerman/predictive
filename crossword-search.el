@@ -1,7 +1,7 @@
 
-
-
 (require 'dict-tree)
+
+(eval-when-compile (defvar dict-english nil))
 
 
 (defun crossword-search (pattern)
@@ -20,10 +20,9 @@ dictionary. Returns a list of words that match the pattern."
   (let ((words (dictree-regexp-search
 		dict-english pattern nil nil nil nil nil
 		(lambda (key data) key))))
-    (when (interactive-p)
+    (when (called-interactively-p 'any)
       (switch-to-buffer-other-window "*Crossword matches*")
       (erase-buffer)
       (dolist (word words) (insert word "\n"))
       (other-window -1))
     words))
-

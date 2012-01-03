@@ -82,16 +82,14 @@ name of the buffer in which log-modification-mode is enabled."
       ;; replace newlines with explicit \n's
       (when (string-match "\n" str)
 	(setq str (replace-match "\\\\n" nil nil str)))
-      (save-excursion
-	(set-buffer log-modification-buffer)
+      (with-current-buffer log-modification-buffer
 	(goto-char (point-max))
 	(insert (concat (format "(goto-char %d)" beg)
 			" (inesrt " (prin1-to-string str) ")\n")))))
 
    ;; log a deletion
    ((= beg end)
-    (save-excursion
-      (set-buffer log-modification-buffer)
+    (with-current-buffer log-modification-buffer
       (goto-char (point-max))
       (insert (format "(delete-region %d %d)\n" beg (+ beg len))))))
 
@@ -114,8 +112,7 @@ name of the buffer in which log-modification-mode is enabled."
 			   filename)))
 	(copy-file (buffer-file-name) filename t)
 	;; log checkpoint creation
-	(save-excursion
-	  (set-buffer log-modification-buffer)
+	(with-current-buffer log-modification-buffer
 	  (goto-char (point-max))
 	  (insert (format "%% checkpoint %d" i)))
 
@@ -128,14 +125,11 @@ name of the buffer in which log-modification-mode is enabled."
 		   (- i log-modification-checkpoints)
 		   (file-name-extension (buffer-file-name))))
 	  ;; log checkpoint deletion
-	  (save-excursion
-	    (set-buffer log-modification-buffer)
+	  (with-current-buffer log-modification-buffer
 	    (insert (format " (checkpoint %d expired)"
 			    (- i log-modification-checkpoints)))))
 
-	(save-excursion
-	  (set-buffer log-modification-buffer)
-	  (insert "\n")))
+	(with-current-buffer log-modification-buffer (insert "\n")))
       ))
 )
 

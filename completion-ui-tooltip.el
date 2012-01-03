@@ -2,10 +2,10 @@
 ;;; completion-ui-tooltip.el --- tooltip user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2
+;; Version: 0.2.1
 ;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -33,6 +33,9 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.1
+;; * replaced obsolete `interactive-p' with `called-interactively-p'
 ;;
 ;; Version 0.2
 ;; * use pos-tip.el library to display tooltips instead of `x-show-tip'
@@ -245,7 +248,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
     ;; if called manually, flag this in overlay property and call
     ;; auto-show-helpers, since they won't have been called by
     ;; `completion-ui-auto-show'
-    (when (or (interactive-p) interactive)
+    (when (or (called-interactively-p 'any) interactive)
       (overlay-put overlay 'completion-interactive-tooltip t)
       (completion-ui-call-auto-show-interface-helpers overlay))
 

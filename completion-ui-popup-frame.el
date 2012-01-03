@@ -2,10 +2,10 @@
 ;;; completion-ui-echo.el --- echo area user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, echo area, help-echo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,6 +29,12 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.1.1
+;; * use `with-current-buffer' instead of `save-excursion' + `set-buffer' to
+;;   get rid of byte-compiler message
+;; * use `delete-char' instead of `delete-backward-char' to avoid
+;;   byte-compiler warning
 ;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
@@ -411,8 +417,8 @@ methods. Toggling will show all possible completions."
      ((null completion-popup-frame-show-all)
       (message
        "Finding all completions (C-g to cancel if taking too long)...")
-      (save-excursion
-        (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
+      (with-current-buffer
+	  (overlay-buffer completion-popup-frame-parent-overlay)
         (setq completions (funcall cmpl-fun prefix)))
       (overlay-put completion-popup-frame-parent-overlay
                    'completions completions))
@@ -420,8 +426,8 @@ methods. Toggling will show all possible completions."
      ;; if we were showing all completions, get list of best completions and
      ;; update completion overlay properties
      (completion-popup-frame-show-all
-      (save-excursion
-        (set-buffer (overlay-buffer completion-popup-frame-parent-overlay))
+      (with-current-buffer
+	  (overlay-buffer completion-popup-frame-parent-overlay)
         (setq completions
 	      (funcall cmpl-fun prefix completion-max-candidates)))
       (overlay-put completion-popup-frame-parent-overlay
@@ -435,7 +441,7 @@ methods. Toggling will show all possible completions."
     (set-frame-size (selected-frame) (1+ maxlen) (frame-height))
     ;; insert completions in pop-up frame
     (mapc (lambda (str) (insert str "\n")) lines)
-    (delete-backward-char 1)
+    (delete-char -1)
     ;; highlight first completion
     (goto-char (point-min))
     (let ((pos (point)))
