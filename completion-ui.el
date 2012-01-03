@@ -2,10 +2,10 @@
 ;;; completion-ui.el --- in-buffer completion user interface
 
 
-;; Copyright (C) 2006-2010 Toby Cubitt
+;; Copyright (C) 2006-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.12
+;; Version: 0.11.13
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.13
+;; * fixed bug in `completion-backward-delete' which caused overlays to be
+;;   incorrectly removed from `completion--overlay-list'
+;; * replaced obsolete `interactive-p' with `called-interactively-p'
 ;;
 ;; Version 0.11.12
 ;; * modified `completion-ui-resolve-old' to take optional arguments
@@ -3516,7 +3521,7 @@ based on current syntax table."
 ;;;                          Undo
 
 (defun completion-resolve-before-undo (beg end)
-  "Resolve completions betweeh BEG and END before undoing.
+  "Resolve completions between BEG and END before undoing.
 Added to `before-change-functions' hook."
   ;; check if current command is an undo
   (when undo-in-progress
@@ -3676,7 +3681,7 @@ enabled, complete what remains of that word."
 	   (t
 	    ;; if point was at start of completion or start of word before
 	    ;; deleting, and we're now within or at end of a word, setup
-	    ;; overlay to prevent word after point being deleted
+	    ;; a new overlay to prevent word after point being deleted
 	    (when (or overlay
 		      (and wordstart
 			   (or (completion-within-word-p word-thing)
@@ -3688,8 +3693,7 @@ enabled, complete what remains of that word."
 			       (funcall prefix-fun))))
 		(setq overlay
 		      (completion-ui-setup-overlay
-		       prefix nil nil nil auto-completion-source
-		       nil nil overlay))
+		       prefix nil nil nil auto-completion-source))
 		(move-overlay overlay (point) (point))))
 
 	    ;; if there's no existing timer, set one up to complete remainder
@@ -3748,7 +3752,7 @@ negative, behaviour is instead as for
 If there is a provisional completion at point after deleting, it
 is rejected. "
   (interactive "P")
-  (when (and (interactive-p) n) (setq killflag t))
+  (when (and (called-interactively-p 'any) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
   ;; if deleting backwards, call `completion-backward-delete' instead
   (if (< n 0)
@@ -3768,7 +3772,7 @@ Any provisional completion at point is first rejected. If
 deleting backwards into a word, and `auto-completion-mode' is
 enabled, complete what remains of that word."
   (interactive "P")
-  (when (and (interactive-p) n) (setq killflag t))
+  (when (and (called-interactively-p 'any) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
@@ -3790,7 +3794,7 @@ Any provisional completion at point is first rejected. If
 deleting backwards into a word, and `auto-completion-mode' is
 enabled, complete what remains of that word."
   (interactive "P")
-  (when (and (interactive-p) n) (setq killflag t))
+  (when (and (called-interactively-p 'any) n) (setq killflag t))
   (setq n (prefix-numeric-value n))
   ;; if deleting forwards, call `completion-delete' instead
   (if (< n 0)
