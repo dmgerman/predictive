@@ -1461,7 +1461,7 @@ the label at point (if any)."
 
     ;; interactively, read label from minibuffer, defaulting to what we've
     ;; found
-    (when (called-interactively-p 'interactive)
+    (when (called-interactively-p 'any)
       (let ((label-tmp
 	     (completing-read
 	      (if label
@@ -1527,7 +1527,7 @@ that are defined in the document's preamble."
 
     ;; interactively, read command from minibuffer, defaulting to what we've
     ;; found
-    (when (called-interactively-p 'interactive)
+    (when (called-interactively-p 'any)
       (let ((command-tmp
 	     (completing-read
 	      (if command
@@ -1585,7 +1585,7 @@ environments that are defined in the document's preamble."
 
     ;; interactively, read environment from minibuffer, defaulting to what
     ;; we've found
-    (when (called-interactively-p 'interactive)
+    (when (called-interactively-p 'any)
       (let ((env-tmp
 	     (completing-read
 	      (if env
@@ -1623,7 +1623,7 @@ Interactively, SECTION is read from the mini-buffer."
   (let ((dict predictive-latex-section-dict))
     ;; interactively, read section name from minibuffer, defaulting to what
     ;; we've found
-    (when (called-interactively-p 'interactive)
+    (when (called-interactively-p 'any)
       (setq section
 	    (completing-read
 	     "Section: "
