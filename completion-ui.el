@@ -5,7 +5,7 @@
 ;; Copyright (C) 2006-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.11.13
+;; Version: 0.11.14
 ;; Keywords: completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -234,6 +234,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.11.14
+;; * added work-around to `complete-in-buffer' to force a keymap refresh
+;;   when running via a timer (either because `auto-completion-delay' is
+;;   non-nil, or after `completion-backward-delete')
 ;;
 ;; Version 0.11.13
 ;; * fixed bug in `completion-backward-delete' which caused overlays to be
@@ -992,6 +997,11 @@ recursion can result from incorrectly configured key bindings set
 by the Emacs user.")
 
 
+;; dummy keyboard event used to force keybinding refresh
+(defconst completion--dummy-event
+  (event-convert-list '(meta control shift hyper super alt 524287)))
+
+
 
 
 ;;; =================================================================
@@ -1597,7 +1607,8 @@ used if the current Emacs version lacks command remapping support."
   (if (fboundp 'command-remapping)
       (define-key auto-completion-map [remap fill-paragraph]
 	'completion-fill-paragraph)
-    (define-key auto-completion-map "\M-q" 'completion-fill-paragraph)))
+    (define-key auto-completion-map "\M-q" 'completion-fill-paragraph))
+  )
 
 
 
@@ -2647,11 +2658,36 @@ The remaining arguments are for internal use only."
 		  update)))
 	    (move-overlay overlay (point) (point))
 
-	    ;; --- activate completion user-interfaces ---
-	    (if update
-		(completion-ui-update-interfaces overlay)
-	      (completion-ui-activate-interfaces overlay))
-	    (when completion-auto-show (completion-ui-auto-show overlay)))
+	    ;; if using an `auto-completion-delay', generate dummy keyboard
+	    ;; event to force keymap update, and bind that event a function
+	    ;; that activates the interfaces (hack to work around limitation
+	    ;; that Emacs computes the set of active keymaps before overlay
+	    ;; was created by timer)
+	    (if auto
+		(progn
+		  ;; dummy binding used to force keymap refresh
+		  (define-key auto-completion-map
+		    (vector completion--dummy-event)
+		    (if update
+			(lambda ()
+			  (interactive)
+			  (let ((overlay (completion-ui-overlay-at-point)))
+			    (completion-ui-update-interfaces overlay)
+			    (when completion-auto-show
+			      (completion-ui-auto-show overlay))))
+		      (lambda ()
+			(interactive)
+			(let ((overlay (completion-ui-overlay-at-point)))
+			  (completion-ui-activate-interfaces overlay)
+			  (when completion-auto-show
+			    (completion-ui-auto-show overlay))))))
+		  (push completion--dummy-event unread-command-events))
+
+	      ;; --- activate completion user-interfaces ---
+	      (if update
+		  (completion-ui-update-interfaces overlay)
+		(completion-ui-activate-interfaces overlay))
+	      (when completion-auto-show (completion-ui-auto-show overlay))))
 
 	  ;; set `completion-ui--activated' (buffer-locally) to enable
 	  ;; `completion-map' work-around hacks
