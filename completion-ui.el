@@ -236,9 +236,11 @@
 ;;; Change Log:
 ;;
 ;; Version 0.11.14
-;; * added work-around to `complete-in-buffer' to force a keymap refresh
-;;   when running via a timer (either because `auto-completion-delay' is
-;;   non-nil, or after `completion-backward-delete')
+;; * added work-around to `complete-in-buffer' to force a keymap refresh when
+;;   running via a timer (because either `auto-completion-delay' or
+;;   `completion-backward-delete-delay' is non-nil)
+;; * fixed bug in `complete-in-buffer' that caused any word adjacent to point
+;;   to be deleted when completing with non-nil `auto-completion-min-chars'
 ;;
 ;; Version 0.11.13
 ;; * fixed bug in `completion-backward-delete' which caused overlays to be
@@ -2638,32 +2640,36 @@ The remaining arguments are for internal use only."
 		   completion-source))))
 
 
-	;; if auto-completing, only do so if prefix if it has requisite number
-        ;; of characters
-        (if (and auto
-		 auto-completion-min-chars
-		 (< (length prefix) auto-completion-min-chars))
-	    (if update (completion-ui-deactivate-interfaces update))
+	;; create/update completion overlay (need create overlay regardless of
+	;; `auto-completion-min-chars' to mark end of prefix, in case point is
+	;; immediately before a word)
+	(let ((overlay
+	       (completion-ui-setup-overlay
+		prefix 'unchanged nil nil
+		completion-source prefix-function non-prefix-completion
+		update)))
+	  (move-overlay overlay (point) (point))
 
+	  ;; if auto-completing, only do so if prefix if it has requisite
+	  ;; number of characters
+	  (if (and auto auto-completion-min-chars
+		   (< (length prefix) auto-completion-min-chars))
+	      (if update (completion-ui-deactivate-interfaces update))
 
-          ;; --- get completions ---
-          (setq completions
-		(funcall completion-function
-			 prefix completion-max-candidates))
+	    ;; otherwise, get completions
+	    (setq completions
+		  (funcall completion-function
+			   prefix completion-max-candidates))
+	    (completion-ui-setup-overlay prefix 'unchanged completions)
 
-          (let ((overlay
-		 (completion-ui-setup-overlay
-		  prefix 'unchanged completions nil
-		  completion-source prefix-function non-prefix-completion
-		  update)))
-	    (move-overlay overlay (point) (point))
-
-	    ;; if using an `auto-completion-delay', generate dummy keyboard
+	    ;; if running from an `auto-completion-delay' of
+	    ;; `completion-backward-delete' timer, generate dummy keyboard
 	    ;; event to force keymap update, and bind that event a function
-	    ;; that activates the interfaces (hack to work around limitation
-	    ;; that Emacs computes the set of active keymaps before overlay
-	    ;; was created by timer)
-	    (if auto
+	    ;; that activates the interfaces
+	    ;; (Note: hack to work around limitation that Emacs already
+	    ;;        computed the set of active keymaps before overlay
+	    ;;        existed, so overlay keymap gets ignored)
+	    (if (or (eq auto 'timer) (eq auto 'backward-delete))
 		(progn
 		  ;; dummy binding used to force keymap refresh
 		  (define-key auto-completion-map
@@ -3740,11 +3746,12 @@ enabled, complete what remains of that word."
 		(setq completion--backward-delete-timer
 		      (run-with-idle-timer
 		       auto-completion-backward-delete-delay nil
-		       `(lambda ()
-			  (setq completion--backward-delete-timer nil)
-			  (complete-in-buffer
-			   ',auto-completion-source nil 'not-set
-			   'auto ,overlay ,(point)))))
+		       (lambda (source overlay point)
+			 (setq completion--backward-delete-timer nil)
+			 (complete-in-buffer
+			  source nil 'not-set
+			  'backward-delete overlay point))
+		       auto-completion-source overlay (point)))
 	      ;; if completing with no delay, do so
 	      (complete-in-buffer auto-completion-source nil 'not-set
 				  'auto overlay (point)))
