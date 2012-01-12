@@ -2577,84 +2577,82 @@ The remaining arguments are for internal use only."
   ;; only complete if point is at POS (only used when called from timer)
   (unless (and pos (/= (point) pos))
 
-    ;; if we're auto-completing and `auto-completion-delay' is set,
-    ;; delay completing by setting a timer to call ourselves later
-    (if (and auto auto-completion-delay (not (eq auto 'timer)))
-        (setq completion--auto-timer
-              (run-with-idle-timer
-	       auto-completion-delay nil
-	       'complete-in-buffer
-	       completion-source prefix-function
-	       (if s-npcmpl non-prefix-completion 'not-set)
-	       'timer update (point)))
+    (let (completion-function word-thing prefix completions)
+      ;; resolve any provisional completions
+      (completion-ui-resolve-old update)
 
 
-      ;; otherwise...
-      (let (completion-function word-thing prefix completions)
-	;; resolve any provisional completions
-	(completion-ui-resolve-old update)
+      ;; --- get completion properties ---
 
-
-	;; --- get completion properties ---
-
-	;; if updating a completion overlay, use it's properties
-	(if update
-	    (setq completion-function
-		    (completion-ui-source-completion-function nil update)
-		  prefix
-		    (overlay-get update 'prefix)
-		  non-prefix-completion
-		    (overlay-get update 'non-prefix-completion))
-
-	  ;; otherwise, sort out arguments...
-	  ;; get completion-function
+      ;; if updating a completion overlay, use it's properties
+      (if update
 	  (setq completion-function
-		(completion-ui-source-completion-function completion-source))
-	  ;; literal PREFIX-FUNCTION takes precedence
-	  (if (stringp prefix-function)
-	      (setq prefix prefix-function)
-	    ;; sort out PREFIX-FUNCTION and word-thing
-	    (cond
-	     ((functionp prefix-function))  ; PREFIX-FUNCTION is function
-	     ((symbolp prefix-function)     ; PREFIX-FUNCTION is word-thing
-	      (setq word-thing prefix-function
-		    prefix-function nil)))
-	    ;; get prefix function unless already specified in arguments
-	    (unless prefix-function
-	      (setq prefix-function
-		    (completion-ui-source-prefix-function completion-source)))
-	    ;; get prefix word-thing unless specified in arguments
-	    (unless word-thing
-	      (setq word-thing
-		    (completion-ui-source-word-thing completion-source)))
-	    ;; --- get prefix ---
-	    (let ((completion-word-thing word-thing))
-	      (setq prefix (funcall prefix-function))))
+		(completion-ui-source-completion-function nil update)
+		prefix
+		(overlay-get update 'prefix)
+		non-prefix-completion
+		(overlay-get update 'non-prefix-completion))
 
-	  ;; get non-prefix-completion unless specified in arguments
-	  (unless (and s-npcmpl
-		       (or (null non-prefix-completion)
-			   (eq non-prefix-completion t)))
-	    (setq non-prefix-completion
-		  (completion-ui-source-non-prefix-completion
-		   completion-source))))
+	;; otherwise, sort out arguments...
+	;; get completion-function
+	(setq completion-function
+	      (completion-ui-source-completion-function completion-source))
+	;; literal PREFIX-FUNCTION takes precedence
+	(if (stringp prefix-function)
+	    (setq prefix prefix-function)
+	  ;; sort out PREFIX-FUNCTION and word-thing
+	  (cond
+	   ((functionp prefix-function))  ; PREFIX-FUNCTION is function
+	   ((symbolp prefix-function)     ; PREFIX-FUNCTION is word-thing
+	    (setq word-thing prefix-function
+		  prefix-function nil)))
+	  ;; get prefix function unless already specified in arguments
+	  (unless prefix-function
+	    (setq prefix-function
+		  (completion-ui-source-prefix-function completion-source)))
+	  ;; get prefix word-thing unless specified in arguments
+	  (unless word-thing
+	    (setq word-thing
+		  (completion-ui-source-word-thing completion-source)))
+	  ;; --- get prefix ---
+	  (let ((completion-word-thing word-thing))
+	    (setq prefix (funcall prefix-function))))
+
+	;; get non-prefix-completion unless specified in arguments
+	(unless (and s-npcmpl
+		     (or (null non-prefix-completion)
+			 (eq non-prefix-completion t)))
+	  (setq non-prefix-completion
+		(completion-ui-source-non-prefix-completion
+		 completion-source))))
 
 
-	;; create/update completion overlay (need create overlay regardless of
-	;; `auto-completion-min-chars' to mark end of prefix, in case point is
-	;; immediately before a word)
-	(let ((overlay
-	       (completion-ui-setup-overlay
-		prefix 'unchanged nil nil
-		completion-source prefix-function non-prefix-completion
-		update)))
-	  (move-overlay overlay (point) (point))
+      ;; create/update completion overlay (need create overlay regardless of
+      ;; `auto-completion-min-chars' and `auto-completion-delay', to mark end
+      ;; of prefix in case point is immediately before a word)
+      (let ((overlay
+	     (completion-ui-setup-overlay
+	      prefix 'unchanged nil nil
+	      completion-source prefix-function non-prefix-completion
+	      update)))
+	(move-overlay overlay (point) (point))
 
-	  ;; if auto-completing, only do so if prefix if it has requisite
-	  ;; number of characters
-	  (if (and auto auto-completion-min-chars
-		   (< (length prefix) auto-completion-min-chars))
-	      (if update (completion-ui-deactivate-interfaces update))
+	;; if auto-completing, only do so if prefix if it has requisite number
+	;; of characters
+	(if (and auto auto-completion-min-chars
+		 (< (length prefix) auto-completion-min-chars))
+	    (if update (completion-ui-deactivate-interfaces update))
+
+	  ;; if we're auto-completing and `auto-completion-delay' is set,
+	  ;; delay completing by setting a timer to call ourselves later
+	  (if (and auto auto-completion-delay (not (eq auto 'timer)))
+	      (setq completion--auto-timer
+		    (run-with-idle-timer
+		     auto-completion-delay nil
+		     'complete-in-buffer
+		     completion-source prefix-function
+		     (if s-npcmpl non-prefix-completion 'not-set)
+		     'timer update (point)))
 
 	    ;; otherwise, get completions
 	    (setq completions
