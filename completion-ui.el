@@ -1000,8 +1000,7 @@ by the Emacs user.")
 
 
 ;; dummy keyboard event used to force keybinding refresh
-(defconst completion--dummy-event
-  (event-convert-list '(meta control shift hyper super alt 524287)))
+(defconst completion--dummy-event 'completion-dummy-event)
 
 
 
