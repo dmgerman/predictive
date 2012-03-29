@@ -314,9 +314,9 @@ Return t if the height of the tree has grown."
 	        (if (> (* sgn b2) 0) (- sgn) 0)
 	      (avl-tree--node-balance p1)
 	        (if (< (* sgn b2) 0) sgn 0)
-	      (avl-tree--node-branch node branch) p2
-	      (avl-tree--node-balance
-	       (avl-tree--node-branch node branch)) 0))
+                (avl-tree--node-branch node branch) p2))
+      (setf (avl-tree--node-balance
+             (avl-tree--node-branch node branch)) 0)
       nil))))
 
 (defun avl-tree--do-enter (cmpfun root branch data &optional updatefun)
