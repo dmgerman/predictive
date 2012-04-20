@@ -1,9 +1,55 @@
 
-DANGER, Will Robinson, DANGER!!!
-----------------------------------
+Obtaining
+---------
 
-************   The dumped dictionary backup files from old versions of the
-* WARNING! *   predictive package are *NOT* compatible with this
+The current version of the predictive completion package can be obtained
+from:
+
+  http://www.dr-qubit.org/emacs.php
+
+Developed and maintained by Toby Cubitt (toby-predictive@dr-qubit.org).
+
+
+
+
+Backing-Up Dictionaries
+-----------------------
+
+*************   If you are upgrading from a previous version of the
+* IMPORTANT *   predictive completion package, it's a good idea to first
+*************   backup any dictionaries you use by dumping the words and
+data they contain to files (unless you want to start from scratch). To make
+the backups, use
+
+  M-x predictive-dump-dict-to-file
+
+(see Loading and Saving Dictionaries, Emacs Predictive Completion
+Manual). It is NOT enough to make a copy of the dictionary file. Only the
+plain-text "dumped" format is guaranteed to be portable across different
+versions of predictive mode.
+
+Older versions of the predictive completion package saved dictionaries in
+a compiled form that was not portable across different versions of
+Emacs. Newer versions now automatically save dictionaries in both
+compiled and uncompiled forms. If you are upgrading to a different
+version of Emacs, but continuing to use the same recent version of the
+predictive completion package, then it is sufficient to delete the
+compiled dictionary files (extension ".elc", but make sure you do NOT
+delete the uncompiled files with extension ".el"!), and let predictive
+mode recompile them automatically when the dictionaries are saved.
+
+However, backing up your dictionaries by dumping them to plain-text
+files, as described above, is still a very good idea (just to be on the
+safe side!).
+
+
+
+
+DANGER, Will Robinson, DANGER!!!
+--------------------------------
+
+************   The dumped dictionary backup files from very old versions of
+* WARNING! *   the predictive package are *NOT* compatible with this
 ************   version. You have to convert the dumped file format to the
 new format before recreating your dictionaries in this new version.
 
@@ -36,53 +82,6 @@ To port a dictionary to the new version, use the following procedure:
 
 Repeat this procedure for each dictionary that you want to port to this
 new version.
-
-
-
-
-
-Obtaining
----------
-
-The current version of the predictive completion package can be obtained
-from:
-
-  http://www.dr-qubit.org/emacs.php
-
-Developed and maintained by Toby Cubitt (toby-predictive@dr-qubit.org).
-
-
-
-
-Backing-Up Dictionaries
------------------------
-
-*************   If you are upgrading from a previous version of the
-* IMPORTANT *   predictive completion package, make sure you first backup
-*************   any dictionaries you use by dumping the words and data
-they contain to files (unless you want to start from scratch). To make
-the backups, use
-
-  M-x predictive-dump-dict-to-file
-
-(see Loading and Saving Dictionaries, Emacs Predictive Completion
-Manual). It is NOT enough to make a copy of the dictionary file. Only the
-plain-text "dumped" format is guaranteed to be portable across different
-versions of predictive mode.
-
-Older versions of the predictive completion package saved dictionaries in
-a compiled form that was not portable across different versions of
-Emacs. Newer versions now automatically save dictionaries in both
-compiled and uncompiled forms. If you are upgrading to a different
-version of Emacs, but continuing to use the same recent version of the
-predictive completion package, then it is sufficient to delete the
-compiled dictionary files (extension ".elc", but make sure you do NOT
-delete the uncompiled files with extension ".el"!), and let predictive
-mode recompile them automatically when the dictionaries are saved.
-
-However, backing up your dictionaries by dumping them to plain-text
-files, as described above, is still a very good idea (just to be on the
-safe side!).
 
 
 
