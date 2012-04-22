@@ -32,7 +32,7 @@
 ;; first-in first-out (FIFO) stack, i.e. elements can be added to and
 ;; removed from the front or back of the queue.
 ;;
-;; Yoy create a queue using `queue-create', add an element to the end of
+;; You create a queue using `make-queue', add an element to the end of
 ;; the queue using `queue-enqueue', and push an element onto the front
 ;; of the queue using `queue-prepend'. To remove the first element from
 ;; a queue, use `queue-dequeue'. A number of other queue convenience
@@ -54,6 +54,11 @@
 	    (:constructor queue-create ())
 	    (:copier nil))
   head tail)
+
+
+;;;###autoload
+(defalias 'make-queue 'queue-create
+  "Create an empty queue data structure.")
 
 
 (defun queue-enqueue (queue element)
