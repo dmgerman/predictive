@@ -1,11 +1,12 @@
-;;; queue.el --- queue data structure
 
-;; Copyright (C) 1991-1995, 2008-2009 Free Software Foundation
+;;; queue.el --- queue data structures
+
+;; Copyright (C) 1991-1995, 2008-2009, 2012 Free Software Foundation
 
 ;; Author: Inge Wallin <inge@lysator.liu.se>
-;;         rewritten by Toby Cubitt <toby-predictive@dr-qubit.org>
+;;         Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1
-;; Keywords: queue, extensions, lisp
+;; Keywords: extensions, data structures, queue
 
 ;; This file is part of the GNU Emacs lisp library, Elib.
 
@@ -26,7 +27,18 @@
 ;;
 
 ;;; Commentary:
-
+;;
+;; A queue can be used both as a first-in last-out (FILO) and as a
+;; first-in first-out (FIFO) stack, i.e. elements can be added to and
+;; removed from the front or back of the queue.
+;;
+;; Yoy create a queue using `queue-create', add an element to the end of
+;; the queue using `queue-enqueue', and push an element onto the front
+;; of the queue using `queue-prepend'. To remove the first element from
+;; a queue, use `queue-dequeue'. A number of other queue convenience
+;; functions are also provided, all starting with the prefix `queue-'.
+;; Functions with prefix `queue--' are for internal use only, and should
+;; never be used outside this package.
 
 
 ;;; Code:

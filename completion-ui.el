@@ -5,8 +5,9 @@
 ;; Copyright (C) 2006-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Package-Version: 0.11.11
 ;; Version: 0.11.14
-;; Keywords: completion, ui, user interface
+;; Keywords: convenience, extenions, abbrev, completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
 

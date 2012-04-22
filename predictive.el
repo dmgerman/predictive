@@ -1,5 +1,5 @@
 
-;;; predictive.el --- predictive completion minor mode for Emacs
+;;; predictive.el --- predictive completion minor mode
 
 
 ;; Copyright (C) 2004-2012 Toby Cubitt
@@ -7,7 +7,7 @@
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.23.13
 ;; Version: 0.19.7
-;; Keywords: predictive, completion
+;; Keywords: convenience, abbrev, tex, predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
 

@@ -5,8 +5,9 @@
 ;; Copyright (C) 2005-2010, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Package-Version: 0.10.7
 ;; Version: 0.9.10
-;; Keywords: automatic, overlays
+;; Keywords: extensions, matching, faces, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
 
