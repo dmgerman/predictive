@@ -52,8 +52,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-tooltip)
 (require 'completion-ui)
 (require 'pos-tip)
 
@@ -67,14 +65,14 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-tooltip t
-  "*When non-nil, enable the tooltip Completion-UI interface."
+(defcustom completion-use-tooltip nil
+  "When non-nil, enable the tooltip Completion-UI interface."
   :group 'completion-ui-tooltip
   :type 'boolean)
 
 
 (defcustom completion-tooltip-timeout -1
-  "*Number of seconds for wihch to display completion tooltip.
+  "Number of seconds for wihch to display completion tooltip.
 A negative value means don't hide the tooltip automatically."
   :group 'completion-ui-tooltip
   :type 'integer)
@@ -94,7 +92,7 @@ A negative value means don't hide the tooltip automatically."
 		   (list :background (face-attribute 'menu :background)
 			 :foreground (face-attribute 'menu :foreground)))
 	      '(:background "light yellow" :foreground "black"))))
-  "*Face used in tooltip. Only :foreground, :background and :family
+  "Face used in tooltip. Only :foreground, :background and :family
 attributes are used."
   :group 'completion-ui-tooltip)
 
@@ -106,10 +104,10 @@ attributes are used."
 (defvar completion-tooltip-function nil
   "Function to call to construct the tooltip text.
 
-The function is called with three arguments, the prefix,
-completions, and index of the currently active completion. It
-should return a string containing the text to be displayed in the
-tooltip.
+The function is called with three arguments, the prefix, a list
+of completions, and the index of the currently active
+completion. It should return a string containing the text to be
+displayed in the tooltip.
 
 Note: this can be overridden by an \"overlay local\" binding (see
 `auto-overlay-local-binding').")
@@ -222,7 +220,7 @@ in all your flower-arranging endevours for thirteen years."
     ;; if no overlay was supplied, try to find one at point
     (unless overlay (setq overlay (completion-ui-overlay-at-point)))
     ;; activate tooltip key bindings
-    (completion-activate-tooltip-keys overlay)
+    (completion-activate-overlay-keys overlay completion-tooltip-map)
     ;; if tooltip has been displayed manually, re-display it
     (when (overlay-get overlay 'completion-interactive-tooltip)
       (completion-show-tooltip overlay)))
@@ -287,22 +285,6 @@ INTERACTIVE is supplied, pretend we were called interactively."
       )))
 
 
-(defun completion-activate-tooltip-keys (overlay)
-  "Enable tooltip key bindings for OVERLAY."
-  (map-keymap
-   (lambda (key binding)
-     (define-key (overlay-get overlay 'keymap) (vector key) binding))
-   completion-tooltip-map))
-
-
-(defun completion-deactivate-tooltip-keys (overlay)
-  "Disable tooltip key bindings for OVERLAY."
-  (map-keymap
-   (lambda (key binding)
-     (define-key (overlay-get overlay 'keymap) (vector key) nil))
-   completion-tooltip-map))
-
-
 (defun completion-cancel-tooltip (&optional overlay)
   "Hide the completion tooltip and cancel timers."
   (interactive)
@@ -314,8 +296,6 @@ INTERACTIVE is supplied, pretend we were called interactively."
   ;; cancel tooltip
   (when (and window-system (fboundp 'x-show-tip))
     (tooltip-hide)
-    ;; (when (overlayp completion-tooltip-active)
-    ;;   (completion-deactivate-tooltip-keys completion-tooltip-active))
     (setq completion-tooltip-active nil)))
 
 
@@ -412,15 +392,7 @@ sheep."
  :auto-show 'completion-show-tooltip)
 
 
-;; set default auto-show interface to tooltip
-(setq completion-auto-show 'completion-show-tooltip)
 
-;; (Note: this is kinda ugly, but setting the default in the defcustom seems
-;; to conflict with refreshing the defcustom in
-;; `compeltion-ui-register-interface'. Since Completion-UI is almost
-;; invariably loaded before a user's customization settings, theirs will
-;; still take precedence.)
-
-
+(provide 'completion-ui-tooltip)
 
 ;;; completion-ui-tooltip.el ends here

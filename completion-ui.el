@@ -1027,6 +1027,22 @@ by the Emacs user.")
 ;;; ===============================================================
 ;;;                  Keybinding functions
 
+(defun completion-activate-overlay-keys (overlay keymap)
+  "Enable KEYMAP key bindings in OVERLAY."
+  (map-keymap
+   (lambda (key binding)
+     (define-key (overlay-get overlay 'keymap) (vector key) binding))
+   keymap))
+
+
+(defun completion-deactivate-overlay-keys (overlay keymap)
+  "Disable KEYMAP key bindings in OVERLAY."
+  (map-keymap
+   (lambda (key binding)
+     (define-key (overlay-get overlay 'keymap) (vector key) nil))
+   keymap))
+
+
 (defun completion-define-word-constituent-binding
   (key char &optional syntax no-syntax-override)
   "Setup key binding for KEY so that it inserts character CHAR as
@@ -1848,35 +1864,15 @@ interface is activated."
  - replacing existing definition" ',name)
 	   (setcdr existing ',(cdr interface-def))))
 
-       ;; update `completion-auto-show' defcustom
-       (defcustom completion-auto-show nil
-	 "Function to call to display a completion user-interface.
-When null, nothing is auto-displayed.
-
-The function is called after a completion command, possibly after
-a delay of `completion-auto-show-delay' seconds if one is set. It
-is passed one argument, a completion overlay."
-	 :group 'completion-ui
-	 :type
-	 '(choice
-	   (const nil)
-	   ,@(let (defcustom-list)
-	       (mapc
-		(lambda (def)
-		  (when (completion-ui--interface-auto-show def)
-		    (push
-		     (list
-		      'const
-		      :tag (symbol-name (completion-ui--interface-name def))
-		      (completion-ui--interface-auto-show def))
-		     defcustom-list)))
-		(append
-		 (assq-delete-all
-		  variable
-		  (copy-sequence completion-ui-interface-definitions))
-		 (list interface-def)))
-	       defcustom-list))))
-    ))
+       ;; update choices in `completion-auto-show' defcustom
+       ,(if auto-show
+	    `(let ((choices (get 'completion-auto-show 'custom-type)))
+	       (unless (member '(const :tag ,name ,auto-show) choices)
+		 (nconc (cdr choices)
+			'((const :tag ,(symbol-name name) ,auto-show)))))
+	  `(delete '(const :tag ,(symbol-name name) ,auto-show)
+		   (get 'completion-auto-show 'custom-type)))
+       )))
 
 
 
@@ -1985,8 +1981,11 @@ is passed one argument, a completion overlay."
 (defmacro completion-ui--source-def-tooltip-function (def)
   `(plist-get ,def :tooltip-function))
 
+(defmacro completion-ui--source-def-popup-tip-function (def)
+  `(plist-get ,def :popup-tip-function))
+
 (defmacro completion-ui--source-def-popup-frame-function (def)
-  `(plist-get ,def :popup-frame))
+  `(plist-get ,def :popup-frame-function))
 
 (defmacro completion-ui--source-def-menu-function (def)
   `(plist-get ,def :menu))
@@ -2002,7 +2001,8 @@ is passed one argument, a completion overlay."
      non-prefix-completion prefix-function word-thing
      command-name no-command no-auto-completion
      accept-functions reject-functions sort-by-frequency
-     tooltip-function popup-frame-function menu-function browser-function)
+     tooltip-function popup-tip-function popup-frame-function
+     menu browser)
   "Register a Completion-UI source.
 
 COMPLETION-FUNCTION should be a function that takes either zero
@@ -2091,12 +2091,14 @@ of completion candidates returned by the completion function by
 frequency.
 
 The remaining optional keyword arguments override the default
-functions for constructing the completion tooltip, pop-up frame,
-menu, and browser menu. They are passed one argument, a
-completion overlay. The tooltip function should return the text
-to display in the tooltip as a string. The pop-up frame function
-should return a list of strings, each a line of text for the
-pop-up frame. The menu functions should return menu keymaps."
+functions for constructing the completion tooltip, popup-tip,
+pop-up frame, menu, and browser menu. They are passed one
+argument, a completion overlay. The tooltip function should
+return the text to display in the tooltip as a string. The pop-up
+frame function should return a list of strings, each a line of
+text for the pop-up frame. The menu and browser arguments should
+either be fixed menu keymaps, or functions that return menu
+keymaps."
 
   ;; remove `quote' from arguments
   (when (and (listp completion-function)
@@ -2129,12 +2131,12 @@ pop-up frame. The menu functions should return menu keymaps."
   (when (and (listp popup-frame-function)
 	     (eq (car popup-frame-function) 'quote))
     (setq popup-frame-function (cadr popup-frame-function)))
-  (when (and (listp menu-function)
-	     (eq (car menu-function) 'quote))
-    (setq menu-function (cadr menu-function)))
-  (when (and (listp browser-function)
-	     (eq (car browser-function) 'quote))
-    (setq browser-function (cadr browser-function)))
+  (when (and (listp menu)
+	     (eq (car menu) 'quote))
+    (setq menu (cadr menu)))
+  (when (and (listp browser)
+	     (eq (car browser) 'quote))
+    (setq browser (cadr browser)))
 
   ;; make ACCEPT-FUNCTIONS and REJECT-FUNCTIONS into lists
   (when accept-functions
@@ -2289,13 +2291,13 @@ pop-up frame. The menu functions should return menu keymaps."
 		(when reject-functions
 		  (list :reject-functions reject-functions))
 		(when tooltip-function
-		  (list :tooltip tooltip-function))
+		  (list :tooltip-function tooltip-function))
+		(when popup-tip-function
+		  (list :popup-tip-function tooltip-function))
 		(when popup-frame-function
-		  (list :popup-frame popup-frame-function))
-		(when menu-function
-		  (list :menu menu-function))
-		(when browser-function
-		  (list :browser browser-function))))))
+		  (list :popup-frame-function popup-frame-function))
+		(when menu (list :menu menu))
+		(when browser (list :browser browser))))))
 
     ;; construct code to add source definition to list (or replace existing
     ;; definition)
@@ -2499,9 +2501,36 @@ pop-up frame. The menu functions should return menu keymaps."
       'completion-construct-tooltip-text))
 
 
-(defun completion-ui-source-menu-function
+(defun completion-ui-source-popup-tip-function
   (source &optional overlay)
-  ;; return popup-frame-function for SOURCE of OVERLAY at point
+  ;; return popup-tip-function for SOURCE of OVERLAY at point
+  (or (let (popup-tip-function)
+	;; get overlay-local binding, falling back to SOURCE definition
+	(if (fboundp 'auto-overlay-local-binding)
+	    (let ((completion-popup-tip-function
+		   (completion-ui--source-def-popup-tip-function
+		    (assq (completion-ui-completion-source source overlay)
+			  completion-ui-source-definitions))))
+	      (setq popup-tip-function
+		    (auto-overlay-local-binding
+		     'completion-popup-tip-function)))
+	  (setq popup-tip-function
+		(completion-ui--source-def-popup-tip-function
+		 (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions))))
+	;; evaluate result until we get a function
+	(while (and popup-tip-function
+		    (not (functionp popup-tip-function))
+		    (boundp popup-tip-function))
+	  (setq popup-tip-function (eval popup-tip-function)))
+	popup-tip-function)
+      ;; default fall-back
+      'completion-construct-tooltip-text))
+
+
+(defun completion-ui-source-menu
+  (source &optional overlay)
+  ;; return menu for SOURCE of OVERLAY at point
   (or (let (menu-function)
 	;; get overlay-local binding, falling back to SOURCE definition
 	(if (fboundp 'auto-overlay-local-binding)
@@ -2525,9 +2554,9 @@ pop-up frame. The menu functions should return menu keymaps."
       'completion-construct-menu))
 
 
-(defun completion-ui-source-browser-function
+(defun completion-ui-source-browser
   (source &optional overlay)
-  ;; return popup-frame-function for SOURCE of OVERLAY at point
+  ;; return browser for SOURCE of OVERLAY at point
   (or (let (browser-function)
 	;; get overlay-local binding, falling back to SOURCE definition
 	(if (fboundp 'auto-overlay-local-binding)
@@ -4760,6 +4789,7 @@ in WINDOW'S frame."
 (require 'completion-ui-hotkeys)
 (require 'completion-ui-echo)
 (require 'completion-ui-tooltip)
+(require 'completion-ui-popup-tip)
 (require 'completion-ui-menu)
 (require 'completion-ui-sources)
 
