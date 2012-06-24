@@ -50,6 +50,7 @@
 ;; Version 0.19.8
 ;; * `dictree-meta-dict-create' was renamed to `dictree-create-meta-dict'
 ;;   in dict-tree package
+;; * keyword argument names changed in `completion-ui-register-source'
 ;;
 ;; Version 0.19.7
 ;; * replaced obsolete `interactive-p' with `called-interactively-p'
@@ -3118,10 +3119,10 @@ A negative prefix argument turns it off.")
  'predictive-complete
  :name 'predictive
  :completion-args 2
- :accept-function (lambda (prefix completion &optional arg)
+ :accept-functions (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-accept-functions
 					prefix completion arg))
- :reject-function (lambda (prefix completion &optional arg)
+ :reject-functions (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-reject-functions
 					prefix completion arg))
  :menu-function 'predictive-menu-function

@@ -5,8 +5,8 @@
 ;; Copyright (C) 2006-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Package-Version: 0.11.11
-;; Version: 0.11.14
+;; Package-Version: 0.12
+;; Version: 0.12
 ;; Keywords: convenience, extenions, abbrev, completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -235,6 +235,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.12
+;; * implemented ranking of completion candidates by frequency for any
+;;   completion source, enabled by new :sort-by-frequency argument in
+;;   `completion-ui-register-source'
 ;;
 ;; Version 0.11.14
 ;; * added work-around to `complete-in-buffer' to force a keymap refresh when
@@ -1971,11 +1976,11 @@ is passed one argument, a completion overlay."
 (defmacro completion-ui--source-def-word-thing (def)
   `(plist-get ,def :word-thing))
 
-(defmacro completion-ui--source-def-accept-function (def)
-  `(plist-get ,def :accept))
+(defmacro completion-ui--source-def-accept-functions (def)
+  `(plist-get ,def :accept-functions))
 
-(defmacro completion-ui--source-def-reject-function (def)
-  `(plist-get ,def :reject))
+(defmacro completion-ui--source-def-reject-functions (def)
+  `(plist-get ,def :reject-functions))
 
 (defmacro completion-ui--source-def-tooltip-function (def)
   `(plist-get ,def :tooltip-function))
@@ -1996,7 +2001,7 @@ is passed one argument, a completion overlay."
      &key name completion-args other-args
      non-prefix-completion prefix-function word-thing
      command-name no-command no-auto-completion
-     accept-function reject-function
+     accept-functions reject-functions sort-by-frequency
      tooltip-function popup-frame-function menu-function browser-function)
   "Register a Completion-UI source.
 
@@ -2071,13 +2076,19 @@ completions should *replace* that prefix when
 selected. Completion-UI will then adapt the user-interface
 appropriately.
 
-The optional :accept-function and :reject-function keyword
-arguments act as hook functions, called when a completion
-obtained using this source is accepted or rejected,
-respectively. They are passed three arguments: the prefix, the
-completion candidate that was accepted or rejected, and any
-prefix argument supplied by the user if the accept or reject
-command was called interactively.
+The optional :accept-functions and :reject-functions keyword
+arguments are hooks, called when a completion obtained using this
+source is accepted or rejected, respectively. They are passed
+three arguments: the prefix, the completion candidate that was
+accepted or rejected, and any prefix argument supplied by the
+user if the accept or reject command was called interactively. A
+single function or a list of functions can be supplied.
+
+The optional :sort-by-frequency keyword argument is a boolean
+option. When non-null, Completion-UI will record frequency data
+for this completion source, and will automatically sort the list
+of completion candidates returned by the completion function by
+frequency.
 
 The remaining optional keyword arguments override the default
 functions for constructing the completion tooltip, pop-up frame,
@@ -2106,12 +2117,12 @@ pop-up frame. The menu functions should return menu keymaps."
   (when (and (listp word-thing)
 	     (eq (car word-thing) 'quote))
     (setq word-thing (cadr word-thing)))
-  (when (and (listp accept-function)
-	     (eq (car accept-function) 'quote))
-    (setq accept-function (cadr accept-function)))
-  (when (and (listp reject-function)
-	     (eq (car reject-function) 'quote))
-    (setq reject-function (cadr reject-function)))
+  (when (and (listp accept-functions)
+	     (eq (car accept-functions) 'quote))
+    (setq accept-functions (cadr accept-functions)))
+  (when (and (listp reject-functions)
+	     (eq (car reject-functions) 'quote))
+    (setq reject-functions (cadr reject-functions)))
   (when (and (listp tooltip-function)
 	     (eq (car tooltip-function) 'quote))
     (setq tooltip-function (cadr tooltip-function)))
@@ -2124,6 +2135,19 @@ pop-up frame. The menu functions should return menu keymaps."
   (when (and (listp browser-function)
 	     (eq (car browser-function) 'quote))
     (setq browser-function (cadr browser-function)))
+
+  ;; make ACCEPT-FUNCTIONS and REJECT-FUNCTIONS into lists
+  (when accept-functions
+    (unless (and (listp accept-functions)
+		 (not (eq (car accept-functions) 'lambda))
+		 (not (eq (car accept-functions) 'function)))
+      (setq accept-functions (list accept-functions))))
+  (when reject-functions
+    (unless (and (listp reject-functions)
+		 (not (eq (car reject-functions) 'lambda))
+		 (not (eq (car reject-functions) 'function)))
+      (setq reject-functions (list reject-functions))))
+
 
   ;; construct source name from completion-function if not defined explicitly
   (unless name
@@ -2191,29 +2215,62 @@ pop-up frame. The menu functions should return menu keymaps."
     (while otherstack (push (pop otherstack) arglist))
     (setq arglist (nreverse arglist))
 
-    ;; construct wrapper around COMPLETION-FUNCTION if necessary
-    (cond
-     ;; no maxnum argument
-     ((or (= (length completion-args) 0)
-     	  (= (length completion-args) 1))
-      (setq completion-function
-     	    `(lambda (prefix &optional maxnum)
-     	       (let ((completions (,completion-function ,@arglist)))
-     		 (if maxnum
-     		     (butlast completions (- (length completions) maxnum))
-     		   completions)))))
-     ;; maxnum argument with other args required
-     ((and (= (length completion-args) 2)
-     	   (or other-args (not (= (nth 1 completion-args) 1))))
-      (setq completion-function
-      	    `(lambda (prefix &optional maxnum)
-      	       (let ((completions (,completion-function ,@arglist)))
-      		 (if maxnum
-      		     (butlast completions (- (length completions) maxnum))
-      		   completions)))))
-     ;; maxnum argument with no other args required - leave
-     ;; COMPLETION-FUNCTION as is
-     ))
+    ;; if we're NOT recording and sorting by frequency data...
+    (if (null sort-by-frequency)
+	;; construct wrapper around COMPLETION-FUNCTION if necessary
+	(cond
+	 ;; no maxnum argument
+	 ((or (= (length completion-args) 0)
+	      (= (length completion-args) 1))
+	  (setq completion-function
+		`(lambda (prefix &optional maxnum)
+		   (let ((completions (,completion-function ,@arglist)))
+		     (if maxnum
+			 (butlast completions (- (length completions) maxnum))
+		       completions)))))
+	 ;; maxnum argument present, additional args required
+	 ((and (= (length completion-args) 2)
+	       (or other-args (not (= (nth 1 completion-args) 1))))
+	  (setq completion-function
+		`(lambda (prefix &optional maxnum)
+		   (,completion-function ,@arglist))))
+	 ;; maxnum argument present, no additional args required - leave
+	 ;; COMPLETION-FUNCTION as is
+	 )
+
+      ;; if we ARE recording and sorting by frequency data...
+      (let ((hash-table-name
+	     (intern (concat "completion--" (symbol-name name) "-frequency"))))
+	;; construct wrapper around COMPLETION-FUNCTION
+	(cond
+	 ;; no maxnum argument
+	 ((or (= (length completion-args) 0)
+	      (= (length completion-args) 1))
+	  (setq completion-function
+		`(lambda (prefix &optional maxnum)
+		   (let ((completions
+			  (sort (,completion-function ,@arglist)
+				(lambda (a b)
+				  (> (gethash a ,hash-table-name 0)
+				     (gethash b ,hash-table-name 0))))))
+		     (if maxnum
+			 (butlast completions (- (length completions) maxnum))
+		       completions)))))
+	 ;; maxnum argument present (with or without additional args)
+	 (t
+	  (setq completion-function
+		`(lambda (prefix &optional maxnum)
+		   (sort (,completion-function ,@arglist)
+			 (lambda (a b)
+			   (> (gethash a ,hash-table-name 0)
+			      (gethash b ,hash-table-name 0))))))))
+	;; add an accept function that increments the frequency
+	(push `(lambda (prefix completion arg)
+		 (puthash completion
+			  (1+ (gethash completion ,hash-table-name 0))
+			  ,hash-table-name))
+	      accept-functions)
+	)))
 
 
   ;; construct interface definiton
@@ -2227,10 +2284,10 @@ pop-up frame. The menu functions should return menu keymaps."
 		  (list :prefix-function prefix-function))
 		(when word-thing
 		  (list :word-thing word-thing))
-		(when accept-function
-		  (list :accept accept-function))
-		(when reject-function
-		  (list :reject reject-function))
+		(when accept-functions
+		  (list :accept-functions accept-functions))
+		(when reject-functions
+		  (list :reject-functions reject-functions))
 		(when tooltip-function
 		  (list :tooltip tooltip-function))
 		(when popup-frame-function
@@ -2239,7 +2296,6 @@ pop-up frame. The menu functions should return menu keymaps."
 		  (list :menu menu-function))
 		(when browser-function
 		  (list :browser browser-function))))))
-
 
     ;; construct code to add source definition to list (or replace existing
     ;; definition)
@@ -2250,6 +2306,13 @@ pop-up frame. The menu functions should return menu keymaps."
  - replacing existing definition" ',name)
 	 (setcdr existing ',(cdr source-def)))
 
+       ;; if sorting by frequency, create hash table to store frequency data
+       ,(when sort-by-frequency
+	  (let ((hash-table-name
+		 (intern (concat "completion--" (symbol-name name)
+				 "-frequency"))))
+	    `(defvar ,hash-table-name (make-hash-table :test 'equal))))
+
        ;; construct code to define completion command
        ,(unless no-command
 	  `(defun ,command-name
@@ -2259,23 +2322,13 @@ pop-up frame. The menu functions should return menu keymaps."
 	     (interactive "p")
 	     (complete-or-cycle-word-at-point ',name n)))
 
-       ;; update `auto-completion-source' defcustom
-       ,(unless no-auto-completion
-	  `(defcustom auto-completion-source nil
-	     "*Completion source for `auto-completion-mode'."
-	     :group 'completion-ui
-	     :type
-	     '(choice
-	       (const nil)
-	       ,@(nreverse
-		  (mapcar
-		   (lambda (def)
-		     (list 'const (completion-ui--source-def-name def)))
-		   (append
-		    (assq-delete-all
-		     name (copy-sequence completion-ui-source-definitions))
-		    (list source-def))))))))
-    ))
+       ;; update list of choices in `auto-completion-source' defcustom
+       ,(if no-auto-completion
+	    `(delete '(const ,name) (get 'auto-completion-source 'custom-type))
+	  `(let ((choices (get 'auto-completion-source 'custom-type)))
+	     (unless (member '(const ,name) choices)
+	       (nconc (cdr choices) '((const ,name))))))
+       )))
 
 
 
@@ -2376,18 +2429,18 @@ pop-up frame. The menu functions should return menu keymaps."
       nil))  ; default fall-back
 
 
-(defmacro completion-ui-source-accept-function
+(defmacro completion-ui-source-accept-functions
   (source &optional overlay)
-  ;; return accept-function for SOURCE or OVERLAY
-  `(completion-ui--source-def-accept-function
+  ;; return accept-functions for SOURCE or OVERLAY
+  `(completion-ui--source-def-accept-functions
     (assq (completion-ui-completion-source ,source ,overlay)
   	  completion-ui-source-definitions)))
 
 
-(defmacro completion-ui-source-reject-function
+(defmacro completion-ui-source-reject-functions
   (source &optional overlay)
-  ;; return reject-function for SOURCE or OVERLAY
-  `(completion-ui--source-def-reject-function
+  ;; return reject-functions for SOURCE or OVERLAY
+  `(completion-ui--source-def-reject-functions
     (assq (completion-ui-completion-source ,source ,overlay)
   	  completion-ui-source-definitions)))
 
@@ -2500,24 +2553,24 @@ pop-up frame. The menu functions should return menu keymaps."
 
 
 
-(defmacro completion-ui-source-run-accept-function
+(defmacro completion-ui-source-run-accept-functions
   (overlay prefix completion &optional arg)
-  ;; run accept function for completion OVERLAY, passing the rejected
+  ;; run accept functions for completion OVERLAY, passing the accepted
   ;; COMPLETION of PREFIX and any user-supplied ARG
-  `(let ((func (completion-ui-source-accept-function
-  		(overlay-get ,overlay 'completion-source)
-  		overlay)))
-     (when (functionp func) (funcall func ,prefix ,completion ,arg))))
+  `(let ((funcs (completion-ui-source-accept-functions
+		 (overlay-get ,overlay 'completion-source)
+		 overlay)))
+     (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
 
 
-(defmacro completion-ui-source-run-reject-function
+(defmacro completion-ui-source-run-reject-functions
   (overlay prefix completion &optional arg)
-  ;; run reject function for completion OVERLAY, passing the rejected
+  ;; run reject functions for completion OVERLAY, passing the rejected
   ;; COMPLETION of PREFIX and any user-supplied ARG
-  `(let ((func (completion-ui-source-reject-function
-  		(overlay-get ,overlay 'completion-source)
-  		overlay)))
-     (when (functionp func) (funcall func ,prefix ,completion ,arg))))
+  `(let ((funcs (completion-ui-source-reject-functions
+		 (overlay-get ,overlay 'completion-source)
+		 overlay)))
+     (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
 
 
 
@@ -2850,8 +2903,9 @@ see)."
   "Accept current provisional completion.
 
 The value of ARG is passed as the third argument to any functions
-called from the `completion-accept-functions' hook. Interactively,
-ARG is the prefix argument.
+called from the `completion-accept-functions' hook or from the
+completion source's own accept-functions. Interactively, ARG is
+the prefix argument.
 
 If optional argument OVERLAY is supplied, it is used instead of
 looking for an overlay at the point. The point had better be
@@ -2880,7 +2934,7 @@ the prefix and the completion string\). Otherwise returns nil."
 	    (completion-ui-delete-overlay overlay)
 	    (completion-ui-deactivate-interfaces overlay)
 	    ;; run accept hooks
-	    (completion-ui-source-run-accept-function
+	    (completion-ui-source-run-accept-functions
 	     overlay prefix prefix arg)
 	    (run-hook-with-args
 	     'completion-accept-functions prefix prefix arg)
@@ -2897,7 +2951,7 @@ the prefix and the completion string\). Otherwise returns nil."
 	(delete-region (- (point) (length prefix)) (point))
 	(let ((overwrite-mode nil)) (insert cmpl))
 	;; run accept hooks
-	(completion-ui-source-run-accept-function overlay prefix cmpl arg)
+	(completion-ui-source-run-accept-functions overlay prefix cmpl arg)
 	(run-hook-with-args 'completion-accept-functions prefix cmpl arg)
 	;; delete overlay
 	(completion-ui-delete-overlay overlay)
@@ -2939,7 +2993,7 @@ the prefix and the completion string\). Otherwise returns nil."
       ;; deactivate the interfaces
       (completion-ui-deactivate-interfaces overlay)
       ;; run reject hooks
-      (completion-ui-source-run-reject-function overlay prefix cmpl arg)
+      (completion-ui-source-run-reject-functions overlay prefix cmpl arg)
       (run-hook-with-args 'completion-reject-functions prefix cmpl arg)
       ;; delete overlay
       (completion-ui-delete-overlay overlay)
@@ -3002,7 +3056,7 @@ crash through your ceiling."
 	(delete-region (- (point) len) (point))
 	(let ((overwrite-mode nil)) (insert cmpl))
 	;; run accept hooks
-	(completion-ui-source-run-accept-function overlay prefix cmpl)
+	(completion-ui-source-run-accept-functions overlay prefix cmpl)
 	(run-hook-with-args 'completion-accept-functions prefix cmpl)
 	;; delete overlay
 	(completion-ui-delete-overlay overlay)
