@@ -5,8 +5,8 @@
 ;; Copyright (C) 2004-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Package-Version: 0.23.13
-;; Version: 0.19.7
+;; Package-Version: 0.23.14
+;; Version: 0.19.8
 ;; Keywords: convenience, abbrev, tex, predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -46,6 +46,10 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.19.8
+;; * `dictree-meta-dict-create' was renamed to `dictree-create-meta-dict'
+;;   in dict-tree package
 ;;
 ;; Version 0.19.7
 ;; * replaced obsolete `interactive-p' with `called-interactively-p'
@@ -104,7 +108,7 @@
 ;;   predictive mode can now automatically manage loading and unloading of
 ;;   dictionaries
 ;; * updated `predictive-prefix-expansions' and `predictive-expand-prefix' for
-;;   compatibility with new `dictree-regexp-reach', which replaces wildcard
+;;   compatibility with new `dictree-regexp-search', which replaces wildcard
 ;;   searches
 ;; * bug-fixes to `predictive-add-to-dict' meta-dict handling
 ;; * renamed `predictive-fast-learn-from-*' commands to
@@ -1518,7 +1522,7 @@ The other arguments are as for `predictive-create-dict'."
     (or autosave (setq autosave autosave predictive-dict-autosave))
 
     ;; create and return the new dictionary
-    (dictree-meta-dict-create dictlist name filename autosave nil
+    (dictree-create-meta-dict dictlist name filename autosave nil
 			      '+ nil nil nil nil speed)))
 
 
@@ -2998,7 +3002,7 @@ meta-dictionary will be based, instead of
 		    (t (cons (+ (car a) (car b)) (cdr b))))))
       ;; create the buffer-local meta-dictionary
       (setq meta-dict
-	    (dictree-meta-dict-create
+	    (dictree-create-meta-dict
 	     (append (list buffer-dict)
 		     (mapcar (lambda (dic)
 			       (if (dictree-p dic) dic (eval dic)))
