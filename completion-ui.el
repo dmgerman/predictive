@@ -240,6 +240,9 @@
 ;; * implemented ranking of completion candidates by frequency for any
 ;;   completion source, enabled by new :sort-by-frequency argument in
 ;;   `completion-ui-register-source'
+;; * moved and renamed `completion-activate-overlay-keys' and
+;;   `completion-deactivate-overlay-keys' from completion-ui-tooltip.el, to
+;;   make them available generally for completion interfaces
 ;;
 ;; Version 0.11.14
 ;; * added work-around to `complete-in-buffer' to force a keymap refresh when
