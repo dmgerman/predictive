@@ -91,7 +91,7 @@
 
 
 (defcustom predictive-texinfo-electric-environments nil
-  "*When enabled, environment names are automatically synchronized
+  "When enabled, environment names are automatically synchronized
 between \\begin{...} and \\end{...} commands."
   :group 'predictive-texinfo
   :type 'boolean)

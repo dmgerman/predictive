@@ -323,14 +323,14 @@
 
 
 (defcustom predictive-latex-docclass-alist nil
-  "*Alist associating LaTeX document classes with dictionaries.
+  "Alist associating LaTeX document classes with dictionaries.
 When a document class is in the list, "
   :group 'predictive-latex
   :type '(repeat (cons string symbol)))
 
 
 (defcustom predictive-latex-display-help t
-  "*When non-nil, display help on LaTeX commands.
+  "When non-nil, display help on LaTeX commands.
 \(This relies on suitable help text being defined in the LaTeX
 dictionaries.\)"
   :group 'predictive-latex
@@ -338,7 +338,7 @@ dictionaries.\)"
 
 
 (defcustom predictive-latex-save-section-dict nil
-  "*When non-nil, save the LaTeX section dictionary.
+  "When non-nil, save the LaTeX section dictionary.
 
 Disabled by default because saving the section dictionary has a
 tendency to hit an irritating internal Emacs limit on printing
@@ -355,7 +355,7 @@ patched source."
 
 
 (defcustom predictive-latex-save-label-dict nil
-  "*When non-nil, save the LaTeX label dictionary.
+  "When non-nil, save the LaTeX label dictionary.
 
 Disabled by default because saving the label dictionaries has a
 tendency to occasionally hit an irritating internal Emacs limit
@@ -375,7 +375,7 @@ Emacs source, and recompile Emacs from the patched source."
 
 
 (defcustom predictive-latex-electric-environments nil
-  "*When enabled, environment names are automatically synchronized
+  "When enabled, environment names are automatically synchronized
 between \\begin{...} and \\end{...} commands."
   :group 'predictive-latex
   :type 'boolean)
@@ -1388,7 +1388,7 @@ definition of the same thing."
 				 definition-id))))))
 	  ;; set dict to temporary meta-dict that combines local-latex and
 	  ;; local-math dicts
-	  (setq dict (dictree-meta-dict-create
+	  (setq dict (dictree-create-meta-dict
 		      (list predictive-latex-local-latex-dict
 			    predictive-latex-local-math-dict)
 		      nil nil nil t '+))
@@ -1499,7 +1499,7 @@ to the command at point (if any). This only jumps to commands
 that are defined in the document's preamble."
   (interactive)
 
-  (let ((dict (dictree-meta-dict-create
+  (let ((dict (dictree-create-meta-dict
 	       (list predictive-latex-local-latex-dict
 		     predictive-latex-local-math-dict)
 	       nil nil nil t '+))

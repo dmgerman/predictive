@@ -394,7 +394,7 @@
 
 
 (defcustom predictive-main-dict 'dict-english
-  "*Main dictionary to use in a predictive mode buffer.
+  "Main dictionary to use in a predictive mode buffer.
 
 It should be the symbol of a loaded dictionary. It can also be a
 list of such symbols, in which case predictive mode searches for
@@ -412,14 +412,14 @@ is set to t, words will be added to the first dictionary in the list \(see
 
 
 (defcustom predictive-dict-lock-loaded-list nil
-  "*List of dictionaries that should never be automatically unloaded,
+  "List of dictionaries that should never be automatically unloaded,
 in addition to `predictive-main-dict'."
   :group 'predictive
   :type '(repeat symbol))
 
 
 (defcustom predictive-completion-speed 0.1
-  "*Default completion speed for new predictive mode dictionaries
+  "Default completion speed for new predictive mode dictionaries
 created using `predictive-create-dict'.
 
 The completion speed is a desired upper limit on the time it
@@ -432,7 +432,7 @@ memory."
 
 
 (defcustom predictive-dict-autosave t
-  "*Default autosave flag for new predictive mode dictionaries.
+  "Default autosave flag for new predictive mode dictionaries.
 
 A value of t means modified dictionaries will be saved
 automatically when unloaded (or when quitting Emacs). The symbol
@@ -446,7 +446,7 @@ lost when the dictionary is unloaded. See also
 
 
 (defcustom predictive-dict-autosave-on-kill-buffer t
-  "*Whether to save dictionaries when a buffer is killed.
+  "Whether to save dictionaries when a buffer is killed.
 
 If non-nil, modifications to dictionaries that are used by a
 buffer will automatically be saved when the buffer is killed,
@@ -457,7 +457,7 @@ for dictionaries that have their autosave flag set (see
 
 
 (defcustom predictive-dict-autosave-on-mode-disable t
-  "*Whether to save dictionaries when predictive mode is disabled.
+  "Whether to save dictionaries when predictive mode is disabled.
 
 If non-nil, modifications to dictionaries that are used by a
 buffer will automatically be saved when predictive mode is
@@ -468,7 +468,7 @@ autosave flag set (see `predictive-dict-autosave')."
 
 
 (defcustom predictive-dict-compilation nil
-  "*Whether to save dictionaries in compiled or uncompiled form.
+  "Whether to save dictionaries in compiled or uncompiled form.
 
 The default is to save both compiled and uncompiled forms. If set
 to 'compiled, only the compiled form is saved. If set to
@@ -482,7 +482,7 @@ versions."
 
 
 (defcustom predictive-ignore-initial-caps t
-  "*Whether to ignore initial capital letters when completing
+  "Whether to ignore initial capital letters when completing
 words. If non-nil, completions for the uncapitalized string are
 also found.
 
@@ -495,7 +495,7 @@ typing \"a\" would only find \"and\"."
 
 
 (defcustom predictive-equivalent-characters '(" -")
-  "*List of characters to be treated as equivalent.
+  "List of characters to be treated as equivalent.
 Each element of the list should be a string, and all characters
 appearing in the same string will be treated as equivalent when
 completing words. Predictive mode will then not only find
@@ -531,7 +531,7 @@ the string."
 
 
 (defcustom predictive-prefix-expansions nil
-  "*Alist of expansions to apply to a prefix before completing it.
+  "Alist of expansions to apply to a prefix before completing it.
 The alist should associate regexps with their replacements. The
 expansions are applied in-order to the completion
 prefix. Characters matching a regexp are only expanded once,
@@ -568,7 +568,7 @@ latter take precedence."
 
 
 (defcustom predictive-auto-correction-no-completion nil
-  "*When non-nil, predictive mode will only auto-correct typed words,
+  "When non-nil, predictive mode will only auto-correct typed words,
 not complete them. This is only useful when one or more
 `predictive-prefix-expansions' or
 `predictive-equivalent-characters' are defined.
@@ -586,14 +586,14 @@ completions of the words."
 
 
 (defcustom predictive-auto-complete t
-  "*Enable and disable `auto-completion-mode'
+  "Enable and disable `auto-completion-mode'
 along with predictive mode."
   :group 'predictive
   :type 'boolean)
 
 
 (defcustom predictive-auto-learn nil
-  "*Enables predictive mode's automatic word frequency learning.
+  "Enables predictive mode's automatic word frequency learning.
 
 When non-nil, the frequency count for that word is incremented
 each time a completion is accepted, making the word more likely
@@ -603,7 +603,7 @@ to be offered higher up the list of completions in the future."
 
 
 (defcustom predictive-auto-add-to-dict nil
-  "*Controls automatic adding of new words to dictionaries.
+  "Controls automatic adding of new words to dictionaries.
 
 If nil, words are never automatically added to a dictionary. If
 t, new words \(i.e. words that are not in the dictionary\) are
@@ -628,7 +628,7 @@ ask before adding any word."
 
 
 (defcustom predictive-add-to-dict-ask t
-  "*If non-nil, predictive mode will ask before auto-adding a word
+  "If non-nil, predictive mode will ask before auto-adding a word
 to a dictionary. Enabled by default. This has no effect unless
 `predictive-auto-add-to-dict' is also enabled."
   :group 'predictive
@@ -636,7 +636,7 @@ to a dictionary. Enabled by default. This has no effect unless
 
 
 (defcustom predictive-auto-add-min-chars nil
-  "*Minimum length of auto-added words.
+  "Minimum length of auto-added words.
 Words shorter than this will not be automatically added to the
   dictionary when `predictive-auto-add-to-dict' is enabled."
   :group 'predictive
@@ -645,7 +645,7 @@ Words shorter than this will not be automatically added to the
 
 
 (defcustom predictive-auto-define-prefixes t
-  "*Controls automatic prefix definitions in predictive mode.
+  "Controls automatic prefix definitions in predictive mode.
 
 If non-nil, whenever a word is added to a dictionary, it is
 automatically defined to be a prefix for all words for which it
@@ -658,7 +658,7 @@ completing."
 
 
 (defcustom predictive-auxiliary-file-location ".predictive/"
-  "*Directory to which predictive mode auxiliary files are saved.
+  "Directory to which predictive mode auxiliary files are saved.
 
 If this is a relative path, it is relative to the current
 directory of a buffer using predictive mode. This means that
@@ -682,7 +682,7 @@ risk."
 
 
 (defcustom predictive-use-buffer-local-dict nil
-  "*If non-nil, a buffer-local dictionary will be used
+  "If non-nil, a buffer-local dictionary will be used
 in conjunction with `predictive-main-dict'. Results from both
 dictionaries are combined, as though they were one large
 dictionary.
@@ -707,7 +707,7 @@ the buffer-local dictionary."
 
 
 (defcustom predictive-buffer-local-learn-multiplier 50
-  "*Multiplier for buffer-local learning rate.
+  "Multiplier for buffer-local learning rate.
 When words are learnt or added to a buffer-local dictionary, the
 weight increment is multiplied by this number. See also
 `predictive-use-buffer-local-dict'."
@@ -716,7 +716,7 @@ weight increment is multiplied by this number. See also
 
 
 (defcustom predictive-use-auto-learn-cache t
-  "*If non-nil, auto-learned and auto-added words will be cached
+  "If non-nil, auto-learned and auto-added words will be cached
 and only added to the dictionary when Emacs is idle.
 
 This makes predictive mode more responsive, since learning or
@@ -735,7 +735,7 @@ This has no effect unless `predictive-auto-learn' or
 
 
 (defcustom predictive-flush-auto-learn-delay 10
-  "*Time to wait before flushing auto-learn/add caches.
+  "Time to wait before flushing auto-learn/add caches.
 The caches will only be flushed after Emacs has been idle for
 this many seconds. To take effect, this variable must be set
 before predictive mode is enabled.
@@ -746,7 +746,7 @@ This has no effect unless `predictive-use-auto-learn-cache' is enabled."
 
 
 (defcustom predictive-which-dict-mode t
-  "*If non-nil, display the predictive mode dictionary in the mode line."
+  "If non-nil, display the predictive mode dictionary in the mode line."
   :group 'predictive
   :type 'boolean)
 

@@ -4,10 +4,10 @@
 
 
 (defvar log-modification-checkpoints 10
-  "*Number of checkpoints to keep.")
+  "Number of checkpoints to keep.")
 
 (defvar log-modification-checkpoint-interval 100
-  "*Save a new checkpoint after this number of modifications.")
+  "Save a new checkpoint after this number of modifications.")
 
 
 (defvar log-modification-buffer nil
