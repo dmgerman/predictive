@@ -51,6 +51,10 @@
 ;; * `dictree-meta-dict-create' was renamed to `dictree-create-meta-dict'
 ;;   in dict-tree package
 ;; * keyword argument names changed in `completion-ui-register-source'
+;; * modified interactive dictionary commands to accept dictionary name
+;;   instead of dictionary when called interactively, to avoid eval'ed
+;;   dictionary ending up in `command-history' (cf. corresponding changes to
+;;   `read-dict' in dict-tree.el)
 ;;
 ;; Version 0.19.7
 ;; * replaced obsolete `interactive-p' with `called-interactively-p'
@@ -1250,6 +1254,8 @@ When within a pop-up frame:\
 To set the default main dictionary, you should customize
 `predictive-main-dict' instead."
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
+  (when (and (called-interactively-p 'and) (symbolp dict))
+    (setq dict (eval dict)))
   ;; if DICT is a string, load DICT
   (when (stringp dict)
     (let ((dic (predictive-load-dict dict)))
@@ -1278,11 +1284,7 @@ DICT must either be the name of a loaded dictionary, or the name
 of a dictionary to be found somewhere in the load path. Returns
 the dictionary, or nil if dictionary fails to
 load. Interactively, it is read from the mini-buffer."
-
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
-  ;; sort out argument
-  (when (symbolp dict) (setq dict (symbol-name dict)))
-
   (cond
    ;; DICT is already a dictionary
    ((dictree-p dict))
@@ -1333,8 +1335,9 @@ If the dictionary is not in use by any other buffers, this will
 also unload the dictionary from Emacs."
   (interactive (list (read-dict "Dictionary: "
 				nil predictive-used-dict-list)))
-  ;; sort out argument
-  (when (symbolp dict) (setq dict (eval dict)))
+  ;; sort out arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
 
   ;; remove dict from buffer's used dictionary list
   (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
@@ -1374,8 +1377,9 @@ Use `predictive-write-dict' to save to a different file.
 
 See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to save: ")))
-  (when dict
-    (dictree-save dict predictive-dict-compilation)))
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
+  (when dict (dictree-save dict predictive-dict-compilation)))
 
 
 
@@ -1389,6 +1393,8 @@ See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to write: ")
 		     (read-file-name "File to write to: ")
 		     current-prefix-arg))
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (dictree-write dict filename overwrite predictive-dict-compilation))
 
 
@@ -1490,7 +1496,7 @@ The other arguments are as for `predictive-create-dict'."
 		     "Constituent dictionary (blank to end): " nil))
 	       diclist)
 	   (while dic
-	     (setq diclist (append diclist (list dic)))
+	     (setq diclist (nconc diclist (list dic)))
 	     (setq dic
 		   (read-dict "Constituent dictionary (blank to end): " nil)))
 	   diclist)
@@ -1502,7 +1508,9 @@ The other arguments are as for `predictive-create-dict'."
       (error "Can't see any point in creating a meta-dictionary\
  based on less than two dictionaries"))
     (when (symbolp name) (setq name (symbol-name name)))
-    (when (string= filename "") (setq filename nil)))
+    (when (string= filename "") (setq filename nil))
+    (setq dictlist
+	  (mapcar (lambda (d) (if (symbolp d) (eval d) d)) dictlist)))
 
   ;; confirm if overwriting existing dict, then unload existing one
   ;; (Note: we need the condition-case to work around bug in intern-soft. It
@@ -1537,7 +1545,6 @@ created. If BUFFER is omitted, the current buffer is used.
 If saved to a file, the dumped data can be used to populate a
 dictionary when creating it using `predictive-create-dict'. See
 also `predictive-dump-dict-to-file'."
-
   (interactive (list (read-dict
 		      (let ((dic (car (predictive-current-dict))))
 			(if dic
@@ -1547,6 +1554,8 @@ also `predictive-dump-dict-to-file'."
 		      (car (predictive-current-dict)))
 		     (read-buffer "Buffer to dump to: "
 				  (buffer-name (current-buffer)))))
+  (when (and (called-interactively-p 'and) (symbolp dict))
+    (setq dict (eval dict)))
   (dictree-dump-to-buffer dict buffer 'string))
 
 
@@ -1564,7 +1573,6 @@ by supplying a prefix arg.
 The dumped data can be used to populate a dictionary when
 creating it using `predictive-create-dict'. See also
 `predictive-dump-dict-to-buffer'."
-
   (interactive (list (read-dict
 		      (let ((dic (car (predictive-current-dict))))
 			(if dic
@@ -1574,6 +1582,8 @@ creating it using `predictive-create-dict'. See also
 		      (car (predictive-current-dict)))
 		     (read-file-name "File to dump to: ")
 		     current-prefix-arg))
+  (when (and (called-interactively-p 'and) (symbolp dict))
+    (setq dict (eval dict)))
   (dictree-dump-to-file dict filename 'string overwrite))
 
 
@@ -1604,7 +1614,7 @@ specified by the prefix argument."
 
   ;; if called interactively, sort out arguments
   (when (called-interactively-p 'any)
-    ;; sort out word argument
+    (when (symbolp dict) (setq dict (eval dict)))
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
 	(if (null str)
@@ -1675,7 +1685,7 @@ Interactively, WORD and DICT are read from the minibuffer."
 
   ;; if called interactively, sort out arguments
   (when (called-interactively-p 'any)
-    ;; sort out word argument
+    (when (symbolp dict) (setq dict (eval dict)))
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
 	(if (null str)
@@ -1716,6 +1726,8 @@ If WEIGHT is supplied, reset to that value instead of
 		     current-prefix-arg))
 
   ;; sort out arguments
+  (when (and (called-interactively-p 'and) (symbolp dict))
+    (setq dict (eval dict)))
   (when (and (stringp word) (string= word "")) (setq word nil))
   (cond
    ((null weight) (setq weight 0))
@@ -1782,6 +1794,7 @@ as the weight of WORD."
 
   ;; when called interactively, sort out arguments
   (when (called-interactively-p 'any)
+    (when (symbolp dict) (setq dict (eval dict)))
     ;; default to word at point
     (when (or (null word) (string= word ""))
       (let ((str (thing-at-point 'word)))
@@ -1867,6 +1880,7 @@ least as large as the weight of WORD."
 
   ;; when called interactively, sort out arguments
   (when (called-interactively-p 'any)
+    (when (symbolp dict) (setq dict (eval dict)))
     (when (or (null word) (string= word ""))
       (let ((str (thing-at-point 'word)))
 	(if (null str)
@@ -1915,6 +1929,8 @@ LENGTH is the integer prefix argument."
 		     (prefix-numeric-value current-prefix-arg)))
 
   ;; sort out arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
 
   (let (prefix-fun)
@@ -1991,6 +2007,8 @@ confirmation first if called interactively)."
 		     (read-string "Prefix (leave blank for all): ")))
 
   ;; sort out arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
   ;; prompt for confirmation if called interactively to remove all prefixes
   (when (or (not (called-interactively-p 'any))
@@ -2080,7 +2098,9 @@ See also `predictive-fast-learn-or-add-from-buffer'."
 		      nil)
 		     current-prefix-arg))
 
-  ;; sanity check arguments
+  ;; sort out and sanity check arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (when (and all (null dict))
     (error "Argument ALL supplied but no dictionary specified"))
 
@@ -2173,13 +2193,14 @@ must be specified.
 
 Interactively, FILE and DICT are read from the mini-buffer, and ALL is
 specified by the presence of a prefix argument."
-
   (interactive (list (read-file-name "File to learn from: " nil nil t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
 		      nil)
 		     current-prefix-arg))
-
+  ;; sort out arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (save-excursion
     ;; open file in a buffer
     (let (visiting buff)
@@ -2237,7 +2258,9 @@ the buffer's syntax table."
 		     current-prefix-arg))
   (when (and (called-interactively-p 'any) (eq dict t)) (setq dict nil))
 
-  ;; sanity check arguments
+  ;; sort out and sanity check arguments
+  (when (and (called-interactively-p 'any) (symbolp dict))
+    (setq dict (eval dict)))
   (when (and all (null dict))
     (error "Argument ALL supplied but no dictionary specified"))
 
@@ -2415,14 +2438,16 @@ ALL is specified by the presence of a prefix argument.
 This function is faster then `predictive-learn-from-file' for
 large dictionaries, but will miss any words not consisting
 entirely of word- or symbol-constituent characters."
-
   (interactive (list (read-file-name "File to learn from: " nil nil t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
 		      t)
 		     current-prefix-arg))
-  (when (and (called-interactively-p 'any) (eq dict t)) (setq dict nil))
-
+  ;; sort out arguments
+  (when (called-interactively-p 'any)
+    (cond
+     ((eq dict t) (setq dict nil))
+     ((symbolp dict) (setq dict (eval dict)))))
   (save-excursion
     ;; open file in a buffer
     (let (visiting buff)
@@ -3125,8 +3150,8 @@ A negative prefix argument turns it off.")
  :reject-functions (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-reject-functions
 					prefix completion arg))
- :menu-function 'predictive-menu-function
- :browser-function 'predictive-browser-function
+ :menu 'predictive-menu-function
+ :browser 'predictive-browser-function
  :word-thing 'predictive-word-thing)
 
 
