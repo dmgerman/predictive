@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: completion, user interface, echo area, help-echo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.2
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1.1
 ;; * use `with-current-buffer' instead of `save-excursion' + `set-buffer' to
 ;;   get rid of byte-compiler message
@@ -43,8 +48,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-popup-frame)
 (require 'completion-ui)
 
 
@@ -57,14 +60,14 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-popup-frame t
-  "*Enable the completion pop-up frame."
+(defcustom completion-ui-use-popup-frame t
+  "When non-nil, enable the completion pop-up frame interface."
   :group 'completion-ui-popup-frame
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-popup-frame-max-height 20
-  "*Maximum height of a popup frame"
+  "Maximum height of a popup frame"
   :group 'completion-ui-popup-frame
   :type 'integer)
 
@@ -254,7 +257,7 @@ If no OVERLAY is supplied, tries to find one at point."
            (completions (overlay-get overlay 'completions))
            (num (overlay-get overlay 'completion-num))
            (popup-fun (completion-ui-source-popup-frame-function nil overlay))
-           (lines (funcall popup-fun prefix completions))
+           (lines (funcall popup-fun overlay))
            (maxlen (if (null lines) 0 (apply 'max (mapcar 'length lines))))
            (pos (save-excursion
                   (goto-char (overlay-start overlay))
@@ -326,7 +329,9 @@ If no OVERLAY is supplied, tries to find one at point."
 	   (cmpl-fun (or (completion-ui-source-completion-function
 			  (overlay-get overlay 'completion-source))
 			 (overlay-get overlay 'completion-source)))
-	   (completions (funcall cmpl-fun prefix completion-max-candidates)))
+	   (completions (funcall cmpl-fun prefix
+				 (completion-ui-get-value-for-source
+				  overlay completion-max-candidates))))
       (overlay-put overlay 'completions completions)))
   ;; select main Emacs frame if we're in a pop-up frame
   (when completion-popup-frame-parent-frame
@@ -409,6 +414,9 @@ methods. Toggling will show all possible completions."
 			       'completion-source))
 		      (overlay-get completion-popup-frame-parent-overlay
 			       'completion-source)))
+	(hotkeys (completion-ui-get-value-for-source
+		  completion-popup-frame-parent-overlay
+		  completion-ui-use-hotkeys))
 	completions lines maxlen)
 
     (cond
@@ -429,14 +437,18 @@ methods. Toggling will show all possible completions."
       (with-current-buffer
 	  (overlay-buffer completion-popup-frame-parent-overlay)
         (setq completions
-	      (funcall cmpl-fun prefix completion-max-candidates)))
+	      (funcall cmpl-fun prefix
+		       (completion-ui-get-value-for-source
+			completion-popup-frame-parent-overlay
+			completion-max-candidates))))
       (overlay-put completion-popup-frame-parent-overlay
                    'completions completions)))
 
     ;; reset pop-up frame properties
     (erase-buffer)
     (setq lines
-          (completion-construct-popup-frame-text prefix completions))
+          (completion-construct-popup-frame-text
+	   completion-popup-frame-parent-overlay))
     (setq maxlen (if (null lines) 0 (apply 'max (mapcar 'length lines))))
     (set-frame-size (selected-frame) (1+ maxlen) (frame-height))
     ;; insert completions in pop-up frame
@@ -453,17 +465,21 @@ methods. Toggling will show all possible completions."
 
 
 
-(defun completion-construct-popup-frame-text (prefix completions)
+(defun completion-construct-popup-frame-text (overlay)
   "Construct the list of lines for a pop-up frame."
-  (let ((maxlen
-	 (if (null completions) 0
-	   (apply 'max
-		  (mapcar
-		   (lambda (cmpl)
-		     (if (stringp cmpl) (length cmpl) (length (car cmpl))))
-		   completions))))
-        (lines nil)
-	str)
+  (let* ((prefix (overlay-get overlay 'prefix))
+	 (completions (overlay-get overlay 'completions))
+	 (hotkeys (completion-ui-get-value-for-source
+		   overlay completion-ui-use-hotkeys))
+	 (maxlen
+	  (if (null completions) 0
+	    (apply 'max
+		   (mapcar
+		    (lambda (cmpl)
+		      (if (stringp cmpl) (length cmpl) (length (car cmpl))))
+		    completions))))
+	 (lines nil)
+	 str)
     (dotimes (i (length completions))
       (setq str (nth i completions))
       (unless (stringp str) (setq str (car str)))
@@ -475,7 +491,7 @@ methods. Toggling will show all possible completions."
                       ;; pad to same length
                       (make-string (- maxlen (length str)) ? )
                       ;; add hotkey for current completion, if any
-                      (if (and completion-use-hotkeys
+                      (if (and hotkeys
                                (< i (length completion-hotkey-list)))
                           (format " (%s)"
                                   (key-description
@@ -489,13 +505,14 @@ methods. Toggling will show all possible completions."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-popup-frame
+ 'popup-frame
+ :variable 'completion-ui-use-popup-frame
  :activate 'completion-activate-popup-frame-keys
  :deactivate 'completion-popup-frame-dismiss
  :update 'completion-update-popup-frame
- :auto-show 'completion-popup-frame
- :after t)
+ :auto-show 'completion-popup-frame)
 
 
 
+(provide 'completion-ui-popup-frame)
 ;;; completion-ui-popup-frame.el ends here

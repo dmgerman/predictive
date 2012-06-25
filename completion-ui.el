@@ -243,6 +243,8 @@
 ;; * moved and renamed `completion-activate-overlay-keys' and
 ;;   `completion-deactivate-overlay-keys' from completion-ui-tooltip.el, to
 ;;   make them available generally for completion interfaces
+;; * allow many customization options to be set either globally, or per
+;;   completion source
 ;;
 ;; Version 0.11.14
 ;; * added work-around to `complete-in-buffer' to force a keymap refresh when
@@ -672,31 +674,58 @@
 ;;; ============================================================
 ;;;                    Customization variables
 
+(defun completion-ui-customize-list-sources ()
+  (mapcar (lambda (def) (list 'const (car def)))
+	  completion-ui-source-definitions))
+
+
+(defun completion-ui-customize-by-source (type)
+  `(choice ,(cond
+	     ((symbolp type) `(,type :tag "global"))
+	     ((and (listp type) (eq (car type) 'choice))
+	      (append '(choice :tag "global") (copy-sequence (cdr type)))))
+	   (alist :tag "per source"
+		  :key-type (choice :tag "source"
+				    (const :tag "default" t)
+				    ,@(completion-ui-customize-list-sources))
+		  :value-type ,(if (listp type) (copy-sequence type) type))))
+
+
+(defun completion-ui-get-value-for-source (source value)
+  (if (listp value)
+      (let ((v (or (assq (if (overlayp source)
+			     (overlay-get source 'completion-source)
+			   source)
+			 value)
+		   (assq t value))))
+	(cdr v))
+    value))
+
+
+
 (defgroup completion-ui nil
   "Completion user interface."
   :group 'convenience)
 
 
 (defcustom completion-max-candidates 10
-  "*Maximum number of completion candidates to offer."
+  "Maximum number of completion candidates to offer."
   :group 'completion-ui
-  :type 'integer)
+  :type (completion-ui-customize-by-source 'integer))
 
 
 (defcustom completion-accept-or-reject-by-default 'accept
-  "*Default action for the current completion:
+  "Default action for the current completion:
 
   'accept:        automatically accept the completion
   'accept-common: automatically accept the common part of the completion
   'reject:        automatically reject the completion"
   :group 'completion-ui
-  :type '(choice (const :tag "accept" accept)
-                 (const :tag "reject" reject)
-                 (const :tag "accept-common" accept-common)))
+  :type '(choice (const accept) (const reject) (const accept-common)))
 
 
 (defcustom completion-how-to-resolve-old-completions 'accept
-  "*What to do with unfinished and abandoned completions
+  "What to do with unfinished and abandoned completions
 left behind in the buffer:
 
   'leave:         leave the old completions pending
@@ -704,14 +733,11 @@ left behind in the buffer:
   'reject:        automatically reject the old completions
   'ask:           ask what to do with the old completions"
   :group 'completion-ui
-  :type '(choice (const :tag "leave" leave)
-                 (const :tag "accept" accept)
-                 (const :tag "reject" reject)
-                 (const :tag "ask" ask)))
+  :type '(choice (const leave) (const accept) (const reject) (const ask)))
 
 
 (defcustom completion-overwrite t
-  "*When non-nil, completing in the middle of a word over-writes
+  "When non-nil, completing in the middle of a word over-writes
 the rest of the word. `completion-word-thing' determines what is
 considered a word."
   :group 'completion-ui
@@ -719,15 +745,15 @@ considered a word."
 
 
 (defcustom completion-auto-update t
-  "*When non-nil, completion candidates are updated automatically
+  "When non-nil, completion candidates are updated automatically
 when characters are added to the current completion prefix.
 \(Effectively, it is as though `auto-completion-mode' is
 temporarily enabled for the duration of the completion.\)"
   :group 'completion-ui
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
-(defcustom completion-auto-show nil
+(defcustom completion-auto-show 'completion-show-popup-tip
   "Function to call to display a completion user-interface.
 When null, nothing is auto-displayed.
 
@@ -735,15 +761,15 @@ The function is called after a completion command, possibly after
 a delay of `completion-auto-show-delay' seconds if one is set. It
 is passed one argument, a completion overlay."
   :group 'completion-ui
-  :type '(choice (const nil)))
+  :type (completion-ui-customize-by-source '(choice (const nil))))
 
 
 (defcustom completion-auto-show-delay 3
-  "*Number of seconds to wait after completion is invoked
+  "Number of seconds to wait after completion is invoked
 before the `completion-auto-show' interface is activated."
   :group 'completion-ui
-  :type '(choice (const :tag "Off" nil)
-                 (float :tag "On")))
+  :type (completion-ui-customize-by-source
+	 '(choice (const :tag "Off" nil) (float :tag "On"))))
 
 
 
@@ -752,7 +778,7 @@ before the `completion-auto-show' interface is activated."
      (:background "blue" :foreground "white"))
     (((class color) (background light))
      (:background "orange" :foreground "black")))
-  "*Face used to highlight completions in various user-interfaces."
+  "Face used to highlight completions in various user-interfaces."
   :group 'completion-ui)
 
 
@@ -765,41 +791,37 @@ before the `completion-auto-show' interface is activated."
 
 
 (defcustom auto-completion-source 'dabbrev
-  "*Completion source for `auto-completion-mode'."
+  "Completion source for `auto-completion-mode'."
   :group 'auto-completion-mode
   :type `(choice
 	  (const nil)
-	  ,@(nreverse
-	     (mapcar
-	      (lambda (def)
-		(list 'const (car def)))  ; FIXME: breaks abstraction
-	      completion-ui-source-definitions))))
+	  ,@(completion-ui-customize-list-sources)))
 
 
 (defcustom auto-completion-min-chars nil
-  "*Minimum number of characters before completions are offered."
+  "Minimum number of characters before completions are offered."
   :group 'auto-completion-mode
-  :type '(choice (const :tag "Off" nil)
-                 (integer :tag "On")))
+  :type (completion-ui-customize-by-source
+	 '(choice (const :tag "Off" nil) (integer :tag "On"))))
 
 
 (defcustom auto-completion-delay nil
-  "*Number of seconds to wait before activating completion mechanisms
+  "Number of seconds to wait before activating completion mechanisms
 in auto-completion mode."
   :group 'auto-completion-mode
-  :type '(choice (const :tag "Off" nil)
-                 (float :tag "On")))
+  :type (completion-ui-customize-by-source
+	 '(choice (const :tag "Off" nil) (float :tag "On"))))
 
 
 (defcustom auto-completion-backward-delete-delay 0.1
-  "*Number of seconds to wait before activating completion mechanisms
-after deleting backwards in auto-completion mode."
+  "Number of seconds to wait before activating completion mechanisms
+after deleting backwards in `auto-completion-mode'."
   :group 'auto-completion-mode
   :type 'float)
 
 
 (defcustom auto-completion-syntax-alist '(reject . word)
-  "*Associates character syntax with completion behaviour.
+  "Associates character syntax with completion behaviour.
 Used by the `auto-completion-self-insert' function to decide what
 to do based on a typed character's syntax.
 
@@ -873,9 +895,9 @@ if it is nil. (Note that, perhaps confusingly, a non-existent
 third element is equivalent to setting the third element to
 t). If the third element of the list is a function, its return
 value again determines the insertion behaviour. This allows a
-function to take-over the job of inserting characters (e.g. in
+function to take over the job of inserting characters (e.g. in
 order to make sure parentheses are inserted in pairs), and is
-probably the only time it makes sense to use a null third
+probably the only time it makes sense to use/return a null third
 element."
   :group 'auto-completion-mode
   :type '(choice
@@ -909,7 +931,7 @@ element."
     (?8 . (reject none))
     (?9 . (reject none))
     (?' . (add word)))
-  "*Alist associating characters with completion behaviour.
+  "Alist associating characters with completion behaviour.
 Overrides the default behaviour defined by the character's syntax
 in `auto-completion-syntax-alist'. The format is the same as for
 `auto-completion-synax-alist', except that the alist keys are
@@ -1740,10 +1762,10 @@ to work."
 ;;; =======================================================
 ;;;              Modularized user interfaces
 
-(defmacro completion-ui--interface-variable (def)
+(defmacro completion-ui--interface-name (def)
   `(car ,def))
 
-(defmacro completion-ui--interface-name (def)
+(defmacro completion-ui--interface-variable (def)
   `(cadr ,def))
 
 (defmacro completion-ui--interface-activate-function (def)
@@ -1751,6 +1773,9 @@ to work."
 
 (defmacro completion-ui--interface-deactivate-function (def)
   `(nth 3 ,def))
+
+(defmacro completion-ui--interface-update-function (def)
+  `(plist-get ,def :update))
 
 (defmacro completion-ui--interface-auto-show (def)
   `(plist-get ,def :auto-show))
@@ -1761,31 +1786,33 @@ to work."
 
 
 (defmacro* completion-ui-register-interface
-    (variable &key name activate deactivate
-	      update auto-show auto-show-helper after)
+    (name &key activate deactivate
+	  variable update auto-show auto-show-helper first)
   "Register a Completion-UI user-interface.
 
-VARIABLE should be the customization variable (a symbol) used to
-enable and disable this interface. It should conform to the
-naming convention \"completion-use-<name>\" where <name> is
-the NAME of the user-interface.
+NAME is the name (a symbol) of the new user-interface, which will
+appear in customization options.
 
-The :activate keyword argument is mandatory, and should be a
-function that takes one argument, a completion overlay, and does
-whatever is necessary to activate the user-interface for that
-completion. Its return value is ignored. :deactivate is
-analogous, but should deactivate the user-interface.
+The :activate and :deactivate keyword arguments are
+mandatory. They should be functions that take one argument, a
+completion overlay, and do whatever is necessary to activate and
+deactivate the user-interface for that completion. The return
+value is ignored.
 
-The optional :name keyword argument can be used to give a
-name (symbol) to the user-interface, which will appear in
-customization options. The default is to construct the interface
-name from VARIABLE, removing \"completion-use-\" from the
-front.
+The optional :variable keyword specifies the name of the
+customization variable used to enable the interface. If supplied,
+it is good practice to follow the naming convention
+`completion-ui-use-<interface-name>'. If no :variable argument is
+supplied, a defcustom is created automatically with this as the
+variable name.
 
-The optional :after keyword causes the interface definition to be
-added at the end of the list, rather than at the
-beginning. Interfaces functions are called in the order they
-appear in the list of definitions.
+The optional :first keyword causes the new interface to be added
+at the beginning of the list of interfaces, rather than at the
+end. Interfaces functions are called in the order they appear in
+the list of definitions. Note that this has no effect if a NAME
+interface is already defined, in which case the new definition
+replaces the old one at the same location in the list as
+previously.
 
 The remaining optional keyword arguments specify user-interface
 functions to call in various circumstances. They are all called
@@ -1805,84 +1832,92 @@ The :auto-show-helper function is called when an auto-show
 interface is activated."
 
   ;; remove `quote' from arguments
-  (when (and (listp variable)
-	     (eq (car variable) 'quote))
-    (setq variable (cadr variable)))
-  (when (and (listp name)
-	     (eq (car name) 'quote))
+  (when (and (listp name) (eq (car name) 'quote))
     (setq name (cadr name)))
-  (when (and (listp activate)
-	     (eq (car activate) 'quote))
+  (when (and (listp variable) (eq (car variable) 'quote))
+    (setq variable (cadr variable)))
+  (when (and (listp activate) (eq (car activate) 'quote))
     (setq activate (cadr activate)))
-  (when (and (listp deactivate)
-	     (eq (car deactivate) 'quote))
+  (when (and (listp deactivate) (eq (car deactivate) 'quote))
     (setq deactivate (cadr deactivate)))
-  (when (and (listp update)
-	     (eq (car update) 'quote))
+  (when (and (listp update) (eq (car update) 'quote))
     (setq update (cadr update)))
-  (when (and (listp auto-show)
-	     (eq (car auto-show) 'quote))
+  (when (and (listp auto-show) (eq (car auto-show) 'quote))
     (setq auto-show (cadr auto-show)))
-  (when (and (listp auto-show-helper)
-	     (eq (car auto-show-helper) 'quote))
+  (when (and (listp auto-show-helper) (eq (car auto-show-helper) 'quote))
     (setq auto-show-helper (cadr auto-show-helper)))
 
   ;; sanity-check arguments
-  (unless (symbolp variable)
-    (error "completion-ui-register-interface: invalid variable %s"
-	   variable))
-  ;; (unless (functionp activate)
+  (unless (symbolp name)
+    (error "completion-ui-register-interface: invalid name %s" name))
+;; (unless (functionp activate)
   ;;   (error "completion-ui-register-interface: invalid activate function %s"
   ;; 	   activate))
   ;; (unless (functionp activate)
   ;;   (error "completion-ui-register-interface: invalid deactivate function %s"
   ;; 	   deactivate))
 
-  ;; extract name from customization-variable if not defined explicitly
-  (unless name
-    (setq name (symbol-name variable))
-    (when (string-match "^completion-use-" name)
-      (setq name (substring name (match-end 0))))
-    (setq name (intern name)))
-
   ;; construct interface definiton
-  (let ((interface-def
-	 (cons
-	  variable
-	  (append
-	   (list name activate deactivate)
-	   (when update (list :update update))
-	   (when auto-show (list :auto-show auto-show))
-	   (when auto-show-helper (list :auto-show-helper auto-show-helper))
-	   ))))
+  (let* ((var (or variable
+		  (intern (concat "completion-ui-use-" (symbol-name name)))))
+	 (interface-def
+	  (cons name (nconc
+		      (list var activate deactivate)
+		      (when update (list :update update))
+		      (when auto-show (list :auto-show auto-show))
+		      (when auto-show-helper
+			(list :auto-show-helper auto-show-helper))))))
 
     ;; construct code to add interface definition to list (or replace existing
     ;; definition)
     `(progn
-       (let ((existing (assq ',variable completion-ui-interface-definitions)))
+       (let ((existing (assq ',name completion-ui-interface-definitions)))
 	 (if (not existing)
 	     (add-to-list 'completion-ui-interface-definitions
-			  ',interface-def ,after)
-	   (message "Completion-UI interface named `%s' already registered\
- - replacing existing definition" ',name)
+			  ',interface-def ,(not first))
+	   (message ,(concat
+		      "Completion-UI interface named "
+		      (symbol-name name)
+		      " already registered - replacing existing definition"))
 	   (setcdr existing ',(cdr interface-def))))
+
+       ;; generate defcustom for variable used to enable interface
+       ,(unless variable
+	  `(defcustom ,var nil
+	     ,(concat "When non-nil, enable the " (symbol-name name)
+		      " Completion-UI interface.")
+	     :group 'completion-ui
+	     :type (completion-ui-customize-by-source 'boolean)))
 
        ;; update choices in `completion-auto-show' defcustom
        ,(if auto-show
-	    `(let ((choices (get 'completion-auto-show 'custom-type)))
-	       (unless (member '(const :tag ,name ,auto-show) choices)
-		 (nconc (cdr choices)
+	    `(let* ((type (get 'completion-auto-show 'custom-type))
+		    (global-choices (cadr type))
+		    (source-choices (plist-get (cdaddr type) :value-type)))
+	       (unless (member '(const :tag ,(symbol-name name) ,auto-show)
+			       global-choices)
+		 (nconc global-choices
+			'((const :tag ,(symbol-name name) ,auto-show))))
+	       (unless (member '(const :tag ,(symbol-name name) ,auto-show)
+			       source-choices)
+		 (nconc source-choices
 			'((const :tag ,(symbol-name name) ,auto-show)))))
-	  `(delete '(const :tag ,(symbol-name name) ,auto-show)
-		   (get 'completion-auto-show 'custom-type)))
+	  `(let* ((type (get 'completion-auto-show 'custom-type))
+		  (global-choices (caadr type))
+		  (source-choices (plist-get (cdaddr type) :value-type)))
+	     (delete '(const :tag ,(symbol-name name) ,auto-show)
+		     global-choices)
+	     (delete '(const :tag ,(symbol-name name) ,auto-show)
+		   source-choices)))
        )))
 
 
 
-(defmacro completion-ui-interface-enabled-p (interface-def)
+(defmacro completion-ui-interface-enabled-p (interface-def source)
   ;; Returns non-nil when interface defined by INTERFACE-def is enabled,
   ;; nil otherwise
-  `(eval (car ,interface-def)))
+  `(completion-ui-get-value-for-source
+    overlay (completion-ui--interface-variable ,interface-def)))
 
 
 (defmacro completion-ui-interface-activate (interface-def overlay)
@@ -1900,22 +1935,23 @@ interface is activated."
 (defmacro completion-ui-activate-interfaces (overlay)
   ;; Activate all enabled user-interfaces for current completion OVERLAY
   `(dolist (interface-def completion-ui-interface-definitions)
-     (when (completion-ui-interface-enabled-p interface-def)
+     (when (completion-ui-interface-enabled-p interface-def overlay)
        (completion-ui-interface-activate interface-def ,overlay))))
 
 
 (defmacro completion-ui-deactivate-interfaces (overlay)
   ;; Deactivate all enabled user-interfaces for current completion OVERLAY.
   `(dolist (interface-def completion-ui-interface-definitions)
-     (when (completion-ui-interface-enabled-p interface-def)
+     (when (completion-ui-interface-enabled-p interface-def overlay)
        (completion-ui-interface-deactivate interface-def ,overlay))))
 
 
 (defmacro completion-ui-deactivate-interfaces-pre-update (overlay)
   ;; Deactivate all non-updatable interfaces
   `(dolist (interface-def completion-ui-interface-definitions)
-     (when (and (completion-ui-interface-enabled-p interface-def)
-		(not (plist-get interface-def :update)))
+     (when (and (completion-ui-interface-enabled-p interface-def overlay)
+		(not (completion-ui--interface-update-function
+		      interface-def)))
        (completion-ui-interface-deactivate interface-def ,overlay))))
 
 
@@ -1923,8 +1959,9 @@ interface is activated."
   ;; Run update interfaces, falling back to activating them
   `(let (func)
      (dolist (interface-def completion-ui-interface-definitions)
-       (when (completion-ui-interface-enabled-p interface-def)
-	 (if (setq func (plist-get interface-def :update))
+       (when (completion-ui-interface-enabled-p interface-def overlay)
+	 (if (setq func (completion-ui--interface-update-function
+			 interface-def))
 	     (when (functionp func) (funcall func ,overlay))
 	   (completion-ui-interface-activate interface-def ,overlay))))))
 
@@ -1933,7 +1970,9 @@ interface is activated."
   ;; Activate auto-show interface for current completion OVERLAY.
   `(funcall
     (completion-ui--interface-auto-show
-     (assq completion-auto-show completion-ui-interface-definitions))
+     (assq (completion-ui-get-value-for-source
+	    overlay completion-auto-show)
+	   completion-ui-interface-definitions))
     overlay))
 
 
@@ -1941,7 +1980,7 @@ interface is activated."
   ;; Call auto-show-helpers
   (let (func)
      (dolist (interface-def completion-ui-interface-definitions)
-       (when (and (completion-ui-interface-enabled-p interface-def)
+       (when (and (completion-ui-interface-enabled-p interface-def overlay)
 		  (setq func (completion-ui--interface-auto-show-helper
 			      interface-def)))
 	 (funcall func overlay)))))
@@ -2648,6 +2687,7 @@ and instead treats the PREFIX as a pattern to search for, which
 should be replaced by the completion.
 
 The remaining arguments are for internal use only."
+
   ;; If AUTO is non-nil, assume we're auto-completing and respect settings of
   ;; `auto-completion-min-chars' and (unless AUTO is 'timer)
   ;; `auto-completion-delay'. If UPDATE is an overlay, update the
@@ -2715,26 +2755,28 @@ The remaining arguments are for internal use only."
       ;; create/update completion overlay (need create overlay regardless of
       ;; `auto-completion-min-chars' and `auto-completion-delay', to mark end
       ;; of prefix in case point is immediately before a word)
-      (let ((overlay
-	     (completion-ui-setup-overlay
-	      prefix 'unchanged nil nil
-	      completion-source prefix-function non-prefix-completion
-	      update)))
-	(move-overlay overlay (point) (point))
+      (let* ((overlay
+	      (move-overlay (completion-ui-setup-overlay
+			     prefix 'unchanged nil nil
+			     completion-source prefix-function
+			     non-prefix-completion update)
+			    (point) (point)))
+	     (min-chars (completion-ui-get-value-for-source
+			 overlay auto-completion-min-chars))
+	     (delay (completion-ui-get-value-for-source
+		     overlay auto-completion-delay)))
 
 	;; if auto-completing, only do so if prefix if it has requisite number
 	;; of characters
-	(if (and auto auto-completion-min-chars
-		 (< (length prefix) auto-completion-min-chars))
+	(if (and auto min-chars (< (length prefix) min-chars))
 	    (if update (completion-ui-deactivate-interfaces update))
 
 	  ;; if we're auto-completing and `auto-completion-delay' is set,
 	  ;; delay completing by setting a timer to call ourselves later
-	  (if (and auto auto-completion-delay (not (eq auto 'timer)))
+	  (if (and auto delay (not (eq auto 'timer)))
 	      (setq completion--auto-timer
 		    (run-with-idle-timer
-		     auto-completion-delay nil
-		     'complete-in-buffer
+		     delay nil 'complete-in-buffer
 		     completion-source prefix-function
 		     (if s-npcmpl non-prefix-completion 'not-set)
 		     'timer update (point)))
@@ -2742,10 +2784,12 @@ The remaining arguments are for internal use only."
 	    ;; otherwise, get completions
 	    (setq completions
 		  (funcall completion-function
-			   prefix completion-max-candidates))
+			   prefix (completion-ui-get-value-for-source
+				   completion-source
+				   completion-max-candidates)))
 	    (completion-ui-setup-overlay prefix 'unchanged completions)
 
-	    ;; if running from an `auto-completion-delay' of
+	    ;; if running from an `auto-completion-delay' or
 	    ;; `completion-backward-delete' timer, generate dummy keyboard
 	    ;; event to force keymap update, and bind that event a function
 	    ;; that activates the interfaces
@@ -2762,13 +2806,15 @@ The remaining arguments are for internal use only."
 			  (interactive)
 			  (let ((overlay (completion-ui-overlay-at-point)))
 			    (completion-ui-update-interfaces overlay)
-			    (when completion-auto-show
+			    (when (completion-ui-get-value-for-source
+				   overlay completion-auto-show)
 			      (completion-ui-auto-show overlay))))
 		      (lambda ()
 			(interactive)
 			(let ((overlay (completion-ui-overlay-at-point)))
 			  (completion-ui-activate-interfaces overlay)
-			  (when completion-auto-show
+			  (when (completion-ui-get-value-for-source
+				 overlay completion-auto-show)
 			    (completion-ui-auto-show overlay))))))
 		  (push completion--dummy-event unread-command-events))
 
@@ -2776,7 +2822,9 @@ The remaining arguments are for internal use only."
 	      (if update
 		  (completion-ui-update-interfaces overlay)
 		(completion-ui-activate-interfaces overlay))
-	      (when completion-auto-show (completion-ui-auto-show overlay))))
+	      (when (completion-ui-get-value-for-source
+		     overlay completion-auto-show)
+		(completion-ui-auto-show overlay))))
 
 	  ;; set `completion-ui--activated' (buffer-locally) to enable
 	  ;; `completion-map' work-around hacks
@@ -2809,29 +2857,33 @@ called from timer)."
 
   ;; make sure things are still in a sensible state (might not be if
   ;; displaying after a delay)
-  (when (and completion-auto-show
-	     overlay
-	     (overlay-buffer overlay)
-             (or (null point) (= (point) point)))
-    (cond
+  (let (auto-show auto-show-delay)
+    (when (and overlay
+	       (setq auto-show
+		     (completion-ui-get-value-for-source
+		      overlay completion-auto-show))
+	       (overlay-buffer overlay)
+	       (or (null point) (= (point) point)))
+      (setq auto-show-delay (completion-ui-get-value-for-source
+			     overlay completion-auto-show-delay))
+      (cond
+       ;; ;; if auto-show interface is already active for overlay, update it
+       ;; ((overlay-get overlay 'auto-show)
+       ;;  (completion-ui-call-auto-show-interface-helpers overlay)
+       ;;  (funcall (overlay-get overlay 'auto-show) overlay))
 
-     ;; ;; if auto-show interface is already active for overlay, update it
-     ;; ((overlay-get overlay 'auto-show)
-     ;;  (completion-ui-call-auto-show-interface-helpers overlay)
-     ;;  (funcall (overlay-get overlay 'auto-show) overlay))
+       ;; if delaying, setup timer to call ourselves later
+       ((and auto-show-delay (null point))
+	(setq completion--auto-timer
+	      (run-with-timer auto-show-delay nil
+			      'completion-ui-auto-show
+			      overlay (point))))
 
-     ;; if delaying, setup timer to call ourselves later
-     ((and completion-auto-show-delay (null point))
-      (setq completion--auto-timer
-	    (run-with-timer completion-auto-show-delay nil
-			    'completion-ui-auto-show
-			    overlay (point))))
-
-     ;; otherwise, display whatever we're displaying
-     (t
-      (overlay-put overlay 'auto-show completion-auto-show)
-      (completion-ui-call-auto-show-interface-helpers overlay)
-      (funcall completion-auto-show overlay)))))
+       ;; otherwise, display whatever we're displaying
+       (t
+	(overlay-put overlay 'auto-show auto-show)
+	(completion-ui-call-auto-show-interface-helpers overlay)
+	(funcall auto-show overlay))))))
 
 
 
@@ -3251,7 +3303,8 @@ green over night."
 	(completion-ui-setup-overlay
 	 str nil nil nil nil nil 'unchanged overlay)
         ;; when auto-completing, do so
-        (if (or completion-auto-update
+        (if (or (completion-ui-get-value-for-source
+		 overlay completion-auto-update)
 		(and auto-completion-mode
 		     (eq (overlay-get overlay 'completion-source)
 			 auto-completion-source)))
@@ -3599,7 +3652,9 @@ based on current syntax table."
        ;;       because otherwise the prefix being added to is hidden
        ((and (or (eq syntax ?w) (eq syntax ?_))
 	     (or (not (overlay-get overlay 'non-prefix-completion))
-		 (eq completion-accept-or-reject-by-default 'reject)))
+		 (eq (completion-ui-get-value-for-source
+		      overlay completion-accept-or-reject-by-default)
+		     'reject)))
 	;; add characters up to point and new character to prefix
 	(setq prefix
 	      (concat (buffer-substring-no-properties
@@ -3706,11 +3761,16 @@ COMMAND deletes into a word and `auto-completion-mode' is
 enabled, complete what remains of that word."
 
   (let* ((overlay (completion-ui-overlay-at-point))
+	 (accept-or-reject
+	  (completion-ui-get-value-for-source
+	   overlay completion-accept-or-reject-by-default))
          pos)
     ;(combine-after-change-calls
 
       ;; ----- not auto-completing -----
-      (if (and (not auto-completion-mode) (not completion-auto-update))
+      (if (and (not auto-completion-mode)
+	       (not (completion-ui-get-value-for-source
+		     overlay completion-auto-update)))
 
           (progn
             ;; if within a completion...
@@ -3718,11 +3778,11 @@ enabled, complete what remains of that word."
               (cond
 	       ;; if rejecting old completions, delete everything after the
 	       ;; point
-	       ((eq completion-accept-or-reject-by-default 'reject)
+	       ((eq accept-or-reject 'reject)
                 (delete-region (point) (overlay-end overlay)))
 
 	       ;; if accepting longest common substring...
-	       ((eq completion-accept-or-reject-by-default 'accept-common)
+	       ((eq accept-or-reject 'accept-common)
 		;; find the end of the longest common substring, using
 		;; common-substring overlay if it exists, otherwise searching
 		;; for it ourselves
@@ -4142,7 +4202,9 @@ point) are being set."
 	      (eq (overlay-get overlay 'completion-source)
 		  auto-completion-source))
 	 auto-completion-overlay-map)
-	(completion-auto-update completion-auto-update-overlay-map)
+	((completion-ui-get-value-for-source
+	  completion-source completion-auto-update)
+	 completion-auto-update-overlay-map)
 	(t completion-overlay-map))))
     ;; add overlay to list
     (push overlay completion--overlay-list))
@@ -4326,7 +4388,10 @@ inserting anything)."
 
   ;; if there's a completion at point...
   (when overlay
-    (let (resolve)
+    (let ((accept-or-reject
+	   (completion-ui-get-value-for-source
+	    overlay completion-accept-or-reject-by-default))
+	  resolve)
       ;; if `auto-completion-mode' is enabled, and at least one of CHAR or
       ;; SYNTAX was supplied, lookup behaviour for CHAR and SYNTAX
       (if (and auto-completion-mode
@@ -4342,8 +4407,8 @@ inserting anything)."
 	;;       common substring in the case of 'accept-common because of
 	;;       where point is positioned
 	(cond
-	 ((or (eq completion-accept-or-reject-by-default 'reject)
-	      (eq completion-accept-or-reject-by-default 'accept-common))
+	 ((or (eq accept-or-reject 'reject)
+	      (eq accept-or-reject 'accept-common))
 	  (setq resolve 'reject))
 	 (t (setq resolve 'accept))))
 
@@ -4360,8 +4425,7 @@ inserting anything)."
           (completion-ui-delete-overlay overlay)))
 
        ;; if accepting, do so
-       ((eq resolve 'accept)
-        (completion-accept nil overlay))
+       ((eq resolve 'accept) (completion-accept nil overlay))
 
        ;; anything else effectively accepts the completion but without
        ;; running accept hooks
@@ -4787,15 +4851,24 @@ in WINDOW'S frame."
 ;;;                Load user-interface modules
 
 (provide 'completion-ui)
-(require 'completion-ui-popup-frame)
 (require 'completion-ui-dynamic)
 (require 'completion-ui-hotkeys)
 (require 'completion-ui-echo)
 (require 'completion-ui-tooltip)
 (require 'completion-ui-popup-tip)
 (require 'completion-ui-menu)
+(require 'completion-ui-popup-frame)
 (require 'completion-ui-sources)
 
+
+;; ;; set default auto-show interface to popup-tip
+;; (setq completion-auto-show 'completion-show-popup-tip)
+
+;; ;; (Note: this is kinda ugly, but setting the default in the defcustom seems
+;; ;; to conflict with refreshing the defcustom in
+;; ;; `compeltion-ui-register-interface'. Since Completion-UI is almost
+;; ;; invariably loaded before a user's customization settings, theirs will
+;; ;; still take precedence.)
 
 
 ;;; completion-ui.el ends here

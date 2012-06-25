@@ -5,7 +5,7 @@
 ;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.1
+;; Version: 0.2.2
 ;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -33,6 +33,11 @@
 
 
 ;;; Change Log:
+;;
+;; Version 0.2.2
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
 ;;
 ;; Version 0.2.1
 ;; * replaced obsolete `interactive-p' with `called-interactively-p'
@@ -65,10 +70,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-tooltip nil
-  "When non-nil, enable the tooltip Completion-UI interface."
+(defcustom completion-ui-use-tooltip nil
+  "When non-nil, enable the tooltip interface."
   :group 'completion-ui-tooltip
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-tooltip-timeout -1
@@ -257,9 +262,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
 
       ;; construct the tooltip text
       (setq text (funcall (completion-ui-source-tooltip-function nil overlay)
-                          (overlay-get overlay 'prefix)
-                          (overlay-get overlay 'completions)
-                          (overlay-get overlay 'completion-num)))
+                          overlay))
       (when (string= (substring text -1) "\n")
         (setq text (substring text 0 -1)))
       (setq w-h (pos-tip-string-width-height text))
@@ -299,13 +302,14 @@ INTERACTIVE is supplied, pretend we were called interactively."
     (setq completion-tooltip-active nil)))
 
 
-(defun completion-construct-tooltip-text
-  (prefix completions &optional num)
-  "Function to return completion text for a tooltip.
-Optional argument NUM specifies the number of the currently
-inserted dynamic completion."
-
-  (let* ((text "") str
+(defun completion-construct-tooltip-text (overlay)
+  "Function to return completion text for a tooltip."
+  (let* ((hotkeys (completion-ui-get-value-for-source
+		   overlay completion-ui-use-hotkeys))
+	 (prefix (overlay-get overlay 'prefix))
+	 (completions (overlay-get overlay 'completions))
+	 (num (overlay-get overlay 'completion-num))
+	 (text "") str
          (maxlen (if (null completions) 0
                    (apply 'max (mapcar (lambda (cmpl)
 					 (if (stringp cmpl)
@@ -320,8 +324,7 @@ inserted dynamic completion."
       (setq str (concat str (make-string (- maxlen (length str)) ? )))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
-      (when (and completion-use-hotkeys
-                 (< i (length completion-hotkey-list)))
+      (when (and hotkeys (< i (length completion-hotkey-list)))
         (setq str
               (concat str " "
                       (format "(%s)"
@@ -386,7 +389,8 @@ sheep."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-tooltip
+ 'tooltip
+ :variable 'completion-ui-use-tooltip
  :activate 'completion-activate-tooltip
  :deactivate 'completion-cancel-tooltip
  :auto-show 'completion-show-tooltip)

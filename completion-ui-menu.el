@@ -2,10 +2,10 @@
 ;;; completion-ui-menu.el --- menu user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, menu
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.1
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1
 ;; * initial version (split off from completion-ui.el)
 
@@ -37,8 +42,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-menu)
 (require 'completion-ui)
 
 
@@ -51,14 +54,14 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-menu t
-  "*Enable the completion menu and browser."
+(defcustom completion-ui-use-menu t
+  "When non-nil, enable the completion menu and browser."
   :group 'completion-ui-menu
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-menu-offset '(0 . 0)
-  "*Pixel offset for completion menus.
+  "Pixel offset for completion menus.
 This sometimes needs to be tweaked manually to get completion
 menus in the correct position under different window systems."
   :group 'completion-ui-menu
@@ -66,10 +69,10 @@ menus in the correct position under different window systems."
 
 
 (defcustom completion-browser-max-items 25
-  "*Maximum number of completions to display
+  "Maximum number of completions to display
 in any one completion browser submenu."
   :group 'completion-ui-menu
-  :type 'integer)
+  :type (completion-ui-customize-by-source 'integer))
 
 
 (defcustom completion-browser-recurse-on-completions t
@@ -83,11 +86,11 @@ act as though this variable is set to nil, regardless of its
 actual value, since recursing only makes sense for prefix
 completion."
   :group 'completion-ui-menu
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-browser-buckets 'balance
-  "*Policy for choosing number of \"buckets\" in completion browser
+  "Policy for choosing number of \"buckets\" in completion browser
 when there are more than `completion-browser-max-items' to
 display:
 
@@ -287,7 +290,8 @@ for a completion OVERLAY."
 		       ,(if (stringp (nth n completions))
 			    (length prefix) (cdr (nth n completions)))))
 	      ;; if a hotkey is associated with completion, show it in menu
-	      :keys (when (and completion-use-hotkeys
+	      :keys (when (and (completion-ui-get-value-for-source
+				overlay completion-ui-use-hotkeys)
 			       (< n (length completion-hotkey-list)))
 		      (key-description
 		       (vector (nth n completion-hotkey-list)))))))
@@ -366,7 +370,9 @@ and OVERLAY. They should return menu keymaps."
 
   (let ((prefix (overlay-get overlay 'prefix))
 	(menu (make-sparse-keymap))
-	(num-completions (length completions)))
+	(num-completions (length completions))
+	(max-items (completion-ui-get-value-for-source
+		    overlay completion-browser-max-items)))
     (cond
 
      ;; if there's only 1 entry, don't bother with sub-menu, just set keymap
@@ -400,7 +406,7 @@ and OVERLAY. They should return menu keymaps."
 
      ;; if menu does not need to be divided into buckets, just add the
      ;; completions themselves to the keymap
-     ((<= num-completions completion-browser-max-items)
+     ((<= num-completions max-items)
       (dotimes (i num-completions)
 	(define-key-after menu
 	  (vector (intern (concat "completion-insert-"
@@ -422,18 +428,13 @@ and OVERLAY. They should return menu keymaps."
               (cond
                ;; maximize number of buckets, minimize size of
                ;; contents
-               ((eq completion-browser-buckets 'max)
-                completion-browser-max-items)
+               ((eq completion-browser-buckets 'max) max-items)
                ;; minimize number of buckets, maximize size of
                ;; contents
                ((eq completion-browser-buckets 'min)
-                (min completion-browser-max-items
-		     (1+ (/ (1- num-completions)
-			    completion-browser-max-items))))
+                (min max-items (1+ (/ (1- num-completions) max-items))))
                ;; balance number of buckets and size of contents
-               (t
-                (min completion-browser-max-items
-                     (round (sqrt num-completions))))))
+               (t (min max-items (round (sqrt num-completions))))))
              (num-per-bucket (/ num-completions num-buckets))
              (num-large-buckets (% num-completions num-buckets))
              (num-small-buckets (- num-buckets num-large-buckets))
@@ -501,7 +502,8 @@ and OVERLAY. They should return menu keymaps."
 	 ;; so the entry is just the original completion itself if
 	 ;; `non-prefix-completion' is non-nil.
 	 (completions
-	  (and completion-browser-recurse-on-completions
+	  (and (completion-ui-get-value-for-source
+		overlay completion-browser-recurse-on-completions)
 	       (not non-prefix-completion)
 	       (not (string= (if (stringp cmpl) cmpl (car cmpl)) ""))
 	       ;; note :have to replace any prefix length data in completions
@@ -537,11 +539,13 @@ and OVERLAY. They should return menu keymaps."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-menu
+ 'menu
+ :variable 'completion-ui-use-menu
  :activate 'completion-activate-menu-keys
  :deactivate 'completion-deactivate-menu-keys
  :auto-show 'completion-show-menu)
 
 
 
+(provide 'completion-ui-menu)
 ;;; completion-ui-menu.el ends here

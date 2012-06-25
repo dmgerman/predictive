@@ -5,7 +5,7 @@
 ;; Copyright (C) 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: completion, user interface, popup-tip
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -34,8 +34,13 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.1
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1
-;; * initial version (split off from completion-ui.el)
+;; * initial version
 
 
 ;;; Code:
@@ -54,10 +59,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-popup-tip t
-  "When non-nil, enable the popup-tip Completion-UI interface."
+(defcustom completion-ui-use-popup-tip t
+  "When non-nil, enable the popup-tip interface."
   :group 'completion-ui-popup-tip
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defface completion-popup-tip-face
@@ -181,9 +186,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
 
     ;; construct the popup-tip text
     (let ((text (funcall (completion-ui-source-popup-tip-function nil overlay)
-			 (overlay-get overlay 'prefix)
-			 (overlay-get overlay 'completions)
-			 (overlay-get overlay 'completion-num))))
+			 overlay)))
       (when (string= (substring text -1) "\n")
         (setq text (substring text 0 -1)))
 
@@ -219,41 +222,6 @@ INTERACTIVE is supplied, pretend we were called interactively."
    overlay completion-popup-tip-active-map))
 
 
-(defun completion-construct-popup-tip-text
-  (prefix completions &optional num)
-  "Function to return completion text for a popup-tip.
-Optional argument NUM specifies the number of the currently
-inserted dynamic completion."
-
-  (let* ((text "") str
-         (maxlen (if (null completions) 0
-                   (apply 'max (mapcar (lambda (cmpl)
-					 (if (stringp cmpl)
-					     (length cmpl)
-					   (length (car cmpl))))
-				       completions)))))
-
-    (dotimes (i (length completions))
-      ;; pad all strings to same length
-      (setq str (nth i completions))
-      (unless (stringp str) (setq str (car str)))
-      (setq str (concat str (make-string (- maxlen (length str)) ? )))
-      ;; if using hotkeys and one is assigned to current completion,
-      ;; show it next to completion text
-      (when (and completion-use-hotkeys
-                 (< i (length completion-hotkey-list)))
-        (setq str
-              (concat str " "
-                      (format "(%s)"
-                              (key-description
-                               (vector (nth i completion-hotkey-list)))))))
-      ;;(setq text (concat text str "\n"))
-      )
-
-    ;; return constructed text
-    text))
-
-
 (defun completion-popup-tip-cycle (&optional n overlay)
   "Cycle forwards through N completions and redisplay the popup-tip.
 A negative argument cycles backwards.
@@ -283,21 +251,11 @@ sheep."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-popup-tip
+ 'popup-tip
+ :variable 'completion-ui-use-popup-tip
  :activate 'completion-activate-popup-tip
  :deactivate 'completion-cancel-popup-tip
  :auto-show 'completion-show-popup-tip)
-
-
-
-;; set default auto-show interface to tooltip
-(setq completion-auto-show 'completion-show-popup-tip)
-
-;; (Note: this is kinda ugly, but setting the default in the defcustom seems
-;; to conflict with refreshing the defcustom in
-;; `compeltion-ui-register-interface'. Since Completion-UI is almost
-;; invariably loaded before a user's customization settings, theirs will
-;; still take precedence.)
 
 
 

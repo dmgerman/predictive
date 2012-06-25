@@ -2,10 +2,10 @@
 ;;; completion-ui-tooltip.el --- dynamic user-interface for Completion-UI
 
 
-;; Copyright (C) 2009-2010 Toby Cubitt
+;; Copyright (C) 2009-2010, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.3
+;; Version: 0.1.4
 ;; Keywords: completion, user interface, dynamic, hippie
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,8 +30,13 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.4
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1.3
-;; * Minor change to `completion-deactivate-dynamic' to make it more robust
+;; * minor change to `completion-deactivate-dynamic' to make it more robust
 ;;   against the overlay being in an inconsistent state
 ;;
 ;; Version 0.1.2
@@ -51,8 +56,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-dynamic)
 (require 'completion-ui)
 
 
@@ -65,26 +68,27 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-dynamic t
-  "*Enable dynamic completion.
+(defcustom completion-ui-use-dynamic t
+  "When non-nil, enable dynamic completion.
+
 Dynamic completion directly inserts the first completion into the
 buffer without further action required by the user. It is still a
 provisional completion, so until it is accepted all the usual
 mechanisms for selecting completions are still available."
   :group 'completion-ui-dynamic
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-dynamic-highlight-common-substring t
-  "*Highlight the longest common prefix in dynamic completions."
+  "Highlight the longest common prefix in dynamic completions."
   :group 'completion-ui-dynamic
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defcustom completion-dynamic-highlight-prefix-alterations t
-  "*Highlight alterations to the prefix in dynamic completions."
+  "Highlight alterations to the prefix in dynamic completions."
   :group 'completion-ui-dynamic
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 (defface completion-dynamic-common-substring-face
@@ -92,7 +96,7 @@ mechanisms for selecting completions are still available."
      (:background "dodger blue" :foreground "white"))
     (((class color) (background light))
      (:background "gold" :foreground "black")))
-  "*Face used to highlight the common prefix in dynamic completions."
+  "Face used to highlight the common prefix in dynamic completions."
   :group 'completion-ui-dynamic)
 
 
@@ -101,7 +105,7 @@ mechanisms for selecting completions are still available."
      (:background "slate blue" :foreground "white"))
     (((class color) (background light))
      (:background "yellow" :foreground "black")))
-  "*Face used to highlight prefix alterations in dynamic completions."
+  "Face used to highlight prefix alterations in dynamic completions."
   :group 'completion-ui-dynamic)
 
 
@@ -164,11 +168,13 @@ cauliflower will start growing out of your ears."
 		      (+ pos (length cmpl)))
         (overlay-put overlay 'prefix-length len)
 	;; highlight alterations to prefix, if enabled
-	(when (and completion-dynamic-highlight-prefix-alterations
+	(when (and (completion-ui-get-value-for-source
+		    overlay completion-dynamic-highlight-prefix-alterations)
 		   (not non-prefix-cmpl))
 	  (completion--highlight-prefix-alterations prefix cmpl pos len))
         ;; highlight common substring, if enabled
-        (when completion-dynamic-highlight-common-substring
+        (when (completion-ui-get-value-for-source
+	       overlay completion-dynamic-highlight-common-substring)
 	  (completion--highlight-common-substring
 	   prefix cmpl pos len overlay)))
 
@@ -320,10 +326,13 @@ the end if it is to be accepted."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-dynamic
+ 'dynamic
+ :variable 'completion-ui-use-dynamic
  :activate 'completion-activate-dynamic
  :deactivate 'completion-deactivate-dynamic)
 
 
+
+(provide 'completion-ui-dynamic)
 
 ;;; completion-ui-dynamic.el ends here

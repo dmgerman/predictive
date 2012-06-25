@@ -2,10 +2,10 @@
 ;;; completion-ui-echo.el --- echo area user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: completion, user interface, echo area, help-echo
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.2
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1.1
 ;; * fixed `completion-echo' to quote "%" characters in message text
 ;;
@@ -40,8 +45,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-echo)
 (require 'completion-ui)
 
 
@@ -54,10 +57,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-echo t
-  "*Display completions in echo area."
+(defcustom completion-ui-use-echo t
+  "When non-nil, display completions in echo area."
   :group 'completion-ui-echo
-  :type 'boolean)
+  :type (completion-ui-customize-by-source 'boolean))
 
 
 
@@ -84,8 +87,8 @@
       (unless (stringp cmpl) (setq cmpl (car cmpl)))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
-      (if (or (eq completion-use-hotkeys t)
-	      (and (eq completion-use-hotkeys 'auto-show)
+      (if (or (eq completion-ui-use-hotkeys t)
+	      (and (eq completion-ui-use-hotkeys 'auto-show)
 		   (overlay-get overlay 'auto-show)))
 	  (if (< i (length completion-hotkey-list))
 	      (setq cmpl
@@ -114,8 +117,8 @@ of completion overlay."
         (dotimes (i (length completions))
           ;; if using hotkeys and one is assigned to current
           ;; completion, show it next to completion text
-          (if (or (eq completion-use-hotkeys t)
-		  (and (eq completion-use-hotkeys 'auto-show)
+          (if (or (eq completion-ui-use-hotkeys t)
+		  (and (eq completion-ui-use-hotkeys 'auto-show)
 		       (overlay-get overlay 'auto-show)))
 	      (if (< i (length completion-hotkey-list))
 		  (setq str
@@ -141,11 +144,14 @@ of completion overlay."
 
 
 (completion-ui-register-interface
- 'completion-use-echo
+ 'echo
+ :variable 'completion-ui-use-echo
  :activate 'completion-echo
  :deactivate t
  :auto-show-helper 'completion-echo)
 
 
+
+(provide 'completion-ui-echo)
 
 ;;; completion-ui-echo.el ends here

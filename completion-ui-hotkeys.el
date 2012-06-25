@@ -2,10 +2,10 @@
 ;;; completion-ui-tooltip.el --- hotkey user-interface for Completion-UI
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Keywords: completion, user interface, hotkey
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -30,6 +30,11 @@
 
 ;;; Change Log:
 ;;
+;; Version 0.1.2
+;; * allow customization variables to be set either globally or per
+;;   completion source
+;; * updated to new `completion-ui-register-interface' syntax
+;;
 ;; Version 0.1.1
 ;; * changed `completion-[auto-show]-[de]activate-hotkeys' to cope with
 ;;   vectors in `completion-hotkey-list'
@@ -41,8 +46,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-
-(provide 'completion-ui-hotkeys)
 (require 'completion-ui)
 
 
@@ -55,24 +58,26 @@
   :group 'completion-ui)
 
 
-(defcustom completion-use-hotkeys t
-  "*Enable completion hotkeys (single-key selection of completions).
+(defcustom completion-ui-use-hotkeys t
+  "When non-nil, enable completion hotkeys
+\(single-key selection of completions\).
 
 If t, enable hotkeys whenever completions are available. If nil,
 disable hotkeys entirely. If set to the symbol 'auto-show, only
 enable hotkeys when the `completion-auto-show' interface is
-active. (Note that because the completion menu steals keyboard
-focus, enabling hotkeys when the menu is active has no effect. So
-don't try to report this as a bug!)"
+active.
+
+\(Note that because the completion menu steals keyboard focus,
+enabling hotkeys when the menu is active has no effect. So don't
+try to report this as a bug!\)"
   :group 'completion-ui-hotkeys
-  :type '(choice (const t)
-                 (const auto-show)
-                 (const nil)))
+  :type (completion-ui-customize-by-source
+	 '(choice (const t) (const auto-show) (const nil))))
 
 
 (defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)
-  "*List of keys (vectors) to use for selecting completions
-when `completion-use-hotkeys' is enabled."
+  "List of keys (vectors) to use for selecting completions
+when `completion-ui-use-hotkeys' is enabled."
   :group 'completion-ui-hotkeys
   :type '(repeat character))
 
@@ -84,7 +89,9 @@ when `completion-use-hotkeys' is enabled."
 (defun completion-activate-hotkeys (overlay)
   "Activate completion hotkeys for OVERLAY."
   ;; activate keys unless only active when auto-show interface is displayed
-  (unless (eq completion-use-hotkeys 'auto-show)
+  (unless (eq (completion-ui-get-value-for-source
+	       overlay completion-ui-use-hotkeys)
+	      'auto-show)
     (dolist (key completion-hotkey-list)
       (define-key (overlay-get overlay 'keymap)
 	(if (vectorp key) key (vector key))
@@ -94,7 +101,9 @@ when `completion-use-hotkeys' is enabled."
 (defun completion-auto-show-activate-hotkeys (overlay)
   "Activate completion hotkeys for OVERLAY
 when auto-show interface is displayed."
-  (when (eq completion-use-hotkeys 'auto-show)
+  (when (eq (completion-ui-get-value-for-source
+	     overlay completion-ui-use-hotkeys)
+	    'auto-show)
     (dolist (key completion-hotkey-list)
       (define-key (overlay-get overlay 'keymap)
 	(if (vectorp key) key (vector key))
@@ -151,11 +160,14 @@ internally. It should *never* be bound in a keymap."
 ;;;                    Register user-interface
 
 (completion-ui-register-interface
- 'completion-use-hotkeys
+ 'hotkeys
+ :variable 'completion-ui-use-hotkeys
  :activate 'completion-activate-hotkeys
  :deactivate 'completion-deactivate-hotkeys
  :auto-show-helper 'completion-auto-show-activate-hotkeys)
 
 
+
+(provide 'completion-ui-hotkeys)
 
 ;;; completion-ui-hotkeys.el ends here

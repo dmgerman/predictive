@@ -2,7 +2,7 @@
 ;;; completion-ui-sources.el --- Completion-UI completion sources
 
 
-;; Copyright (C) 2009 Toby Cubitt
+;; Copyright (C) 2009, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.2
