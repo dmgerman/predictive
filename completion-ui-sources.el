@@ -104,8 +104,8 @@ sexp
 				    regexp function sexp)))
 
 
-(defun completion-ui-combine-sources-update-defcustom
-  (&key name non-prefix-completion no-combining &allow-other-keys)
+(defun* completion-ui-combine-sources-update-defcustom
+  (completion-function &key name non-prefix-completion no-combining &allow-other-keys)
   "Update source choices in `completion-ui-combine-sources-alist' defcustom.
 Called from `completion-ui-resiter-source-functions' hook after a
 new source is registered.
@@ -127,7 +127,7 @@ available for combining."
 
 
 (add-hook 'completion-ui-register-source-functions
-	  'completion-ui--combine-sources-update-customize)
+	  'completion-ui-combine-sources-update-defcustom)
 
 
 

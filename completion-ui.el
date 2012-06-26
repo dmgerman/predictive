@@ -173,13 +173,14 @@
 ;; Note that `auto-completion-mode' is not very useful if the completion
 ;; source takes a long time to find completions.
 ;;
-;; <shameless plug>
+;; <shameless-plug>
 ;; The Predictive completion package (available separately from the above URL)
 ;; is designed from the ground up to be extremely fast, even when a very large
 ;; number of completion candidates are available. As you type, it also learns
 ;; to predict which completion is the most likely. So it is particularly
-;; suited to being used as the `auto-completion-mode' source.
-;; </shameless plug>
+;; suited to being used as the `auto-completion-mode' source when typing plain
+;; text.
+;; </shameless-plug>
 ;;
 ;;
 ;; CUSTOMIZING
@@ -191,7 +192,7 @@
 ;;   M-x customize-group <ret> completion-ui <ret>
 ;;
 ;; All the customization options and settings are well documented via the
-;; usual built-in Emacs documentationn features.
+;; usual built-in Emacs documentation features.
 ;;
 ;;
 ;;
@@ -207,7 +208,8 @@
 ;; By providing a universal user-interface that can be used by all completion
 ;; packages, Completion-UI lets users customize their in-buffer completion
 ;; user interface once-and-for-all to suit their tastes, rather than having to
-;; learn how to customize each new package separately.
+;; learn how to customize each new package separately. All you have to do (as
+;; a completion package writer) is supply the completions!
 ;;
 ;;
 ;; Adding new sources
@@ -219,7 +221,7 @@
 ;; `complete-<name>' (where <name> is the supplied source name) which
 ;; completes whatever is at the point using the new completion source. It will
 ;; also add the new source to the list of choices for the
-;; `auto-completion-source' customization option (unless this is supressed).
+;; `auto-completion-source' customization option.
 ;;
 ;;
 ;; Adding new interfaces
