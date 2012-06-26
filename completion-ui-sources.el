@@ -104,13 +104,15 @@ sexp
 				    regexp function sexp)))
 
 
-(defun completion-ui--combine-sources-update-customize
-  ;;(&key name non-prefix-completion no-combining &allow-other-keys)
-  (&rest args)
-  (let ((no-combining (plist-get (cdr args) :no-combining))
-  	(non-prefix-completion (plist-get (cdr args) :non-prefix-completion))
-  	(name (plist-get (cdr args) :name)))
-  ;; update list of choices in `completion-ui-combine-sources-alist' defcustom
+(defun completion-ui-combine-sources-update-defcustom
+  (&key name non-prefix-completion no-combining &allow-other-keys)
+  "Update source choices in `completion-ui-combine-sources-alist' defcustom.
+Called from `completion-ui-resiter-source-functions' hook after a
+new source is registered.
+
+Passing a non-nil :no-combining keyword argument to
+`completion-ui-register-source' prevents the new source being
+available for combining."
   (if (or no-combining non-prefix-completion)
       (delete `(const ,name)
 	      (plist-get (cdr (get 'completion-ui-combine-sources-alist
@@ -122,7 +124,7 @@ sexp
       (unless (member `(const ,name) choices)
 	(delete `(const nil) choices)
 	(nconc choices `((const ,name)))))))
-)
+
 
 (add-hook 'completion-ui-register-source-functions
 	  'completion-ui--combine-sources-update-customize)
@@ -142,7 +144,7 @@ sexp
  :completion-args (2)
  :other-args (completion-ui-combine-sources-alist)
  :name Combine-freq
- :sort-by-frequency t
+ :sort-by-frequency global
  :no-combining t)
 
 
@@ -163,7 +165,7 @@ sexp
    (dabbrev--reset-global-variables)
    (dabbrev--find-all-expansions prefix case-fold-search))
  :name dabbrev-freq
- :sort-by-frequency t)
+ :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -181,7 +183,7 @@ sexp
    (require 'etags)
    (all-completions prefix (tags-lazy-completion-table)))
  :name etags-freq
- :sort-by-frequency t)
+ :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -201,7 +203,7 @@ sexp
  :other-args (obarray)
  :name elisp-freq
  :word-thing symbol
- :sort-by-frequency t)
+ :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -228,7 +230,7 @@ sexp
 (completion-ui-register-source
  completion--filename-wrapper
  :name files-freq
- :sort-by-frequency t)
+ :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -273,7 +275,7 @@ sexp
  completion--ispell-wrapper
  :non-prefix-completion t
  :name ispell-freq
- :sort-by-frequency t)
+ :sort-by-frequency global)
 
 
 
@@ -292,7 +294,7 @@ sexp
    :completion-args 1
    :other-args (t t)
    :name nxml-freq
-   :sort-by-frequency t))
+   :sort-by-frequency global))
 
 
 
@@ -362,7 +364,7 @@ sexp
    completion--semantic-wrapper
    :prefix-function completion--semantic-prefix-wrapper
    :name semantic-freq
-   :sort-by-frequency t))
+   :sort-by-frequency global))
 
 
 

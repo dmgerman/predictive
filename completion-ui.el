@@ -2058,16 +2058,21 @@ interface is activated."
 (defmacro completion-ui--source-def-browser-function (def)
   `(plist-get ,def :browser))
 
-
-(defmacro completion-ui--frequency-hash-table-name (name)
-  `(concat "completion--" (symbol-name ,name) "-frequency"))
+(defmacro completion-ui--frequency-hash-table-name (name sort-by-frequency)
+  (cond
+   ((eq sort-by-frequency 'source)
+    `(concat "completion-ui--" (symbol-name ,name) "-frequency"))
+   (t "completion-ui--frequency-data")))
 
 
 (defvar completion-ui-register-source-functions nil
-  "Hook called when a new completion source is registered.
+  "Hook called after registering a new completion source.
 
 All arguments to the `completion-ui-register-source' call are
 passed on to the hook functions.")
+
+
+(defvar completion-ui--frequency-data (make-hash-table :test 'equal))
 
 
 (defmacro* completion-ui-register-source
@@ -2079,6 +2084,8 @@ passed on to the hook functions.")
      tooltip-function popup-tip-function popup-frame-function menu browser
      &allow-other-keys)
   "Register a Completion-UI source.
+
+\(Note that none of the arguments should be quoted.\)
 
 COMPLETION-FUNCTION should be a function that takes either zero
 arguments, one argument, or one mandatory and one optional
@@ -2159,11 +2166,14 @@ accepted or rejected, and any prefix argument supplied by the
 user if the accept or reject command was called interactively. A
 single function or a list of functions can be supplied.
 
-The optional :sort-by-frequency keyword argument is a boolean
-option. When non-null, Completion-UI will record frequency data
-for this completion source, and will automatically sort the list
-of completion candidates returned by the completion function by
-frequency.
+The optional :sort-by-frequency keyword argument specifies
+whether completions should be sorted by frequency. Setting this
+option tells Completion-UI to record usage frequency data for
+this source, and automatically sort its completions by
+frequency. If set to the symbol 'source, frequency data will be
+accumulated separately for this source. If set to the symbol
+'global, frequency data to be pooled with data from other
+completion sources.
 
 The remaining optional keyword arguments override the default
 functions for constructing the completion tooltip, popup-tip,
@@ -2173,45 +2183,16 @@ return the text to display in the tooltip as a string. The pop-up
 frame function should return a list of strings, each a line of
 text for the pop-up frame. The menu and browser arguments should
 either be fixed menu keymaps, or functions that return menu
-keymaps."
+keymaps.
 
-  ;; ;; remove `quote' from arguments
-  ;; (when (and (listp completion-function)
-  ;; 	     (eq (car completion-function) 'quote))
-  ;;   (setq completion-function (cadr completion-function)))
-  ;; (when (and (listp name)
-  ;; 	     (eq (car name) 'quote))
-  ;;   (setq name (cadr name)))
-  ;; (when (and (listp completion-args)
-  ;; 	     (eq (car completion-args) 'quote))
-  ;;   (setq completion-args (cadr completion-args)))
-  ;; (when (and (listp other-args)
-  ;; 	     (eq (car other-args) 'quote))
-  ;;   (setq other-args (cadr other-args)))
-  ;; (when (and (listp prefix-function)
-  ;; 	     (eq (car prefix-function) 'quote))
-  ;;   (setq prefix-function (cadr prefix-function)))
-  ;; (when (and (listp word-thing)
-  ;; 	     (eq (car word-thing) 'quote))
-  ;;   (setq word-thing (cadr word-thing)))
-  ;; (when (and (listp accept-functions)
-  ;; 	     (eq (car accept-functions) 'quote))
-  ;;   (setq accept-functions (cadr accept-functions)))
-  ;; (when (and (listp reject-functions)
-  ;; 	     (eq (car reject-functions) 'quote))
-  ;;   (setq reject-functions (cadr reject-functions)))
-  ;; (when (and (listp tooltip-function)
-  ;; 	     (eq (car tooltip-function) 'quote))
-  ;;   (setq tooltip-function (cadr tooltip-function)))
-  ;; (when (and (listp popup-frame-function)
-  ;; 	     (eq (car popup-frame-function) 'quote))
-  ;;   (setq popup-frame-function (cadr popup-frame-function)))
-  ;; (when (and (listp menu)
-  ;; 	     (eq (car menu) 'quote))
-  ;;   (setq menu (cadr menu)))
-  ;; (when (and (listp browser)
-  ;; 	     (eq (car browser) 'quote))
-  ;;   (setq browser (cadr browser)))
+The special hook `completion-ui-register-source-functions' is
+called after registering the completion source.
+
+Arbitrary additional keyword arguments can be passed in the
+argument list. These have no effect in
+`completion-ui-register-source', but they are passed on to the
+functions called from the
+`completion-ui-register-source-functions' hook."
 
   ;; make ACCEPT-FUNCTIONS and REJECT-FUNCTIONS into lists
   (when accept-functions
@@ -2316,7 +2297,8 @@ keymaps."
 
       ;; if we ARE recording and sorting by frequency data...
       (let ((hash-table-name
-	     (intern (concat "completion--" (symbol-name name) "-frequency"))))
+	     (intern (completion-ui--frequency-hash-table-name
+		      name sort-by-frequency))))
 	;; construct wrapper around COMPLETION-FUNCTION
 	(cond
 	 ;; no maxnum argument
@@ -2383,10 +2365,12 @@ keymaps."
  - replacing existing definition" ',name)
 	   (setcdr existing ',(cdr source-def))))
 
-       ;; if sorting by frequency, create hash table to store frequency data
-       ,(when sort-by-frequency
+       ;; if gathering separate frequency data for this source, create hash
+       ;; table to store frequency data
+       ,(when (eq sort-by-frequency 'source)
 	  (let ((hash-table-name
-		 (intern (completion-ui--frequency-hash-table-name name))))
+		 (intern (completion-ui--frequency-hash-table-name
+			  name sort-by-frequency))))
 	    `(defvar ,hash-table-name (make-hash-table :test 'equal))))
 
        ;; construct code to define completion command
@@ -2727,39 +2711,6 @@ sexp
     (if maxnum
 	(butlast completions (- (length completions) maxnum))
       completions)))
-
-
-;; (defun completion-combine-sources-by-frequency
-;;   (source-spec prefix &optional maxnum)
-;;   "Return a combined list of all completions
-;; from sources in SOURCE-SPEC."
-;;   (let (completions hash)
-;;     (dolist (s source-spec)
-;;       (when (cond
-;; 	     ((functionp (cdr s))
-;; 	      (funcall (cdr s)))
-;; 	     ((stringp (cdr s))
-;; 	      (re-search-backward (cdr s) (line-beginning-position) t))
-;; 	     (t (eval (cdr s))))
-;; 	(setq hash
-;; 	      (eval (intern-soft
-;; 		     (completion-ui--frequency-hash-table-name (car s)))))
-;; 	(setq completions
-;; 	      (completion-ui--merge
-;; 	       completions
-;; 	       (mapcar
-;; 		(lambda (c)
-;; 		  (cons c (or (and (hash-table-p hash)
-;; 				   (gethash c hash 0))
-;; 			      0)))
-;; 		(funcall (completion-ui--source-def-completion-function
-;; 			  (assq (car s) completion-ui-source-definitions))
-;; 			 prefix maxnum))
-;; 	       (lambda (a b) (< (cdr a) (cdr b)))))))
-;;     (when maxnum
-;;       (setq completions
-;; 	    (butlast completions (- (length completions) maxnum))))
-;;     (mapcar 'car completions)))
 
 
 
