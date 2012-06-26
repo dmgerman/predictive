@@ -784,60 +784,6 @@ before the `completion-auto-show' interface is activated."
 	 '(choice (const :tag "Off" nil) (float :tag "On"))))
 
 
-
-(defcustom completion-ui-combine-sources-alist nil
-  "Alist specifying completion sources to be combined.
-
-Each element of the alist specifies the name of a completion
-source (a symbol) in the car.
-
-The cdr specifies a test used to determine whether the
-corresponding source is used, and must be either a:
-
-function
-  called with no arguments
-  source is used if it returns non-nil
-
-regexp
-  re-search-backwards to beginning of line
-  source is used if regexp matches
-
-sexp
-  `eval'ed
-  source is used if it evals to non-nil."
-  :group 'completion-ui
-  :type '(alist :key-type (choice :tag "source" (const nil))
-		:value-type (choice :tag "test" :value t
-				    regexp function sexp)))
-
-
-;; (defcustom completion-ui-combine-by-frequency-sources-alist nil
-;;   "Alist specifying completion sources to be combined.
-;;
-;; Each element of the alist specifies the name of a completion
-;; source (a symbol) in the car.
-;;
-;; The cdr specifies a test used to determine whether the
-;; corresponding source is used, and must be either a:
-;;
-;; function
-;;   called with no arguments
-;;   source is used if it returns non-nil
-;;
-;; regexp
-;;   re-search-backwards to beginning of line
-;;   source is used if regexp matches
-;;
-;; sexp
-;;   `eval'ed
-;;   source is used if it evals to non-nil."
-;;   :group 'completion-ui
-;;   :type '(alist :key-type (choice :tag "source" (const nil))
-;; 		:value-type (choice :tag "test" :value t
-;; 				    regexp function sexp)))
-
-
-
 (defface completion-highlight-face
   '((((class color) (background dark))
      (:background "blue" :foreground "white"))
@@ -2117,14 +2063,21 @@ interface is activated."
   `(concat "completion--" (symbol-name ,name) "-frequency"))
 
 
+(defvar completion-ui-register-source-functions nil
+  "Hook called when a new completion source is registered.
+
+All arguments to the `completion-ui-register-source' call are
+passed on to the hook functions.")
+
+
 (defmacro* completion-ui-register-source
-    (completion-function
+    (completion-function &rest args
      &key name completion-args other-args
      non-prefix-completion prefix-function word-thing
-     command-name no-command no-auto-completion no-combining
+     command-name no-command no-auto-completion
      accept-functions reject-functions sort-by-frequency
-     tooltip-function popup-tip-function popup-frame-function
-     menu browser)
+     tooltip-function popup-tip-function popup-frame-function menu browser
+     &allow-other-keys)
   "Register a Completion-UI source.
 
 COMPLETION-FUNCTION should be a function that takes either zero
@@ -2181,10 +2134,6 @@ optional :no-auto-completion and :no-command keyword arguments
 disable these features. The optional :command-name keyword
 argument overrides the default command name.
 
-Similarly, by default the new completion source is available to
-be combined with other sources. Setting the
-:no-combining option disables this.
-
 The optional :prefix-function keyword argument specifies a
 function to call to return the prefix to complete at point. It
 defaults to `completion-prefix', which uses `thing-at-point' to
@@ -2226,43 +2175,43 @@ text for the pop-up frame. The menu and browser arguments should
 either be fixed menu keymaps, or functions that return menu
 keymaps."
 
-  ;; remove `quote' from arguments
-  (when (and (listp completion-function)
-	     (eq (car completion-function) 'quote))
-    (setq completion-function (cadr completion-function)))
-  (when (and (listp name)
-	     (eq (car name) 'quote))
-    (setq name (cadr name)))
-  (when (and (listp completion-args)
-	     (eq (car completion-args) 'quote))
-    (setq completion-args (cadr completion-args)))
-  (when (and (listp other-args)
-	     (eq (car other-args) 'quote))
-    (setq other-args (cadr other-args)))
-  (when (and (listp prefix-function)
-	     (eq (car prefix-function) 'quote))
-    (setq prefix-function (cadr prefix-function)))
-  (when (and (listp word-thing)
-	     (eq (car word-thing) 'quote))
-    (setq word-thing (cadr word-thing)))
-  (when (and (listp accept-functions)
-	     (eq (car accept-functions) 'quote))
-    (setq accept-functions (cadr accept-functions)))
-  (when (and (listp reject-functions)
-	     (eq (car reject-functions) 'quote))
-    (setq reject-functions (cadr reject-functions)))
-  (when (and (listp tooltip-function)
-	     (eq (car tooltip-function) 'quote))
-    (setq tooltip-function (cadr tooltip-function)))
-  (when (and (listp popup-frame-function)
-	     (eq (car popup-frame-function) 'quote))
-    (setq popup-frame-function (cadr popup-frame-function)))
-  (when (and (listp menu)
-	     (eq (car menu) 'quote))
-    (setq menu (cadr menu)))
-  (when (and (listp browser)
-	     (eq (car browser) 'quote))
-    (setq browser (cadr browser)))
+  ;; ;; remove `quote' from arguments
+  ;; (when (and (listp completion-function)
+  ;; 	     (eq (car completion-function) 'quote))
+  ;;   (setq completion-function (cadr completion-function)))
+  ;; (when (and (listp name)
+  ;; 	     (eq (car name) 'quote))
+  ;;   (setq name (cadr name)))
+  ;; (when (and (listp completion-args)
+  ;; 	     (eq (car completion-args) 'quote))
+  ;;   (setq completion-args (cadr completion-args)))
+  ;; (when (and (listp other-args)
+  ;; 	     (eq (car other-args) 'quote))
+  ;;   (setq other-args (cadr other-args)))
+  ;; (when (and (listp prefix-function)
+  ;; 	     (eq (car prefix-function) 'quote))
+  ;;   (setq prefix-function (cadr prefix-function)))
+  ;; (when (and (listp word-thing)
+  ;; 	     (eq (car word-thing) 'quote))
+  ;;   (setq word-thing (cadr word-thing)))
+  ;; (when (and (listp accept-functions)
+  ;; 	     (eq (car accept-functions) 'quote))
+  ;;   (setq accept-functions (cadr accept-functions)))
+  ;; (when (and (listp reject-functions)
+  ;; 	     (eq (car reject-functions) 'quote))
+  ;;   (setq reject-functions (cadr reject-functions)))
+  ;; (when (and (listp tooltip-function)
+  ;; 	     (eq (car tooltip-function) 'quote))
+  ;;   (setq tooltip-function (cadr tooltip-function)))
+  ;; (when (and (listp popup-frame-function)
+  ;; 	     (eq (car popup-frame-function) 'quote))
+  ;;   (setq popup-frame-function (cadr popup-frame-function)))
+  ;; (when (and (listp menu)
+  ;; 	     (eq (car menu) 'quote))
+  ;;   (setq menu (cadr menu)))
+  ;; (when (and (listp browser)
+  ;; 	     (eq (car browser) 'quote))
+  ;;   (setq browser (cadr browser)))
 
   ;; make ACCEPT-FUNCTIONS and REJECT-FUNCTIONS into lists
   (when accept-functions
@@ -2424,14 +2373,15 @@ keymaps."
 		(when menu (list :menu menu))
 		(when browser (list :browser browser))))))
 
-    ;; construct code to add source definition to list (or replace existing
-    ;; definition)
-    `(let ((existing (assq ',name completion-ui-source-definitions)))
-       (if (not existing)
-	   (push ',source-def completion-ui-source-definitions)
-	 (message "Completion-UI source `%s' already registered\
+    `(progn
+       ;; construct code to add source definition to list (or replace existing
+       ;; definition)
+       (let ((existing (assq ',name completion-ui-source-definitions)))
+	 (if (not existing)
+	     (push ',source-def completion-ui-source-definitions)
+	   (message "Completion-UI source `%s' already registered\
  - replacing existing definition" ',name)
-	 (setcdr existing ',(cdr source-def)))
+	   (setcdr existing ',(cdr source-def))))
 
        ;; if sorting by frequency, create hash table to store frequency data
        ,(when sort-by-frequency
@@ -2450,31 +2400,21 @@ keymaps."
 
        ;; update list of choices in `auto-completion-source' defcustom
        ,(if no-auto-completion
-	    `(delete '(const ,name) (get 'auto-completion-source 'custom-type))
+	    `(delete '(const ,name)
+		     (get 'auto-completion-source 'custom-type))
 	  `(let ((choices (get 'auto-completion-source 'custom-type)))
 	     (unless (member '(const ,name) choices)
 	       (nconc (cdr choices) '((const ,name))))))
 
-       ;; update list of choices in `completion-ui-combine-sources-alist'
-       ;; defcustom
-       ,(if (or no-combining non-prefix-completion)
-	    `(delete '(const ,name)
-		     (plist-get (cdr (get 'completion-ui-combine-sources-alist
-					  'custom-type))
-				:key-type))
-	  `(let ((choices
-		  (plist-get (cdr (get 'completion-ui-combine-sources-alist
-				       'custom-type))
-			     :key-type)))
-	     (unless (member '(const ,name) choices)
-	       (delete '(const nil) choices)
-	       (nconc choices '((const ,name))))))
-       ;; ;; update list of choices in
-       ;; ;; `completion-ui-combine-by-frequency-sources-alist' defcustom
-       ;; (setcdr (get 'completion-ui-combine-by-frequency-sources-alist
-       ;; 		    'custom-type)
-       ;; 	       (cdr (get 'completion-ui-combine-sources-alist
-       ;; 			 'custom-type)))
+       ;; run hooks
+       ,(progn
+	  (setq args (plist-put args :name name))
+	  (let ((elt args))
+	    (while (cadr elt)
+	      (setf (cadr elt) `(quote ,(cadr elt))
+		    elt (cddr elt))))
+	  `(run-hook-with-args 'completion-ui-register-source-functions
+			       ',completion-function ,@args))
        )))
 
 
@@ -2820,23 +2760,6 @@ sexp
 ;;       (setq completions
 ;; 	    (butlast completions (- (length completions) maxnum))))
 ;;     (mapcar 'car completions)))
-
-
-(completion-ui-register-source
- 'completion-combine-sources
- :completion-args '(2 3)
- :other-args '(completion-ui-combine-sources-alist)
- :name 'Combine
- :no-combining t)
-
-
-(completion-ui-register-source
- 'completion-combine-sources
- :completion-args '(2)
- :other-args '(completion-ui-combine-sources-alist)
- :name 'Combine-freq
- :sort-by-frequency t
- :no-combining t)
 
 
 

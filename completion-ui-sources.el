@@ -76,6 +76,77 @@
 
 
 ;;;=========================================================
+;;;                   combined sources
+
+(defcustom completion-ui-combine-sources-alist nil
+  "Alist specifying completion sources to be combined.
+
+Each element of the alist specifies the name of a completion
+source (a symbol) in the car.
+
+The cdr specifies a test used to determine whether the
+corresponding source is used, and must be either a:
+
+function
+  called with no arguments
+  source is used if it returns non-nil
+
+regexp
+  re-search-backwards to beginning of line
+  source is used if regexp matches
+
+sexp
+  `eval'ed
+  source is used if it evals to non-nil."
+  :group 'completion-ui
+  :type '(alist :key-type (choice :tag "source" (const nil))
+		:value-type (choice :tag "test" :value t
+				    regexp function sexp)))
+
+
+(defun completion-ui--combine-sources-update-customize
+  ;;(&key name non-prefix-completion no-combining &allow-other-keys)
+  (&rest args)
+  (let ((no-combining (plist-get (cdr args) :no-combining))
+  	(non-prefix-completion (plist-get (cdr args) :non-prefix-completion))
+  	(name (plist-get (cdr args) :name)))
+  ;; update list of choices in `completion-ui-combine-sources-alist' defcustom
+  (if (or no-combining non-prefix-completion)
+      (delete `(const ,name)
+	      (plist-get (cdr (get 'completion-ui-combine-sources-alist
+				   'custom-type))
+			 :key-type))
+    (let ((choices (plist-get (cdr (get 'completion-ui-combine-sources-alist
+					'custom-type))
+			      :key-type)))
+      (unless (member `(const ,name) choices)
+	(delete `(const nil) choices)
+	(nconc choices `((const ,name)))))))
+)
+
+(add-hook 'completion-ui-register-source-functions
+	  'completion-ui--combine-sources-update-customize)
+
+
+
+(completion-ui-register-source
+ completion-combine-sources
+ :completion-args (2 3)
+ :other-args (completion-ui-combine-sources-alist)
+ :name Combine
+ :no-combining t)
+
+
+(completion-ui-register-source
+ completion-combine-sources
+ :completion-args (2)
+ :other-args (completion-ui-combine-sources-alist)
+ :name Combine-freq
+ :sort-by-frequency t
+ :no-combining t)
+
+
+;;;=========================================================
 ;;;                     dabbrevs
 
 (completion-ui-register-source
@@ -83,7 +154,7 @@
    (require 'dabbrev)
    (dabbrev--reset-global-variables)
    (dabbrev--find-all-expansions prefix case-fold-search))
- :name 'dabbrev)
+ :name dabbrev)
 
 
 (completion-ui-register-source
@@ -91,7 +162,7 @@
    (require 'dabbrev)
    (dabbrev--reset-global-variables)
    (dabbrev--find-all-expansions prefix case-fold-search))
- :name 'dabbrev-freq
+ :name dabbrev-freq
  :sort-by-frequency t)
 
 
@@ -102,14 +173,14 @@
  (lambda (prefix)
    (require 'etags)
    (all-completions prefix (tags-lazy-completion-table)))
- :name 'etags)
+ :name etags)
 
 
 (completion-ui-register-source
  (lambda (prefix)
    (require 'etags)
    (all-completions prefix (tags-lazy-completion-table)))
- :name 'etags-freq
+ :name etags-freq
  :sort-by-frequency t)
 
 
@@ -117,19 +188,19 @@
 ;;;                        Elisp
 
 (completion-ui-register-source
- 'all-completions
+ all-completions
  :completion-args 1
- :other-args '(obarray)
- :name 'elisp
- :word-thing 'symbol)
+ :other-args (obarray)
+ :name elisp
+ :word-thing symbol)
 
 
 (completion-ui-register-source
- 'all-completions
+ all-completions
  :completion-args 1
- :other-args '(obarray)
- :name 'elisp-freq
- :word-thing 'symbol
+ :other-args (obarray)
+ :name elisp-freq
+ :word-thing symbol
  :sort-by-frequency t)
 
 
@@ -150,13 +221,13 @@
 
 
 (completion-ui-register-source
- 'completion--filename-wrapper
- :name 'files)
+ completion--filename-wrapper
+ :name files)
 
 
 (completion-ui-register-source
- 'completion--filename-wrapper
- :name 'files-freq
+ completion--filename-wrapper
+ :name files-freq
  :sort-by-frequency t)
 
 
@@ -193,15 +264,15 @@
 
 
 (completion-ui-register-source
- 'completion--ispell-wrapper
+ completion--ispell-wrapper
  :non-prefix-completion t
- :name 'ispell)
+ :name ispell)
 
 
 (completion-ui-register-source
- 'completion--ispell-wrapper
+ completion--ispell-wrapper
  :non-prefix-completion t
- :name 'ispell-freq
+ :name ispell-freq
  :sort-by-frequency t)
 
 
@@ -211,16 +282,16 @@
 
 (when (require 'nxml nil t)
   (completion-ui-register-source
-   'rng-complete-qname-function
+   rng-complete-qname-function
    :completion-args 1
-   :other-args '(t t)
-   :name 'nxml)
+   :other-args (t t)
+   :name nxml)
 
   (completion-ui-register-source
-   'rng-complete-qname-function
+   rng-complete-qname-function
    :completion-args 1
-   :other-args '(t t)
-   :name 'nxml-freq
+   :other-args (t t)
+   :name nxml-freq
    :sort-by-frequency t))
 
 
@@ -283,14 +354,14 @@
 
   ;; register the Semantic source
   (completion-ui-register-source
-   'completion--semantic-wrapper
+   completion--semantic-wrapper
    :prefix-function completion--semantic-prefix-wrapper
-   :name 'semantic)
+   :name semantic)
 
   (completion-ui-register-source
-   'completion--semantic-wrapper
+   completion--semantic-wrapper
    :prefix-function completion--semantic-prefix-wrapper
-   :name 'semantic-freq
+   :name semantic-freq
    :sort-by-frequency t))
 
 
