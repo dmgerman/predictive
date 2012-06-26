@@ -2678,18 +2678,23 @@ functions called from the
   "Return a combined list of all completions
 from sources in SOURCE-SPEC.
 
-SOURCE-SPEC should be an alist specifying how the completion
-sources are to be combined. Each element of the alist specifies
-the name of a completion source (a symbol) in the car. The cdr
-specifies a test used to determine whether the corresponding
-source is used, and must be either a:
+SOURCE-SPEC should be a list specifying how the completion
+sources are to be combined. Each element can be either a
+completion source (a symbol) in which case the source is always
+used, or a cons cell of the form
+
+  (SOURCE . TEST)
+
+where SOURCE is a completion source (a symbol), and TEST
+specifies a test used to determine whether SOURCE is used. TEST
+must be one of the following:
 
 function
   called with no arguments
   source is used if it returns non-nil
 
 regexp
-  re-search-backwards to beginning of line
+  `re-search-backward' to beginning of line
   source is used if regexp matches
 
 sexp
@@ -2698,6 +2703,7 @@ sexp
   (let (completions)
     (dolist (s source-spec)
       (when (cond
+	     ((symbolp s) t)
 	     ((functionp (cdr s))
 	      (funcall (cdr s)))
 	     ((stringp (cdr s))

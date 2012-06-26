@@ -45,7 +45,7 @@
 (require 'completion-ui)
 
 
-;; get rid of compiler warnings
+;; suppress compiler warnings
 (eval-when-compile
   (defvar semanticdb-find-default-throttle nil)
   (require 'ispell))
@@ -75,29 +75,36 @@
 
 
 
+
 ;;;=========================================================
-;;;                   combined sources
+;;;              combining completion sources
 
 (defcustom completion-ui-combine-sources-alist nil
   "Alist specifying completion sources to be combined.
 
-Each element of the alist specifies the name of a completion
-source (a symbol) in the car.
+Each element of the alist must be a cons cell of the form
 
-The cdr specifies a test used to determine whether the
-corresponding source is used, and must be either a:
+
+  (SOURCE . TEST)
+
+where SOURCE is a completion source (a symbol), and TEST
+specifies a test used to determine whether SOURCE is used. TEST
+must be one of the following:
 
 function
   called with no arguments
   source is used if it returns non-nil
 
 regexp
-  re-search-backwards to beginning of line
+  `re-search-backward' to beginning of line
   source is used if regexp matches
 
 sexp
   `eval'ed
-  source is used if it evals to non-nil."
+  source is used if it evals to non-nil.
+
+To specify that a source should always be used, set its TEST
+to t."
   :group 'completion-ui
   :type '(alist :key-type (choice :tag "source" (const nil))
 		:value-type (choice :tag "test" :value t
@@ -105,7 +112,8 @@ sexp
 
 
 (defun* completion-ui-combine-sources-update-defcustom
-  (completion-function &key name non-prefix-completion no-combining &allow-other-keys)
+  (completion-function
+   &key name non-prefix-completion no-combining &allow-other-keys)
   "Update source choices in `completion-ui-combine-sources-alist' defcustom.
 Called from `completion-ui-resiter-source-functions' hook after a
 new source is registered.
