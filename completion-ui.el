@@ -245,6 +245,10 @@
 ;;   make them available generally for completion interfaces
 ;; * allow many customization options to be set either globally, or per
 ;;   completion source
+;; * added `completion-combine-sources' function to gather completions form
+;;   multiple sources, and defined Combine and Combine-freq sources which
+;;   combine the sources specified in `completion-ui-combine-sources-alist'
+;;
 ;;
 ;; Version 0.11.14
 ;; * added work-around to `complete-in-buffer' to force a keymap refresh when
@@ -679,6 +683,14 @@
 	  completion-ui-source-definitions))
 
 
+(defun completion-ui-customize-list-combining-sources ()
+  (let (sources)
+    (dolist (def completion-ui-source-definitions)
+      (unless (plist-get def :non-combining)
+	(push (list 'const (car def)) sources)))
+    (nreverse sources)))
+
+
 (defun completion-ui-customize-by-source (type)
   `(choice ,(cond
 	     ((symbolp type) `(,type :tag "global"))
@@ -770,6 +782,59 @@ before the `completion-auto-show' interface is activated."
   :group 'completion-ui
   :type (completion-ui-customize-by-source
 	 '(choice (const :tag "Off" nil) (float :tag "On"))))
+
+
+
+(defcustom completion-ui-combine-sources-alist nil
+  "Alist specifying completion sources to be combined.
+
+Each element of the alist specifies the name of a completion
+source (a symbol) in the car.
+
+The cdr specifies a test used to determine whether the
+corresponding source is used, and must be either a:
+
+function
+  called with no arguments
+  source is used if it returns non-nil
+
+regexp
+  re-search-backwards to beginning of line
+  source is used if regexp matches
+
+sexp
+  `eval'ed
+  source is used if it evals to non-nil."
+  :group 'completion-ui
+  :type '(alist :key-type (choice :tag "source" (const nil))
+		:value-type (choice :tag "test" :value t
+				    regexp function sexp)))
+
+
+;; (defcustom completion-ui-combine-by-frequency-sources-alist nil
+;;   "Alist specifying completion sources to be combined.
+;;
+;; Each element of the alist specifies the name of a completion
+;; source (a symbol) in the car.
+;;
+;; The cdr specifies a test used to determine whether the
+;; corresponding source is used, and must be either a:
+;;
+;; function
+;;   called with no arguments
+;;   source is used if it returns non-nil
+;;
+;; regexp
+;;   re-search-backwards to beginning of line
+;;   source is used if regexp matches
+;;
+;; sexp
+;;   `eval'ed
+;;   source is used if it evals to non-nil."
+;;   :group 'completion-ui
+;;   :type '(alist :key-type (choice :tag "source" (const nil))
+;; 		:value-type (choice :tag "test" :value t
+;; 				    regexp function sexp)))
 
 
 
@@ -1696,6 +1761,21 @@ Comparison is done with 'equal."
       nil)))
 
 
+(defun completion-ui--merge (seq1 seq2 predicate)
+  "Destructively merge two lists to produce a new list.
+SEQ1 and SEQ2 are the two argument lists, and PREDICATE is a
+`less-than' predicate on the elements.
+\n(fn SEQ1 SEQ2 PREDICATE)"
+  (or (listp seq1) (setq seq1 (append seq1 nil)))
+  (or (listp seq2) (setq seq2 (append seq2 nil)))
+  (let ((res nil))
+    (while (and seq1 seq2)
+      (if (funcall predicate (car seq2) (car seq1))
+	  (push (pop seq2) res)
+	  (push (pop seq1) res)))
+    (nconc (nreverse res) seq1 seq2)))
+
+
 
 
 ;;; =======================================================
@@ -1743,7 +1823,6 @@ to work."
     (run-hooks 'auto-completion-mode-disable-hook))))
 
 
-
 (defun turn-on-auto-completion-mode ()
   "Turn on auto-completion mode. Useful for adding to hooks."
   (unless auto-completion-mode (auto-completion-mode)))
@@ -1752,10 +1831,8 @@ to work."
 (defvar auto-completion-mode-enable-hook nil
   "Hook run when `auto-completion-mode' is enabled.")
 
-
 (defvar auto-completion-mode-disable-hook nil
   "Hook run when `auto-completion-mode' is disabled.")
-
 
 
 
@@ -2036,12 +2113,15 @@ interface is activated."
   `(plist-get ,def :browser))
 
 
+(defmacro completion-ui--frequency-hash-table-name (name)
+  `(concat "completion--" (symbol-name ,name) "-frequency"))
+
 
 (defmacro* completion-ui-register-source
     (completion-function
      &key name completion-args other-args
      non-prefix-completion prefix-function word-thing
-     command-name no-command no-auto-completion
+     command-name no-command no-auto-completion no-combining
      accept-functions reject-functions sort-by-frequency
      tooltip-function popup-tip-function popup-frame-function
      menu browser)
@@ -2100,6 +2180,10 @@ completes the prefix at point using the new source. The
 optional :no-auto-completion and :no-command keyword arguments
 disable these features. The optional :command-name keyword
 argument overrides the default command name.
+
+Similarly, by default the new completion source is available to
+be combined with other sources. Setting the
+:no-combining option disables this.
 
 The optional :prefix-function keyword argument specifies a
 function to call to return the prefix to complete at point. It
@@ -2245,7 +2329,6 @@ keymaps."
    (t (error "completion-ui-register-source: invalid :completion-args, %s"
  	     completion-args)))
 
-
   ;; construct argument list for COMPLETION-FUNCTION
   (let ((argnames '(prefix maxnum))
   	(cmplstack completion-args)
@@ -2353,8 +2436,7 @@ keymaps."
        ;; if sorting by frequency, create hash table to store frequency data
        ,(when sort-by-frequency
 	  (let ((hash-table-name
-		 (intern (concat "completion--" (symbol-name name)
-				 "-frequency"))))
+		 (intern (completion-ui--frequency-hash-table-name name))))
 	    `(defvar ,hash-table-name (make-hash-table :test 'equal))))
 
        ;; construct code to define completion command
@@ -2372,6 +2454,27 @@ keymaps."
 	  `(let ((choices (get 'auto-completion-source 'custom-type)))
 	     (unless (member '(const ,name) choices)
 	       (nconc (cdr choices) '((const ,name))))))
+
+       ;; update list of choices in `completion-ui-combine-sources-alist'
+       ;; defcustom
+       ,(if (or no-combining non-prefix-completion)
+	    `(delete '(const ,name)
+		     (plist-get (cdr (get 'completion-ui-combine-sources-alist
+					  'custom-type))
+				:key-type))
+	  `(let ((choices
+		  (plist-get (cdr (get 'completion-ui-combine-sources-alist
+				       'custom-type))
+			     :key-type)))
+	     (unless (member '(const ,name) choices)
+	       (delete '(const nil) choices)
+	       (nconc choices '((const ,name))))))
+       ;; ;; update list of choices in
+       ;; ;; `completion-ui-combine-by-frequency-sources-alist' defcustom
+       ;; (setcdr (get 'completion-ui-combine-by-frequency-sources-alist
+       ;; 		    'custom-type)
+       ;; 	       (cdr (get 'completion-ui-combine-sources-alist
+       ;; 			 'custom-type)))
        )))
 
 
@@ -2645,6 +2748,97 @@ keymaps."
 
 
 
+(defun completion-combine-sources (source-spec prefix &optional maxnum)
+  "Return a combined list of all completions
+from sources in SOURCE-SPEC.
+
+SOURCE-SPEC should be an alist specifying how the completion
+sources are to be combined. Each element of the alist specifies
+the name of a completion source (a symbol) in the car. The cdr
+specifies a test used to determine whether the corresponding
+source is used, and must be either a:
+
+function
+  called with no arguments
+  source is used if it returns non-nil
+
+regexp
+  re-search-backwards to beginning of line
+  source is used if regexp matches
+
+sexp
+  `eval'ed
+  source is used if it evals to non-nil."
+  (let (completions)
+    (dolist (s source-spec)
+      (when (cond
+	     ((functionp (cdr s))
+	      (funcall (cdr s)))
+	     ((stringp (cdr s))
+	      (save-excursion
+		(re-search-backward (cdr s) (line-beginning-position) t)))
+	     (t (eval (cdr s))))
+	(setq completions
+	      (nconc
+	       completions
+	       (funcall (completion-ui--source-def-completion-function
+			 (assq (car s) completion-ui-source-definitions))
+			prefix maxnum)))))
+    (if maxnum
+	(butlast completions (- (length completions) maxnum))
+      completions)))
+
+
+;; (defun completion-combine-sources-by-frequency
+;;   (source-spec prefix &optional maxnum)
+;;   "Return a combined list of all completions
+;; from sources in SOURCE-SPEC."
+;;   (let (completions hash)
+;;     (dolist (s source-spec)
+;;       (when (cond
+;; 	     ((functionp (cdr s))
+;; 	      (funcall (cdr s)))
+;; 	     ((stringp (cdr s))
+;; 	      (re-search-backward (cdr s) (line-beginning-position) t))
+;; 	     (t (eval (cdr s))))
+;; 	(setq hash
+;; 	      (eval (intern-soft
+;; 		     (completion-ui--frequency-hash-table-name (car s)))))
+;; 	(setq completions
+;; 	      (completion-ui--merge
+;; 	       completions
+;; 	       (mapcar
+;; 		(lambda (c)
+;; 		  (cons c (or (and (hash-table-p hash)
+;; 				   (gethash c hash 0))
+;; 			      0)))
+;; 		(funcall (completion-ui--source-def-completion-function
+;; 			  (assq (car s) completion-ui-source-definitions))
+;; 			 prefix maxnum))
+;; 	       (lambda (a b) (< (cdr a) (cdr b)))))))
+;;     (when maxnum
+;;       (setq completions
+;; 	    (butlast completions (- (length completions) maxnum))))
+;;     (mapcar 'car completions)))
+
+
+(completion-ui-register-source
+ 'completion-combine-sources
+ :completion-args '(2 3)
+ :other-args '(completion-ui-combine-sources-alist)
+ :name 'Combine
+ :no-combining t)
+
+
+(completion-ui-register-source
+ 'completion-combine-sources
+ :completion-args '(2)
+ :other-args '(completion-ui-combine-sources-alist)
+ :name 'Combine-freq
+ :sort-by-frequency t
+ :no-combining t)
+
+
 
 ;;; =======================================================
 ;;;             The core completion functions
@@ -2712,11 +2906,11 @@ The remaining arguments are for internal use only."
       ;; if updating a completion overlay, use it's properties
       (if update
 	  (setq completion-function
-		(completion-ui-source-completion-function nil update)
+		  (completion-ui-source-completion-function nil update)
 		prefix
-		(overlay-get update 'prefix)
+		  (overlay-get update 'prefix)
 		non-prefix-completion
-		(overlay-get update 'non-prefix-completion))
+		  (overlay-get update 'non-prefix-completion))
 
 	;; otherwise, sort out arguments...
 	;; get completion-function
