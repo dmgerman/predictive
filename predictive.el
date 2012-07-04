@@ -3116,8 +3116,8 @@ A negative prefix argument turns it off.")
 ;;;                   Register Completion-UI source
 
 (completion-ui-register-source
- 'predictive-complete
- :name 'predictive
+ predictive-complete
+ :name predictive
  :completion-args 2
  :accept-functions (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-accept-functions
@@ -3125,9 +3125,9 @@ A negative prefix argument turns it off.")
  :reject-functions (lambda (prefix completion &optional arg)
 		    (run-hook-with-args 'predictive-reject-functions
 					prefix completion arg))
- :menu 'predictive-menu-function
- :browser 'predictive-browser-function
- :word-thing 'predictive-word-thing)
+ :menu predictive-menu-function
+ :browser predictive-browser-function
+ :word-thing predictive-word-thing)
 
 
 
