@@ -1452,8 +1452,8 @@ respectively."
 		     (and (y-or-n-p
 			   (format (concat
 				    "Dictionary %s already exists. Replace "
-				    "it? (you'll be prompted to save the old "
-				    "version) ")
+				    "it? (you'll be prompted to save any "
+				    "unsaved changes first) ")
 				   dictname))
 			  (dictree-unload (eval (intern-soft dictname)))))
 		 (setq dictname (intern dictname))))
@@ -1472,6 +1472,9 @@ respectively."
 	    (message "Created dictionary %s" dictname))
 	(dictree-populate-from-file dict populate nil nil
 				    (lambda (data) (or data 0)))
+	;; define prefixes when `predictive-auto-define-prefixes' is enabled
+	(when predictive-auto-define-prefixes
+	  (predictive-define-all-prefixes dict nil nil 'interactive))
 	(when (called-interactively-p 'interactive)
 	  (message "Created dictionary %s and populated it from file %s"
 		   dictname populate)))
@@ -1892,7 +1895,8 @@ least as large as the weight of WORD."
 
 
 
-(defun predictive-define-all-prefixes (dict &optional prefix length)
+(defun predictive-define-all-prefixes
+  (dict &optional prefix length interactive)
   "Define prefix relationships for PREFIX in dictionary DICT.
 PREFIX will be added to the prefix list of any word for which it
 is a prefix. Predictive mode will then automatically ensure that
@@ -1906,7 +1910,11 @@ word\; prefix words shorter than this minimum will be ignored. If
 it is zero or negative, all prefix words will be included.
 
 Interactively, DICT and PREFIX are read from the minibuffer, and
-LENGTH is the integer prefix argument."
+LENGTH is the integer prefix argument.
+
+Since defining all prefixes can take some time, progress messages
+are displayed in the echo area when called interactively, or when
+INTERACTIVE is non-nil."
   (interactive (list (read-dict
 		      (let ((dic (car (predictive-current-dict))))
 			(if dic
@@ -1919,37 +1927,36 @@ LENGTH is the integer prefix argument."
   ;; sort out arguments
   (and (symbolp dict) (setq dict (eval dict)))
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
+  (and (called-interactively-p 'interactive) (setq interactive t))
 
-  (let (prefix-fun)
-    ;; create function for defining prefixes
-    (setq prefix-fun
-	  (lambda (word)
-	    (let (completion-list string)
-	      ;; deal with capitalisation
-	      (if (and predictive-ignore-initial-caps
-		       (predictive-capitalized-p word))
-		  (setq string (list word (downcase word)))
-		(setq string word))
-	      ;; find completions of word, dropping first which is always the
-	      ;; word itself
-	      (setq completion-list
-		    (cdr (dictree-complete dict string nil nil nil nil nil
-					   (lambda (key data) key))))
-	      ;; define the word to  be a prefix for all its completions
-	      (dolist (cmpl completion-list)
-		(predictive-define-prefix dict cmpl word))
-	      )))
+  ;; create function for defining prefixes
+  (let ((prefix-fun
+	 (lambda (word)
+	   (let (completion-list string)
+	     ;; deal with capitalisation
+	     (if (and predictive-ignore-initial-caps
+		      (predictive-capitalized-p word))
+		 (setq string (list word (downcase word)))
+	       (setq string word))
+	     ;; find completions of word, dropping first which is always the
+	     ;; word itself
+	     (setq completion-list
+		   (cdr (dictree-complete dict string nil nil nil nil nil
+					  (lambda (key data) key))))
+	     ;; define the word to  be a prefix for all its completions
+	     (dolist (cmpl completion-list)
+	       (predictive-define-prefix dict cmpl word))
+	     ))))
 
     ;; display informative messages if called interactively
-    (when (called-interactively-p 'interactive)
+    (when interactive
       (if prefix
 	  (message "Defining prefix \"%s\" in %s..."
 		   prefix (dictree-name dict))
       (message "Defining prefixes in %s..." (dictree-name dict))))
     (let ((i 0)
-	  (count (when (called-interactively-p 'interactive)
-		   (dictree-size dict))))
-      (and (called-interactively-p 'interactive) prefix
+	  (count (when interactive (dictree-size dict))))
+      (and interactive prefix
 	   (message "Defining prefixes in %s...(word 1 of %d)"
 		    (dictree-name dict) count))
 
@@ -1959,15 +1966,16 @@ LENGTH is the integer prefix argument."
 	;; define all prefixes
 	(dictree-mapc
 	 (lambda (word weight)
-	   (and (called-interactively-p 'interactive)
+	   (and interactive
 		(setq i (1+ i)) (= 0 (mod i 50))
 		(message "Defining prefixes in %s...(word %d of %d)"
 			 (dictree-name dict) i count))
 	   ;; ignore word if it's too short
-	   (unless (< (length word) length) (funcall prefix-fun word)))
+	   (unless (and length (< (length word) length))
+	     (funcall prefix-fun word)))
 	 dict 'string))
 
-      (when (called-interactively-p 'interactive)
+      (when interactive
 	(if prefix
 	    (message "Defining prefix \"%s\" in %s...done"
 		     prefix (dictree-name dict))
