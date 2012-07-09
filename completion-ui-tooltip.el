@@ -70,10 +70,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-tooltip nil
+(completion-ui-defcustom-per-source completion-ui-use-tooltip nil
   "When non-nil, enable the tooltip interface."
   :group 'completion-ui-tooltip
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defcustom completion-tooltip-timeout -1

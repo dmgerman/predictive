@@ -60,10 +60,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-popup-frame t
+(completion-ui-defcustom-per-source completion-ui-use-popup-frame t
   "When non-nil, enable the completion pop-up frame interface."
   :group 'completion-ui-popup-frame
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defcustom completion-popup-frame-max-height 20

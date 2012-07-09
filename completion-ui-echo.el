@@ -57,10 +57,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-echo t
+(completion-ui-defcustom-per-source completion-ui-use-echo t
   "When non-nil, display completions in echo area."
   :group 'completion-ui-echo
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 

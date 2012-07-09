@@ -68,7 +68,7 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-dynamic t
+(completion-ui-defcustom-per-source completion-ui-use-dynamic t
   "When non-nil, enable dynamic completion.
 
 Dynamic completion directly inserts the first completion into the
@@ -76,19 +76,21 @@ buffer without further action required by the user. It is still a
 provisional completion, so until it is accepted all the usual
 mechanisms for selecting completions are still available."
   :group 'completion-ui-dynamic
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
-(defcustom completion-dynamic-highlight-common-substring t
+(completion-ui-defcustom-per-source
+  completion-dynamic-highlight-common-substring t
   "Highlight the longest common prefix in dynamic completions."
   :group 'completion-ui-dynamic
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
-(defcustom completion-dynamic-highlight-prefix-alterations t
+(completion-ui-defcustom-per-source
+  completion-dynamic-highlight-prefix-alterations t
   "Highlight alterations to the prefix in dynamic completions."
   :group 'completion-ui-dynamic
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defface completion-dynamic-common-substring-face

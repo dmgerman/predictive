@@ -678,54 +678,80 @@
 
 
 ;;; ============================================================
-;;;                    Customization variables
+;;;          Dynamically updated customization types
+
+;; list of customization variables that can be customized per source
+(defvar completion-ui-per-source-defcustoms nil)
+
 
 (defun completion-ui-customize-list-sources ()
   (mapcar (lambda (def) (list 'const (car def)))
 	  completion-ui-source-definitions))
 
 
-(defun completion-ui-customize-list-combining-sources ()
-  (let (sources)
-    (dolist (def completion-ui-source-definitions)
-      (unless (plist-get def :non-combining)
-	(push (list 'const (car def)) sources)))
-    (nreverse sources)))
+(defmacro completion-ui-defcustom-per-source (symbol standard doc &rest args)
+  "Declare SYMBOL as a customization variable.
+Value of SYMBOL can either be set globally, or it can be set to a
+different value for each completion source."
+  (declare (indent defun) (debug (name body)) (doc-string 3))
+  ;; NOTE: we're assuming type is a quoted symbol or sexp
+  (let ((type (cadr (plist-get args :type))))
+    (plist-put
+     args :type
+     `(quote
+       (choice ,(cond
+		 ((symbolp type) `(,type :tag "global"))
+		 ((and (listp type) (eq (car type) 'choice))
+		  (append '(choice :tag "global") (copy-sequence (cdr type))))
+		 ;; NOTE: extend cond if other compound types are needed
+		 )
+	       (alist :tag "per source"
+		      :key-type
+		      (choice :tag "source" (const :tag "default" t))
+		      :value-type
+		      ,(if (listp type) (copy-sequence type) type))))))
+  ;; construct defcustom definition
+  `(progn
+     (add-to-list 'completion-ui-per-source-defcustoms ',symbol)
+     (defcustom ,symbol ,standard ,doc ,@args)))
 
 
-(defun completion-ui-customize-by-source (type)
-  `(choice ,(cond
-	     ((symbolp type) `(,type :tag "global"))
-	     ((and (listp type) (eq (car type) 'choice))
-	      (append '(choice :tag "global") (copy-sequence (cdr type)))))
-	   (alist :tag "per source"
-		  :key-type (choice :tag "source"
-				    (const :tag "default" t)
-				    ,@(completion-ui-customize-list-sources))
-		  :value-type ,(if (listp type) (copy-sequence type) type))))
-
-
-(defun completion-ui-get-value-for-source (source value)
-  (if (listp value)
+(defun completion-ui-get-value-for-source (source value-list)
+  ;; extract value that applies to SOURCE from VALUE-LIST
+  (if (listp value-list)
       (let ((v (or (assq (if (overlayp source)
 			     (overlay-get source 'completion-source)
 			   source)
-			 value)
-		   (assq t value))))
+			 value-list)
+		   (assq t value-list))))
 	(cdr v))
-    value))
+    value-list))
 
 
+(defun completion-ui-update-per-source-defcustoms (source &optional del)
+  ;; add SOURCE to choices in all per-source defcustoms, or delete it if
+  ;; DEL is non-nil.
+  (dolist (var completion-ui-per-source-defcustoms)
+    (let ((choices (nth 4 (nth 2 (get var 'custom-type)))))
+      (if del (delete '(const ,name) choices)
+	(unless (member `(const ,source) choices)
+	  (delete nil choices)
+	  (nconc choices `((const ,source))))))))
+
+
+
+;;; ============================================================
+;;;                    Customization variables
 
 (defgroup completion-ui nil
   "Completion user interface."
   :group 'convenience)
 
 
-(defcustom completion-max-candidates 10
+(completion-ui-defcustom-per-source completion-max-candidates 10
   "Maximum number of completion candidates to offer."
   :group 'completion-ui
-  :type (completion-ui-customize-by-source 'integer))
+  :type 'integer)
 
 
 (defcustom completion-accept-or-reject-by-default 'accept
@@ -758,16 +784,17 @@ considered a word."
   :type 'boolean)
 
 
-(defcustom completion-auto-update t
+(completion-ui-defcustom-per-source completion-auto-update t
   "When non-nil, completion candidates are updated automatically
 when characters are added to the current completion prefix.
 \(Effectively, it is as though `auto-completion-mode' is
 temporarily enabled for the duration of the completion.\)"
   :group 'completion-ui
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
-(defcustom completion-auto-show 'completion-show-popup-tip
+(completion-ui-defcustom-per-source
+  completion-auto-show 'completion-show-popup-tip
   "Function to call to display a completion user-interface.
 When null, nothing is auto-displayed.
 
@@ -775,15 +802,14 @@ The function is called after a completion command, possibly after
 a delay of `completion-auto-show-delay' seconds if one is set. It
 is passed one argument, a completion overlay."
   :group 'completion-ui
-  :type (completion-ui-customize-by-source '(choice (const nil))))
+  :type '(choice (const nil)))
 
 
-(defcustom completion-auto-show-delay 3
+(completion-ui-defcustom-per-source completion-auto-show-delay 3
   "Number of seconds to wait after completion is invoked
 before the `completion-auto-show' interface is activated."
   :group 'completion-ui
-  :type (completion-ui-customize-by-source
-	 '(choice (const :tag "Off" nil) (float :tag "On"))))
+  :type '(choice (const :tag "Off" nil) (float :tag "On")))
 
 
 (defface completion-highlight-face
@@ -811,19 +837,17 @@ before the `completion-auto-show' interface is activated."
 	  ,@(completion-ui-customize-list-sources)))
 
 
-(defcustom auto-completion-min-chars nil
+(completion-ui-defcustom-per-source auto-completion-min-chars nil
   "Minimum number of characters before completions are offered."
   :group 'auto-completion-mode
-  :type (completion-ui-customize-by-source
-	 '(choice (const :tag "Off" nil) (integer :tag "On"))))
+  :type '(choice (const :tag "Off" nil) (integer :tag "On")))
 
 
-(defcustom auto-completion-delay nil
+(completion-ui-defcustom-per-source auto-completion-delay nil
   "Number of seconds to wait before activating completion mechanisms
 in auto-completion mode."
   :group 'auto-completion-mode
-  :type (completion-ui-customize-by-source
-	 '(choice (const :tag "Off" nil) (float :tag "On"))))
+  :type '(choice (const :tag "Off" nil) (float :tag "On")))
 
 
 (defcustom auto-completion-backward-delete-delay 0.1
@@ -1908,11 +1932,11 @@ interface is activated."
 
        ;; generate defcustom for variable used to enable interface
        ,(unless variable
-	  `(defcustom ,var nil
+	  `(completion-ui-defcustom-per-source ,var nil
 	     ,(concat "When non-nil, enable the " (symbol-name name)
 		      " Completion-UI interface.")
 	     :group 'completion-ui
-	     :type (completion-ui-customize-by-source 'boolean)))
+	     :type 'boolean))
 
        ;; update choices in `completion-auto-show' defcustom
        ,(if auto-show
@@ -2391,6 +2415,9 @@ functions called from the
 	  `(let ((choices (get 'auto-completion-source 'custom-type)))
 	     (unless (member '(const ,name) choices)
 	       (nconc (cdr choices) '((const ,name))))))
+
+       ;; update list of choices in other per-source defcustoms
+       (completion-ui-update-per-source-defcustoms ',name)
 
        ;; run hooks
        ,(progn

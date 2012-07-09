@@ -54,10 +54,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-menu t
+(completion-ui-defcustom-per-source completion-ui-use-menu t
   "When non-nil, enable the completion menu and browser."
   :group 'completion-ui-menu
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defcustom completion-menu-offset '(0 . 0)
@@ -68,14 +68,15 @@ menus in the correct position under different window systems."
   :type '(cons (integer :tag "x") (integer :tag "y")))
 
 
-(defcustom completion-browser-max-items 25
+(completion-ui-defcustom-per-source completion-browser-max-items 25
   "Maximum number of completions to display
 in any one completion browser submenu."
   :group 'completion-ui-menu
-  :type (completion-ui-customize-by-source 'integer))
+  :type 'integer)
 
 
-(defcustom completion-browser-recurse-on-completions t
+(completion-ui-defcustom-per-source
+  completion-browser-recurse-on-completions t
   "If non-nil, the completion browser will recursively list
 completions of completions (of completions of completions...).
 If nil, it will only display the original list of completions,
@@ -86,7 +87,7 @@ act as though this variable is set to nil, regardless of its
 actual value, since recursing only makes sense for prefix
 completion."
   :group 'completion-ui-menu
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defcustom completion-browser-buckets 'balance

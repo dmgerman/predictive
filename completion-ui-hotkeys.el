@@ -58,7 +58,7 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-hotkeys t
+(completion-ui-defcustom-per-source completion-ui-use-hotkeys t
   "When non-nil, enable completion hotkeys
 \(single-key selection of completions\).
 
@@ -71,8 +71,7 @@ active.
 enabling hotkeys when the menu is active has no effect. So don't
 try to report this as a bug!\)"
   :group 'completion-ui-hotkeys
-  :type (completion-ui-customize-by-source
-	 '(choice (const t) (const auto-show) (const nil))))
+  :type '(choice (const t) (const auto-show) (const nil)))
 
 
 (defcustom completion-hotkey-list '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9)

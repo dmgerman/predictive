@@ -111,7 +111,7 @@ to t."
 				    regexp function sexp)))
 
 
-(defun* completion-ui-combine-sources-update-defcustom
+(defun* completion-ui-update-combine-sources-defcustom
   (completion-function
    &key name non-prefix-completion no-combining &allow-other-keys)
   "Update source choices in `completion-ui-combine-sources-alist' defcustom.
@@ -135,7 +135,7 @@ available for combining."
 
 
 (add-hook 'completion-ui-register-source-functions
-	  'completion-ui-combine-sources-update-defcustom)
+	  'completion-ui-update-combine-sources-defcustom)
 
 
 

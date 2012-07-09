@@ -59,10 +59,10 @@
   :group 'completion-ui)
 
 
-(defcustom completion-ui-use-popup-tip t
+(completion-ui-defcustom-per-source completion-ui-use-popup-tip t
   "When non-nil, enable the popup-tip interface."
   :group 'completion-ui-popup-tip
-  :type (completion-ui-customize-by-source 'boolean))
+  :type 'boolean)
 
 
 (defface completion-popup-tip-face
