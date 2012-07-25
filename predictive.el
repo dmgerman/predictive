@@ -55,6 +55,8 @@
 ;;   instead of dictionary when called interactively, to avoid eval'ed
 ;;   dictionary ending up in `command-history' (cf. corresponding changes to
 ;;   `read-dict' in dict-tree.el)
+;; * fixed bugs in argument handling in interactive calls to
+;;   `predictive-learn-from-buffer' and `predictive-learn-from-file'
 ;;
 ;; Version 0.19.7
 ;; * replaced obsolete `interactive-p' with `called-interactively-p'
@@ -2068,19 +2070,20 @@ confirmation first if called interactively)."
 (defun predictive-learn-from-buffer (&optional buffer dict all)
   "Learn word weights from BUFFER (defaults to the current buffer).
 
-The word weight of each word in dictionary DICT is incremented by the number
-of occurences of that word in the buffer. DICT can either be a dictionary, or
-a list of dictionaries. If DICT is not supplied, it defaults to all
-dictionaries used by BUFFER. However, DICT must be supplied if ALL is
-specified (see below).
+The word weight of each word in dictionary DICT is incremented by
+the number of occurences of that word in the buffer. DICT can
+either be a dictionary, or a list of dictionaries. If DICT is not
+supplied, it defaults to all dictionaries used by
+BUFFER. However, DICT must be supplied if ALL is specified (see
+below).
 
-By default, only occurences of a word that occur in a region where the
-dictionary is active are taken into account. If optional argument ALL is
-non-nil, all occurences are taken into account. In this case, a dictionary
-must be sprecified.
+By default, only occurences of a word that occur in a region
+where the dictionary is active are taken into account. If
+optional argument ALL is non-nil, all occurences are taken into
+account. In this case, a dictionary must be sprecified.
 
-Interactively, BUFFER and DICT are read from the mini-buffer, and ALL is
-specified by the presence of a prefix argument.
+Interactively, BUFFER and DICT are read from the mini-buffer, and
+ALL is specified by the presence of a prefix argument.
 
 See also `predictive-fast-learn-or-add-from-buffer'."
 
@@ -2088,9 +2091,10 @@ See also `predictive-fast-learn-or-add-from-buffer'."
 				  (buffer-name (current-buffer)) t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
-		      nil)
+		      t)
 		     current-prefix-arg))
   ;; sort out and sanity check arguments
+  (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
   (and (symbolp dict) (setq dict (eval dict)))
   (and all (null dict)
        (error "Argument ALL supplied but no dictionary specified"))
@@ -2171,24 +2175,26 @@ See also `predictive-fast-learn-or-add-from-buffer'."
 (defun predictive-learn-from-file (file &optional dict all)
   "Learn word weights from FILE.
 
-The word weight of each word in dictionary DICT is incremented by the number
-of occurences of that word in the file. DICT can either be a dictionary, or a
-list of dictionaries. If DICT is not supplied, it defaults to all dictionaries
-used by FILE. However, DICT must be supplied if ALL is specified, see below.
+The word weight of each word in dictionary DICT is incremented by
+the number of occurences of that word in the file. DICT can
+either be a dictionary, or a list of dictionaries. If DICT is not
+supplied, it defaults to all dictionaries used by FILE. However,
+DICT must be supplied if ALL is specified, see below.
 
-By default, only occurences of a word that occur in a region where the
-dictionary is active are taken into account. If optional argument ALL is
-non-nil, all occurences are taken into account. In this case, a dictionary
-must be specified.
+By default, only occurences of a word that occur in a region
+where the dictionary is active are taken into account. If
+optional argument ALL is non-nil, all occurences are taken into
+account. In this case, a dictionary must be specified.
 
-Interactively, FILE and DICT are read from the mini-buffer, and ALL is
-specified by the presence of a prefix argument."
+Interactively, FILE and DICT are read from the mini-buffer, and
+ALL is specified by the presence of a prefix argument."
   (interactive (list (read-file-name "File to learn from: " nil nil t)
 		     (read-dict
 		      "Dictionary to update (defaults to all in use): "
-		      nil)
+		      t)
 		     current-prefix-arg))
   ;; sort out arguments
+  (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
   (and (symbolp dict) (setq dict (eval dict)))
   (save-excursion
     ;; open file in a buffer
@@ -2431,8 +2437,8 @@ entirely of word- or symbol-constituent characters."
 		      t)
 		     current-prefix-arg))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
   (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
+  (and (symbolp dict) (setq dict (eval dict)))
   (save-excursion
     ;; open file in a buffer
     (let (visiting buff)
