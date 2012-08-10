@@ -337,9 +337,15 @@ described in detail in the rest of this manual.
 @findex predictive-mode
 
 As you add characters to a word, predictive mode searches in a
-dictionary for words starting with those characters. There are a number
-of different ways to choose which word (if any) should be used to
-complete what you've typed.
+dictionary for words starting with those characters.@footnote{Note that
+the very first time you use @command{predictive-mode}, there may be a
+short delay when completing short strings of one or two letters. This
+delay will only occur the first ever time you try to complete that
+string. The delay will go away entirely the second time, and forever
+after. See @env{predictive-completion-speed} under @ref{Creating
+Dictionaries} for more information.} There are a number of different
+ways to choose which word (if any) should be used to complete what
+you've typed.
 
 The most likely completion is provisionally inserted in the buffer after
 the point, and highlighted to indicate that it has not yet been
