@@ -1422,6 +1422,9 @@ The optional argument SPEED sets the desired speed with which
 string should be completed using the dictionary, in seconds. It
 defaults to `predictive-completion-speed'.
 
+Prefix relationships are automatically defined if
+`predictive-auto-define-prefixes' is enabled.
+
 Interactively, DICTNAME and FILE are read from the
 minibuffer. SPEED and AUTOSAVE use the defaults provided by
 `predictive-completion-speed' and `predictive-dict-autosave'
