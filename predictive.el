@@ -1402,7 +1402,7 @@ See also `predictive-dict-compilation'."
 
 
 (defun predictive-create-dict
-  (&optional dictname file populate autosave speed)
+  (&optional dictname file populate autosave speed no-prefixes)
   "Create a new predictive mode dictionary called DICTNAME.
 
 The optional argument FILE specifies a file to associate with the
@@ -1423,7 +1423,8 @@ string should be completed using the dictionary, in seconds. It
 defaults to `predictive-completion-speed'.
 
 Prefix relationships are automatically defined if
-`predictive-auto-define-prefixes' is enabled.
+`predictive-auto-define-prefixes' is enabled, unless NO-PREFIXES
+is non-nil.
 
 Interactively, DICTNAME and FILE are read from the
 minibuffer. SPEED and AUTOSAVE use the defaults provided by
@@ -1478,7 +1479,7 @@ respectively."
 	(dictree-populate-from-file dict populate nil nil
 				    (lambda (data) (or data 0)))
 	;; define prefixes when `predictive-auto-define-prefixes' is enabled
-	(when predictive-auto-define-prefixes
+	(when (and predictive-auto-define-prefixes (not no-prefixes))
 	  (predictive-define-all-prefixes dict nil nil 'interactive))
 	(when (called-interactively-p 'interactive)
 	  (message "Created dictionary %s and populated it from file %s"

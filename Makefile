@@ -99,7 +99,7 @@ dict-english.elc: dict-english.el #dict-tree.elc
 
 # in case dict-english.el doesn't exist (should be included in package)
 dict-english.el: dict-english.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq predictive-auto-define-prefixes nil) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\" nil nil t)) (dictree-write dict-english \"dict-english\" t))"
 
 
 
@@ -141,7 +141,7 @@ install-info: predictive-user-manual.info.gz
 
 # implicit rule for creating dictionaries
 dict-%.elc: dict-%.word-list #dict-tree.elc
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq predictive-auto-define-prefixes nil) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\" nil nil t) (dictree-save-modified))"
 
 
 # implicit rule for byte-compiling elisp files
