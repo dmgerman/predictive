@@ -70,9 +70,6 @@ install: all
 # list of core elisp files
 core_files := $(shell ls *.el | grep -v 'dict-english.el' | sed 's:\.el:\.elc:g')
 
-# list of libraries to load
-#elisp_libs = heap.el tstree.el dict.el predictive.el auto-overlays.el auto-overlay-word.el auto-overlay-line.el auto-overlay-self.el auto-overlay-stack.el
-
 # lists of dictionaries
 latex_dicts := $(shell ls latex/dict-*.word-list | sed 's:\.word-list:\.elc:g')
 html_dicts := $(shell ls html/dict-*.word-list | sed 's:\.word-list:\.elc:g')
@@ -91,19 +88,6 @@ predictive-latex.elc: predictive-latex.el $(latex-dicts)
 predictive-html.elc: predictive-html.el $(html-dicts)
 	$(EMACS) --batch -L ./ -L ./html/ -f batch-byte-compile $<
 
-# # overrides implicit rule, to display extra message
-# dict-tree.elc: dict-tree.el
-# 	$(EMACS) --batch -L ./ -f batch-byte-compile $<
-# 	@echo
-# 	@echo "The above warning is true, though it's not obvious from the"
-# 	@echo "source code! Be that as it may, I can't fix this until someone"
-# 	@echo "explains to me how to define \`dictree--wrap-insfun' without"
-# 	@echo "using old-style backquotes, whilst still ensuring that the"
-# 	@echo "\`setf' in the \`dictree--wrap-insfun-2' macro is expanded"
-# 	@echo "at compile-time rather than run-time."
-# 	@echo "  -- Toby Cubitt"
-# 	@echo
-
 
 
 # English dictionary target
@@ -115,7 +99,7 @@ dict-english.elc: dict-english.el #dict-tree.elc
 
 # in case dict-english.el doesn't exist (should be included in package)
 dict-english.el: dict-english.word-list
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq predictive-auto-define-prefixes nil) (setq dict-english (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\")) (dictree-write dict-english \"dict-english\" t))"
 
 
 
@@ -157,7 +141,7 @@ install-info: predictive-user-manual.info.gz
 
 # implicit rule for creating dictionaries
 dict-%.elc: dict-%.word-list #dict-tree.elc
-	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
+	$(EMACS) --batch -L ./ --eval="(progn (require 'predictive) (setq predictive-auto-define-prefixes nil) (predictive-create-dict '$(basename $(notdir $@)) \"$(basename $@)\" \"$<\") (dictree-save-modified))"
 
 
 # implicit rule for byte-compiling elisp files
