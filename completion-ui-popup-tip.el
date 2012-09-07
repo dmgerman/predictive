@@ -175,35 +175,39 @@ INTERACTIVE is supplied, pretend we were called interactively."
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   ;; deactivate other auto-show interfaces
   (completion-ui-deactivate-auto-show-interface overlay)
-  ;; if we can display a popup-tip and there are completions to display in it...
-  (when (and overlay (overlay-get overlay 'completions))
-    ;; if called manually, flag this in overlay property and call
-    ;; auto-show-helpers, since they won't have been called by
-    ;; `completion-ui-auto-show'
-    (when (or (called-interactively-p 'any) interactive)
-      (overlay-put overlay 'completion-interactive-popup-tip t)
-      (completion-ui-call-auto-show-interface-helpers overlay))
+  ;; if we can display a popup-tip and
+  (when overlay
+    (completion-cancel-popup-tip overlay)
+    ;; if there are completions to display...
+    (when (overlay-get overlay 'completions)
+      ;; if called manually, flag this in overlay property and call
+      ;; auto-show-helpers, since they won't have been called by
+      ;; `completion-ui-auto-show'
+      (when (or (called-interactively-p 'any) interactive)
+	(overlay-put overlay 'completion-interactive-popup-tip t)
+	(completion-ui-call-auto-show-interface-helpers overlay))
 
-    ;; construct the popup-tip text
-    (let ((text (funcall (completion-ui-source-popup-tip-function nil overlay)
-			 overlay)))
-      (when (string= (substring text -1) "\n")
-        (setq text (substring text 0 -1)))
+      ;; construct the popup-tip text
+      (let ((text (funcall
+		   (completion-ui-source-popup-tip-function nil overlay)
+		   overlay)))
+	(when (string= (substring text -1) "\n")
+	  (setq text (substring text 0 -1)))
 
-      ;; show popup-tip
-      (let ((popup (popup-tip text
-			      :point (overlay-start overlay)
-			      :nowait t
-			      :face 'completion-popup-tip-face
-			      :selection-face 'completion-highlight-face))
-	    (i (overlay-get overlay 'completion-num)))
-	(overlay-put overlay 'completion-popup-tip popup)
-	(when i (popup-select popup i)))
+	;; show popup-tip
+	(let ((popup (popup-tip text
+				:point (overlay-start overlay)
+				:nowait t
+				:face 'completion-popup-tip-face
+				:selection-face 'completion-highlight-face))
+	      (i (overlay-get overlay 'completion-num)))
+	  (overlay-put overlay 'completion-popup-tip popup)
+	  (when i (popup-select popup i)))
 
-      ;; activate popup-tip keys
-      (completion-activate-overlay-keys
-       overlay completion-popup-tip-active-map)
-      )))
+	;; activate popup-tip keys
+	(completion-activate-overlay-keys
+	 overlay completion-popup-tip-active-map)
+	))))
 
 
 (defun completion-cancel-popup-tip (&optional overlay)
