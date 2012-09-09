@@ -65,6 +65,19 @@
   :type 'boolean)
 
 
+(defcustom completion-ui-popup-tip-margin 1
+  "Width (in characters) of left and right margins in a popup-tip."
+  :group 'completion-ui-popup-tip
+  :type 'integer)
+
+
+(defcustom completion-ui-popup-tip-under-point nil
+  "If non-nil, position popup-tip directly under point.
+Otherwise, it is positioned under the word being completed."
+  :group 'completion-ui-popup-tip
+  :type 'boolean)
+
+
 (defface completion-popup-tip-face
   '((t . (:inherit popup-tip-face)))
   "Face used in popup-tip."
@@ -195,11 +208,17 @@ INTERACTIVE is supplied, pretend we were called interactively."
 	  (setq text (substring text 0 -1)))
 
 	;; show popup-tip
-	(let ((popup (popup-tip text
-				:point (overlay-start overlay)
-				:nowait t
-				:face 'completion-popup-tip-face
-				:selection-face 'completion-highlight-face))
+	(let ((popup (popup-tip
+		      text
+		      :point (+ (overlay-start overlay)
+				(if completion-ui-popup-tip-under-point
+				    completion-ui-popup-tip-margin
+				  (- (length (overlay-get overlay 'prefix)))))
+		      :nowait t
+		      :face 'completion-popup-tip-face
+		      :selection-face 'completion-highlight-face
+		      :margin-left completion-ui-popup-tip-margin
+		      :margin-right completion-ui-popup-tip-margin))
 	      (i (overlay-get overlay 'completion-num)))
 	  (overlay-put overlay 'completion-popup-tip popup)
 	  (when i (popup-select popup i)))
