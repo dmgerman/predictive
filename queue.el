@@ -1,4 +1,4 @@
-;;; queue.el --- Queue data structure
+;;; queue.el --- Queue data structure  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 1991-1995, 2008-2009, 2012  Free Software Foundation, Inc
 
