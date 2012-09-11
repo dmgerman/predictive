@@ -28,32 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Commentary:
-;;
-
-
-;;; Change Log:
-;;
-;; Version 0.2.2
-;; * allow customization variables to be set either globally or per
-;;   completion source
-;; * updated to new `completion-ui-register-interface' syntax
-;;
-;; Version 0.2.1
-;; * replaced obsolete `interactive-p' with `called-interactively-p'
-;;
-;; Version 0.2
-;; * use pos-tip.el library to display tooltips instead of `x-show-tip'
-;;   (thanks to Seweryn Kokot)
-;;
-;; Version 0.1.1
-;; * bug-fix to `completion-cancel-tooltip' to prevent
-;;   `completion-tooltip-map' keys from being incorrectly disabled
-;;
-;; Version 0.1
-;; * initial version (split off from completion-ui.el)
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

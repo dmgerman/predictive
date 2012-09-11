@@ -33,16 +33,6 @@
 ;; A simple minor-mode to display the point in the status bar.
 
 
-;;; Change log:
-;;
-;; Version 0.2
-;; * rewritten without any need for an idle-timer
-;;
-;; Version 0.1
-;; * initial release
-
-
-
 ;;; Code:
 
 (provide 'show-point-mode)

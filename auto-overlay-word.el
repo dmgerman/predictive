@@ -28,29 +28,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.4
-;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
-;;
-;; Version 0.1.3
-;; * set overlay properties straight after creation, rather than leaving it to
-;;   `auto-overlay-update', in case overlay is exclusive and we reparse, for
-;;   which properties are already required
-;;
-;; Version 0.1.2
-;; * removed `auto-overlay-functions' and changed to use new interface
-;;
-;; Version 0.1.1
-;; * updated to reflect changes in `auto-overlays.el'
-;;
-;; Version 0.1:
-;; * initial version separated off from auto-overlays.el
-
-
-
 ;;; Code:
-
 
 (require 'auto-overlays)
 (provide 'auto-overlay-word)

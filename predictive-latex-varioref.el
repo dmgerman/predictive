@@ -29,17 +29,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.2
-;; * modified `auto-completion-syntax-alist' for "\vref{" etc. so that typing
-;;   a word-constituent deletes everything from point up to the end of the
-;;   argument.
-;;
-;; Version 0.1
-;; * initial version (adapted from predictive-latex-cleveref.el)
-
-
 ;;; Code:
 
 (require 'predictive-latex)

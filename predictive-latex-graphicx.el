@@ -29,18 +29,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.2.1
-;; * improved regexp definitions
-;;
-;; Version 0.2
-;; * updated for new auto-overlay regexp definition interface
-;;
-;; Version 0.1
-;; * initial version
-
-
 ;;; Code:
 
 (require 'predictive-latex)

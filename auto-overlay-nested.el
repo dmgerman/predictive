@@ -28,40 +28,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.7
-;; * added new `auto-overlay-complex-class' property
-;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
-;;
-;; Version 0.1.6
-;; * renamed from "nest" to "nested"
-;;
-;; Version 0.1.5
-;; * set overlay properties straight after creation in `auto-o-make-nest',
-;;   rather than leaving it to `auto-overlay-update', in case matching causes
-;;   exclusive reparsing, for which properties are already required
-;;
-;; Version 0.1.4
-;; * removed `auto-overlay-functions' and changed to use new interface
-;; * renamed from "stack" to "nest"
-;;
-;; Version 0.1.3
-;; * updated to reflect changes in `auto-overlays.el'
-;;
-;; Version 0.1.2
-;; * bug fix to `auto-o-suicide' behaviour, require change to `auto-o-stack'
-;;
-;; Version 0.1.1
-;; * bug fixes
-;;
-;; Version 0.1
-;; * initial version separated off from auto-overlays.el
-
-
-
 ;;; Code:
-
 
 (require 'auto-overlays)
 (provide 'auto-overlay-nested)

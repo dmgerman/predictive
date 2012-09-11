@@ -28,18 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.2
-;; * added ispell source (thanks to Henry Weller for initial version)
-;; * added `eval-when-compiles' so that correct compilation doesn't rely on
-;;   the non-obvious fact that (require 'completion-ui) in turn pulls in
-;;   "completion-ui-sources.el" at compile-time
-;;
-;; Version 0.1
-;; * initial version
-
-
 ;;; Code:
 
 (require 'completion-ui)

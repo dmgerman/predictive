@@ -28,21 +28,6 @@
 ;; Boston, MA 02111-1307 USA
 
 
-;;; Change Log:
-;;
-;; Version 0.3.1
-;; * fixed another bug in line-number-at-pos compatibility function
-;;
-;; Version 0.3
-;; * fixed bug in line-number-at-pos compatibility function
-;;
-;; Version 0.2
-;; * added replace-regexps-in-string compatibility function
-;;
-;; Version 0.1
-;; * initial release
-
-
 ;;; Code:
 
 (provide 'auto-overlays-compat)

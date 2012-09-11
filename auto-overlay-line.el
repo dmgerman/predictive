@@ -28,41 +28,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version0.3.4
-;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
-;;
-;; Version 0.3.3
-;; * set overlay properties straight after creation, rather than leaving it to
-;;   `auto-overlay-update', in case matching causes exclusive reparsing, for
-;;   which properties are already required
-;;
-;; Version 0.3.2
-;; * removed `auto-overlay-functions' and changed to use new interface
-;;
-;; Version 0.3.1
-;; * updated to reflect changes in `auto-overlays.el'
-;;
-;; Version 0.3
-;; * updated `auto-o-extend-line' to bring it into line with new procedure for
-;;   calling functions after a buffer modification
-;;
-;; Version 0.2.1
-;; * bug fixes in auto-o-extend-line
-;;
-;; Version 0.2:
-;; * got rid of fake end match overlays, which ensured the overlay always
-;;   extended to end of line, in favour of adding a function to the
-;;   modification hooks of the line overlay itself
-;;
-;; Version 0.1:
-;; * initial version separated off from auto-overlays.el
-
-
-
 ;;; Code:
-
 
 (require 'auto-overlays)
 (provide 'auto-overlay-line)

@@ -28,23 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.2
-;; * allow customization variables to be set either globally or per
-;;   completion source
-;; * updated to new `completion-ui-register-interface' syntax
-;;
-;; Version 0.1.1
-;; * use `with-current-buffer' instead of `save-excursion' + `set-buffer' to
-;;   get rid of byte-compiler message
-;; * use `delete-char' instead of `delete-backward-char' to avoid
-;;   byte-compiler warning
-;;
-;; Version 0.1
-;; * initial version (split off from completion-ui.el)
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

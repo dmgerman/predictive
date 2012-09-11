@@ -28,18 +28,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.1
-;; * bugfix in `auto-overlay-local-binding'
-;;
-;; Version 0.1
-;; * initial version split from auto-overlays
-
-
-
 ;;; Code:
-
 
 (provide 'auto-overlay-common)
 

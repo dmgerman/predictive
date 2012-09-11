@@ -27,49 +27,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.2.8
-;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
-;;
-;; Version 0.2.7
-;; * fixed bug in `auto-o-parse-self-match' which caused a matched self match
-;;   to have null 'parent property if a new self match was created inside an
-;;   existing self overlay
-;;
-;; Version 0.2.6
-;; * set overlay properties straight after creation in `auto-o-make-self',
-;;   rather than leaving it to `auto-overlay-update', in case matching causes
-;;   exclusive reparsing, for which properties are already required
-;;
-;; Version 0.2.5
-;; * removed `auto-overlay-functions' and changed to use new interface
-;;
-;; Version 0.2.4
-;; * fixed(?) bug in auto-o-self-list that caused it to
-;;   sometimes miss out the parent overlay itself from the list
-;;
-;; Version 0.2.3
-;; * updated to reflect changes in `auto-overlays.el'
-;; * changed `auto-o-self-list' to make it run faster
-;;
-;; Version 0.2.2
-;; * small but important bug fix
-;;
-;; Version 0.2.1
-;; * bug fixes
-;;
-;; Version 0.2
-;; * substantially re-written to postpone cascading until absolutely
-;;   necessary, for improved responsiveness
-;;
-;; Version 0.1
-;; * initial version separated off from auto-overlays.el
-
-
-
 ;;; Code:
-
 
 (require 'auto-overlays)
 (provide 'auto-overlay-self)

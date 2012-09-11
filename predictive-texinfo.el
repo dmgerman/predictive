@@ -27,43 +27,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.3.4
-;; * replaced obsolete `interactive-p' with `called-interactively-p'
-;;
-;; Version 0.3.3
-;; * Added `predictive-texinfo-map', and `predictive-texinfo-mode' variable to
-;;   enable it. Define texinfo-specific `predictive-mode' bindings there instead
-;;   of in `predictive-map'. This fixes a bug that caused the supposedly
-;;   texinfo-specific bindings to be enabled in all `predictive-mode' buffers.
-;;   (The `make-local-variable' used previously doesn't have the desired
-;;   effect for keymaps.)
-;;
-;; Version 0.3.2
-;; * simplified dictionary handling with advent of the new
-;;   `predictive-auxiliary-dict' predictive-mode variable
-;;
-;; Version 0.3.1
-;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
-;;
-;; Version 0.3
-;; * updated for compatibility with new Completion-UI
-;;
-;; Version 0.2
-;; * define delimiter portion of all brace regexps to fix overlay bug
-;; * added `predictive-texinfo-jump-to-*-definition' commands which use the
-;;   new auto-dict features for tracking definitions
-;; * added `predictive-texinfo-after-save' and
-;;   `predictive-texinfo-kill-buffer' hook functions
-;; * updated for compatibility with new `completion-browser-menu-function'
-;;   spec
-;;
-;; Version 0,1
-;; * initial release, borrowing heavily from predictive-latex.el
-
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

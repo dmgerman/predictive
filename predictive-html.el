@@ -27,38 +27,6 @@
 ;; Boston, MA 02111-1307 USA
 
 
-;;; Change Log:
-;;
-;; Version 0.5.2
-;; * simplified dictionary handling with advent of the new
-;;   `predictive-auxiliary-dict' predictive-mode variable
-;;
-;; Version 0.5.1
-;; * use `predictive-buffer-dict' instead of `predictive-main-dict'
-;;
-;; Version 0.5
-;; * updated for compatibility with new Completion-UI
-;;
-;; Version 0.4.1
-;; * made `predictive-setup-html' fail gracefully when a required dictionary
-;;   can't be found
-;;
-;; Version 0.4
-;; * updated to bring it into line with current auto-overlays
-;; * implemented missing `predictive-html-forward-word' function
-;;
-;; Version 0.3
-;; * major overhaul to bring it up to date with current auto-overlays,
-;;   compltion-ui and predictive code
-;;
-;; Version 0.2
-;; * modified to use the new auto-overlays package
-;;
-;; Version 0.1
-;; * initial release
-
-
-
 ;;; Code:
 
 (require 'predictive)

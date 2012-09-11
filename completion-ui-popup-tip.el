@@ -28,21 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Commentary:
-;;
-
-
-;;; Change Log:
-;;
-;; Version 0.1.1
-;; * allow customization variables to be set either globally or per
-;;   completion source
-;; * updated to new `completion-ui-register-interface' syntax
-;;
-;; Version 0.1
-;; * initial version
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

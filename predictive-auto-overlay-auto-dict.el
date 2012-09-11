@@ -29,48 +29,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.3.2
-;; * modified `predictive-auto-dict-unload' to use `predictive-unload-dict'
-;;   instead of `dictree-unload', so that in the rare event of an auto-dict
-;;   being shared between buffers (can happen e.g. when different versions of
-;;   a file under version control are loaded) the dictionary isn't unloaded if
-;;   it's still needed
-;; * modified `predictive-auto-dict-name' to base auto-dict name on complete
-;;   file name, including extension
-;;
-;; Version 0.3.1
-;; * updated for compatibility with new dict-tree.el
-;; * reinstate fixed `predictive-auto-dict-suicide' function, since it's
-;;   necessary in circumstances when `predictive-auto-dict-update' *isn't*
-;;   called
-;;
-;; Version 0.3
-;; * fixed bug causing two duplicate deletions from dict by removing
-;;   `predictive-auto-dict-suicide' entirely; word already gets deleted by
-;;   `predictive-auto-dict-update'
-;; * keep track of which overlays defined each auto-dict word
-;; * wrote `predictive-auto-dict-jump-to-def' function to jump to definition
-;;   corresponding to an auto-dict word
-;; * added `predictive-auto-dict-unload' and `predictive-auto-dict-save'
-;; * `predictive-auto-dict-load' no longer sets auxiliary variable to point to
-;;   dictionaries, it just loads and returns the dictionary
-;;
-;; Version 0.2
-;; * moved utility functions from predictive-latex.el
-;;
-;; Version 0.1.1
-;; * add required `require's
-;;
-;; Version 0.1
-;; * initial release
-
-
-
-
 ;;; Code:
-
 
 (eval-when-compile (require 'cl))
 (require 'auto-overlays)

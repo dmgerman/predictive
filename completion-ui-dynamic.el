@@ -28,31 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.4
-;; * allow customization variables to be set either globally or per
-;;   completion source
-;; * updated to new `completion-ui-register-interface' syntax
-;;
-;; Version 0.1.3
-;; * minor change to `completion-deactivate-dynamic' to make it more robust
-;;   against the overlay being in an inconsistent state
-;;
-;; Version 0.1.2
-;; * changed behaviour when `completion-accept-or-reject-by-default' is set to
-;;   'accept-common
-;;
-;; Version 0.1.1
-;; * added missing code to activate and deactivate key bindings from
-;;   `completion-dynamic-map'
-;; * removed obsolete `auto-completion-dynamic-map'
-;; * support new `completion-auto-update' customization option
-;;
-;; Version 0.1
-;; * initial version (split off from completion-ui.el)
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

@@ -42,13 +42,6 @@
 ;; package.
 
 
-;;; Change Log:
-;;
-;; Version 0.1
-;; * the old Elib library of the same name, updated to use defstructs
-
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

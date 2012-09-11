@@ -28,21 +28,6 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.2
-;; * allow customization variables to be set either globally or per
-;;   completion source
-;; * updated to new `completion-ui-register-interface' syntax
-;;
-;; Version 0.1.1
-;; * changed `completion-[auto-show]-[de]activate-hotkeys' to cope with
-;;   vectors in `completion-hotkey-list'
-;;
-;; Version 0.1
-;; * initial version (split off from completion-ui.el)
-
-
 ;;; Code:
 
 (eval-when-compile (require 'cl))

@@ -28,24 +28,7 @@
 ;; MA 02110-1301, USA.
 
 
-;;; Change Log:
-;;
-;; Version 0.1.2
-;; * added new `auto-overlay-complex-class' property
-;; * renamed 'entry-id and 'subentry-id to 'definition-id and 'regexp-id
-;;
-;; Version 0.1.1
-;; * set overlay properties straight after creation, rather than leaving it to
-;;   `auto-overlay-update', in case matching causes exclusive reparsing, for
-;;   which properties are already required
-;;
-;; Version 0.1
-;; * initial version
-
-
-
 ;;; Code:
-
 
 (require 'auto-overlays)
 (provide 'auto-overlay-flat)
