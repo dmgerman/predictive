@@ -223,7 +223,7 @@ See `auto-overlay-highest-priority-at-point' for a definition of
 		  point `(identity ,symbol))))
     (if overlay
 	(overlay-get overlay symbol)
-      (when (boundp symbol) (eval symbol))))
+      (when (boundp symbol) (symbol-value symbol))))
 )
 
 ;; auto-overlay-common.el ends here

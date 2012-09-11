@@ -76,7 +76,7 @@
 		 (cons 'predictive-schedule-auto-dict-update
 		       (overlay-get o-new 'insert-behind-hooks)))
     ;; add word to dictionary
-    (unless (dictree-p dict) (setq dict (eval dict)))
+    (unless (dictree-p dict) (setq dict (symbol-value dict)))
     (dictree-insert dict word 0
 		    ;; no duplicate definition warning if starting
 		    ;; predictive-mode (all auto-dict entries get re-added at
@@ -106,7 +106,7 @@
 	(parent (overlay-get o-match 'parent)))
     ;; delete the overlay
     (auto-o-delete-overlay parent)
-    (unless (dictree-p dict) (setq dict (eval dict)))
+    (unless (dictree-p dict) (setq dict (symbol-value dict)))
     ;; delete overlay from definition list
     (unless (dictree-put-property
 	     dict word :definitions
@@ -140,7 +140,7 @@
   (let ((dict (overlay-get (overlay-get o-self 'start) 'auto-dict))
 	(word (overlay-get (overlay-get o-self 'start) 'word))
 	defs)
-    (unless (dictree-p dict) (setq dict (eval dict)))
+    (unless (dictree-p dict) (setq dict (symbol-value dict)))
     ;; delete definition overlay from :definitions property of word in
     ;; auto-dict, deleting word entirely if this was last definition overlay
     (when (null (dictree-put-property
@@ -216,12 +216,12 @@
       (predictive-create-auxiliary-file-location)
       ;; if dictionary is already loaded, return it
       (if (condition-case
-	      error (eval (intern-soft dictname))
+	      error (symbol-value (intern-soft dictname))
 	    (void-variable nil))
-	  (eval (intern-soft dictname))
+	  (symbol-value (intern-soft dictname))
 	;; otherwise, load or create it
 	(if (load file t)
-	    (setf (dictree-filename (eval dictname)) file)
+	    (setf (dictree-filename (symbol-value dictname)) file)
 	  (dictree-create dictname file
 			  predictive-dict-autosave nil
 			  '< '+ 'predictive-dict-rank-function
@@ -231,7 +231,7 @@
 			  nil nil nil nil
 			  'predictive-auto-dict-plist-savefun nil))
 	(predictive-load-dict dictname)
-	(eval dictname)))  ; return the dictionary
+	(symbol-value dictname)))  ; return the dictionary
 
      ;; if buffer is not associated with a file, create a temporary NAME
      ;; dictionary
@@ -250,13 +250,13 @@
   "Unload and possibly save the current buffer's NAME dictionary."
   (when (buffer-file-name)
     (predictive-unload-dict
-     (eval (predictive-auto-dict-name name file)) dont-save)))
+     (symbol-value (predictive-auto-dict-name name file)) dont-save)))
 
 
 (defun predictive-auto-dict-save (name &optional file)
   "Save the current buffer's NAME dictionary if associated with a file."
   (when (buffer-file-name)
-    (dictree-save (eval (predictive-auto-dict-name name file)))))
+    (dictree-save (symbol-value (predictive-auto-dict-name name file)))))
 
 
 

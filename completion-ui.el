@@ -2047,7 +2047,7 @@ functions called from the
 	     (while (and prefix-function
 			 (not (functionp prefix-function))
 			 (boundp prefix-function))
-	       (setq prefix-function (eval prefix-function)))
+	       (setq prefix-function (symbol-value prefix-function)))
 	     prefix-function))
       ;; default fall-back
       'completion-prefix))
@@ -2078,7 +2078,7 @@ functions called from the
 				   (intern-soft
 				    (format "forward-%s" word-thing)))))
 			 (boundp word-thing))
-	       (setq word-thing (eval word-thing)))
+	       (setq word-thing (symbol-value word-thing)))
 	     word-thing))
       ;; default fall-back
       'word))
@@ -2139,7 +2139,7 @@ functions called from the
 	(while (and popup-frame-function
 		    (not (functionp popup-frame-function))
 		    (boundp popup-frame-function))
-	  (setq popup-frame-function (eval popup-frame-function)))
+	  (setq popup-frame-function (symbol-value popup-frame-function)))
 	popup-frame-function)
       ;; default fall-back
       'completion-construct-popup-frame-text))
@@ -2166,7 +2166,7 @@ functions called from the
 	(while (and tooltip-function
 		    (not (functionp tooltip-function))
 		    (boundp tooltip-function))
-	  (setq tooltip-function (eval tooltip-function)))
+	  (setq tooltip-function (symbol-value tooltip-function)))
 	tooltip-function)
       ;; default fall-back
       'completion-construct-tooltip-text))
@@ -2193,7 +2193,7 @@ functions called from the
 	(while (and popup-tip-function
 		    (not (functionp popup-tip-function))
 		    (boundp popup-tip-function))
-	  (setq popup-tip-function (eval popup-tip-function)))
+	  (setq popup-tip-function (symbol-value popup-tip-function)))
 	popup-tip-function)
       ;; default fall-back
       'completion-construct-tooltip-text))
@@ -2219,7 +2219,7 @@ functions called from the
 	(while (and menu-function
 		    (not (functionp menu-function))
 		    (boundp menu-function))
-	  (setq menu-function (eval menu-function)))
+	  (setq menu-function (symbol-value menu-function)))
 	menu-function)
       ;; default fall-back
       'completion-construct-menu))
@@ -2246,7 +2246,7 @@ functions called from the
 	(while (and browser-function
 		    (not (functionp browser-function))
 		    (boundp browser-function))
-	  (setq browser-function (eval browser-function)))
+	  (setq browser-function (symbol-value browser-function)))
 	browser-function)
       ;; default fall-back
       'completion-construct-browser-menu))
@@ -3034,19 +3034,19 @@ exist, unless NO-OVERLAY is non-nil."
     ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
     ;; cons cell), convert it to an alist
     (dolist (alist '(syntax-alist global-syntax-alist))
-      (unless (listp (car (eval alist)))
+      (unless (listp (car (symbol-value alist)))
 	(set alist
 	     `(;; word constituents add to current completion and complete
 	       ;; word or string, depending on VALUE
-	       (?w . (add ,(cdr (eval alist))))
+	       (?w . (add ,(cdr (symbol-value alist))))
 	       ;; symbol constituents, whitespace and punctuation characters
 	       ;; either accept or reject, depending on VALUE, and don't
 	       ;; complete
-	       (?_ .  (,(car (eval alist)) none))
-	       (?  .  (,(car (eval alist)) none))
-	       (?. .  (,(car (eval alist)) none))
-	       (?\( . (,(car (eval alist)) none))
-	       (?\) . (,(car (eval alist)) none))
+	       (?_ .  (,(car (symbol-value alist)) none))
+	       (?  .  (,(car (symbol-value alist)) none))
+	       (?. .  (,(car (symbol-value alist)) none))
+	       (?\( . (,(car (symbol-value alist)) none))
+	       (?\) . (,(car (symbol-value alist)) none))
 	       ;; anything else rejects and does't complete
 	       (t . (reject none)))
 	     )))
@@ -4142,7 +4142,7 @@ sequence in a keymap."
   ;; unless running instead and CONDITION is non-nil
   (unless (and (or (null when) (eq when 'instead)) condition)
     (let ((completion--trap-recursion t)
-          (restore (eval variable))
+          (restore (symbol-value variable))
           command)
       (set variable nil)
       ;; we add (this-command-keys) to `unread-command-events' and then

@@ -930,7 +930,7 @@ To set the default main dictionary, you should customize
 `predictive-main-dict' instead."
   (interactive (list (read-dict "Dictionary: " nil nil 'allow-unloaded)))
   (cond
-   ((symbolp dict) (setq dict (eval dict)))
+   ((symbolp dict) (setq dict (symbol-value dict)))
    ;; if DICT is a string, load DICT
    ((stringp dict)
     (let ((dic (predictive-load-dict dict)))
@@ -968,9 +968,9 @@ load. Interactively, it is read from the mini-buffer."
    ((dictree-p dict))
    ;; DICT is the name of a loaded dictionary
    ((condition-case nil
-	(eval (intern-soft dict))
+	(symbol-value (intern-soft dict))
       (void-variable nil))
-    (let ((dic (eval (intern-soft dict))))
+    (let ((dic (symbol-value (intern-soft dict))))
       (if (dictree-p dic)
 	  (setq dict dic)
 	(error "%s is not a dictionary" dict))))
@@ -1014,7 +1014,7 @@ also unload the dictionary from Emacs."
   (interactive (list (read-dict "Dictionary: "
 				nil predictive-used-dict-list)))
   ;; sort out argument
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
 
   ;; remove dict from buffer's used dictionary list
   (setq predictive-used-dict-list (delq dict predictive-used-dict-list))
@@ -1054,7 +1054,7 @@ Use `predictive-write-dict' to save to a different file.
 
 See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to save: ")))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (when dict (dictree-save dict predictive-dict-compilation)))
 
 
@@ -1069,7 +1069,7 @@ See also `predictive-dict-compilation'."
   (interactive (list (read-dict "Dictionary to write: ")
 		     (read-file-name "File to write to: ")
 		     current-prefix-arg))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (dictree-write dict filename overwrite predictive-dict-compilation))
 
 
@@ -1124,7 +1124,7 @@ respectively."
   ;;        return the symbol instead in some Emacs versions)
   (when (or (null dictname)
 	    (and (null (dictree-p (condition-case nil
-				      (eval (intern-soft dictname))
+				      (symbol-value (intern-soft dictname))
 				    (void-variable nil))))
 		 (setq dictname (intern dictname)))
 	    (and (or (null (called-interactively-p 'any))
@@ -1134,7 +1134,7 @@ respectively."
 				    "it? (you'll be prompted to save any "
 				    "unsaved changes first) ")
 				   dictname))
-			  (dictree-unload (eval (intern-soft dictname)))))
+			  (dictree-unload (symbol-value (intern-soft dictname)))))
 		 (setq dictname (intern dictname))))
 
     (let (dict
@@ -1190,21 +1190,21 @@ The other arguments are as for `predictive-create-dict'."
     (when (symbolp name) (setq name (symbol-name name)))
     (when (string= filename "") (setq filename nil)))
   (setq dictlist
-	(mapcar (lambda (d) (if (symbolp d) (eval d) d)) dictlist))
+	(mapcar (lambda (d) (if (symbolp d) (symbol-value d) d)) dictlist))
 
   ;; confirm if overwriting existing dict, then unload existing one
   ;; (Note: we need the condition-case to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead)
   (when (or (and (null (dictree-p (condition-case nil
-				      (eval (intern-soft name))
+				      (symbol-value (intern-soft name))
 				    (void-variable nil))))
 		 (setq name (intern name)))
 	    (or (null (called-interactively-p 'any))
 		(and (y-or-n-p
 		      (format "Dictionary %s already exists. Replace it? "
 			      name))
-		     (dictree-unload (eval (intern-soft name)))
+		     (dictree-unload (symbol-value (intern-soft name)))
 		     (setq name (intern name)))))
 
     (or speed (setq speed predictive-completion-speed))
@@ -1234,7 +1234,7 @@ also `predictive-dump-dict-to-file'."
 		      (car (predictive-current-dict)))
 		     (read-buffer "Buffer to dump to: "
 				  (buffer-name (current-buffer)))))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (dictree-dump-to-buffer dict buffer 'string))
 
 
@@ -1261,7 +1261,7 @@ creating it using `predictive-create-dict'. See also
 		      (car (predictive-current-dict)))
 		     (read-file-name "File to dump to: ")
 		     current-prefix-arg))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (dictree-dump-to-file dict filename 'string overwrite))
 
 
@@ -1290,7 +1290,7 @@ specified by the prefix argument."
 			      ": "))
 		     current-prefix-arg))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     (when (string= word "")
       (let ((str (thing-at-point 'word)))
@@ -1360,7 +1360,7 @@ Interactively, WORD and DICT are read from the minibuffer."
 				(when str (concat " (default \"" str "\")")))
 			      ": "))))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and (called-interactively-p 'any) (string= word "")
        (let ((str (thing-at-point 'word)))
 	 (if (null str)
@@ -1400,7 +1400,7 @@ If WEIGHT is supplied, reset to that value instead of
 		     current-prefix-arg))
 
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and (stringp word) (string= word "") (setq word nil))
   (cond
    ((null weight) (setq weight 0))
@@ -1465,7 +1465,7 @@ as the weight of WORD."
 				wrd (or (predictive-guess-prefix wrd) ""))))
 		     ))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     ;; default to word at point
     (when (or (null word) (string= word ""))
@@ -1550,7 +1550,7 @@ least as large as the weight of WORD."
 				wrd (or (predictive-guess-prefix wrd) ""))))
 		     ))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     (when (or (null word) (string= word ""))
       (let ((str (thing-at-point 'word)))
@@ -1604,7 +1604,7 @@ INTERACTIVE is non-nil."
 		     (read-string "Prefix (leave blank for all): ")
 		     (prefix-numeric-value current-prefix-arg)))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
   (and (called-interactively-p 'interactive) (setq interactive t))
 
@@ -1679,7 +1679,7 @@ confirmation first if called interactively)."
 		      (car (predictive-current-dict)))
 		     (read-string "Prefix (leave blank for all): ")))
   ;; sort out arguments
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and (stringp prefix) (string= prefix "") (setq prefix nil))
   ;; prompt for confirmation if called interactively to remove all prefixes
   (when (or (not (called-interactively-p 'any))
@@ -1772,7 +1772,7 @@ See also `predictive-fast-learn-or-add-from-buffer'."
 		     current-prefix-arg))
   ;; sort out and sanity check arguments
   (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and all (null dict)
        (error "Argument ALL supplied but no dictionary specified"))
 
@@ -1872,7 +1872,7 @@ ALL is specified by the presence of a prefix argument."
 		     current-prefix-arg))
   ;; sort out arguments
   (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (save-excursion
     ;; open file in a buffer
     (let (visiting buff)
@@ -1930,7 +1930,7 @@ the buffer's syntax table."
 		     current-prefix-arg))
   ;; sort out and sanity check arguments
   (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (and all (null dict)
        (error "Argument ALL supplied but no dictionary specified"))
 
@@ -2029,13 +2029,15 @@ the buffer's syntax table."
 			      (funcall
 			       predictive-auto-add-filter
 			       word
-			       (eval (predictive-buffer-local-dict-name))))
+			       (symbol-value
+				(predictive-buffer-local-dict-name))))
 		      (predictive-add-to-dict
-		       (eval (predictive-buffer-local-dict-name)) word))))
+		       (symbol-value (predictive-buffer-local-dict-name))
+		       word))))
 
 		 ;; anything else specifies an explicit dictionary to add to
 		 (t
-		  (setq currdict (eval predictive-auto-add-to-dict))
+		  (setq currdict (symbol-value predictive-auto-add-to-dict))
 		  ;; check `predictive-auto-add-to-dict' is a dictionary
 		  (if (dictree-p dict)
 		      (when (or (null predictive-auto-add-filter)
@@ -2115,7 +2117,7 @@ entirely of word- or symbol-constituent characters."
 		     current-prefix-arg))
   ;; sort out arguments
   (and (called-interactively-p 'any) (eq dict t) (setq dict nil))
-  (and (symbolp dict) (setq dict (eval dict)))
+  (and (symbolp dict) (setq dict (symbol-value dict)))
   (save-excursion
     ;; open file in a buffer
     (let (visiting buff)
@@ -2398,7 +2400,7 @@ Usually called after a completion is accepted."
 		;; if caching auto-added words, do so
 		(if predictive-use-auto-learn-cache
 		    (push (cons word
-				(eval (predictive-buffer-local-dict-name)))
+				(symbol-value (predictive-buffer-local-dict-name)))
 			  predictive-auto-add-cache)
 		  ;; otherwise, check it passes the filter (if there is one),
 		  ;; then add it to the dictionary
@@ -2409,14 +2411,14 @@ Usually called after a completion is accepted."
 			   (funcall
 			    predictive-auto-add-filter
 			    word
-			    (eval (predictive-buffer-local-dict-name))))
+			    (symbol-value (predictive-buffer-local-dict-name))))
 		       (predictive-add-to-dict
-			(eval (predictive-buffer-local-dict-name))
+			(symbol-value (predictive-buffer-local-dict-name))
 			word)))))
 
 	     ;; anything else specifies an explicit dictionary to add to
 	     (t
-	      (setq dict (eval predictive-auto-add-to-dict))
+	      (setq dict (symbol-value predictive-auto-add-to-dict))
 	      ;; check `predictive-auto-add-to-dict' is a dictionary
 	      (if (dictree-p dict)
 		  ;; if caching auto-added words, do so
@@ -2548,7 +2550,7 @@ there's only one."
       (setq dict (overlay-get overlay 'dict))
       (cond
        ((functionp dict) (setq dict (funcall dict)))
-       ((symbolp dict) (setq dict (eval dict)))))
+       ((symbolp dict) (setq dict (symbol-value dict)))))
 
     ;; t indicates no active dictionary, so return nil
     (if (eq dict t) nil
@@ -2560,9 +2562,7 @@ there's only one."
 	 ;; if element is a function or symbol, evaluate it
 	 (cond
 	  ((functionp dic) (setq dic (funcall dic)))
-  	  ((symbolp dic) (setq dic (eval dic)))
-;; 	  ((symbolp dic) (setq dic (eval (intern-soft (symbol-name dic)))))
-	  )
+  	  ((symbolp dic) (setq dic (symbol-value dic))))
 
 	 (cond
 	  ;; if element is a dictionary, return it
@@ -2638,9 +2638,11 @@ meta-dictionary will be based, instead of
     (if (and filename (file-exists-p filename))
 	(progn
 	  (load filename)
-	  (setf (dictree-filename (eval (predictive-buffer-local-dict-name)))
-		filename)
-	  (setq buffer-dict (eval (predictive-buffer-local-dict-name))))
+	  (setf (dictree-filename (symbol-value
+				   (predictive-buffer-local-dict-name)))
+		  filename
+		buffer-dict
+		  (symbol-value (predictive-buffer-local-dict-name))))
       ;; The insertion function inserts a weight multiplied by the multiplier
       ;; if none already exists, otherwise it adds the new weight times the
       ;; multiplier to the existing one, or if supplied weight is nil,
@@ -2672,13 +2674,15 @@ meta-dictionary will be based, instead of
       ;; if the buffer meta-dictionary exists, and we're basing it on
       ;; `predictive-main-dict', load it
       (load filename)
-      (setf (dictree-filename (eval (predictive-buffer-local-meta-dict-name)))
+      (setf (dictree-filename
+	     (symbol-value (predictive-buffer-local-meta-dict-name)))
 	    filename)
       ;; if the meta-dictionary is not based on the current main dictionary,
       ;; prompt user to update it
-      (and (not (memq (eval predictive-main-dict)
+      (and (not (memq (symbol-value predictive-main-dict)
 		      (dictree--meta-dict-dictlist
-		       (eval (predictive-buffer-local-meta-dict-name)))))
+		       (symbol-value
+			(predictive-buffer-local-meta-dict-name)))))
 	   (y-or-n-p "Existing buffer-local dictionary is not based on the\
  current main dictionary. Update it? ")
 	   (unintern (predictive-buffer-local-meta-dict-name))))
@@ -2697,7 +2701,7 @@ meta-dictionary will be based, instead of
 	    (dictree-create-meta-dict
 	     (append (list buffer-dict)
 		     (mapcar (lambda (dic)
-			       (if (dictree-p dic) dic (eval dic)))
+			       (if (dictree-p dic) dic (symbol-value dic)))
 			     dict-list))
 	     (predictive-buffer-local-meta-dict-name)
 	     filename (when filename t) nil combfun nil nil
@@ -2718,12 +2722,13 @@ meta-dictionary will be based, instead of
   (let ((buffer-dict (predictive-buffer-local-dict-name))
 	(meta-dict (predictive-buffer-local-meta-dict-name)))
     (when (boundp buffer-dict)
-      (if (dictree-p (eval (predictive-buffer-local-dict-name)))
-	  (dictree-unload (eval (predictive-buffer-local-dict-name)))
+      (if (dictree-p (symbol-value (predictive-buffer-local-dict-name)))
+	  (dictree-unload (symbol-value (predictive-buffer-local-dict-name)))
 	(unintern buffer-dict)))
     (when (boundp meta-dict)
-      (if (dictree-p (eval (predictive-buffer-local-meta-dict-name)))
-	  (dictree-unload (eval (predictive-buffer-local-meta-dict-name)))
+      (if (dictree-p (symbol-value (predictive-buffer-local-meta-dict-name)))
+	  (dictree-unload
+	   (symbol-value (predictive-buffer-local-meta-dict-name)))
 	(unintern meta-dict)))))
 
 

@@ -843,8 +843,8 @@ definition of the same thing."
 
     (or
      ;; when we're on either a cross-reference or a node definition...
-     (and (or (member (setq dict (eval (predictive-auto-dict-name
-					"texinfo-node")))
+     (and (or (member (setq dict (symbol-value (predictive-auto-dict-name
+						"texinfo-node")))
 		      current-dict)
 	      (setq o-def (car (auto-overlays-at-point
 				nil `((identity auto-overlay)
@@ -861,8 +861,8 @@ definition of the same thing."
 	  (setq type "node"))
 
      ;; when we're on either a texinfo command or a definition thereof...
-     (and (or (member (setq dict (eval (predictive-auto-dict-name
-					"texinfo-local-texinfo")))
+     (and (or (member (setq dict (symbol-value (predictive-auto-dict-name
+						"texinfo-local-texinfo")))
 		      current-dict)
 	      (setq o-def (car (auto-overlays-at-point
 				nil `((identity auto-overlay)
@@ -879,8 +879,8 @@ definition of the same thing."
 	  (setq type "command"))
 
      ;; when we're on either a flag or definition thereof...
-     (and (or (member (setq dict (eval (predictive-auto-dict-name
-					"texinfo-local-flag")))
+     (and (or (member (setq dict (symbol-value (predictive-auto-dict-name
+						"texinfo-local-flag")))
 		      current-dict)
 	      (setq o-def (car (auto-overlays-at-point
 				nil '((identity auto-overlay)
@@ -917,7 +917,7 @@ Interactively, NODE is read from the mini-buffer, defaulting to
 the node name at point (if any)."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "texinfo-node")))
+  (let ((dict (symbol-value (predictive-auto-dict-name "texinfo-node")))
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
@@ -976,7 +976,7 @@ Interactively, COMMAND is read from the mini-buffer, defaulting to
 the command at point (if any)."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "texinfo-local-texinfo")))
+  (let ((dict (symbol-value (predictive-auto-dict-name "texinfo-local-texinfo")))
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))
@@ -1034,7 +1034,7 @@ Interactively, FLAG is read from the mini-buffer, defaulting to
 the flag at point (if any)."
   (interactive)
 
-  (let ((dict (eval (predictive-auto-dict-name "texinfo-flag")))
+  (let ((dict (symbol-value (predictive-auto-dict-name "texinfo-flag")))
 	(current-dict (predictive-current-dict))
 	o-def)
     (when (dictree-p current-dict) (setq current-dict (list current-dict)))

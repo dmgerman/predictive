@@ -1244,10 +1244,12 @@ that are defined in the document's preamble."
 
     ;; look for command name or definition at point
     (unless command
-      (when (or (member (eval (predictive-auto-dict-name "latex-local-latex"))
-			current-dict)
-		(member (eval (predictive-auto-dict-name "latex-local-math"))
-			current-dict)
+      (when (or (member
+		 (symbol-value (predictive-auto-dict-name "latex-local-latex"))
+		 current-dict)
+		(member
+		 (symbol-value (predictive-auto-dict-name "latex-local-math"))
+		 current-dict)
 		(setq o-def
 		      (car (auto-overlays-at-point
 			    nil `((identity auto-overlay)
@@ -1708,10 +1710,10 @@ the package, if they exist."
       (when (predictive-load-dict dict)
 	(setq loaded t)
 	(setq dict (intern-soft dict))
-	(if (and (listp (eval (car dic)))
-		 (not (dictree-p (eval (car dic)))))
-	    (nconc (eval (car dic)) (list dict))
-	  (set (car dic) (list (eval (car dic)) dict)))))
+	(if (and (listp (symbol-value (car dic)))
+		 (not (dictree-p (symbol-value (car dic)))))
+	    (nconc (symbol-value (car dic)) (list dict))
+	  (set (car dic) (list (symbol-value (car dic)) dict)))))
 
     ;; try to load lisp library for the package
     (require (intern (concat "predictive-latex-" package)) nil t)
@@ -1738,14 +1740,14 @@ they exist."
     ;; unload any package dictionaries
     (dolist (dic predictive-latex-dict-classes)
       (when (setq dict (intern-soft (concat (cdr dic) package)))
-	(predictive-unload-dict (eval dict))
-	(when (and (listp (eval (car dic)))
-		   (not (dictree-p (eval (car dic)))))
+	(predictive-unload-dict (symbol-value dict))
+	(when (and (listp (symbol-value (car dic)))
+		   (not (dictree-p (symbol-value (car dic)))))
 	  ;; we don't use "(set ... (delq ..." here because other variables
 	  ;; may share structure with the dictionary list variables, and the
 	  ;; element we want to delete can not be the first one, as that is
 	  ;; always the standard dictionary
-	  (delq dict (eval (car dic)))))))
+	  (delq dict (symbol-value (car dic)))))))
 
   ;; try to load lisp library for the package
   (require (intern (concat "predictive-latex-" package)) nil t)
@@ -2009,7 +2011,7 @@ they exist."
       (when (functionp submenu)
 	(setq submenu (funcall submenu cmpl)))
       ;; if submenu definition is a symbol, evaluate it
-      (when (symbolp submenu) (setq submenu (eval submenu)))
+      (when (symbolp submenu) (setq submenu (symbol-value submenu)))
       ;; if submenu definition is a dictionary or list of dictionaries,
       ;; construct submenu entries from dictionary words
       (cond
@@ -2025,7 +2027,7 @@ they exist."
        ((and (listp submenu)
 	     (or (dictree-p (car submenu)) (symbolp (car submenu))))
 	(dictree-complete
-	 (mapcar (lambda (dic) (if (dictree-p dic) dic (eval dic)))
+	 (mapcar (lambda (dic) (if (dictree-p dic) dic (symbol-value dic)))
 		 submenu)
 	 "" nil nil nil nil nil
 	 (lambda (word data) (concat cmpl "{" word "}")))))
