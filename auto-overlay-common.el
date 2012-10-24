@@ -2,10 +2,10 @@
 ;;; auto-overlay-common.el --- general overlay functions
 
 
-;; Copyright (C) 2006-2007 Toby Cubitt
+;; Copyright (C) 2006-2007, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.1
+;; Version: 0.2
 ;; Keywords: automatic, overlays
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -206,12 +206,16 @@ See `auto-overlays-at' for ane explanation of the PROPTEST argument."
 
 
 
-(defun auto-overlay-local-binding (symbol &optional point)
+(defun auto-overlay-local-binding (symbol &optional point only-overlay)
   "Return \"overlay local \" binding of SYMBOL at POINT,
-or the current local binding if there is no overlay
-binding. POINT defaults to the point.
+or the current local binding if there is no overlay binding. If
+there is no overlay binding and SYMBOL is not bound, return
+nil. POINT defaults to the point.
 
-An \"overlay local\" binding is creating by giving an overlay a
+If ONLY-OVERLAY is non-nil, only overlay bindings are
+returned. If none exists at POINT, nil is returned
+
+An \"overlay local\" binding is created by giving an overlay a
 non-nil value for a property named SYMBOL. If more than one
 overlay at POINT has a non-nil SYMBOL property, the value from
 the highest priority overlay is returned.
@@ -223,7 +227,6 @@ See `auto-overlay-highest-priority-at-point' for a definition of
 		  point `(identity ,symbol))))
     (if overlay
 	(overlay-get overlay symbol)
-      (when (boundp symbol) (symbol-value symbol))))
-)
+      (and (not only-overlay) (boundp symbol) (symbol-value symbol)))))
 
 ;; auto-overlay-common.el ends here

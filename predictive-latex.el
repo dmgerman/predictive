@@ -836,9 +836,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
+      (append (auto-completion-lookup-behaviour nil ?w 'predictive)
+	      (auto-completion-lookup-behaviour nil ?. 'predictive)
+	      (auto-completion-lookup-behaviour nil ?  'predictive))
 
     ;; make "\", "$", "_", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist

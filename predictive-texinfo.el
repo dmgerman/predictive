@@ -583,9 +583,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
+      (append (auto-completion-lookup-behaviour nil ?w 'predictive)
+	      (auto-completion-lookup-behaviour nil ?. 'predictive)
+	      (auto-completion-lookup-behaviour nil ?  'predictive))
   ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
   ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
   ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))

@@ -209,7 +209,7 @@
 ;; packages, Completion-UI lets users customize their in-buffer completion
 ;; user interface once-and-for-all to suit their tastes, rather than having to
 ;; learn how to customize each new package separately. All you have to do (as
-;; a completion package writer) is supply the completions!
+;; a completion package writer) is supply the completions.
 ;;
 ;;
 ;; Adding new sources
@@ -249,7 +249,7 @@
 
 
 
-
+
 ;;; ============================================================
 ;;;          Dynamically updated customization types
 
@@ -272,40 +272,38 @@ different value for each completion source."
     (plist-put
      args :type
      `(quote
-       (choice ,(cond
-		 ((symbolp type) `(,type :tag "global"))
-		 ((and (listp type) (eq (car type) 'choice))
-		  (append '(choice :tag "global") (copy-sequence (cdr type))))
-		 ;; NOTE: extend cond if other compound types are needed
-		 )
-	       (alist :tag "per source"
-		      :key-type
-		      (choice :tag "source" (const :tag "default" t))
-		      :value-type
-		      ,(if (listp type) (copy-sequence type) type))))))
+       (choice (cons :tag "global" (const global) ,type)
+		     ;;,(if (listp type) (copy-sequence type) type))
+	       (cons :tag "per source"
+		     (const source)
+		     (alist :key-type
+			    (choice :tag "source" (const :tag "default" t))
+			    :value-type ,type))))))
+			    ;;,(if (listp type) (copy-sequence type) type)))))))
   ;; construct defcustom definition
   `(progn
      (add-to-list 'completion-ui-per-source-defcustoms ',symbol)
-     (defcustom ,symbol ,standard ,doc ,@args)))
+     (defcustom ,symbol '(global . ,(eval standard)) ,doc ,@args)))
 
 
 (defun completion-ui-get-value-for-source (source value-list)
   ;; extract value that applies to SOURCE from VALUE-LIST
-  (if (listp value-list)
+  (when (symbolp value-list) (setq value-list (symbol-value value-list)))
+  (if (eq (car value-list) 'source)
       (let ((v (or (assq (if (overlayp source)
 			     (overlay-get source 'completion-source)
 			   source)
 			 value-list)
 		   (assq t value-list))))
 	(cdr v))
-    value-list))
+    (cdr value-list)))
 
 
 (defun completion-ui-update-per-source-defcustoms (source &optional del)
   ;; add SOURCE to choices in all per-source defcustoms, or delete it if
   ;; DEL is non-nil.
   (dolist (var completion-ui-per-source-defcustoms)
-    (let ((choices (nth 4 (nth 2 (get var 'custom-type)))))
+    (let ((choices (nth 2 (nth 4 (nth 2 (get var 'custom-type))))))
       (if del (delete '(const ,name) choices)
 	(unless (member `(const ,source) choices)
 	  (delete nil choices)
@@ -313,6 +311,7 @@ different value for each completion source."
 
 
 
+
 ;;; ============================================================
 ;;;                    Customization variables
 
@@ -324,10 +323,11 @@ different value for each completion source."
 (completion-ui-defcustom-per-source completion-max-candidates 10
   "Maximum number of completion candidates to offer."
   :group 'completion-ui
-  :type 'integer)
+  :type '(choice integer (const :tag "all" nil)))
 
 
-(defcustom completion-accept-or-reject-by-default 'accept
+(completion-ui-defcustom-per-source completion-accept-or-reject-by-default
+  'accept
   "Default action for the current completion:
 
   'accept:        automatically accept the completion
@@ -366,8 +366,8 @@ temporarily enabled for the duration of the completion.\)"
   :type 'boolean)
 
 
-(completion-ui-defcustom-per-source
-  completion-auto-show 'completion-show-popup-tip
+(completion-ui-defcustom-per-source completion-auto-show
+  'completion-show-popup-tip
   "Function to call to display a completion user-interface.
 When null, nothing is auto-displayed.
 
@@ -395,6 +395,7 @@ before the `completion-auto-show' interface is activated."
 
 
 
+
 ;;; ===== Auto-completion customizations =====
 
 (defgroup auto-completion-mode nil
@@ -430,7 +431,8 @@ after deleting backwards in `auto-completion-mode'."
   :type 'float)
 
 
-(defcustom auto-completion-syntax-alist '(reject . word)
+(completion-ui-defcustom-per-source auto-completion-syntax-alist
+  '(reject . word)
   "Associates character syntax with completion behaviour.
 Used by the `auto-completion-self-insert' function to decide what
 to do based on a typed character's syntax.
@@ -462,15 +464,22 @@ defined by a buffer's syntax table) will cause the part of the
 word before point to be completed. That is,
 `auto-completion-mode' will first find the word at or next to the
 point, and then complete that part of it that comes before the
-point (`completion-word-thing' determines which characters form
-part of a word). If \"string\" is selected, typing a
+point (`completion-word-thing' usually determines which
+characters form part of a word, though individual completion
+sources can override this). If \"string\" is selected, typing a
 word-constituent character will complete the string that has been
 built up by typing consecutive characters. That is, the prefix
 will consist of all the characters you've typed in the buffer
 since the last time you did something other than typing a
-word-constituent character. Although they sound quite different,
-the two behaviours usually only differ if you move the point to
-the middle or end of an existing word and then start typing.
+word-constituent character.
+
+Although they sound quite different, the two behaviours usually
+only differ if you move the point to the middle or end of an
+existing word and type a character. The \"word\" setting will
+delete the part of the word after point, add the new character to
+the part of the word before point, and complete the result. The
+\"string\" setting will simply insert the new character and
+complete it.
 
 
 Customizing the behaviour for each syntax individually gives more
@@ -519,7 +528,7 @@ element."
                         (const word)
                         (const string)))
           (alist :tag "Custom"
-                 :key-type character
+                 :key-type (character :tag "Syntax descriptor")
                  :value-type (list
                               (choice (const accept)
                                       (const reject)
@@ -529,7 +538,7 @@ element."
                                       (const none))))))
 
 
-(defcustom auto-completion-override-syntax-alist
+(completion-ui-defcustom-per-source auto-completion-override-syntax-alist
   '((?0 . (reject none))
     (?1 . (reject none))
     (?2 . (reject none))
@@ -557,7 +566,7 @@ characters rather than syntax descriptors."
 
 
 
-
+
 ;;; ============================================================
 ;;;               Other configuration variables
 
@@ -577,9 +586,9 @@ called interactively.")
 
 Completions are rejected by calling
 `completion-reject'. Functions are passed three arguments: the
-prefix, the complete string that was rejected \(including the of
-the prefix\), and any prefix argument supplied by the user if the
-rejection command was called interactively.")
+prefix, the complete string that was rejected \(including the
+prefix\), and any prefix argument supplied by the user if the
+reject command was called interactively.")
 
 
 
@@ -602,7 +611,7 @@ rejection command was called interactively.")
 
 
 
-
+
 ;;; ============================================================
 ;;;                     Internal variables
 
@@ -645,7 +654,6 @@ by the Emacs user.")
 
 
 
-
 ;;; =================================================================
 ;;;            Set properties for delete-selection-mode
 
@@ -658,7 +666,7 @@ by the Emacs user.")
 
 
 
-
+
 ;;; ===============================================================
 ;;;                  Keybinding functions
 
@@ -1002,7 +1010,7 @@ used if the current Emacs version lacks command remapping support."
 
 
 
-
+
 ;;; =================================================================
 ;;;                     Setup default keymaps
 
@@ -1270,7 +1278,7 @@ used if the current Emacs version lacks command remapping support."
 
 
 
-
+
 ;;; ================================================================
 ;;;                Replacements for CL functions
 
@@ -1322,7 +1330,6 @@ SEQ1 and SEQ2 are the two argument lists, and PREDICATE is a
 
 
 
-
 ;;; =======================================================
 ;;;         Compatibility functions and aliases
 
@@ -1331,8 +1338,7 @@ SEQ1 and SEQ2 are the two argument lists, and PREDICATE is a
 
 
 
-
-
+
 ;;; =======================================================
 ;;;         Auto-completion minor-mode definition
 
@@ -1381,6 +1387,7 @@ to work."
 
 
 
+
 ;;; =======================================================
 ;;;              Modularized user interfaces
 
@@ -1617,7 +1624,7 @@ interface is activated."
 
 
 
-
+
 ;;; =======================================================
 ;;;           Modularized source definitions
 
@@ -1771,7 +1778,7 @@ option tells Completion-UI to record usage frequency data for
 this source, and automatically sort its completions by
 frequency. If set to the symbol 'source, frequency data will be
 accumulated separately for this source. If set to the symbol
-'global, frequency data to be pooled with data from other
+'global, frequency data will be pooled with data from other
 completion sources.
 
 The remaining optional keyword arguments override the default
@@ -2321,7 +2328,7 @@ sexp
       completions)))
 
 
-
+
 ;;; =======================================================
 ;;;             The core completion functions
 
@@ -2570,6 +2577,7 @@ called from timer)."
 
 
 
+
 ;;; ============================================================
 ;;;                  Interactive commands
 
@@ -2992,15 +3000,20 @@ green over night."
 
 
 
-
+
 ;;; ===============================================================
-;;;                Self-insert functions
+;;;                   Self-insert functions
 
-(defun auto-completion-lookup-behaviour (&optional char syntax no-overlay)
+(defun auto-completion-lookup-behaviour
+  (&optional char syntax source no-overlay-local)
   "Return syntax-dependent behaviour
-of character CHAR and/or syntax-class SYNTAX. At least one of
-these must be supplied. If both are supplied, SYNTAX overrides the
-syntax-class of CHAR.
+of character CHAR and/or syntax-class SYNTAX.
+
+At least one of these must be supplied. If both are supplied,
+SYNTAX overrides the syntax-class of CHAR.
+
+If SOURCE is supplied, return the behaviour for the specified
+completion source. Otherwise, return the default behaviour.
 
 Returns a three-element list:
 
@@ -3009,26 +3022,34 @@ Returns a three-element list:
 containing the resolve-behaviour, completion-behaviour and
 insert-behaviour.
 
-The \"overlay-local\" bindings of `auto-completion-syntax-alist'
-and `auto-completion-override-syntax-alist' are used when they
-exist, unless NO-OVERLAY is non-nil."
+If any \"overlay-local\" bindings of `auto-completion-syntax-alist'
+and `auto-completion-override-syntax-alist' exist at point, any
+behaviour they specify for CHAR and SYNTAX takes precedence over
+those variables, unless NO-OVERLAY-LOCAL is non-nil."
 
-  ;; SYNTAX defaults to syntax-class of CHAR
+  ;; SYNTAX defaults to syntax-class of CHAR, SOURCE to t (default value)
   (when (and char (not syntax)) (setq syntax (char-syntax char)))
+  (unless source (setq source t))
 
   ;; get syntax alists
   (let ((syntax-alist
-         (if (and (fboundp 'auto-overlay-local-binding)
-		  (not no-overlay))
-             (auto-overlay-local-binding 'auto-completion-syntax-alist)
-           auto-completion-syntax-alist))
+         (or (and (fboundp 'auto-overlay-local-binding)
+		  (not no-overlay-local)
+		  (auto-overlay-local-binding
+		   'auto-completion-syntax-alist nil t))
+	     (completion-ui-get-value-for-source
+	      source auto-completion-syntax-alist)))
         (override-alist
-         (if (and (fboundp 'auto-overlay-local-binding)
-		  (not no-overlay))
-             (auto-overlay-local-binding
-              'auto-completion-override-syntax-alist)
-           auto-completion-override-syntax-alist))
-	(global-syntax-alist auto-completion-syntax-alist)
+         (or (and (fboundp 'auto-overlay-local-binding)
+		  (not no-overlay-local)
+		  (auto-overlay-local-binding
+		   'auto-completion-override-syntax-alist nil t))
+	     (completion-ui-get-value-for-source
+	      source auto-completion-override-syntax-alist)))
+	(global-syntax-alist (completion-ui-get-value-for-source
+			      source auto-completion-syntax-alist))
+	(global-override-alist (completion-ui-get-value-for-source
+				source auto-completion-override-syntax-alist))
 	behaviour)
 
     ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
@@ -3058,7 +3079,7 @@ exist, unless NO-OVERLAY is non-nil."
 	   (and char
 		(or (cdr (assq char override-alist))
 		    ;; fall back to global override-alist
-		    (cdr (assq char auto-completion-override-syntax-alist))))
+		    (cdr (assq char global-override-alist))))
 	   ;; check syntax-alist
 	   (cdr (assq syntax syntax-alist))
 	   (cdr (assq t syntax-alist))
@@ -3160,8 +3181,10 @@ overlays."
 		       overlay word-thing wordstart prefix)
       (append
        (if no-syntax-override
-	   (auto-completion-lookup-behaviour nil syntax)
-	 (auto-completion-lookup-behaviour char syntax))
+	   (auto-completion-lookup-behaviour
+	    nil syntax auto-completion-source)
+	 (auto-completion-lookup-behaviour
+	  char syntax auto-completion-source))
        (list (completion-ui-overlay-at-point) nil nil nil))
     (setq word-thing
 	  (completion-ui-source-word-thing auto-completion-source overlay))
@@ -3373,7 +3396,7 @@ based on current syntax table."
 
 
 
-
+
 ;;; ============================================================
 ;;;                          Undo
 
@@ -3389,8 +3412,6 @@ Added to `before-change-functions' hook."
 	       'accept
 	     completion-how-to-resolve-old-completions)))
       (completion-ui-resolve-old nil beg end))))
-
-
 
 
 
@@ -3410,8 +3431,6 @@ calling `fill-paragraph', passing any argument straight through."
 
 
 
-
-
 ;;; ============================================================
 ;;;                      Yank Commands
 
@@ -3425,8 +3444,7 @@ Temporarily disables `auto-completion-mode', then calls
 
 
 
-
-
+
 ;;; ============================================================
 ;;;                    Deletion commands
 
@@ -3815,8 +3833,7 @@ enabled, complete what remains of that word."
 
 
 
-
-
+
 ;;; ==============================================================
 ;;;                    Internal functions
 
@@ -4074,7 +4091,9 @@ inserting anything)."
 	       (eq (overlay-get overlay 'completion-source)
 		   auto-completion-source)
 	       (or char syntax))
-	  (setq resolve (car (auto-completion-lookup-behaviour char syntax)))
+	  (setq resolve (car (auto-completion-lookup-behaviour
+			      char syntax
+			      (overlay-get overlay 'completion-source))))
 
 	;; otherwise, `completion-accept-or-reject-by-default' determines the
 	;; behaviour
@@ -4316,9 +4335,9 @@ See also `completion-window-posn-at-point' and
 
 
 
-
+
 ;;; ===============================================================
-;;;                     Compatibility Stuff
+;;;                     Compatibility Hacks
 
 ;; prevent bogus compiler warnings
 (eval-when-compile
@@ -4505,9 +4524,6 @@ in WINDOW'S frame."
 
 
 
-;;; =================================================================
-;;;                      Compatibility hacks
-
 ;; If the current Emacs version doesn't support overlay keybindings half
 ;; decently, have to simulate them using the
 ;; `completion--run-if-within-overlay' hack. So far, no Emacs version supports
@@ -4522,7 +4538,7 @@ in WINDOW'S frame."
 
 
 
-
+
 ;;; ================================================================
 ;;;                Load user-interface modules
 
@@ -4546,5 +4562,10 @@ in WINDOW'S frame."
 ;; ;; invariably loaded before a user's customization settings, theirs will
 ;; ;; still take precedence.)
 
+
+
+;; Local Variables:
+;; eval: (font-lock-add-keywords nil '(("(\\(completion-ui-defcustom-per-source\\)\\>[ \t]*\\(\\sw+\\)?" (1 font-lock-keyword-face) (2 font-lock-variable-name-face) ())))
+;; End:
 
 ;;; completion-ui.el ends here

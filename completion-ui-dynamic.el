@@ -108,8 +108,10 @@ cauliflower will start growing out of your ears."
     (let ((prefix (overlay-get overlay 'prefix))
 	  (completions (overlay-get overlay 'completions))
 	  (prefix-len (overlay-get overlay 'prefix-length))
-	  (non-prefix-cmpl
-	   (overlay-get overlay 'non-prefix-completion))
+	  (non-prefix-cmpl (overlay-get overlay 'non-prefix-completion))
+	  (accept-or-reject
+	   (completion-ui-get-value-for-source
+	    overlay completion-accept-or-reject-by-default))
 	  cmpl len)
       (when completions
 	;; For some unknown reason, the delete-region or insert (below) can
@@ -125,10 +127,8 @@ cauliflower will start growing out of your ears."
 	 (- pos
 	    (if (or (null non-prefix-cmpl)
 		    (and (not (overlay-get overlay 'prefix-replaced))
-			 (or (eq completion-accept-or-reject-by-default
-				 'accept)
-			     (eq completion-accept-or-reject-by-default
-				 'accept-common))
+			 (or (eq accept-or-reject 'accept)
+			     (eq accept-or-reject 'accept-common))
 			 (overlay-put overlay 'prefix-replaced t)))
 		(overlay-get overlay 'prefix-length) 0))
 	 (overlay-end overlay))
@@ -267,35 +267,38 @@ overlay."
 the start for `auto-completion-mode' or if it is to be rejected,
 the end of the common prefix for `accept-common' or
 the end if it is to be accepted."
-  (cond
-   ;; reject, auto-completion-mode, or completion-auto-update
-   ((or (eq completion-accept-or-reject-by-default 'reject)
-	(and auto-completion-mode
-	     (eq (overlay-get overlay 'completion-source)
-		 auto-completion-source)))
-    (goto-char (overlay-start overlay)))
+  (let ((accept-or-reject
+	 (completion-ui-get-value-for-source
+	  overlay completion-accept-or-reject-by-default)))
+    (cond
+     ;; reject, auto-completion-mode, or completion-auto-update
+     ((or (eq accept-or-reject 'reject)
+	  (and auto-completion-mode
+	       (eq (overlay-get overlay 'completion-source)
+		   auto-completion-source)))
+      (goto-char (overlay-start overlay)))
 
-   ;; accept-common
-   ((eq completion-accept-or-reject-by-default 'accept-common)
-    (if (overlayp (overlay-get overlay 'common-substring))
-        ;; if the common-substring overlay already exists, goto the end of it
-        (goto-char (overlay-end (overlay-get overlay 'common-substring)))
-      ;; if the common-substring hasn't already been found, find it
-      (let* ((prefix (overlay-get overlay 'prefix))
-	     (completions
-	      (mapcar
-	       (lambda (c)
-		 (if (stringp c)
-		     (substring c (length prefix))
-		   (substring (car c) (cdr c))))
-	       (overlay-get overlay 'completions)))
-	     (str (try-completion "" completions)))
-	;; (try-completion returns t if there's only one completion)
-	(when (eq str t) (setq str (car completions)))
-	(goto-char (+ (overlay-start overlay) (length str))))))
+     ;; accept-common
+     ((eq accept-or-reject 'accept-common)
+      (if (overlayp (overlay-get overlay 'common-substring))
+	  ;; if common-substring overlay already exists, goto the end of it
+	  (goto-char (overlay-end (overlay-get overlay 'common-substring)))
+	;; if the common-substring hasn't already been found, find it
+	(let* ((prefix (overlay-get overlay 'prefix))
+	       (completions
+		(mapcar
+		 (lambda (c)
+		   (if (stringp c)
+		       (substring c (length prefix))
+		     (substring (car c) (cdr c))))
+		 (overlay-get overlay 'completions)))
+	       (str (try-completion "" completions)))
+	  ;; (try-completion returns t if there's only one completion)
+	  (when (eq str t) (setq str (car completions)))
+	  (goto-char (+ (overlay-start overlay) (length str))))))
 
-   ;; accept
-   (t (goto-char (overlay-end overlay)))))
+     ;; accept
+     (t (goto-char (overlay-end overlay))))))
 
 
 
@@ -311,5 +314,10 @@ the end if it is to be accepted."
 
 
 (provide 'completion-ui-dynamic)
+
+
+;; Local Variables:
+;; eval: (font-lock-add-keywords nil '(("(\\(completion-ui-defcustom-per-source\\)\\>[ \t]*\\(\\sw+\\)?" (1 font-lock-keyword-face) (2 font-lock-variable-name-face) ())))
+;; End:
 
 ;;; completion-ui-dynamic.el ends here

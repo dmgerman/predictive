@@ -538,4 +538,10 @@ and OVERLAY. They should return menu keymaps."
 
 
 (provide 'completion-ui-menu)
+
+
+;; Local Variables:
+;; eval: (font-lock-add-keywords nil '(("(\\(completion-ui-defcustom-per-source\\)\\>[ \t]*\\(\\sw+\\)?" (1 font-lock-keyword-face) (2 font-lock-variable-name-face) ())))
+;; End:
+
 ;;; completion-ui-menu.el ends here
