@@ -367,7 +367,7 @@ directory as the buffer's associated file, and is loaded from
 there the next time predictive mode is enabled in the same
 buffer.
 
-The dictionary is initially empty, if `predictive-auto-learn' or
+The dictionary is initially empty. If `predictive-auto-learn' or
 `predictive-auto-add-to-dict' are enabled, words will be added to
 it as you type. The learning rate for the word weights is
 `predictive-local-learn-multiplier' times higher than that for
@@ -394,13 +394,13 @@ weight increment is multiplied by this number. See also
   "If non-nil, auto-learned and auto-added words will be cached
 and only added to the dictionary when Emacs is idle.
 
-This makes predictive mode more responsive, since learning or
-adding words can otherwise cause a small but noticeable delay
-when typing. However, it also means that dictionaries will not
-immediately reflect changes due to auto-learning or
-auto-adding. In particular, auto-added words will not appear as
-completions until Emacs has been idle long enough for them to
-have been added.
+This makes predictive mode more responsive, since on slower
+machines learning or adding words can otherwise cause a small but
+noticeable delay when typing. However, it also means that
+dictionaries will not immediately reflect changes due to
+auto-learning or auto-adding. In particular, auto-added words
+will not appear as completions until Emacs has been idle long
+enough for them to have been added.
 
 This has no effect unless `predictive-auto-learn' or
 `predictive-auto-add' are enabled. See also
@@ -415,7 +415,8 @@ The caches will only be flushed after Emacs has been idle for
 this many seconds. To take effect, this variable must be set
 before predictive mode is enabled.
 
-This has no effect unless `predictive-use-auto-learn-cache' is enabled."
+This has no effect unless `predictive-use-auto-learn-cache' is
+enabled."
   :group 'predictive
   :type 'number)
 
