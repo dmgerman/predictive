@@ -501,7 +501,7 @@ methods. Toggling will show all possible completions."
 
 
 ;; Local Variables:
-;; eval: (font-lock-add-keywords nil '(("(\\(completion-ui-defcustom-per-source\\)\\>[ \t]*\\(\\sw+\\)?" (1 font-lock-keyword-face) (2 font-lock-variable-name-face) ())))
+;; eval: (font-lock-add-keywords nil '(("(\\(completion-ui-defcustom-per-source\\)\\>[ \t]*\\(\\sw+\\)?" (1 font-lock-keyword-face) (2 font-lock-variable-name-face))))
 ;; End:
 
 ;;; completion-ui-popup-frame.el ends here
