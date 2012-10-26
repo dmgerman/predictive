@@ -105,55 +105,27 @@ Note: this can be overridden by an \"overlay local\" binding (see
 ;; unless it's already been set (most likely in an init file).
 (unless completion-popup-frame-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "\M-n" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map "\C-n" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map [down] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'next-line arg)))
-    (define-key map "\M-p" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'previous-line arg)))
-    (define-key map "\C-p" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'previous-line arg)))
-    (define-key map [up] (lambda (&optional arg) (interactive)
-                           (completion-popup-frame-motion
-                            'previous-line arg)))
-    (define-key map "\C-v" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-up arg)))
-    (define-key map [next] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-up arg)))
-    (define-key map "\M-v" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'scroll-down arg)))
-    (define-key map [prior] (lambda (&optional arg) (interactive)
-                              (completion-popup-frame-motion
-                               'scroll-down arg)))
-    (define-key map [home] (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'beginning-of-buffer arg)))
-    (define-key map "\M-<" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'beginning-of-buffer arg)))
-    (define-key map [end] (lambda (&optional arg) (interactive)
-                            (completion-popup-frame-motion
-                             'end-of-buffer arg)))
-    (define-key map "\M->" (lambda (&optional arg) (interactive)
-                             (completion-popup-frame-motion
-                              'end-of-buffer arg)))
-    (define-key map "\C-u" 'universal-argument)
-    (define-key map [?\C--] 'negative-argument)
-    (define-key map [C-up] 'completion-popup-frame-dismiss)
-    (define-key map [M-up] 'completion-popup-frame-dismiss)
+    (define-key map [remap next-line]
+      'completion-popup-frame-next-line)
+    (define-key map [remap previous-line]
+      'completion-popup-frame-previous-line)
+    (define-key map [remap scroll-up]
+      'completion-popup-frame-scroll-up)
+    (define-key map [remap scroll-down]
+      'completion-popup-frame-scroll-down)
+    (define-key map [remap scroll-down]
+      'completion-popup-frame-scroll-down)
+    (define-key map [remap beginning-of-buffer]
+      'completion-popup-frame-beginning-of-buffer)
+    (define-key map [remap end-of-buffer]
+      'completion-popup-frame-end-of-buffer)
+    (define-key map "\C-u"   'universal-argument)
+    (define-key map [?\C--]  'negative-argument)
+    (define-key map [C-up]   'completion-popup-frame-dismiss)
+    (define-key map [M-up]   'completion-popup-frame-dismiss)
     (define-key map [?\M-\t] 'completion-popup-frame-toggle-show-all)
-    (define-key map "\M-/" 'completion-popup-frame-toggle-show-all)
-    (define-key map [t] 'completion-popup-frame-unread-key)
+    (define-key map "\M-/"   'completion-popup-frame-toggle-show-all)
+    (define-key map [t]      'completion-popup-frame-unread-key)
     (setq completion-popup-frame-mode-map map)))
 
 
@@ -371,6 +343,36 @@ If ARG is supplied, it is passed through to COMMAND."
     (completion-ui-activate-interfaces overlay)
     (select-frame-set-input-focus frame)))
 
+
+(defun completion-popup-frame-next-line (&optional arg)
+  "Select next completion."
+  (interactive)
+  (completion-popup-frame-motion 'next-line arg))
+
+(defun completion-popup-frame-previous-line (&optional arg)
+  "Select previous completion."
+  (interactive)
+  (completion-popup-frame-motion 'previous-line arg))
+
+(defun completion-popup-frame-scroll-up (&optional arg)
+  "Select previous completion."
+  (interactive)
+  (completion-popup-frame-motion 'scroll-up arg))
+
+(defun completion-popup-frame-scroll-down (&optional arg)
+  "Select previous completion."
+  (interactive)
+  (completion-popup-frame-motion 'scroll-down arg))
+
+(defun completion-popup-frame-beginning-of-buffer (&optional arg)
+  "Select previous completion."
+  (interactive)
+  (completion-popup-frame-motion 'beginning-of-buffer arg))
+
+(defun completion-popup-frame-end-of-buffer (&optional arg)
+  "Select previous completion."
+  (interactive)
+  (completion-popup-frame-motion 'end-of-buffer arg))
 
 
 (defun completion-popup-frame-unread-key ()
