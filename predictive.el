@@ -56,7 +56,7 @@
 
 
 
-
+
 ;;; ================================================================
 ;;;          Customization variables controling predictive mode
 
@@ -81,6 +81,67 @@ is set to t, words will be added to the first dictionary in the list \(see
 `predictive-auto-add-to-dict'\)."
   :group 'predictive
   :type 'symbol)
+
+
+(defcustom predictive-dict-functions
+  '(predictive-current-regexp-dict
+    predictive-current-face-dict
+    predictive-current-text-property-dict
+    predictive-current-overlay-dict)
+  "A non-standard hook used to select a predictive dictionary.
+
+The functions are called in order, with no arguments, until one
+of them returns a non-nil value (which should be a dictionary or
+dictionary name). When the hook is run, point is at the location
+where the dictionary will be used.
+
+If all of the hook functions return nil,
+`predictive-current-dict' is called to determine the dictionary."
+  :group 'predictive
+  :type 'hook)
+
+
+(defcustom predictive-dict-regexps nil
+  "An alist associating regexps with dictionaries.
+
+Used to automatically select a dictionary based on regexp
+matches.
+
+The regexps are tried in order to see if they match in the
+current line. If a regexp matches, its associated dictionary (or
+list of dictionaries) is returned and no further regexps are
+tried.
+
+This only takes effect if the `predictive-current-regexp-dict'
+function is included in `predictive-dict-functions' (as in the
+default setting) ."
+  :group 'predictive
+  :type '(alist :key-type regexp :value-type symbol))
+
+
+(defcustom predictive-dict-faces nil
+  "An alist associating faces with dictionaries.
+
+Used to automatically select a dictionary based on the current
+face (typically a face set by `font-lock-mode').
+
+Faces are compared in order with the `face' text property of the
+text at point. If a face matches (see below), its associated
+dictionary is returned and no further faces are compared.
+
+Instead of a single face, the `face' text property often contains
+a list of faces. In this case, if an alist key specifies a single
+face symbol, it matches if it is one of the faces in the list. If
+an alist key specifies a list of faces, it matches only if the
+entire list matches. To specify a face that should only match if
+it is the unique face at point, use a singleton list.
+
+This only takes effect if the `predictive-current-face-dict'
+function is included in `predictive-dict-functions' (as in the
+default setting) ."
+  :group 'predictive
+  :type '(alist :key-type (choice face (repeat face))
+		:value-type symbol))
 
 
 (defcustom predictive-dict-lock-loaded-list nil
@@ -436,53 +497,7 @@ enabled."
 
 
 
-
-;;; ==================================================================
-;;;          Aliases for completion-UI customization options
-
-;; (when (fboundp 'defvaralias)
-;;   (defvaralias 'predictive-completion-max-candidates
-;;     'completion-max-candidates)
-;;   (defvaralias 'predictive-completion-resolve-behaviour
-;;     'completion-resolve-behaviour)
-;;   (defvaralias 'predictive-auto-completion-min-chars
-;;     'auto-completion-min-chars)
-;;   (defvaralias 'predictive-auto-completion-delay
-;;     'auto-completion-delay)
-;;   (defvaralias 'predictive-auto-completion-backward-delete-delay
-;;     'auto-completion-backward-delete-delay)
-;;   (defvaralias 'predictive-completion-use-dynamic
-;;     'completion-use-dynamic)
-;;   (defvaralias 'predictive-completion-dynamic-syntax-alist
-;;     'completion-dynamic-syntax-alist)
-;;   (defvaralias 'predictive-completion-dynamic-override-syntax-alist
-;;     'completion-dynamic-override-syntax-alist)
-;;   (defvaralias 'predictive-completion-use-hotkeys
-;;     'completion-use-hotkeys)
-;;   (defvaralias 'predictive-completion-hotkey-list
-;;     'completion-hotkey-list)
-;;   (defvaralias 'predictive-completion-use-tooltip
-;;     'completion-use-tooltip)
-;;   (defvaralias 'predictive-completion-tooltip-delay
-;;     'completion-tooltip-delay)
-;;   (defvaralias 'predictive-completion-tooltip-timeout
-;;     'completion-tooltip-timeout)
-;;   (defvaralias 'predictive-completion-tooltip-offset
-;;     'completion-tooltip-offset)
-;;   (defvaralias 'predictive-completion-tooltip-face
-;;     'completion-tooltip-face)
-;;   (defvaralias 'predictive-completion-auto-show-menu
-;;     'completion-auto-show-menu)
-;;   (defvaralias 'predictive-completion-browser-max-items
-;;     'completion-browser-max-items)
-;;   (defvaralias 'predictive-completion-browser-buckets
-;;     'completion-browser-buckets)
-;;   (defvaralias 'predictive-completion-use-echo
-;;     'completion-use-echo))
-
-
-
-
+
 ;;; ==================================================================
 ;;;     Non-customization variables controlling predictive mode
 
@@ -564,7 +579,7 @@ to the dictionary, nil if it should not. Only used when
   "Keymap used in predictive mode.")
 
 
-
+
 ;;; ================================================================
 ;;;                Setup default key bindings
 
@@ -602,13 +617,13 @@ to the dictionary, nil if it should not. Only used when
 ;;; ==============================================================
 ;;;          Internal variables to do with dictionaries
 
-;; when set, overrides `predictive-main-dict' in a buffer
-(defvar predictive-buffer-dict nil)
+(defvar predictive-buffer-dict nil
+  "When set, overrides `predictive-main-dict' in a buffer.")
 (make-variable-buffer-local 'predictive-buffer-dict)
 
-;; when set, used in addition to `predictive-main-dict' or
-;; `predictive-buffer-dict'
-(defvar predictive-auxiliary-dict nil)
+(defvar predictive-auxiliary-dict nil
+  "When set, used in addition to `predictive-main-dict'
+or `predictive-buffer-dict' in a buffer.")
 (make-variable-buffer-local 'predictive-auxiliary-dict)
 
 ;; variables storing lists of used dictionaries
@@ -618,7 +633,7 @@ to the dictionary, nil if it should not. Only used when
 
 
 
-
+
 ;;; ================================================================
 ;;;                  Convenience macros and functions
 
@@ -714,7 +729,7 @@ disabling `predictive-use-auto-learn-cache'."
 
 
 
-
+
 ;;; ===============================================================
 ;;;                   The minor mode definition
 
@@ -823,8 +838,8 @@ When within a pop-up frame:
     ;; make sure modified dictionaries used in the buffer are saved when the
     ;; bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
-      (add-hook 'kill-buffer-query-functions
-		'predictive-save-used-dicts nil 'local))
+      (add-hook 'kill-buffer-query-functions 'predictive-save-used-dicts
+		nil 'local))
     ;; load/create the buffer-local dictionary if using it, and make sure it's
     ;; saved and unloaded when buffer is killed
     (when predictive-use-buffer-local-dict
@@ -917,7 +932,7 @@ When within a pop-up frame:
 
 
 
-
+
 ;;; ================================================================
 ;;;       Public functions for predictive mode dictionaries
 
@@ -937,12 +952,12 @@ To set the default main dictionary, you should customize
   ;; unload previous main dictionary
   (mapc 'predictive-unload-dict
 	(if predictive-buffer-dict
-	    (if (listp predictive-main-dict)
-		predictive-main-dict
-	      (list predictive-main-dict))
-	  (if (listp predictive-buffer-dict)
-	      predictive-buffer-dict
-	    (list predictive-buffer-dict))))
+	    (if (listp predictive-buffer-dict)
+		predictive-buffer-dict
+	      (list predictive-buffer-dict))
+	  (if (listp predictive-main-dict)
+	      predictive-main-dict
+	    (list predictive-main-dict))))
   ;; set new main dictionary
   (setq dict (intern-soft (dictree-name dict)))
   (setq predictive-buffer-dict dict))
@@ -2161,21 +2176,20 @@ Remaining arguments are ignored (they are there to allow
 
 
 
-
+
 ;;; ================================================================
 ;;;           Internal functions to do with completion
 
 (defun predictive-complete (prefix &optional maxnum)
-  "Try to complete string PREFIX, usually the string before the point,
-returning at most MAXNUM completion candidates, ordered by
-their weighting.
+  "Try to complete string PREFIX, returning at most MAXNUM
+completion candidates, ordered by their weighting.
 
 If MAXNUM is null, all possible completion candidates are
 returned in alphabetical order, rather than by weight.
 
-If `predictive-ignore-initial-caps' is enabled and first
-character of string is capitalized, also search for completions
-for uncapitalized version."
+If `predictive-ignore-initial-caps' is enabled and the first
+character of PREFIX is capitalized, also search for completions
+for the uncapitalized version."
 
   (let ((dict (predictive-current-dict))
 	pfx filter completions)
@@ -2501,7 +2515,7 @@ Usually called after a completion is accepted."
 
 
 
-
+
 ;;; ===================================================================
 ;;;    Internal functions and variables to do with dictionaries
 
@@ -2531,65 +2545,100 @@ Usually called after a completion is accepted."
 
 
 (defun predictive-current-dict (&optional point)
-  "Return the currently active dictionary(ies) at POINT
-\(defaults to the point\). Always returns a list of dictionaries, even if
-there's only one."
-  (when (null point) (setq point (point)))
-
-  ;; get the active dictionary and the overlay that sets it, if any
-  ;; note: can't use `auto-overlay-local-binding' here because we want the
-  ;; overlay as well as the binding
-  (let ((overlay (auto-overlay-highest-priority-at-point
-		  point '(identity dict)))
-	dict generate)
-    (if (null overlay)
-	(setq dict (predictive-main-dict))
-      (setq dict (overlay-get overlay 'dict))
-      (cond
-       ((functionp dict) (setq dict (funcall dict)))
-       ((symbolp dict) (setq dict (symbol-value dict)))))
-
+  "Return a list of the active dictionary(ies) at POINT
+\(defaults to the point\)."
+  (unless point (setq point (point)))
+  ;; run hook to get dict, defaulting to main dict
+  (let ((dict (or (run-hook-wrapped 'predictive-dict-functions
+				    (lambda (fun)
+				      (save-excursion
+					(goto-char point)
+					(funcall fun))))
+		  (predictive-main-dict))))
     ;; t indicates no active dictionary, so return nil
     (if (eq dict t) nil
-      ;; otherwise bundle the dictionary inside a list for mapcar
+      ;; if value is a function or symbol, evaluate it first
+      (cond
+       ((functionp dict) (setq dict (funcall dict)))
+       ((symbolp dict)   (setq dict (symbol-value dict))))
+      ;; otherwise, process the list of dictionaries
       (unless (listp dict) (setq dict (list dict)))
-
       (mapcar
        (lambda (dic)
-	 ;; if element is a function or symbol, evaluate it
+	 ;; if element is a function or symbol, evaluate it first
 	 (cond
 	  ((functionp dic) (setq dic (funcall dic)))
-  	  ((symbolp dic) (setq dic (symbol-value dic))))
-
-	 (cond
-	  ;; if element is a dictionary, return it
-	  ((dictree-p dic) dic)
-
-	  ;; if element is a plist with a :generate property...
-	  ((and (listp dic) (setq generate (plist-get dic :generate)))
-	   (unless (functionp generate)
-	     (error "Wrong type in dictionary's :generate property:\
- functionp %s" (prin1-to-string generate)))
-	   ;; if plist has a :dict property, and it's :refresh function
-	   ;; returns nil, use existing :dict property
-	   (if (and (plist-get dict :dict)
-		    (or (not (functionp (plist-get dict :refresh)))
-			(not (funcall (plist-get dict :refresh) overlay))))
-	       (plist-get dict :dict)
-	     ;; otherwise, generate and return the dictionary, saving it in
-	     ;; the :dict propery
-	     (overlay-put overlay 'dict
-			  (plist-put dict :dict (funcall generate overlay)))
-	     (plist-get dict :dict)))
-
-	  ;; throw error on anything else
-	  (t (error "Wrong type in element of dictionary list: functionp,\
- symbolp, dict-p, plist (with :generate) or t at %d %s"
-		    point (prin1-to-string dic)))
-	  ))
-
-       dict)  ; map over dict
+	  ((symbolp dic)   (setq dic (symbol-value dic))))
+	 ;; return dict, or throw error if we haven't got one by now
+	 (or (and (dictree-p dic) dic)
+	     (error "Wrong type in element of dictionary list: functionp,\
+ symbolp, dict-p,or t at %d %s" point (prin1-to-string dic))))
+       (or (and (listp dict) dict) (list dict)))  ; map over dict list
       )))
+
+
+(defun predictive-current-text-property-dict ()
+  "Return dictionary specified by text properties at point.
+
+When used in `predictive-dict-functions' (as in the default
+setting), this allows the predictive dictionary to be changed in
+a buffer region by setting the `dict' text property in the
+region."
+  (get-text-property (point) 'dict))
+
+
+(defun predictive-current-overlay-dict ()
+  "Return dictionary specified by any overlays at point.
+
+When used in `predictive-dict-functions' (as in the default
+setting), this allows the predictive dictionary to be changed in
+a buffer region by setting the `dict' property of an overlay
+spanning the region."
+  (auto-overlay-local-binding 'dict nil t))
+
+
+(defun predictive-current-regexp-dict ()
+  "Return dictionary specified by a matching regexp.
+
+Associations between regexps and dictionaries are specified by
+`predictive-dict-regexps' (which see).
+
+When used in `predictive-dict-functions' (as in the default
+setting), this allows the predictive dictionary to be changed
+locally when a regexp matches the current buffer line."
+  (catch 'dic
+    (dolist (r predictive-dict-regexps)
+      (save-excursion
+	(goto-char (line-beginning-position))
+	(when (re-search-forward (car r) (line-end-position) t)
+	  (throw 'dic (cdr r)))))))
+
+
+(defun predictive-current-face-dict ()
+  "Return dictionary determined by current face.
+\(Usually a face set by `font-lock-mode'.\)
+
+Associations between faces and dictionaries are defined by
+`predictive-dict-faces' (which see).
+
+When used in `predictive-dict-functions' (as in the default
+setting), this allows the predictive dictionary to be changed
+locally according to the face at point.
+
+\(Obviously, if `predictive-dict-faces' specifies font-lock faces
+- the usual case - then `font-lock-mode' must be enabled in the
+buffer for them to take effect.\)"
+  (let ((face (get-text-property (point) 'face)))
+    (catch 'dic
+      (dolist (f predictive-dict-faces)
+	(when (or (eq (car f) face)  ; might as well check easy case first
+		  (and (symbolp f) (listp face) (memq f face))
+		  (and (listp f) (listp face)
+		       (catch 'no-match
+			 (dolist (el f)
+			   (unless (memq el face) (throw 'no-match nil)))
+			 t)))
+	  (throw 'dic (cdr f)))))))
 
 
 
@@ -2739,7 +2788,7 @@ NO-FAIL-QUERY is passed on to `dictree-save-modified'."
 
 
 
-
+
 ;;; ==================================================================
 ;;;       Functions and variables to do with which-dict mode
 
@@ -2793,7 +2842,7 @@ A negative prefix argument turns it off.")
 
 
 
-
+
 ;;; ===============================================================
 ;;;                       Compatibility Stuff
 
