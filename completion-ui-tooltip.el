@@ -362,12 +362,11 @@ sheep."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'tooltip
- :variable 'completion-ui-use-tooltip
- :activate 'completion-activate-tooltip
- :deactivate 'completion-cancel-tooltip
- :auto-show 'completion-show-tooltip)
+(completion-ui-register-interface tooltip
+ :variable   completion-ui-use-tooltip
+ :activate   completion-activate-tooltip
+ :deactivate completion-cancel-tooltip
+ :auto-show  completion-show-tooltip)
 
 
 

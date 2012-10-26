@@ -129,12 +129,11 @@ of completion overlay."
 ;;;                    Register user-interface
 
 
-(completion-ui-register-interface
- 'echo
- :variable 'completion-ui-use-echo
- :activate 'completion-echo
+(completion-ui-register-interface echo
+ :variable completion-ui-use-echo
+ :activate completion-echo
  :deactivate t
- :auto-show-helper 'completion-echo)
+ :auto-show-helper completion-echo)
 
 
 

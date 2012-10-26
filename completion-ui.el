@@ -1419,46 +1419,73 @@ to work."
 	  variable update auto-show auto-show-helper first)
   "Register a Completion-UI user-interface.
 
+\(Note that none of the arguments should be quoted.\)
+
 NAME is the name (a symbol) of the new user-interface, which will
 appear in customization options.
 
-The :activate and :deactivate keyword arguments are
-mandatory. They should be functions that take one argument, a
-completion overlay, and do whatever is necessary to activate and
-deactivate the user-interface for that completion. The return
-value is ignored.
+The following two keyword arguments are mandatory:
 
-The optional :variable keyword specifies the name of the
-customization variable used to enable the interface. If supplied,
-it is good practice to follow the naming convention
-`completion-ui-use-<interface-name>'. If no :variable argument is
-supplied, a defcustom is created automatically with this as the
-variable name.
+:activate FUNCTION
+        The function called to activate the user-interface. It
+        should take one argument, a completion overlay, and do
+        whatever is necessary to activate the user-interface for
+        that completion. The return value is ignored.
 
-The optional :first keyword causes the new interface to be added
-at the beginning of the list of interfaces, rather than at the
-end. Interfaces functions are called in the order they appear in
-the list of definitions. Note that this has no effect if a NAME
-interface is already defined, in which case the new definition
-replaces the old one at the same location in the list as
-previously.
+:deactivate FUNCTION
+        The function called to deactivate the user-interface. It
+        should take one argument, a completion overlay, and do
+        whatever is necessary to deactivate the user-interface
+        for that completion. The return value is ignored.
 
-The remaining optional keyword arguments specify user-interface
-functions to call in various circumstances. They are all called
-with a single argument, a completion overlay.
 
-The :update function should update the user-interface after a
-change to that completion. If it is not specified, the interface
-is updated by calling the :deactivate function, updating the
-overlay, then calling the :activate function.
+The following optional keywords are also meaningful:
 
-The :auto-show function activates an auto-show
-user-interface. The auto-show interface is chosen by setting the
-`completion-auto-show' customization option. Only one auto-show
-interface can be displayed at any one time.
+:variable SYMBOL
+        The name of the customization variable used to enable the
+        interface. Defaults to `completion-ui-use-<name>'. It is
+        good practice to follow this naming convention if
+        supplying your own variable name explicitly.
 
-The :auto-show-helper function is called when an auto-show
-interface is activated."
+        A defcustom is created automatically with the default
+        variable name if no :variable argument is supplied.
+        *No* defcustom is created if a variable name is is
+        supplied.
+
+:first BOOLEAN
+        A non-nil value causes the new user-interface to be added
+        at the beginning of the list of interfaces. The default
+        is to add it at the end. Interfaces functions are called
+        in the order they appear in the list of definitions.
+
+        Note that this has no effect if a interface called NAME
+        is already defined, in which case the new definition
+        replaces the old one at the same location in the list as
+        before.
+
+
+The remaining optional keyword arguments specify functions to
+call in various circumstances that might require updating the
+user-interface. They are all passed a single argument, a
+completion overlay for the current completion.
+
+:update FUNCTION
+        A function to call to update the user-interface after a
+        change to that completion. If it is not specified, the
+        interface is updated by calling the :deactivate function,
+        updating the overlay, then calling the :activate
+        function.
+
+:auto-show FUNCTION
+        A function to call to activate a this user-interface as
+        an auto-show interface. The auto-show interface is chosen
+        by setting the `completion-auto-show' customization
+        option. Only one auto-show interface can be displayed at
+        any one time.
+
+:auto-show-helper FUNCTION
+        A function to call whenever any auto-show interface is
+        activated for a completion."
 
   ;; remove `quote' from arguments
   (when (and (listp name) (eq (car name) 'quote))
@@ -1712,84 +1739,136 @@ the first argument. The second argument may be used to specify
 the maximum number of completion candidates to return. If it is
 nil, all possible candidates should be returned.
 
-The optional :name keyword argument can be used to give a
-name (symbol) to the source, which will appear in customization
-options. The default is to construct the source name from
-COMPLETION-FUNCTION, removing \"completion-ui-\" or
-\"completion-\" from the front.
+The following keyword arguments are useful when using a
+COMPLETION-FUNCTION that takes additional arguments that should
+be ignored by Completion-UI.
 
-The optional :completion-args and :other-args keyword arguments
-are useful when using a COMPLETION-FUNCTION that takes additional
-arguments that should be ignored by Completion-UI.
+:completion-args NUMBER|LIST
+         If set to 0, 1 or 2, COMPLETION-FUNCTION will be passed
+         that many arguments, as described above, and as many
+         null values will be added to the end of the argument
+         list as necessary to fill any remaining mandatory
+         arguments (but see :other-args, below).
 
-If :completion-args is 0, 1 or 2, COMPLETION-FUNCTION will be
-passed that many arguments, as described above, and as many null
-values will be added to the end of the argument list as necessary
-to fill any remaining mandatory arguments (but see :other-args,
-below).
+         If set to a list of integers, it specifies *which*
+         arguments of COMPLETION-FUNCTION to use. The argument
+         list will be padded with null values as necessary to
+         fill the missing arguments and any remaining mandatory
+         arguments (but see :other-args, below).
 
-If :completion-args is a list of integers, it specifies *which*
-arguments of COMPLETION-FUNCTION to use. The argument list passed
-will be padded with null values as necessary to fill the missing
-arguments and any remaining mandatory arguments (but
-see :other-args, below).
+:other-args LIST
+         Can be used to pass something other than nil to the
+         other arguments of COMPLETION-FUNCTION not being used by
+         Completion-UI. The values are taken sequentially from
+         the list.
 
-The optional :other-args keyword argument can be used to pass
-something other than nil to the other arguments of
-COMPLETION-FUNCTION not being used by Completion-UI. The values
-are taken sequentially from the :other-args list.
 
-Normally, the new completion source is made available as a
-possible `auto-completion-source' choice, and a new interactive
-command called `complete-<name>' is automatically defined that
-completes the prefix at point using the new source. The
-optional :no-auto-completion and :no-command keyword arguments
-disable these features. The optional :command-name keyword
-argument overrides the default command name.
+The following keyword arguments are also meaningful:
 
-The optional :prefix-function keyword argument specifies a
-function to call to return the prefix to complete at point. It
-defaults to `completion-prefix', which uses `thing-at-point' to
-find the prefix. In this case, the \"thing\" to find is specified
-by :word-thing, defaulting to `word'. (Note that we require
-`forward-op' to be defined for :word-thing, which is *not* the
-case for all pre-defined \"things\" in `thing-at-point'.)
+:name SYMBOL
+         Set the name (symbol) for the source, which will appear in
+         customization options. The default is to construct the
+         source name from COMPLETION-FUNCTION, removing
+         \"completion-ui-\" or \"completion-\" from the front if
+         present.
 
-The optional :non-prefix-completion keyword argument is a boolean
-that should be non-null if this completion source does something
-other than prefix completion \(e.g. searching for regular
-expression matches\), so that the \"prefix\" is instead
-interpreted as some kind of pattern used to find matches, and the
-completions should *replace* that prefix when
-selected. Completion-UI will then adapt the user-interface
-appropriately.
+:no-auto-completion BOOLEAN
+         Don't make this source available as a possible
+         `auto-completion-default-source' customization
+         choice. Default is to add the new source to the
+         available choices.
 
-The optional :accept-functions and :reject-functions keyword
-arguments are hooks, called when a completion obtained using this
-source is accepted or rejected, respectively. They are passed
-three arguments: the prefix, the completion candidate that was
-accepted or rejected, and any prefix argument supplied by the
-user if the accept or reject command was called interactively. A
-single function or a list of functions can be supplied.
+:no-command BOOLEAN
+         Don't define a new interactive command for this
+         source. Default is to automatically define a new
+         interactive command called `complete-<name>' which
+         completes the prefix at point using the new source.
+         (See also :command-name keyword, below.)
 
-The optional :sort-by-frequency keyword argument specifies
-whether completions should be sorted by frequency. Setting this
-option tells Completion-UI to record usage frequency data for
-this source, and automatically sort its completions by
-frequency. If set to the symbol 'source, frequency data will be
-accumulated separately for this source. If set to the symbol
-'global, frequency data will be pooled with data from other
-completion sources.
+:command-name SYMBOL
+         Override the default interactive command
+         name (cf. :no-command keyword, above).
+
+:prefix-function FUNCTION
+         Function to call to return the prefix to complete at
+         point. Defaults to `completion-prefix', which uses
+         `thing-at-point' to find the prefix (see :word-thing
+         keyword, below).
+
+:word-thing SYMBOL
+         The `thing-at-point' \"thing\" to use when determining
+         the prefix to complete using the default
+         `completion-prefix' function (see :prefix-function
+         keyword, above). Note that we require `forward-op' to be
+         defined for :word-thing, which is *not* the case for all
+         pre-defined \"things\" in `thing-at-point'.
+
+:non-prefix-completion BOOLEAN
+        A non-nil value specified that this completion source
+        does something other than prefix completion
+        \(e.g. searching for regular expression matches\), so
+        that the \"prefix\" is instead interpreted as some kind
+        of pattern used to find matches, and the completions
+        should *replace* that prefix when selected. Completion-UI
+        will adapt the user-interface appropriately.
+
+:accept-functions FUNCTION|LIST
+        A function or list of functions to call when a completion
+        obtained using this source is accepted. The functions are
+        passed three arguments: the prefix, the completion
+        candidate that was accepted or rejected, and any prefix
+        argument supplied by the user if the accept command was
+        called interactively.
+
+:reject-functions FUNCTION|LIST
+        A function or list of functions to call when a completion
+        obtained using this source is rejected. The functions are
+        passed three arguments: the prefix, the completion
+        candidate that was rejected, and any prefix argument
+        supplied by the user if the accept command was called
+        interactively.
+
+:sort-by-frequency SYMBOL
+        A non-nil value causes completions from this source to be
+        sorted by frequency. Completion-UI will record usage
+        frequency data for this source, and automatically sort
+        its completions by frequency. If set to the symbol
+        `global', frequency data will be pooled with data from
+        other completion sources. If set to the symbol `source',
+        frequency data will be accumulated separately for this
+        source. (Any other non-nil value defaults to `source'.)
+
 
 The remaining optional keyword arguments override the default
-functions for constructing the completion tooltip, popup-tip,
-pop-up frame, menu, and browser menu. They are passed one
-argument, a completion overlay. The tooltip function should
-return the text to display in the tooltip as a string. The pop-up
-frame function should return a list of strings, each a line of
-text for the pop-up frame. The menu and browser arguments should
-either be fixed menu keymaps, or functions that return menu
-keymaps.
+methods for constructing the completion tooltip, popup-tip,
+pop-up frame, menu, and browser menu.
+
+:tooltip-function FUNCTION
+        Function to call to construct the completion tooltip for
+        this source. It is passed one argument, a completion
+        overlay, and should return the text to display in the
+        tooltip as a string.
+
+:popup-tip-function  FUNCTION
+        As for :tooltip-function, but used to construct the
+        popup-tip.
+
+:popup-frame-function FUNCTION
+        Function to call to construct the completion tooltip for
+        this source. It is passed one argument, a completion
+        overlay, and should return a list of strings, each a line
+        of text for the pop-up frame.
+
+:menu KEYMAP|FUNCTION
+        Either a fixed menu keymap, or a function to call to
+        construct the completion menu for this source. The
+        function is passed one argument, a completion overlay,
+        and should return a menu keymap.
+
+:browser KEYMAP|FUNCTION
+        As for :menu, but used to construct the completion
+        browser.
+
 
 The special hook `completion-ui-register-source-functions' is
 called after registering the completion source.

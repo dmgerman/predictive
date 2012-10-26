@@ -487,13 +487,12 @@ methods. Toggling will show all possible completions."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'popup-frame
- :variable 'completion-ui-use-popup-frame
- :activate 'completion-activate-popup-frame-keys
- :deactivate 'completion-popup-frame-dismiss
- :update 'completion-update-popup-frame
- :auto-show 'completion-popup-frame)
+(completion-ui-register-interface popup-frame
+ :variable   completion-ui-use-popup-frame
+ :activate   completion-activate-popup-frame-keys
+ :deactivate completion-popup-frame-dismiss
+ :update     completion-update-popup-frame
+ :auto-show  completion-popup-frame)
 
 
 

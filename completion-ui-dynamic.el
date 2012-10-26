@@ -305,11 +305,10 @@ the end if it is to be accepted."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'dynamic
- :variable 'completion-ui-use-dynamic
- :activate 'completion-activate-dynamic
- :deactivate 'completion-deactivate-dynamic)
+(completion-ui-register-interface dynamic
+ :variable   completion-ui-use-dynamic
+ :activate   completion-activate-dynamic
+ :deactivate completion-deactivate-dynamic)
 
 
 

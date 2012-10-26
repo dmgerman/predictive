@@ -143,12 +143,11 @@ internally. It should *never* be bound in a keymap."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'hotkeys
- :variable 'completion-ui-use-hotkeys
- :activate 'completion-activate-hotkeys
- :deactivate 'completion-deactivate-hotkeys
- :auto-show-helper 'completion-auto-show-activate-hotkeys)
+(completion-ui-register-interface hotkeys
+ :variable         completion-ui-use-hotkeys
+ :activate         completion-activate-hotkeys
+ :deactivate       completion-deactivate-hotkeys
+ :auto-show-helper completion-auto-show-activate-hotkeys)
 
 
 

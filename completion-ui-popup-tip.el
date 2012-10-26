@@ -258,12 +258,11 @@ sheep."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'popup-tip
- :variable 'completion-ui-use-popup-tip
- :activate 'completion-activate-popup-tip
- :deactivate 'completion-cancel-popup-tip
- :auto-show 'completion-show-popup-tip)
+(completion-ui-register-interface popup-tip
+ :variable   completion-ui-use-popup-tip
+ :activate   completion-activate-popup-tip
+ :deactivate completion-cancel-popup-tip
+ :auto-show  completion-show-popup-tip)
 
 
 

@@ -528,12 +528,11 @@ and OVERLAY. They should return menu keymaps."
 ;;; =================================================================
 ;;;                    Register user-interface
 
-(completion-ui-register-interface
- 'menu
- :variable 'completion-ui-use-menu
- :activate 'completion-activate-menu-keys
- :deactivate 'completion-deactivate-menu-keys
- :auto-show 'completion-show-menu)
+(completion-ui-register-interface menu
+ :variable   completion-ui-use-menu
+ :activate   completion-activate-menu-keys
+ :deactivate completion-deactivate-menu-keys
+ :auto-show  completion-show-menu)
 
 
 
