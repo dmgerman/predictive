@@ -34,12 +34,6 @@
 (require 'auto-overlay-nested)
 (require 'predictive-latex)  ; we use dict-latex-math etc. for equations
 
-(provide 'predictive-texinfo)
-(add-to-list 'predictive-major-mode-alist
-	     '(Texinfo-mode . predictive-setup-texinfo))
-(add-to-list 'predictive-major-mode-alist
-	     '(texinfo-mode . predictive-setup-texinfo))
-
 
 
 ;;;============================================================
@@ -140,29 +134,31 @@ between \\begin{...} and \\end{...} commands."
 ;;;                  Setup function
 
 (defun predictive-setup-texinfo (arg)
-  "With a positive ARG, set up predictive mode for use with Texinfo major modes.
-With a negative ARG, undo these changes. Called when predictive
-mode is enabled via entry in `predictive-major-mode-alist'."
+  "With a positive ARG, set up predictive mode for LaTeX.
+With a negative ARG, undo these changes.
+
+The default value of `predictive-major-mode-alist' calls this
+function automatically when predictive mode is enabled in
+`texinfo-mode' or `Texinfo-mode'."
 
   (cond
    ;; ----- enabling Texinfo setup -----
    ((> arg 0)
     (catch 'load-fail
-
+      ;; make predictive completion the default auto-completion source
+      (set (make-local-variable 'auto-completion-default-source) 'predictive)
       ;; enable `predictive-texinfo-map' keymap
       (setq predictive-texinfo-mode t)
 
       ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-texinfo-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer nil t)
-
       ;; use Texinfo browser menu if first character of prefix is "@"
       (set (make-local-variable 'predictive-menu-function)
 	   (lambda (overlay)
 	     (if (string= (substring (overlay-get overlay 'prefix) 0 1) "@")
 		 (predictive-texinfo-construct-browser-menu overlay)
 	       (completion-construct-menu overlay))))
-
       ;; load the Texinfo dictionaries
       (mapc (lambda (dic)
 	      (unless (predictive-load-dict dic)
@@ -179,33 +175,30 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	    (predictive-auto-dict-load "texinfo-local-texinfo")
 	    predictive-texinfo-local-flag-dict
 	    (predictive-auto-dict-load "texinfo-local-flag"))
-
       ;; set Texinfo dictionary to be used alongside main dictionary
       (setq predictive-auxiliary-dict
 	    '(dict-texinfo predictive-texinfo-local-texinfo-dict))
-
       ;; delete any existing predictive auto-overlay regexps and load Texinfo
       ;; auto-overlay regexps
       (auto-overlay-unload-set 'predictive)
       (predictive-texinfo-load-regexps)
-
       ;; start the auto-overlays
-      (auto-overlay-start 'predictive nil predictive-auxiliary-file-location)
-
+      (auto-overlay-start 'predictive nil predictive-local-auxiliary-file-directory)
       ;; load the keybindings and related settings
       (predictive-texinfo-load-keybindings)
       ;; consider @ as start of a word
       (setq predictive-word-thing 'predictive-texinfo-word)
-
       t))  ; indicate successful setup
 
-
    ((< arg 0)
+    ;; restore default auto-completion source
+    (kill-local-variable 'auto-completion-default-source)
     ;; disable `predictive-texinfo-map' keymap
     (setq predictive-texinfo-mode nil)
     ;; stop predictive auto overlays
-    (auto-overlay-stop 'predictive nil (when (buffer-file-name)
-					 predictive-auxiliary-file-location))
+    (auto-overlay-stop 'predictive nil
+		       (when (buffer-file-name)
+			 predictive-local-auxiliary-file-directory))
     (auto-overlay-unload-set 'predictive)
     ;; restore predictive-main-dict
     (kill-local-variable 'predictive-auxiliary-dict)
@@ -221,7 +214,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-texinfo-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-texinfo-kill-buffer t)
-
     t)))  ; indicate successful reversion of changes
 
 
@@ -752,7 +744,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   ;; save overlays if buffer was saved
   (unless (buffer-modified-p)
     (auto-overlay-save-overlays 'predictive nil
-				predictive-auxiliary-file-location)
+				predictive-local-auxiliary-file-directory)
     ;; unload local dicts, without saving if buffer wasn't saved
     (predictive-auto-dict-unload "texinfo-node" (buffer-modified-p))
     (predictive-auto-dict-unload "texinfo-local-texinfo" (buffer-modified-p))
@@ -766,7 +758,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-texinfo-after-save ()
   ;; Function called from `after-save-hook'
   (auto-overlay-save-overlays 'predictive nil
-			      predictive-auxiliary-file-location)
+			      predictive-local-auxiliary-file-directory)
   ;; if file has not been renamed, just save local dicts
   (if (or (and (null predictive-texinfo-previous-filename)
 	       (null (buffer-file-name)))
@@ -1207,5 +1199,7 @@ the flag at point (if any)."
     (goto-char (line-end-position))))
 
 
+
+(provide 'predictive-texinfo)
 
 ;;; predictive-texinfo.el ends here

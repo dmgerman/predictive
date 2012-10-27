@@ -35,11 +35,6 @@
 (require 'auto-overlay-nested)
 (require 'predictive-auto-overlay-auto-dict)
 
-(provide 'predictive-latex)
-(add-to-list 'predictive-major-mode-alist
-	     '(LaTeX-mode . predictive-setup-latex))
-(add-to-list 'predictive-major-mode-alist
-	     '(latex-mode . predictive-setup-latex))
 
 (unless (fboundp 'oddp)
   (defun oddp (i) (and (integerp i) (= (mod i 2) 1))))
@@ -162,7 +157,7 @@ The sub-menu definition can be a function, symbol, dictionary, or
 list of strings.
 
 If it is a function, that function is called with two arguments:
-the prefix being completed, and the menu item in question.  It's
+the prefix being completed, and the menu item in question.  Its
 return value should be a symbol, dictionary, or list of strings
 to use as the sub-menu defition.
 
@@ -245,18 +240,21 @@ strings become the sub-menu entries.")
 ;;;                  Setup function
 
 (defun predictive-setup-latex (arg)
-  "With a positive ARG, set up predictive mode for use with LaTeX major modes.
-With a negative ARG, undo these changes. Called when predictive
-mode is enabled via entry in `predictive-major-mode-alist'."
+  "With a positive ARG, set up predictive mode for LaTeX.
+With a negative ARG, undo these changes.
+
+The default value of `predictive-major-mode-alist' calls this
+function automatically when predictive mode is enabled in
+`latex-mode' or `LaTeX-mode'."
 
   (cond
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
     (catch 'load-fail
-
+      ;; make predictive completion the default auto-completion source
+      (set (make-local-variable 'auto-completion-default-source) 'predictive)
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
-
       ;; save overlays and dictionaries along with buffer
       (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
@@ -267,7 +265,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	(add-hook 'predictive-accept-functions 'predictive-display-help
 		  nil t)
 	(add-hook 'post-command-hook 'predictive-display-help nil t))
-
       ;; use latex browser menu if first character of prefix is "\"
       (set (make-local-variable 'predictive-menu-function)
 	   (lambda (overlay)
@@ -277,7 +274,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       ;; store filename for comparison when saving (see
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
-
 
       (cond
        ;; if we're not the TeX master, visit the TeX master buffer, enable
@@ -326,11 +322,10 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  ;; can modify buffer without actually changing buffer text
 	  (let ((restore-modified (buffer-modified-p)))
 	    (auto-overlay-start 'predictive nil
-				predictive-auxiliary-file-location
+				predictive-local-auxiliary-file-directory
 				'no-regexp-check)
 	    (set-buffer-modified-p restore-modified))
 	  ))
-
 
        ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
        ;; FIXME: probably need to handle null TeX-master case differently
@@ -403,7 +398,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	;; actually changing buffer text)
 	(let ((restore-modified (buffer-modified-p)))
 	  (auto-overlay-start 'predictive nil
-			      predictive-auxiliary-file-location
+			      predictive-local-auxiliary-file-directory
 			      'no-regexp-check)
 	  (set-buffer-modified-p restore-modified))
 	))
@@ -414,13 +409,13 @@ mode is enabled via entry in `predictive-major-mode-alist'."
       (set (make-local-variable 'predictive-word-thing)
 	   'predictive-latex-word)
       (set (make-local-variable 'words-include-escapes) nil)
-
       t))  ; indicate successful setup
-
 
 
    ;; ----- Disabling LaTeX setup -----
    ((< arg 0)
+    ;; restore default auto-completion source
+    (kill-local-variable 'auto-completion-default-source)
     ;; disable `predictive-latex-map' keymap
     (setq predictive-texinfo-mode nil)
 
@@ -435,8 +430,9 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	  (with-current-buffer buff (predictive-mode -1)))))
 
     ;; stop predictive auto overlays
-    (auto-overlay-stop 'predictive nil (when (buffer-file-name)
-					 predictive-auxiliary-file-location))
+    (auto-overlay-stop 'predictive nil
+		       (when (buffer-file-name)
+			 predictive-local-auxiliary-file-directory))
     (auto-overlay-unload-set 'predictive)
     ;; unload local dicts, without saving if buffer wasn't saved
     (unless (and (boundp 'TeX-master) (stringp TeX-master))
@@ -473,7 +469,6 @@ mode is enabled via entry in `predictive-major-mode-alist'."
     ;; remove hook functions that save overlays etc.
     (remove-hook 'after-save-hook 'predictive-latex-after-save t)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
-
     t)))  ; indicate successful reversion of changes
 
 
@@ -659,8 +654,8 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
 
     ;; ...as do \[ and \], but not \\[ and \\] etc.
-    ;; Note: regexps contain a lot of \'s because it has to check whether number
-    ;; of \'s in front of { is even or odd
+    ;; Note: regexps contain a lot of \'s because they have to check whether
+    ;; number of \'s in front of { is even or odd
     (auto-overlay-load-definition
      'predictive
      `(nested :id display-math
@@ -973,7 +968,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (unless (buffer-modified-p)
     (when (buffer-file-name)
       (auto-overlay-save-overlays 'predictive nil
-				  predictive-auxiliary-file-location))
+				  predictive-local-auxiliary-file-directory))
     ;; if we're not the TeX-master, unload the regexps to unshare them
     (if (and (boundp 'TeX-master) (stringp TeX-master))
 	(auto-overlay-unload-set 'predictive)
@@ -998,7 +993,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 (defun predictive-latex-after-save ()
   ;; Function called from `after-save-hook'
   (auto-overlay-save-overlays 'predictive nil
-			      predictive-auxiliary-file-location)
+			      predictive-local-auxiliary-file-directory)
   ;; if file has not been renamed, just save local dicts
   (if (or (and (null predictive-latex-previous-filename)
 	       (null (buffer-file-name)))
@@ -1068,7 +1063,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
   (predictive-mode -1)
   ;; using an internale auto-overlay function is ugly, but then this command
   ;; shouldn't be necessary anyway!
-  (delete-file (concat predictive-auxiliary-file-location
+  (delete-file (concat predictive-local-auxiliary-file-directory
 		       (auto-o-overlay-filename 'predictive)))
   (predictive-mode 1))
 
@@ -1080,7 +1075,7 @@ mode is enabled via entry in `predictive-major-mode-alist'."
 
 (defun predictive-latex-jump-to-definition ()
   "Jump to definition of whatever is at point.
-\(Can be a label, or a command or environemtn defined in the
+\(Can be a label, or a command or environment defined in the
 document's preamble\).
 
 If point is already on a definition, cycle to next duplicate
@@ -2180,5 +2175,7 @@ Intended to be used as the \"resolve\" entry in
 	  (forward-char))))))
 
 
+
+(provide 'predictive-latex)
 
 ;;; predictive-latex.el ends here

@@ -176,13 +176,13 @@ sexp
  :no-combining t)
 
 
-(completion-ui-register-source
- completion-ui-combining-complete
- :completion-args (2)
- :other-args (completion-ui-combine-sources-alist)
- :name Combine-freq
- :sort-by-frequency global
- :no-combining t)
+;; (completion-ui-register-source
+;;  completion-ui-combining-complete
+;;  :completion-args (2)
+;;  :other-args (completion-ui-combine-sources-alist)
+;;  :name Combine-freq
+;;  :sort-by-frequency global
+;;  :no-combining t)
 
 
 ;;;=========================================================
@@ -196,13 +196,13 @@ sexp
  :name dabbrev)
 
 
-(completion-ui-register-source
- (lambda (prefix)
-   (require 'dabbrev)
-   (dabbrev--reset-global-variables)
-   (dabbrev--find-all-expansions prefix case-fold-search))
- :name dabbrev-freq
- :sort-by-frequency global)
+;; (completion-ui-register-source
+;;  (lambda (prefix)
+;;    (require 'dabbrev)
+;;    (dabbrev--reset-global-variables)
+;;    (dabbrev--find-all-expansions prefix case-fold-search))
+;;  :name dabbrev-freq
+;;  :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -215,12 +215,12 @@ sexp
  :name etags)
 
 
-(completion-ui-register-source
- (lambda (prefix)
-   (require 'etags)
-   (all-completions prefix (tags-lazy-completion-table)))
- :name etags-freq
- :sort-by-frequency global)
+;; (completion-ui-register-source
+;;  (lambda (prefix)
+;;    (require 'etags)
+;;    (all-completions prefix (tags-lazy-completion-table)))
+;;  :name etags-freq
+;;  :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -234,13 +234,13 @@ sexp
  :word-thing symbol)
 
 
-(completion-ui-register-source
- all-completions
- :completion-args 1
- :other-args (obarray)
- :name elisp-freq
- :word-thing symbol
- :sort-by-frequency global)
+;; (completion-ui-register-source
+;;  all-completions
+;;  :completion-args 1
+;;  :other-args (obarray)
+;;  :name elisp-freq
+;;  :word-thing symbol
+;;  :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -264,10 +264,10 @@ sexp
  :name files)
 
 
-(completion-ui-register-source
- completion--filename-wrapper
- :name files-freq
- :sort-by-frequency global)
+;; (completion-ui-register-source
+;;  completion--filename-wrapper
+;;  :name files-freq
+;;  :sort-by-frequency global)
 
 
 ;;;=========================================================
@@ -308,11 +308,11 @@ sexp
  :name ispell)
 
 
-(completion-ui-register-source
- completion--ispell-wrapper
- :non-prefix-completion t
- :name ispell-freq
- :sort-by-frequency global)
+;; (completion-ui-register-source
+;;  completion--ispell-wrapper
+;;  :non-prefix-completion t
+;;  :name ispell-freq
+;;  :sort-by-frequency global)
 
 
 
@@ -326,12 +326,13 @@ sexp
    :other-args (t t)
    :name nxml)
 
-  (completion-ui-register-source
-   rng-complete-qname-function
-   :completion-args 1
-   :other-args (t t)
-   :name nxml-freq
-   :sort-by-frequency global))
+  ;; (completion-ui-register-source
+  ;;  rng-complete-qname-function
+  ;;  :completion-args 1
+  ;;  :other-args (t t)
+  ;;  :name nxml-freq
+  ;;  :sort-by-frequency global)
+  )
 
 
 
@@ -397,11 +398,12 @@ sexp
    :prefix-function completion--semantic-prefix-wrapper
    :name semantic)
 
-  (completion-ui-register-source
-   completion--semantic-wrapper
-   :prefix-function completion--semantic-prefix-wrapper
-   :name semantic-freq
-   :sort-by-frequency global))
+  ;; (completion-ui-register-source
+  ;;  completion--semantic-wrapper
+  ;;  :prefix-function completion--semantic-prefix-wrapper
+  ;;  :name semantic-freq
+  ;;  :sort-by-frequency global)
+  )
 
 
 

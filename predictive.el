@@ -6,7 +6,7 @@
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.24
-;; Version: 0.19.8
+;; Version: 0.20
 ;; Keywords: convenience, abbrev, tex, predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -45,24 +45,50 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-(require 'completion-ui)
 (require 'dict-tree)
 (require 'auto-overlays)
 (require 'timerfunctions)
-(require 'ispell)
 
-;; use dynamic byte compilation to save memory
-;;(eval-when-compile (setq byte-compile-dynamic t))
+;; Don't load pre-defined Completion-UI sources yet (we load them later).
+;; Note: We don't want to load the sources before we've installed our hook
+;;       function for auto-generating predictive versions of Completion-UI
+;;       sources. But we need to load the rest of Completion-UI, in order to
+;;       before we can define many of the predictive-mode functions (not least
+;;       that hook function!).
+(let ((completion-ui-inhibit-load-sources t))
+  (require 'completion-ui))
 
 
 
 
 ;;; ================================================================
-;;;          Customization variables controling predictive mode
+;;;        Customization variables controling predictive mode
 
 (defgroup predictive nil
   "Predictive completion."
   :group 'convenience)
+
+
+(defcustom predictive-major-mode-alist
+  '((text-mode . predictive-setup-text)
+    (emacs-lisp-mode . predictive-setup-elisp)
+    (LaTeX-mode . predictive-setup-latex)
+    (latex-mode . predictive-setup-latex)
+    (texinfo-mode . predictive-setup-texinfo)
+    (Texinfo-mode . predictive-setup-texinfo))
+  "Alist associating major mode symols with functions.
+
+The functions should take one argument. A positive argument means
+predictive mode is being enabled, a negative one means it is
+being disabled.
+
+Whenever predictive mode is enabled or disabled in a buffer, the
+buffer's `major-mode' is checked against each entry of the list
+in turn. If it matches or is derived from the mode in an entry,
+the associated function is called. The list is traversed in
+reverse-order when disabling."
+  :group 'predictive
+  :type '(alist :key-type symbol :value-type function))
 
 
 (defcustom predictive-main-dict 'dict-english
@@ -262,7 +288,6 @@ the string."
 		 (repeat :tag "custom" string)))
 
 
-
 (defcustom predictive-prefix-expansions nil
   "Alist of expansions to apply to a prefix before completing it.
 The alist should associate regexps with their replacements. The
@@ -390,19 +415,34 @@ completing."
   :type 'boolean)
 
 
-(defcustom predictive-auxiliary-file-location ".predictive/"
-  "Directory to which predictive mode auxiliary files are saved.
+(defcustom predictive-global-auxiliary-file-directory "~/.emacs.d/predictive/"
+  "Directory to save global predictive auxilliary files in.
+
+The path *must* include a trailing \"/\"."
+  :group 'predictive
+  :type 'directory
+  ;; ensure trailing directory separator
+  :set (lambda (var val)
+	 (unless (string= (file-name-directory val) val)
+	   (setq val (concat val "/")))
+	 (set-default var val)))
+
+
+(defcustom predictive-local-auxiliary-file-directory ".predictive/"
+  "Directory to save file-specific predictive auxiliary files in.
 
 If this is a relative path, it is relative to the current
 directory of a buffer using predictive mode. This means that
 files located in different directories will use separate
 auxiliary file subdirectories.
 
+The path *must* include a trailing \"/\".
+
 Setting an absolute path is possible, but discouraged. All
 auxiliary files will be created in the same directory, and there
 are no safe-guards to prevent two different auxiliary files that
 happen to have the same name from clobbering one another. That
-said, auxiliary filenames incorporate the buffer filename, so
+said, auxiliary filenames do incorporate the buffer filename, so
 only identically named files in different directories pose a
 risk."
   :group 'predictive
@@ -412,6 +452,13 @@ risk."
 	 (unless (string= (file-name-directory val) val)
 	   (setq val (concat val "/")))
 	 (set-default var val)))
+
+(defvaralias 'predictive-auxiliary-file-locatiom
+  'predictive-local-auxiliary-file-directory)
+
+(make-obsolete-variable 'predictive-auxiliary-file-location
+			'predictive-local-auxiliary-file-location
+			"version 0.24 of the predictive package")
 
 
 (defcustom predictive-use-buffer-local-dict nil
@@ -515,18 +562,6 @@ enabled."
   "Hook run after predictive mode is disabled.")
 
 
-;; FIXME: should this be a customization option?
-(defvar predictive-major-mode-alist nil
-  "Alist associating major mode symols with functions.
-The functions should take one argument. The alist is checked
-whenever predictive mode is enabled or disabled in a buffer. If
-the buffer's major made matches an entry in the alist, the
-associated function is called, with a positive argument if
-predictive mode is being enabled or a negative one if it is being
-disabled. This makes it easier to customize predictive mode for
-different major modes.")
-
-
 (defvar predictive-accept-functions '(predictive-auto-learn)
   "Hook run after a predictive completion is accepted.
 The functions are called with two or three arguments: the prefix,
@@ -581,7 +616,7 @@ to the dictionary, nil if it should not. Only used when
 
 
 ;;; ================================================================
-;;;                Setup default key bindings
+;;;                  Setup default key bindings
 
 (unless predictive-map
   (setq predictive-map (make-sparse-keymap))
@@ -633,6 +668,14 @@ or `predictive-buffer-dict' in a buffer.")
 
 
 
+;;; ==============================================================
+;;;     Internal variables to do with Completion-UI sources
+
+;; stores list of predictive versions of Completion-UI sources
+(defvar predictive-completion-ui-source-definitions nil)
+
+
+
 
 ;;; ================================================================
 ;;;                  Convenience macros and functions
@@ -647,10 +690,31 @@ or `predictive-buffer-dict' in a buffer.")
 	   (string= (substring string 1) (downcase (substring string 1))))))
 
 
-(defmacro predictive-create-auxiliary-file-location ()
-  ;; Create directory specified by `predictive-auxiliary-file-locaion' for
-  ;; current buffer, if necessary.
-  '(make-directory predictive-auxiliary-file-location t))
+(defun predictive-assoc-delete-all (key alist)
+  "Delete from ALIST all elements whose car is `equal' to KEY.
+Return modified alist."
+  (while (and (consp (car alist))
+	      (equal (car (car alist)) key))
+    (setq alist (cdr alist)))
+  (let ((tail alist) tail-cdr)
+    (while (setq tail-cdr (cdr tail))
+      (if (and (consp (car tail-cdr))
+	       (equal (car (car tail-cdr)) key))
+	  (setcdr tail (cdr tail-cdr))
+	(setq tail tail-cdr))))
+  alist)
+
+
+(defmacro predictive-make-global-auxiliary-file-directory ()
+  ;; Create directory specified by `predictive-global-auxiliary-file-locaion',
+  ;; if necessary.
+  '(make-directory predictive-global-auxiliary-file-directory t))
+
+
+(defmacro predictive-make-local-auxiliary-file-directory ()
+  ;; Create directory specified by `predictive-local-auxiliary-file-directory'
+  ;; for current buffer, if necessary.
+  '(make-directory predictive-local-auxiliary-file-directory t))
 
 
 (defmacro predictive-buffer-local-dict-name ()
@@ -674,22 +738,6 @@ or `predictive-buffer-dict' in a buffer.")
 		  (buffer-name)))))))
 
 
-(defun predictive-assoc-delete-all (key alist)
-  "Delete from ALIST all elements whose car is `equal' to KEY.
-Return modified alist."
-  (while (and (consp (car alist))
-	      (equal (car (car alist)) key))
-    (setq alist (cdr alist)))
-  (let ((tail alist) tail-cdr)
-    (while (setq tail-cdr (cdr tail))
-      (if (and (consp (car tail-cdr))
-	       (equal (car (car tail-cdr)) key))
-	  (setcdr tail (cdr tail-cdr))
-	(setq tail tail-cdr))))
-  alist)
-
-
-
 (defun predictive-lookup-word-p (word &optional ignored)
   "Return non-nil if WORD is found by `lookup-words', nil otherwise.
 Potentially useful as a `predictive-auto-add-filter' (hence the
@@ -707,6 +755,7 @@ hang if it is used as a `predictive-auto-add-filter' and
 `predictive-use-auto-learn-cache' is enabled. If this happens,
 use C-g to terminate `predictive-ispell-word-p', then consider
 disabling `predictive-use-auto-learn-cache'."
+  (require 'ispell)
   ;; --- Code copied and adapted from `ispell-word' in ispell.el ---
   (let (poss)
     (ispell-set-spellchecker-params)    ; Initialize variables and dicts alists
@@ -726,6 +775,16 @@ disabling `predictive-use-auto-learn-cache'."
     ;; return t if word is correct
     ;;(when (null poss) (message "Error in ispell process"))
     (or (eq poss t) (stringp poss))))
+
+
+
+;;; ===============================================================
+;;;                     Compatibility stuff
+
+(unless (fboundp 'replace-regexp-in-string)
+  (require 'predictive-compat)
+  (defalias 'replace-regexp-in-string
+            'predictive-compat-replace-regexp-in-string))
 
 
 
@@ -835,36 +894,42 @@ When within a pop-up frame:
    ((not predictive-mode)
     ;; make sure main dictionaries are loaded
     (mapc 'predictive-load-dict (predictive-main-dict))
-    ;; make sure modified dictionaries used in the buffer are saved when the
-    ;; bufer is killed
+    ;; replace Completion-UI sources with their predictive variants
+    (set (make-local-variable 'completion-ui-source-definitions)
+	 predictive-completion-ui-source-definitions)
+
+    ;; save dictionaries used in the buffer when bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
       (add-hook 'kill-buffer-query-functions 'predictive-save-used-dicts
 		nil 'local))
-    ;; load/create the buffer-local dictionary if using it, and make sure it's
-    ;; saved and unloaded when buffer is killed
+    ;; load/create the buffer-local dictionary if using it, and save and
+    ;; unload it when buffer is killed
     (when predictive-use-buffer-local-dict
       (predictive-load-buffer-local-dict)
       (add-hook 'kill-buffer-hook 'predictive-unload-buffer-local-dict
 		nil 'local))
-    ;; make sure auto-learn/add caches are flushed if buffer is killed
+    ;; flush auto-learn/add caches when buffer is killed
     (add-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches
 	      nil 'local)
 
-    ;; look up major mode in major-mode-alist and call any matching function
-    ;; with a positive argument to indicate enabling
-    (let ((modefunc (assq major-mode predictive-major-mode-alist)))
-      (when modefunc
-	(if (functionp (cdr modefunc))
-	    (unless (funcall (cdr modefunc) 1)
-	      (warn (concat "Predictive major-mode setup function %s "
-			    "failed; %s support disabled")
-		       (cdr modefunc) major-mode)
-	      (setq predictive-disable-major-mode-setup t))
-	  (error "Wrong type in `predictive-major-mode-alist': functionp, %s"
-		 (prin1-to-string (cdr modefunc))))))
+    ;; call any matching functions in `predictive-major-mode-alist' with a
+    ;; positive argument to indicate enabling
+    (let (modefunc)
+      (dolist (mode-entry predictive-major-mode-alist)
+	(when (and (or (eq major-mode (car mode-entry))
+		       (derived-mode-p (car mode-entry)))
+		   (setq modefunc (cdr mode-entry)))
+	  (if (functionp modefunc)
+	      (unless (funcall modefunc 1)
+		(warn "Predictive major-mode setup function %s failed;\
+ %s support disabled" modefunc major-mode)
+		(setq predictive-disable-major-mode-setup t))
+	    (error
+	     "Wrong type in `predictive-major-mode-alist': functionp, %s"
+	     (prin1-to-string modefunc))))))
 
     ;; turn on auto-completion mode if necessary
-    (set (make-local-variable 'auto-completion-default-source) 'predictive)
+    ;;(set (make-local-variable 'auto-completion-default-source) 'predictive)
     (when predictive-auto-complete (auto-completion-mode 1))
     ;; setup idle-timer to flush auto-learn and auto-add caches
     (setq predictive-flush-auto-learn-timer
@@ -880,7 +945,7 @@ When within a pop-up frame:
    ;; ----- disabling predictive mode -----
    (predictive-mode
     ;; turn off auto-completion mode if necessary
-    (kill-local-variable 'auto-completion-default-source)
+    ;;(kill-local-variable 'auto-completion-default-source)
     (when predictive-auto-complete (auto-completion-mode -1))
     ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)
@@ -891,24 +956,29 @@ When within a pop-up frame:
       (predictive-save-used-dicts 'no-save-query))
     (when predictive-use-buffer-local-dict
       (predictive-unload-buffer-local-dict))
+    ;; save Completion-UI frequency data
+    (dolist (source predictive-completion-ui-source-definitions)
+      (predictive-save-source-frequency-data (car source) nil 'overwrite))
+    ;; restore Completion-UI sources
+    (kill-local-variable 'completion-ui-source-definitions)
 
     ;; if major-mode setup function failed to load, just reset the flag
     (if predictive-disable-major-mode-setup
 	(setq predictive-disable-major-mode-setup nil)
       ;; otherwise, look up major mode in major-mode-alist and call any
       ;; matching function with a negative argument to indicate disabling
-      (let ((modefunc (assq major-mode predictive-major-mode-alist)))
-	(when modefunc
-	  (condition-case nil
-	      (if (functionp (cdr modefunc))
-		  (funcall (cdr modefunc) -1)
-		(error (concat "Wrong type in `predictive-major-mode-alist': "
-			       "functionp, %s"
-			       (prin1-to-string (cdr modefunc)))))
-	    (error
-	     (warn (concat "Predictive major-mode setup function failed "
-			   "whilst disabling: %s")
-		   (prin1-to-string (cdr modefunc))))))))
+      (let (modefunc)
+	(dolist (mode-entry (reverse predictive-major-mode-alist))
+	  (when (and (or (eq major-mode (car mode-entry))
+			 (derived-mode-p (car mode-entry)))
+		     (setq modefunc (cdr mode-entry)))
+	    (if (functionp modefunc)
+		(unless (funcall modefunc -1)
+		  (warn "Predictive major-mode setup function %s failed\
+ during disabling" modefunc))
+	      (error
+	       "Wrong type in `predictive-major-mode-alist': functionp, %s"
+	       (prin1-to-string modefunc)))))))
 
     ;; remove hooks
     (remove-hook 'kill-buffer-hook 'predictive-flush-auto-learn-caches 'local)
@@ -929,6 +999,41 @@ When within a pop-up frame:
 (defun turn-on-predictive-mode ()
   "Turn on predictive mode. Useful for adding to hooks."
   (unless predictive-mode (predictive-mode)))
+
+
+
+
+;;; ================================================================
+;;;            Simple predictive-mode setup functions
+
+(defun predictive-setup-text (arg)
+  "With a positive ARG, set up predictive mode for plain text.
+With a negative ARG, undo these changes.
+
+The default setting of `predictive-major-mode-alist' calls this
+function automatically when predictive mode is enabled in
+`text-mode' and any mode derived from it."
+  (cond  ;; make predictive completion the default auto-completion source
+   ((> arg 0)
+    (set (make-local-variable 'auto-completion-default-source) 'predictive))
+   ((< arg 0)
+    (kill-local-variable 'auto-completion-default-source))))
+
+
+(defun predictive-setup-elisp (arg)
+  "With a positive ARG, set up predictive mode for Emacs lisp.
+With a negative ARG, undo these changes.
+
+The default setting of `predictive-major-mode-alist' calls this
+function automatically when predictive mode is enabled in
+`emacs-lisp-mode' and any mode derived from it (such as
+`lisp-interaction-mode') ."
+  (cond  ;; make predictive elisp completion default auto-completion source
+   ((> arg 0)
+    (set (make-local-variable 'auto-completion-default-source)
+	 'predictive-elisp))
+   ((< arg 0)
+    (kill-local-variable 'auto-completion-default-source))))
 
 
 
@@ -2675,11 +2780,11 @@ meta-dictionary will be based, instead of
     (when (buffer-file-name)
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
-		    predictive-auxiliary-file-location
+		    predictive-local-auxiliary-file-directory
 		    (symbol-name (predictive-buffer-local-dict-name))
 		    ".elc"))
       ;; create directory if necessary
-      (predictive-create-auxiliary-file-location))
+      (predictive-make-local-auxiliary-file-directory))
     ;; if the buffer-local dictionary exists, load it, otherwise create it
     (if (and filename (file-exists-p filename))
 	(progn
@@ -2709,7 +2814,7 @@ meta-dictionary will be based, instead of
     (when (buffer-file-name)
       (setq filename
 	    (concat (file-name-directory (buffer-file-name))
-		    predictive-auxiliary-file-location
+		    predictive-local-auxiliary-file-directory
 		    (symbol-name (predictive-buffer-local-meta-dict-name))
 		    ".elc")))
     ;; if the buffer-local dictionary doesn't exist yet, or needs updating,
@@ -2843,19 +2948,169 @@ A negative prefix argument turns it off.")
 
 
 
+;;; ================================================================
+;;;                     Completion-UI setup
+
+(defmacro predictive--source-frequency-data-filename (source)
+  `(if (symbolp source)
+       (concat predictive-global-auxiliary-file-directory
+	       (symbol-name ,source) "-frequency-data")
+     ;; Note: we construct the global frequency data filename so that it is
+     ;;       always different from any source-specific file
+     (concat predictive-global-auxiliary-file-directory
+	     "predictive-frequency-data-global")))
+
+
+
+(defun predictive-load-source-frequency-data
+  (source &optional filename noerror)
+  "Load frequency data for predictive SOURCE from file.
+
+If SOURCE is not a symbol, load global frequency data instead.
+
+Defaults to canonical filename for SOURCE if optional argument
+FILENAME is null, otherwise loads data from FILENAME.
+
+If the optional argument NOERROR is non-nil, return nil instead
+of signaling and error if file is not found."
+
+  ;; get filename
+  (unless filename
+    (setq filename (predictive--source-frequency-data-filename source)))
+  ;; attempt to read frequency data from FILENAME
+  (catch 'load-error
+    (unless (file-exists-p filename)
+      (if noerror
+	  (throw 'load-error nil)
+	(error "File \"%s\" does not exist; could not load predictive\
+ frequency data" filename)))
+    (let (freqdata)
+      (with-temp-buffer
+	(insert-file-contents filename)
+	(goto-char (point-min))
+	(condition-case nil
+	    (setq freqdata (read (current-buffer)))
+	  (error
+	   (kill-buffer nil)
+	   (funcall (if noerror 'message 'error)
+		    "Error reading predictive frequency data from \"%s\""
+		    filename)
+	   (throw 'load-error nil)))
+	(kill-buffer nil))
+      ;; set Completion-UI variable storing frequency hash table for source
+      (set (intern (completion-ui--frequency-hash-table-name
+		    source (if (symbolp source) 'source 'global)))
+	   freqdata)
+      (if (symbolp source)
+	  (message
+	   "Loaded frequency data for \"%s\" source from %s"
+	   source filename)
+	(message "Loaded global predictive frequency data from %s" filename))
+      )))
+
+
+(defun predictive-save-source-frequency-data
+  (source &optional filename overwrite)
+  "Save frequency data for predictive SOURCE to file.
+
+If SOURCE is not a symbol, load global frequency data instead.
+
+Defaults to canonical filename for SOURCE if FILENAME is null.
+If OVERWRITE is non-nil, any existing file will be overwritten
+without asking for confirmation."
+
+  ;; get filename
+  (unless filename
+    (setq filename (predictive--source-frequency-data-filename source)))
+  (when (or (not (file-exists-p filename)) overwrite
+	    (yes-or-no-p (format "Overwrite \"%s\"? " filename)))
+    ;; get frequency data
+    (let ((freqdata (intern (completion-ui--frequency-hash-table-name
+			     source (if (symbolp source) 'source 'global)))))
+      (if (not (boundp freqdata))
+	  (if (symbolp source)
+	      (message
+	       "No predictive frequency saved data found for \"%s\" source"
+	       source)
+	    (message "No global predictive frequency saved data found"))
+	(setq freqdata (symbol-value freqdata))
+	;; make sure auxilliary file directory exists
+	(predictive-make-global-auxiliary-file-directory)
+	;; write frequency data to file
+	(with-temp-buffer
+	  (prin1 freqdata (current-buffer))
+	  (write-region nil nil filename))
+	(if (symbolp source)
+	    (message
+	     "Predictive frequency data for \"%s\" source saved to %s"
+	     source filename)
+	  (message "Global predictive frequency data saved to %s" filename))
+	))))
+
+
+
+(defun predictive--register-source (completion-function &rest args)
+  ;; Hook function for `completion-ui-register-source-functions' which
+  ;; auto-generates predictive versions of new Completion-UI sources.
+  (let ((name (plist-get args :name))
+	predictive-name)
+    ;; construct source name
+    (unless name
+      (setq name (completion-ui--construct-source-name completion-function)))
+    (setq predictive-name (intern (concat "predictive-" (symbol-name name))))
+
+    ;; if source already sets :sort-by-frequency or explicitly disables
+    ;; predictive support, add it unmodified to predictive-mode's list of
+    ;; source definitions
+    (if (or (plist-get args :no-predictive)
+	    (plist-get args :sort-by-frequency))
+	(let ((existing
+	       (assq name predictive-completion-ui-source-definitions)))
+	  (if existing
+	      (setcdr existing
+		      (cdr (assq name completion-ui-source-definitions)))
+	    (push (assq name completion-ui-source-definitions)
+		  predictive-completion-ui-source-definitions))
+	  ;; load frequency data for source if it collects source-specific
+	  ;; data and predictive support isn't disabled
+	  (unless (or (plist-get args :no-predictive)
+		      (eq (plist-get args :sort-by-frequency) 'global))
+	    (predictive-load-source-frequency-data name nil 'noerror)))
+
+      ;; otherwise, generate predictive variant of source
+      (plist-put args :name predictive-name)
+      (plist-put args :sort-by-frequency 'source)
+      (plist-put args :no-predictive t)
+      (eval `(completion-ui-register-source ,completion-function ,@args))
+      ;; load frequency data for predictive source
+      (predictive-load-source-frequency-data predictive-name nil 'noerror)
+      ;; add predictive variant to predictive-mode's list of source
+      ;; definitions under *original* source's name
+      (let ((existing (assq name predictive-completion-ui-source-definitions))
+	    (def (assq predictive-name completion-ui-source-definitions)))
+	(if existing
+	    (setcdr existing (cdr def))
+	  (push (cons name (cdr def))
+		predictive-completion-ui-source-definitions)))
+      )))
+
+
+
+;; install hook to construct predictive versions of Completion-UI sources
+(add-hook 'completion-ui-register-source-functions
+	  'predictive--register-source)
+
+;; load global frequency data from file
+(predictive-load-source-frequency-data 0 nil 'noerror)
+
+;; now we can finally load the pre-defined Completion-UI sources
+(require 'completion-ui-sources)
+
+
+
+
 ;;; ===============================================================
-;;;                       Compatibility Stuff
-
-(unless (fboundp 'replace-regexp-in-string)
-  (require 'predictive-compat)
-  (defalias 'replace-regexp-in-string
-            'predictive-compat-replace-regexp-in-string))
-
-
-
-
-;;; ===============================================================
-;;;                   Register Completion-UI source
+;;;         Register main predictive Completion-UI source
 
 (completion-ui-register-source
  predictive-complete
@@ -2869,7 +3124,8 @@ A negative prefix argument turns it off.")
 					prefix completion arg))
  :menu predictive-menu-function
  :browser predictive-browser-function
- :word-thing predictive-word-thing)
+ :word-thing predictive-word-thing
+ :no-predictive t)
 
 
 

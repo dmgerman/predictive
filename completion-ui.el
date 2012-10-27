@@ -1719,6 +1719,14 @@ completion overlay for the current completion.
 ;;; =======================================================
 ;;;           Modularized source definitions
 
+(defmacro completion-ui--construct-source-name (completion-function)
+  `(let ((name (setq name (symbol-name ,completion-function))))
+     (when (or (string-match "^completion-ui-+" name)
+	       (string-match "^completion-+" name)
+	       (string-match "^complete-+" name))
+       (setq name (substring name (match-end 0))))
+     (intern name)))
+
 (defmacro completion-ui--source-def-name (def)
   `(car ,def))
 
@@ -1757,9 +1765,8 @@ completion overlay for the current completion.
 
 (defmacro completion-ui--frequency-hash-table-name (name sort-by-frequency)
   (cond
-   ((eq sort-by-frequency 'source)
-    `(concat "completion-ui--" (symbol-name ,name) "-frequency"))
-   (t "completion-ui--frequency-data")))
+   ((eq sort-by-frequency 'global) "completion-ui--frequency-data")
+   (t `(concat "completion-ui--" (symbol-name ,name) "-frequency-data"))))
 
 
 (defvar completion-ui-register-source-functions nil
@@ -1958,12 +1965,7 @@ functions called from the
 
   ;; construct source name from completion-function if not defined explicitly
   (unless name
-    (setq name (symbol-name completion-function))
-    (if (string-match "^completion-ui-+" name)
-	(setq name (substring name (match-end 0)))
-      (when (string-match "^completion-+" name)
-	(setq name (substring name (match-end 0)))))
-    (setq name (intern name)))
+    (setq name (completion-ui--construct-source-name completion-function)))
   ;; construct command name from source name if not defined explicitly
   (unless command-name
     (setq command-name (intern (concat "complete-" (symbol-name name)))))
@@ -2009,7 +2011,8 @@ functions called from the
  	     completion-args)))
 
   ;; construct argument list for COMPLETION-FUNCTION
-  (let ((argnames '(prefix maxnum))
+  (let ((cmplfun completion-function)
+	(argnames '(prefix maxnum))
   	(cmplstack completion-args)
   	(otherstack other-args)
   	(arg 0) arglist)
@@ -2028,7 +2031,7 @@ functions called from the
 	 ;; no maxnum argument
 	 ((or (= (length completion-args) 0)
 	      (= (length completion-args) 1))
-	  (setq completion-function
+	  (setq cmplfun
 		`(lambda (prefix &optional maxnum)
 		   (let ((completions (,completion-function ,@arglist)))
 		     (if maxnum
@@ -2037,7 +2040,7 @@ functions called from the
 	 ;; maxnum argument present, additional args required
 	 ((and (= (length completion-args) 2)
 	       (or other-args (not (= (nth 1 completion-args) 1))))
-	  (setq completion-function
+	  (setq cmplfun
 		`(lambda (prefix &optional maxnum)
 		   (,completion-function ,@arglist))))
 	 ;; maxnum argument present, no additional args required - leave
@@ -2053,7 +2056,7 @@ functions called from the
 	 ;; no maxnum argument
 	 ((or (= (length completion-args) 0)
 	      (= (length completion-args) 1))
-	  (setq completion-function
+	  (setq cmplfun
 		`(lambda (prefix &optional maxnum)
 		   (let ((completions
 			  (sort (,completion-function ,@arglist)
@@ -2065,7 +2068,7 @@ functions called from the
 		       completions)))))
 	 ;; maxnum argument present (with or without additional args)
 	 (t
-	  (setq completion-function
+	  (setq cmplfun
 		`(lambda (prefix &optional maxnum)
 		   (sort (,completion-function ,@arglist)
 			 (lambda (a b)
@@ -2077,81 +2080,82 @@ functions called from the
 			  (1+ (gethash completion ,hash-table-name 0))
 			  ,hash-table-name))
 	      accept-functions)
-	)))
+	))
 
 
-  ;; construct interface definiton
-  (let ((source-def
-	 (cons name
-	       (append
-		(list completion-function)
-		(when non-prefix-completion
-		  (list :non-prefix-completion non-prefix-completion))
-		(when prefix-function
-		  (list :prefix-function prefix-function))
-		(when word-thing
-		  (list :word-thing word-thing))
-		(when accept-functions
-		  (list :accept-functions accept-functions))
-		(when reject-functions
-		  (list :reject-functions reject-functions))
-		(when tooltip-function
-		  (list :tooltip-function tooltip-function))
-		(when popup-tip-function
-		  (list :popup-tip-function tooltip-function))
-		(when popup-frame-function
-		  (list :popup-frame-function popup-frame-function))
-		(when menu (list :menu menu))
-		(when browser (list :browser browser))))))
+    ;; construct interface definiton
+    (let ((source-def
+	   (cons name
+		 (append
+		  (list cmplfun)
+		  (when non-prefix-completion
+		    (list :non-prefix-completion non-prefix-completion))
+		  (when prefix-function
+		    (list :prefix-function prefix-function))
+		  (when word-thing
+		    (list :word-thing word-thing))
+		  (when accept-functions
+		    (list :accept-functions accept-functions))
+		  (when reject-functions
+		    (list :reject-functions reject-functions))
+		  (when tooltip-function
+		    (list :tooltip-function tooltip-function))
+		  (when popup-tip-function
+		    (list :popup-tip-function tooltip-function))
+		  (when popup-frame-function
+		    (list :popup-frame-function popup-frame-function))
+		  (when menu (list :menu menu))
+		  (when browser (list :browser browser))))))
 
-    `(progn
-       ;; construct code to add source definition to list (or replace existing
-       ;; definition)
-       (let ((existing (assq ',name completion-ui-source-definitions)))
-	 (if (not existing)
-	     (push ',source-def completion-ui-source-definitions)
-	   (message "Completion-UI source `%s' already registered\
+      `(progn
+	 ;; construct code to add source definition to list (or replace
+	 ;; existing definition)
+	 (let ((existing (assq ',name completion-ui-source-definitions)))
+	   (if (not existing)
+	       (push ',source-def completion-ui-source-definitions)
+	     (message "Completion-UI source `%s' already registered\
  - replacing existing definition" ',name)
-	   (setcdr existing ',(cdr source-def))))
+	     (setcdr existing ',(cdr source-def))))
 
-       ;; if gathering separate frequency data for this source, create hash
-       ;; table to store frequency data
-       ,(when (eq sort-by-frequency 'source)
-	  (let ((hash-table-name
-		 (intern (completion-ui--frequency-hash-table-name
-			  name sort-by-frequency))))
-	    `(defvar ,hash-table-name (make-hash-table :test 'equal))))
+	 ;; if gathering separate frequency data for this source, create hash
+	 ;; table to store frequency data
+	 ,(when (and sort-by-frequency (not (eq sort-by-frequency 'global)))
+	    (let ((hash-table-name
+		   (intern (completion-ui--frequency-hash-table-name
+			    name sort-by-frequency))))
+	      `(defvar ,hash-table-name (make-hash-table :test 'equal))))
 
-       ;; construct code to define completion command
-       ,(unless no-command
-	  `(defun ,command-name
-	     (&optional n)
-	     ,(concat "Complete or cycle word at point using "
-		      (symbol-name name) " source.")
-	     (interactive "p")
-	     (complete-or-cycle-word-at-point ',name n)))
+	 ;; construct code to define completion command
+	 ,(unless no-command
+	    `(defun ,command-name
+	       (&optional n)
+	       ,(concat "Complete or cycle word at point using "
+			(symbol-name name) " source.")
+	       (interactive "p")
+	       (complete-or-cycle-word-at-point ',name n)))
 
-       ;; update list of choices in `auto-completion-default-source' defcustom
-       ,(if no-auto-completion
-	    `(delete '(const ,name)
-		     (get 'auto-completion-default-source 'custom-type))
-	  `(let ((choices (get 'auto-completion-default-source 'custom-type)))
-	     (unless (member '(const ,name) choices)
-	       (nconc (cdr choices) '((const ,name))))))
+	 ;; update list of choices in `auto-completion-default-source'
+	 ;; defcustom
+	 ,(if no-auto-completion
+	      `(delete '(const ,name)
+		       (get 'auto-completion-default-source 'custom-type))
+	    `(let ((choices (get 'auto-completion-default-source 'custom-type)))
+	       (unless (member '(const ,name) choices)
+		 (nconc (cdr choices) '((const ,name))))))
 
-       ;; update list of choices in other per-source defcustoms
-       (completion-ui-update-per-source-defcustoms ',name)
+	 ;; update list of choices in other per-source defcustoms
+	 (completion-ui-update-per-source-defcustoms ',name)
 
-       ;; run hooks
-       ,(progn
-	  (setq args (plist-put args :name name))
-	  (let ((elt args))
-	    (while (cadr elt)
-	      (setf (cadr elt) `(quote ,(cadr elt))
-		    elt (cddr elt))))
-	  `(run-hook-with-args 'completion-ui-register-source-functions
-			       ',completion-function ,@args))
-       )))
+	 ;; run hooks
+	 ,(progn
+	    (setq args (plist-put args :name name))
+	    (let ((elt args))
+	      (while (cadr elt)
+		(setf (cadr elt) `(quote ,(cadr elt))
+		      elt (cddr elt))))
+	    `(run-hook-with-args 'completion-ui-register-source-functions
+				 ',completion-function ,@args))
+	 ))))
 
 
 
@@ -4507,6 +4511,7 @@ See also `completion-window-posn-at-point' and
 
 ;; prevent bogus compiler warnings
 (eval-when-compile
+  (defvar completion-ui-inhibit-load-sources)
   (defun completion--compat-window-offsets (dummy))
   (defun completion--compat-frame-posn-at-point
     (&optional arg1 arg2 arg3 arg4)))
@@ -4716,7 +4721,11 @@ in WINDOW'S frame."
 (require 'completion-ui-popup-tip)
 (require 'completion-ui-menu)
 (require 'completion-ui-popup-frame)
-(require 'completion-ui-sources)
+;; binding `completion-ui-inhibit-source-loading' prevents pre-defined sources
+;; from being loaded
+(unless (and (boundp 'completion-ui-inhibit-load-sources)
+	     completion-ui-inhibit-load-sources)
+  (require 'completion-ui-sources))
 
 
 ;; ;; set default auto-show interface to popup-tip
