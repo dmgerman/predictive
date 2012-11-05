@@ -2164,10 +2164,10 @@ functions called from the
   ;; return SOURCE or completion-source for OVERLAY at point
   `(or ,(when overlay
   	  `(and ,overlay (overlay-get ,overlay 'completion-source)))
-       ,(when source
-  	  `(and (fboundp 'auto-overlay-local-binding)
-  		(let ((completion-source ,source))
-  		  (auto-overlay-local-binding 'completion-source))))
+       ;; ,(when source
+       ;; 	  `(and (fboundp 'auto-overlay-local-binding)
+       ;; 		(let ((completion-source ,source))
+       ;; 		  (auto-overlay-local-binding 'completion-source))))
        ,source))
 
 
@@ -2408,22 +2408,23 @@ functions called from the
 
 
 (defmacro completion-ui-source-run-accept-functions
-  (overlay prefix completion &optional arg)
-  ;; run accept functions for completion OVERLAY, passing the accepted
-  ;; COMPLETION of PREFIX and any user-supplied ARG
-  `(let ((funcs (completion-ui-source-accept-functions
-		 (overlay-get ,overlay 'completion-source)
-		 overlay)))
+  (source prefix completion &optional arg)
+  ;; Run accept functions for SOURCE, passing the accepted COMPLETION of
+  ;; PREFIX and any user-supplied ARG. SOURCE can be a completion overlay, in
+  ;; which case its completion source is used.
+  `(let ((funcs (if (overlayp ,source)
+		    (completion-ui-source-accept-functions nil ,source)
+		  (completion-ui-source-accept-functions ,source))))
      (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
 
 
 (defmacro completion-ui-source-run-reject-functions
-  (overlay prefix completion &optional arg)
+  (source prefix completion &optional arg)
   ;; run reject functions for completion OVERLAY, passing the rejected
   ;; COMPLETION of PREFIX and any user-supplied ARG
-  `(let ((funcs (completion-ui-source-reject-functions
-		 (overlay-get ,overlay 'completion-source)
-		 overlay)))
+  `(let ((funcs (if (overlayp ,source)
+		    (completion-ui-source-accept-functions nil ,source)
+		  (completion-ui-source-accept-functions ,source))))
      (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
 
 
@@ -2463,9 +2464,8 @@ If no other arguments are supplied, the remaining settings are
 determined automatically from the Completion-UI source definition
 corresponding to COMPLETION-SOURCE (see
 `completion-ui-register-source'), falling back to default values
-if the COMPLETION-SOURCE isn't a registered Completion-UI
-source. The remaining optional arguments can be used to override
-these defaults.
+if COMPLETION-SOURCE is a function. The remaining optional
+arguments can be used to override these standard settings.
 
 PREFIX-FUNCTION can either be a function that takes zero
 arguments (called to find the prefix at the point), a
@@ -2694,7 +2694,7 @@ called from timer)."
 	     (non-prefix-completion nil s-npcmpl))
   "Complete the word at or next to point.
 
-The default completion source is to use the
+The default completion source to use is the
 `auto-completion-mode' source'. COMPLETION-SOURCE,
 PREFIX-FUNCTION, and NON-PREFIX-COMPLETION override this
 default (see `complete-in-buffer' for more details)."
@@ -2742,15 +2742,20 @@ default (see `complete-in-buffer' for more details)."
 
 
 (defun* complete-or-cycle-word-at-point
-  (completion-source &optional n prefix-function
-		     (non-prefix-completion nil s-npcmpl))
+  (&optional completion-source n prefix-function
+	     (non-prefix-completion nil s-npcmpl))
   "Cycle through available completions if there are any,
 otherwise complete the word at point.
 
-When completing, COMPLETION-SOURCE, PREFIX-FUNCTION, and
-NON-PREFIX-COMPLETION are passed to `complete-in-buffer' (which
-see)."
-  (interactive "p")
+When completing, the default completion source to use is the
+`auto-completion-mode' source'. COMPLETION-SOURCE,
+PREFIX-FUNCTION, and NON-PREFIX-COMPLETION override this
+default (see `complete-in-buffer' for more details).
+
+When cycling, the completion source is whatever source was used
+for the pending completion at point and these arguments are
+ignored."
+  (interactive "i\np")
   (if (completion-ui-overlay-at-point)
       (completion-cycle n)
     (complete-word-at-point

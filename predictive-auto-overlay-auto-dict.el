@@ -207,10 +207,10 @@
       (unless file
 	(setq file
 	      (concat (file-name-directory (buffer-file-name))
-		      predictive-auxiliary-file-location
+		      predictive-local-auxiliary-file-directory
 		      (symbol-name dictname))))
       ;; create directory for dictionary file if necessary
-      (predictive-create-auxiliary-file-location)
+      (predictive-make-local-auxiliary-file-directory)
       ;; if dictionary is already loaded, return it
       (if (condition-case
 	      error (symbol-value (intern-soft dictname))
