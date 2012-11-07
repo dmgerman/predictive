@@ -677,10 +677,10 @@ or `predictive-buffer-dict' in a buffer.")
 ;; stores list of predictive versions of Completion-UI sources
 (defvar predictive-completion-ui-source-definitions nil)
 
-;; stores previous buffer-local value of `auto-completion-default-source';
-;; used by predictive-mode setup functions
-(defvar predictive-restore-auto-completion-default-source nil)
-(make-variable-buffer-local 'predictive-restore-auto-completion-default-source)
+;; used by `predictive-mode' setup functions to store values of configuration
+;; variables to be restored when disabling
+(defvar predictive-setup-saved-local-state nil)
+(make-variable-buffer-local 'predictive-setup-saved-state)
 
 
 
@@ -743,6 +743,22 @@ Return modified alist."
 	     (file-name-nondirectory
 	      (or (buffer-file-name)
 		  (buffer-name)))))))
+
+
+(defsubst predictive-setup-save-local-state (var)
+  ;; Saved buffer-local value of variable VAR (a symbol), is any.
+  (when (local-variable-p var)
+    (push
+     (cons 'auto-completion-default-source auto-completion-default-source)
+     predictive-setup-saved-local-state)))
+
+
+(defsubst predictive-setup-restore-local-state ()
+  ;; Restore buffer-local configuration state saved in
+  ;; `predictive-setup-saved-local-state'
+  (dolist (el predictive-setup-saved-local-state)
+    (kill-local-variable (car el))
+    (set (make-local-variable (car el)) (cdr el))))
 
 
 (defun predictive-lookup-word-p (word &optional ignored)
@@ -1022,17 +1038,10 @@ function automatically when predictive mode is enabled in
 `text-mode' and any mode derived from it."
   (cond  ;; make predictive completion the default auto-completion source
    ((> arg 0)
-    (when (local-variable-p 'auto-completion-default-source)
-      (setq predictive-restore-auto-completion-default-source
-	    auto-completion-default-source))
+    (predictive-setup-save-local-state 'auto-completion-default-source)
     (set (make-local-variable 'auto-completion-default-source) 'predictive))
-   ((< arg 0)
-    (if (not predictive-restore-auto-completion-default-source)
-	(kill-local-variable 'auto-completion-default-source)
-      (set (make-local-variable auto-completion-default-source)
-	   predictive-restore-auto-completion-default-source)
-      (setq predictive-restore-auto-completion-default-source nil)))
-   ))
+   ((< arg 0) (predictive-setup-restore-local-state)))
+  t)  ; return t to indicate successful setup
 
 
 (defun predictive-setup-elisp (arg)
@@ -1043,20 +1052,22 @@ The default setting of `predictive-major-mode-alist' calls this
 function automatically when predictive mode is enabled in
 `emacs-lisp-mode' and any mode derived from it (such as
 `lisp-interaction-mode') ."
-  (cond  ;; make predictive elisp completion default auto-completion source
+  (cond
+   ;; enabling
    ((> arg 0)
-    (when (local-variable-p 'auto-completion-default-source)
-      (setq predictive-restore-auto-completion-default-source
-	    auto-completion-default-source))
+    (predictive-setup-save-local-state 'auto-completion-default-source)
+    (predictive-setup-save-local-state 'auto-completion-source-faces)
+    ;; make predictive elisp completion the default auto-completion source
     (set (make-local-variable 'auto-completion-default-source)
-	 'predictive-elisp))
-   ((< arg 0)
-    (if (not predictive-restore-auto-completion-default-source)
-	(kill-local-variable 'auto-completion-default-source)
-      (set (make-local-variable auto-completion-default-source)
-	   predictive-restore-auto-completion-default-source)
-      (setq predictive-restore-auto-completion-default-source nil)))
-   ))
+	 'predictive-elisp)
+    ;; use predictive completion in comments and strings
+    (set (make-local-variable 'auto-completion-source-faces)
+	 '((font-lock-comment-face . predictive)
+	   (font-lock-string-face . predictive)
+	   (font-lock-doc-face . predictive))))
+   ;; disabling
+   ((< arg 0) (predictive-setup-restore-local-state)))
+  t)  ; return t to indicate successful setup
 
 
 
