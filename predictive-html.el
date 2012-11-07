@@ -2,29 +2,26 @@
 ;;; predictive-html.el --- predictive mode HTML setup function
 
 
-;; Copyright (C) 2005 2008-2010 Toby Cubitt
+;; Copyright (C) 2005 2008-2010, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt
-;; Version: 0.5.2
+;; Version: 0.5.3
 ;; Keywords: predictive, setup function, html
 
-;; This file is part of the Emacs Predictive Completion package.
+;; This file is NOT part of Emacs.
 ;;
-;; The Emacs Predicive Completion package is free software; you can
-;; redistribute it and/or modify it under the terms of the GNU
-;; General Public License as published by the Free Software
-;; Foundation; either version 2 of the License, or (at your option)
+;; This file is free software: you can redistribute it and/or modify it under
+;; the terms of the GNU General Public License as published by the Free
+;; Software Foundation, either version 3 of the License, or (at your option)
 ;; any later version.
 ;;
-;; The Emacs Predicive Completion package is distributed in the hope
-;; that it will be useful, but WITHOUT ANY WARRANTY; without even the
-;; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-;; PURPOSE.  See the GNU General Public License for more details.
+;; This program is distributed in the hope that it will be useful, but WITHOUT
+;; ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+;; FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+;; more details.
 ;;
-;; You should have received a copy of the GNU General Public License
-;; along with the Emacs Predicive Completion package; if not, write
-;; to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-;; Boston, MA 02111-1307 USA
+;; You should have received a copy of the GNU General Public License along
+;; with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 
 ;;; Code:
