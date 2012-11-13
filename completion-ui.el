@@ -432,21 +432,34 @@ defaults to `auto-completion-default-source'."
 
 
 (defcustom auto-completion-source-regexps nil
-  "An alist associating regexps with completion sources (symbols).
+  "An alist associating regexps with completion sources.
 
 Used to automatically select a completion source for
 `auto-completion-mode' and `complete-word-at-point' based on
 regexp matches.
 
+Each entry must be a list of three elements: a regexp, one of the
+symbols `before-point' or `looking-at', and a completion
+source (symbol).
+
 The regexps are tried in order to see if they match in the
-current line. If a regexp matches, its associated completion
-source is returned and no further regexps are tried.
+current line. If `before-point' is specified, the regexp must
+match text strictly before point. If `looking-at' is specified,
+the regexp must match text at point according to the
+`thing-at-point-looking-at' function.
+
+If a regexp matches, its associated completion source is returned
+and no further regexps are tried.
 
 This only takes effect if the `auto-completion-regexp-source'
 function is included in `auto-completion-source-functions' (as in
 the default setting) ."
   :group 'auto-completion-mode
-  :type '(alist :key-type regexp :value-type symbol))
+  :type '(repeat (list regexp
+		       (choice :tag "Where " :value before-point
+			      (const before-point)
+			      (const looking-at))
+		       (symbol :tag "Source"))))
 
 
 (defcustom auto-completion-source-faces nil
@@ -472,7 +485,7 @@ function is included in `auto-completion-source-functions' (as in
 the default setting) ."
   :group 'auto-completion-mode
   :type '(alist :key-type (choice face (repeat face))
-		:value-type symbol))
+		:value-type (symbol :tag "source")))
 
 
 (completion-ui-defcustom-per-source auto-completion-min-chars nil
@@ -3999,12 +4012,16 @@ by `auto-completion-source-regexps' (which see).
 When used in `auto-completion-source-functions' (as in the
 default setting), this allows the completion source to be changed
 locally when a regexp matches the current buffer line."
-  (catch 'source
-    (dolist (r auto-completion-source-regexps)
-      (save-excursion
-	(goto-char (line-beginning-position))
-	(when (re-search-forward (car r) (line-end-position) t)
-	  (throw 'source (cdr r)))))))
+  (let ((pos (point)))
+    (catch 'source
+      (dolist (r auto-completion-source-regexps)
+	(save-excursion
+	  (if (eq (nth 1 r) 'looking-at)
+	      (when (thing-at-point-looking-at (nth 0 r))
+		(throw 'source (nth 2 r)))
+	    (goto-char (line-beginning-position))
+	    (when (re-search-forward (car r) pos t)
+	      (throw 'source (nth 2 r)))))))))
 
 
 (defun auto-completion-face-source ()

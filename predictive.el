@@ -111,10 +111,10 @@ is set to t, words will be added to the first dictionary in the list \(see
 
 
 (defcustom predictive-dict-functions
-  '(predictive-current-regexp-dict
-    predictive-current-face-dict
-    predictive-current-text-property-dict
-    predictive-current-overlay-dict)
+  '(predictive-current-text-property-dict
+    predictive-current-overlay-dict
+    predictive-current-regexp-dict
+    predictive-current-face-dict)
   "A non-standard hook used to select a predictive dictionary.
 
 The functions are called in order, with no arguments, until one
@@ -129,21 +129,33 @@ If all of the hook functions return nil,
 
 
 (defcustom predictive-dict-regexps nil
-  "An alist associating regexps with dictionaries.
+  "A list associating regexps with dictionaries.
 
 Used to automatically select a dictionary based on regexp
 matches.
 
+Each entry must be a list of three elements: a regexp, one of the
+symbols `before-point' or `looking-at', and either a single
+dictionary or a list of dictionaries.
+
 The regexps are tried in order to see if they match in the
-current line. If a regexp matches, its associated dictionary (or
-list of dictionaries) is returned and no further regexps are
-tried.
+current line. If `before-point' is specified, the regexp must
+match text strictly before point. If `looking-at' is specified,
+the regexp must match text at point according to the
+`thing-at-point-looking-at' function.
+
+If a regexp matches, its associated dictionary (or list of
+dictionaries) is returned and no further regexps are tried.
 
 This only takes effect if the `predictive-current-regexp-dict'
 function is included in `predictive-dict-functions' (as in the
 default setting) ."
   :group 'predictive
-  :type '(alist :key-type regexp :value-type symbol))
+  :type '(repeat (list regexp
+		       (choice :tag "Where " :value before-point
+			      (const before-point)
+			      (const looking-at))
+		       (symbol :tag "Source"))))
 
 
 (defcustom predictive-dict-faces nil
@@ -2575,7 +2587,7 @@ When used in `predictive-dict-functions' (as in the default
 setting), this allows the predictive dictionary to be changed in
 a buffer region by setting the `dict' text property in the
 region."
-  (get-text-property (point) 'dict))
+  (get-text-property (point) 'predictive-dict))
 
 
 (defun predictive-current-overlay-dict ()
@@ -2585,7 +2597,7 @@ When used in `predictive-dict-functions' (as in the default
 setting), this allows the predictive dictionary to be changed in
 a buffer region by setting the `dict' property of an overlay
 spanning the region."
-  (auto-overlay-local-binding 'dict nil t))
+  (auto-overlay-local-binding 'predictive-dict nil 'only-overlay))
 
 
 (defun predictive-current-regexp-dict ()
@@ -2597,12 +2609,16 @@ Associations between regexps and dictionaries are specified by
 When used in `predictive-dict-functions' (as in the default
 setting), this allows the predictive dictionary to be changed
 locally when a regexp matches the current buffer line."
-  (catch 'dic
-    (dolist (r predictive-dict-regexps)
-      (save-excursion
-	(goto-char (line-beginning-position))
-	(when (re-search-forward (car r) (line-end-position) t)
-	  (throw 'dic (cdr r)))))))
+  (let ((pos (point)))
+    (catch 'dic
+      (dolist (r predictive-dict-regexps)
+	(save-excursion
+	  (if (eq (nth 1 r) 'looking-at)
+	      (when (thing-at-point-looking-at (nth 0 r))
+		(throw 'dic (nth 2 r)))
+	    (goto-char (line-beginning-position))
+	    (when (re-search-forward (car r) pos t)
+	      (throw 'dic (nth 2 r)))))))))
 
 
 (defun predictive-current-face-dict ()
