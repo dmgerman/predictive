@@ -238,6 +238,7 @@
 
 (eval-when-compile (require 'cl))
 (require 'auto-overlay-common)
+(require 'thingatpt)
 
 
 (defvar completion-ui-interface-definitions nil
@@ -271,38 +272,34 @@ different value for each completion source."
     (plist-put
      args :type
      `(quote
-       (choice (cons :tag "global" (const global) ,type)
-		     ;;,(if (listp type) (copy-sequence type) type))
-	       (cons :tag "per source"
-		     (const source)
-		     (alist :key-type
-			    (choice :tag "source" (const :tag "default" t))
-			    :value-type ,type))))))
-			    ;;,(if (listp type) (copy-sequence type) type)))))))
+       (alist :key-type
+	      (choice (const :tag "Default" t)
+		      (symbol :tag "Other"))
+	      :value-type ,type))))
+              ;;,(if (listp type) (copy-sequence type) type)))))))
   ;; construct defcustom definition
   `(progn
      (add-to-list 'completion-ui-per-source-defcustoms ',symbol)
-     (defcustom ,symbol '(global . ,(eval standard)) ,doc ,@args)))
+     (defcustom ,symbol '((t . ,(eval standard))) ,doc ,@args)))
 
 
-(defun completion-ui-get-value-for-source (source value-list)
+(defun completion-ui-get-value-for-source
+  (source value-list &optional no-default)
   ;; extract value that applies to SOURCE from VALUE-LIST
   (when (symbolp value-list) (setq value-list (symbol-value value-list)))
-  (if (eq (car value-list) 'source)
-      (let ((v (or (assq (if (overlayp source)
-			     (overlay-get source 'completion-source)
-			   source)
-			 value-list)
-		   (assq t value-list))))
-	(cdr v))
-    (cdr value-list)))
+  (cdr (or (assq (if (overlayp source)
+		     (overlay-get source 'completion-source)
+		   source)
+		 value-list)
+	   (if no-default nil (assq t value-list)))))
 
 
 (defun completion-ui-update-per-source-defcustoms (source &optional del)
   ;; add SOURCE to choices in all per-source defcustoms, or delete it if
   ;; DEL is non-nil.
-  (dolist (var completion-ui-per-source-defcustoms)
-    (let ((choices (nth 2 (nth 4 (nth 2 (get var 'custom-type))))))
+  (let (choices)
+    (dolist (var completion-ui-per-source-defcustoms)
+      (setq choices (nth 2 (get var 'custom-type)))
       (if del (delete '(const ,name) choices)
 	(unless (member `(const ,source) choices)
 	  (delete nil choices)
@@ -1625,21 +1622,13 @@ completion overlay for the current completion.
        ;; update choices in `completion-auto-show' defcustom
        ,(if auto-show
 	    `(let* ((type (get 'completion-auto-show 'custom-type))
-		    (global-choices (cadr type))
-		    (source-choices (plist-get (cdaddr type) :value-type)))
-	       (unless (member '(const :tag ,(symbol-name name) ,auto-show)
-			       global-choices)
-		 (nconc global-choices
-			'((const :tag ,(symbol-name name) ,auto-show))))
+		    (source-choices (plist-get (cdr type) :value-type)))
 	       (unless (member '(const :tag ,(symbol-name name) ,auto-show)
 			       source-choices)
 		 (nconc source-choices
 			'((const :tag ,(symbol-name name) ,auto-show)))))
 	  `(let* ((type (get 'completion-auto-show 'custom-type))
-		  (global-choices (caadr type))
-		  (source-choices (plist-get (cdaddr type) :value-type)))
-	     (delete '(const :tag ,(symbol-name name) ,auto-show)
-		     global-choices)
+		  (source-choices (plist-get (cdr type) :value-type)))
 	     (delete '(const :tag ,(symbol-name name) ,auto-show)
 		   source-choices)))
        )))
@@ -1760,6 +1749,12 @@ completion overlay for the current completion.
 
 (defmacro completion-ui--source-def-reject-functions (def)
   `(plist-get ,def :reject-functions))
+
+(defmacro completion-ui--source-def-syntax-alist (def)
+  `(plist-get ,def :syntax-alist))
+
+(defmacro completion-ui--source-def-override-syntax-alist (def)
+  `(plist-get ,def :override-syntax-alist))
 
 (defmacro completion-ui--source-def-tooltip-function (def)
   `(plist-get ,def :tooltip-function))
@@ -1921,6 +1916,17 @@ The following keyword arguments are also meaningful:
         other completion sources. If set to the symbol `source',
         frequency data will be accumulated separately for this
         source. (Any other non-nil value defaults to `source'.)
+
+:syntax-alist ALIST
+        If specified, entries in the alist override those in
+        `auto-completion-syntax-alist' for the source. The format of the alist
+        entries is that same as that in `auto-completion-syntax-alist'.
+
+:override-syntax-alist ALIST
+        If specified, entries in the alist override those in
+        `auto-completion-override-syntax-alist' for the source. The format of
+        the alist entries is that same as that in
+        `auto-completion-override-syntax-alist'.
 
 
 The remaining optional keyword arguments override the default
@@ -2097,28 +2103,17 @@ functions called from the
 
 
     ;; construct interface definiton
-    (let ((source-def
-	   (cons name
-		 (append
-		  (list cmplfun)
-		  (when non-prefix-completion
-		    (list :non-prefix-completion non-prefix-completion))
-		  (when prefix-function
-		    (list :prefix-function prefix-function))
-		  (when word-thing
-		    (list :word-thing word-thing))
-		  (when accept-functions
-		    (list :accept-functions accept-functions))
-		  (when reject-functions
-		    (list :reject-functions reject-functions))
-		  (when tooltip-function
-		    (list :tooltip-function tooltip-function))
-		  (when popup-tip-function
-		    (list :popup-tip-function tooltip-function))
-		  (when popup-frame-function
-		    (list :popup-frame-function popup-frame-function))
-		  (when menu (list :menu menu))
-		  (when browser (list :browser browser))))))
+    (let (source-def)
+      (let* ((keyargs (cons nil (copy-sequence args)))
+	     (p keyargs))
+	(while (cdr p)
+	  (if (memq (cadr p) '(:name :completion-args :other-args
+				     :command-name :no-command :no-auto-completion
+				     :sort-by-frequency))
+	      (setcdr p (nthcdr 3 p))
+	    (setq p (cddr p))))
+	(setq keyargs (cdr keyargs))  ; drop leading nil
+	(setq source-def (cons name (append (list cmplfun) keyargs))))
 
       `(progn
 	 ;; construct code to add source definition to list (or replace
@@ -2249,6 +2244,20 @@ functions called from the
 	     word-thing))
       ;; default fall-back
       'word))
+
+
+(defun completion-ui-source-syntax-alist (source)
+  ;; return override-syntax-alist setting for SOURCE
+  (completion-ui--source-def-syntax-alist
+   (assq (completion-ui-completion-source source)
+	 completion-ui-source-definitions)))
+
+
+(defun completion-ui-source-override-syntax-alist (source)
+  ;; return override-syntax-alist setting for SOURCE
+  (completion-ui--source-def-override-syntax-alist
+   (assq (completion-ui-completion-source source)
+	 completion-ui-source-definitions)))
 
 
 (defun completion-ui-source-non-prefix-completion
@@ -3169,29 +3178,34 @@ those variables, unless NO-OVERLAY-LOCAL is non-nil."
   (unless source (setq source t))
 
   ;; get syntax alists
-  (let ((syntax-alist
+  (let ((overlay-syntax-alist
          (or (and (fboundp 'auto-overlay-local-binding)
 		  (not no-overlay-local)
 		  (auto-overlay-local-binding
-		   'auto-completion-syntax-alist nil t))
-	     (completion-ui-get-value-for-source
-	      source auto-completion-syntax-alist)))
+		   'auto-completion-syntax-alist nil 'only-overlay))
+	     nil))
+	(custom-syntax-alist (completion-ui-get-value-for-source
+			      source auto-completion-syntax-alist 'no-default))
+	(source-syntax-alist (completion-ui-source-syntax-alist source))
+	(default-syntax-alist (completion-ui-get-value-for-source
+			       source auto-completion-syntax-alist))
         (override-alist
-         (or (and (fboundp 'auto-overlay-local-binding)
-		  (not no-overlay-local)
-		  (auto-overlay-local-binding
-		   'auto-completion-override-syntax-alist nil t))
-	     (completion-ui-get-value-for-source
-	      source auto-completion-override-syntax-alist)))
-	(global-syntax-alist (completion-ui-get-value-for-source
-			      source auto-completion-syntax-alist))
-	(global-override-alist (completion-ui-get-value-for-source
-				source auto-completion-override-syntax-alist))
+         (append (or (and (fboundp 'auto-overlay-local-binding)
+			  (not no-overlay-local)
+			  (auto-overlay-local-binding
+			   'auto-completion-override-syntax-alist nil t))
+		     nil)
+		 (completion-ui-get-value-for-source
+		  source auto-completion-override-syntax-alist 'no-default)
+		 (completion-ui-source-override-syntax-alist source)
+		 (completion-ui-get-value-for-source
+		  source auto-completion-override-syntax-alist)))
 	behaviour)
 
     ;; if `auto-completion-syntax-alist' is a predefined behaviour (a
     ;; cons cell), convert it to an alist
-    (dolist (alist '(syntax-alist global-syntax-alist))
+    (dolist (alist '(overlay-syntax-alist custom-syntax-alist
+		     source-syntax-alist default-syntax-alist))
       (unless (listp (car (symbol-value alist)))
 	(set alist
 	     `(;; word constituents add to current completion and complete
@@ -3208,23 +3222,26 @@ those variables, unless NO-OVERLAY-LOCAL is non-nil."
 	       ;; anything else rejects and does't complete
 	       (t . (reject none)))
 	     )))
+    (setq source-syntax-alist (append overlay-syntax-alist custom-syntax-alist
+				      source-syntax-alist default-syntax-alist))
 
     ;; extract behaviours from syntax alists
     (setq behaviour
 	  (or
 	   ;; if char is specified, check override-alist
-	   (and char
-		(or (cdr (assq char override-alist))
-		    ;; fall back to global override-alist
-		    (cdr (assq char global-override-alist))))
+	   (and char (cdr (assq char override-alist)))
 	   ;; check syntax-alist
-	   (cdr (assq syntax syntax-alist))
-	   (cdr (assq t syntax-alist))
-	   ;; fall back to global syntax-alist
-	   (cdr (assq syntax global-syntax-alist))
-	   (cdr (assq t global-syntax-alist))))
-    (when (= (length behaviour) 2) (setq behaviour (append behaviour '(t))))
-    ;; return behaviour
+	   (cdr (assq syntax source-syntax-alist))
+	   ;; fall back to default
+	   (cdr (assq t source-syntax-alist))))
+    ;; return behaviour, converting any variables to values
+    (if (= (length behaviour) 2) (setq behaviour (append behaviour '(t))))
+    (let ((valid '((accept reject add) (word string none) (t nil))))
+      (dotimes (i 3)
+	(while (and (not (or (memq (nth i behaviour) (nth i valid))
+			     (functionp (nth i behaviour))))
+		    (boundp (nth i behaviour)))
+	  (setf (nth i behaviour) (symbol-value (nth i behaviour))))))
     behaviour))
 
 
@@ -3320,10 +3337,9 @@ overlays."
 	 (word-thing (completion-ui-source-word-thing source overlay))
 	 wordstart prefix)
     (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour)
-	(append
-	 (if no-syntax-override
-	     (auto-completion-lookup-behaviour nil syntax source)
-	   (auto-completion-lookup-behaviour char syntax source)))
+	(if no-syntax-override
+	    (auto-completion-lookup-behaviour nil syntax source)
+	  (auto-completion-lookup-behaviour char syntax source))
 
       ;; ----- resolve behaviour -----
       (completion-ui-resolve-old overlay)
@@ -4000,7 +4016,7 @@ When used in `auto-completion-source-functions' (as in the
 default setting), this allows the auto-completion source to be
 changed in a buffer region by setting the `completion-source'
 property of an overlay spanning the region."
-  (auto-overlay-local-binding 'completion-source nil t))
+  (auto-overlay-local-binding 'completion-source nil 'only-overlay))
 
 
 (defun auto-completion-regexp-source ()
@@ -4038,18 +4054,25 @@ locally according to the face at point.
 \(Obviously, if `auto-completion-source-faces' specifies
 font-lock faces - the usual case - then `font-lock-mode' must be
 enabled in the buffer for them to take effect.\)"
-  (let ((face (get-text-property (point) 'face)))
+  (let* ((face0 (get-text-property (point) 'face))
+	 (face1 (if (eq (point) (point-min))
+		    face0
+		  (get-text-property (1- (point)) 'face))))
     (catch 'source
       (dolist (f auto-completion-source-faces)
-	(when (or (eq (car f) face)  ; might as well check easy case first
-		  (and (symbolp f) (listp face) (memq f face))
-		  (and (listp f) (listp face)
-		       (catch 'no-match
-			 (dolist (el f)
-			   (unless (memq el face) (throw 'no-match nil)))
-			 t)))
+	(when (and (completion-ui-face-matches-p (car f) face0)
+		   (completion-ui-face-matches-p (car f) face1))
 	  (throw 'source (cdr f)))))))
 
+
+(defun completion-ui-face-matches-p (f face)
+  (or (eq f face)  ; might as well check easy case first
+      (and (symbolp f) (listp face) (memq f face))
+      (and (listp f) (listp face)
+	   (catch 'no-match
+	     (dolist (el f)
+	       (unless (memq el face) (throw 'no-match nil)))
+	     t))))
 
 
 (defun completion-ui-setup-overlay
