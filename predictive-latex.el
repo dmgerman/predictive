@@ -35,12 +35,19 @@
 (require 'auto-overlay-nested)
 (require 'predictive-auto-overlay-auto-dict)
 
-
+;; compatibility defun
 (unless (fboundp 'oddp)
   (defun oddp (i) (and (integerp i) (= (mod i 2) 1))))
 
+;; prevent bogus compiler warnings
+(eval-when-compile
+  (defvar dict-latex-docclass)
+  (defvar dict-latex-bibstyle)
+  (defvar TeX-master))
 
 
+
+
 ;;;============================================================
 ;;;                  Customization Options
 
@@ -109,32 +116,35 @@ between \\begin{...} and \\end{...} commands."
 
 
 
-
+
 ;;;============================================================
-;;;                       Variables
+;;;                        Keymap
 
-;; variables holding dictionaries for different LaTeX contexts
-(defvar predictive-latex-dict '(dict-latex))
-(make-variable-buffer-local 'predictive-latex-dict)
-(defvar predictive-latex-math-dict '(dict-latex-math))
-(make-variable-buffer-local 'predictive-latex-math-dict)
-(defvar predictive-latex-preamble-dict '(dict-latex-preamble))
-(make-variable-buffer-local 'predictive-latex-preamble-dict)
-(defvar predictive-latex-env-dict '(dict-latex-env))
-(make-variable-buffer-local 'predictive-latex-env-dict)
-(defvar predictive-latex-bibstyle-dict '(dict-latex-bibstyle))
-(make-variable-buffer-local 'predictive-latex-bibstyle-dict)
-(defvar predictive-latex-label-dict nil)
-(make-variable-buffer-local 'predictive-latex-label-dict)
-(defvar predictive-latex-local-latex-dict nil)
-(make-variable-buffer-local 'predictive-latex-local-latex-dict)
-(defvar predictive-latex-local-math-dict nil)
-(make-variable-buffer-local 'predictive-latex-local-math-dict)
-(defvar predictive-latex-local-env-dict nil)
-(make-variable-buffer-local 'predictive-latex-local-env-dict)
-(defvar predictive-latex-section-dict nil)
-(make-variable-buffer-local 'predictive-latex-section-dict)
+;; variable used to enable `predictive-latex-map' minor-mode keymap
+;; (we don't use `define-minor-mode' because we explicitly don't want an
+;; interactive minor-mode toggling command)
+(defvar predictive-latex-mode nil)
+(make-variable-buffer-local 'predictive-latex-mode)
 
+;; keymap used for latex-specific `predictive-mode' key bindings
+(defvar predictive-latex-map (make-sparse-keymap))
+
+(push (cons 'predictive-latex-mode predictive-latex-map)
+      minor-mode-map-alist)
+
+;; override AUCTeX bindings so completion works
+(define-key predictive-latex-map [?$]  'completion-self-insert)
+(define-key predictive-latex-map [?\"] 'completion-self-insert)
+(define-key predictive-latex-map [?_]  'completion-self-insert)
+(define-key predictive-latex-map [?^]  'completion-self-insert)
+(define-key predictive-latex-map [?\\] 'completion-self-insert)
+(define-key predictive-latex-map [?-]  'completion-self-insert)
+
+
+
+
+;;;============================================================
+;;;                     Other variables
 
 (defvar predictive-latex-usepackage-functions nil
   "List of LaTeX package functions.
@@ -180,62 +190,55 @@ strings become the sub-menu entries.")
      'predictive-latex-label-forward-word)
 
 
+;; variables holding dictionaries for different LaTeX contexts
+(defvar predictive-latex-dict '(dict-latex))
+(make-variable-buffer-local 'predictive-latex-dict)
+(defvar predictive-latex-math-dict '(dict-latex-math))
+(make-variable-buffer-local 'predictive-latex-math-dict)
+(defvar predictive-latex-preamble-dict '(dict-latex-preamble))
+(make-variable-buffer-local 'predictive-latex-preamble-dict)
+(defvar predictive-latex-env-dict '(dict-latex-env))
+(make-variable-buffer-local 'predictive-latex-env-dict)
+(defvar predictive-latex-bibstyle-dict '(dict-latex-bibstyle))
+(make-variable-buffer-local 'predictive-latex-bibstyle-dict)
+
+(defvar predictive-latex-label-dict nil)
+(make-variable-buffer-local 'predictive-latex-label-dict)
+(defvar predictive-latex-local-latex-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-latex-dict)
+(defvar predictive-latex-local-math-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-math-dict)
+(defvar predictive-latex-local-env-dict nil)
+(make-variable-buffer-local 'predictive-latex-local-env-dict)
+(defvar predictive-latex-section-dict nil)
+(make-variable-buffer-local 'predictive-latex-section-dict)
+
+
+
+
+;; variable storing filename before saving, to detect renaming
+;; (see `predictive-latex-after-save')
+(defvar predictive-latex-previous-filename nil)
+(make-variable-buffer-local 'predictive-latex-previous-filename)
+
+
 ;; convenience const holding alist associating latex dictionary variables and
-;; corresponding dictionary name prefices
+;; corresponding dictionary name prefixes
 (defconst predictive-latex-dict-classes
   '((predictive-latex-dict . "dict-latex-")
     (predictive-latex-math-dict . "dict-latex-math-")
     (predictive-latex-preamble-dict . "dict-latex-preamble-")
     (predictive-latex-env-dict . "dict-latex-env-")))
 
-
-
-;; variable used to enable `predictive-latex-map' minor-mode keymap
-;; (we don't use `define-minor-mode' because we explicitly don't want an
-;; interactive minor-mode toggling command)
-(defvar predictive-latex-mode nil)
-(make-variable-buffer-local 'predictive-latex-mode)
-
-;; keymap used for latex-specific `predictive-mode' key bindings
-(defvar predictive-latex-map (make-sparse-keymap))
-
-(push (cons 'predictive-latex-mode predictive-latex-map)
-      minor-mode-map-alist)
-
-;; override AUCTeX bindings so completion works
-(define-key predictive-latex-map [?$]  'completion-self-insert)
-(define-key predictive-latex-map [?\"] 'completion-self-insert)
-(define-key predictive-latex-map [?_]  'completion-self-insert)
-(define-key predictive-latex-map [?^]  'completion-self-insert)
-(define-key predictive-latex-map [?\\] 'completion-self-insert)
-(define-key predictive-latex-map [?-]  'completion-self-insert)
+;; convenience consts defining useful regexp patterns
+(defconst predictive-latex-odd-backslash-regexp
+  "\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\")
+(defconst predictive-latex-not-closebrace-regexp
+  "\\(\\w\\|\\s_\\|\\s.\\)*")
 
 
 
-;; variables used to restore local settings of variables when predictive mode
-;; is disabled in a LaTeX buffer
-(defvar predictive-restore-override-syntax-alist nil)
-(make-variable-buffer-local 'predictive-restore-override-syntax-alist)
-
-;; variable storing filename before saving, to detect renaming (see
-;; `predictive-latex-after-save')
-(defvar predictive-latex-previous-filename nil)
-(make-variable-buffer-local 'predictive-latex-previous-filename)
-
-
-;; prevent bogus compiler warnings
-(eval-when-compile
-  (defvar dict-latex-docclass)
-  (defvar dict-latex-bibstyle)
-  (defvar TeX-master))
-
-
-;; background color for certain auto-overlays to aid debugging
-(defvar predictive-overlay-debug-colour nil)
-(defvaralias 'predictive-overlay-debug-color 'predictive-overlay-debug-colour)
-
-
-
+
 ;;;=========================================================
 ;;;                  Setup function
 
@@ -252,6 +255,7 @@ function automatically when predictive mode is enabled in
    ((> arg 0)
     (catch 'load-fail
       ;; make predictive completion the default auto-completion source
+      (predictive-setup-save-local-state 'auto-completion-default-source)
       (set (make-local-variable 'auto-completion-default-source) 'predictive)
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
@@ -263,9 +267,10 @@ function automatically when predictive mode is enabled in
       ;; after point motion
       (when predictive-latex-display-help
 	(add-hook 'predictive-accept-functions 'predictive-display-help
-		  nil t)
-	(add-hook 'post-command-hook 'predictive-display-help nil t))
+		  nil 'local)
+	(add-hook 'post-command-hook 'predictive-display-help nil 'local))
       ;; use latex browser menu if first character of prefix is "\"
+      (predictive-setup-save-local-state 'predictive-menu-function)
       (set (make-local-variable 'predictive-menu-function)
 	   (lambda (overlay)
 	     (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
@@ -275,18 +280,17 @@ function automatically when predictive mode is enabled in
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
 
+
       (cond
-       ;; if we're not the TeX master, visit the TeX master buffer, enable
+       ;; if we're not the TeX-master, visit the TeX master buffer, enable
        ;; predictive mode in it, and share buffer-local settings with it
        ((and (boundp 'TeX-master) (stringp TeX-master))
 	(let (filename buff used-dicts main-dict aux-dict
-		       latex-dict math-dict preamble-dict env-dict
-		       label-dict local-latex-dict local-math-dict
-		       local-env-dict local-section-dict)
-	  (setq filename
-		(concat (file-name-sans-extension
-			 (expand-file-name TeX-master))
-			".tex"))
+	      latex-dict math-dict preamble-dict env-dict
+	      label-dict local-latex-dict local-math-dict
+	      local-env-dict local-section-dict)
+	  (setq filename (concat (file-name-sans-extension
+				  (expand-file-name TeX-master)) ".tex"))
 	  (unless (file-exists-p filename) (throw 'load-fail nil))
 	  (save-window-excursion
 	    (find-file filename)
@@ -317,9 +321,13 @@ function automatically when predictive mode is enabled in
 		predictive-latex-local-latex-dict local-math-dict
 		predictive-latex-local-env-dict   local-env-dict
 		predictive-latex-section-dict     local-section-dict)
-	  ;; start the auto-overlays, restoring buffer's modified flag
-	  ;; afterwards, since automatic synchronization of LaTeX envionments
-	  ;; can modify buffer without actually changing buffer text
+
+	  ;; start the auto-overlays
+	  ;; Note: we skip the check that regexp definitions haven't changed
+	  ;;       if there's a file of saved overlay data to use, and
+	  ;;       restoring buffer's modified flag afterwards (if used,
+	  ;;       automatic synchronization of LaTeX envionments can modify
+	  ;;       buffer without actually changing buffer text)
 	  (let ((restore-modified (buffer-modified-p)))
 	    (auto-overlay-start 'predictive nil
 				predictive-local-auxiliary-file-directory
@@ -327,8 +335,9 @@ function automatically when predictive mode is enabled in
 	    (set-buffer-modified-p restore-modified))
 	  ))
 
+
        ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
-       ;; FIXME: probably need to handle null TeX-master case differently
+       ;; FIXME: should we handle null TeX-master case differently?
        (t
 	;; load the latex dictionaries
 	(mapc (lambda (dic)
@@ -341,7 +350,7 @@ function automatically when predictive mode is enabled in
 		      predictive-latex-env-dict
 		      predictive-latex-bibstyle-dict
 		      (list 'dict-latex-docclass)))
-	;; load/create the label and local latex dictionaries
+	;; load/create the local latex and label dictionaries
 	(setq predictive-latex-label-dict
 	      (predictive-auto-dict-load "latex-label")
 	      predictive-latex-local-latex-dict
@@ -352,18 +361,16 @@ function automatically when predictive mode is enabled in
 	      (predictive-auto-dict-load "latex-local-env")
 	      predictive-latex-section-dict
 	      (predictive-auto-dict-load "latex-section"))
-	;; disable saving of section and label dictionaries to avoid
-	;; Emacs "bug"
+	;; disable saving of section and label dictionaries to avoid Emacs bug
 	(unless predictive-latex-save-section-dict
 	  (setf (dictree-autosave predictive-latex-section-dict) nil))
 	(unless predictive-latex-save-label-dict
 	  (setf (dictree-autosave predictive-latex-label-dict) nil))
 
-	;; add local environment, maths and text-mode dictionaries to
-	;; appropriate dictionary lists
+	;; add local env, maths and text-mode dicts to appropriate dict lists
 	;; Note: we add the local text-mode command dictionary to the maths
-	;; dictionary list too, because there's no way to tell whether
-	;; \newcommand's are text- or math-mode commands.
+	;;       dictionary list too, because there's no way to tell whether
+	;;       \newcommand's are text- or math-mode commands.
 	(setq predictive-latex-dict
 	      (append predictive-latex-dict
 		      (if (dictree-p predictive-latex-local-latex-dict)
@@ -391,11 +398,12 @@ function automatically when predictive mode is enabled in
 	(auto-overlay-unload-set 'predictive)
 	(predictive-latex-load-regexps)
 
-	;; start the auto-overlays, skipping the check that regexp definitions
-	;; haven't changed if there's a file of saved overlay data to use, and
-	;; restoring buffer's modified flag afterwards (if used, automatic
-	;; synchronization of LaTeX envionments can modify buffer without
-	;; actually changing buffer text)
+	;; start the auto-overlays
+	;; Note: we skip the check that regexp definitions haven't changed if
+	;;       there's a file of saved overlay data to use, and restoring
+	;;       buffer's modified flag afterwards (if used, automatic
+	;;       synchronization of LaTeX envionments can modify buffer
+	;;       without actually changing buffer text)
 	(let ((restore-modified (buffer-modified-p)))
 	  (auto-overlay-start 'predictive nil
 			      predictive-local-auxiliary-file-directory
@@ -406,18 +414,18 @@ function automatically when predictive mode is enabled in
       ;; load the keybindings and related settings
       (predictive-latex-load-keybindings)
       ;; consider \ as start of a word
+      (predictive-setup-save-local-state 'predictive-word-thing)
       (set (make-local-variable 'predictive-word-thing)
 	   'predictive-latex-word)
+      (predictive-setup-save-local-state 'words-include-excapes)
       (set (make-local-variable 'words-include-escapes) nil)
       t))  ; indicate successful setup
 
 
    ;; ----- Disabling LaTeX setup -----
    ((< arg 0)
-    ;; restore default auto-completion source
-    (kill-local-variable 'auto-completion-default-source)
     ;; disable `predictive-latex-map' keymap
-    (setq predictive-texinfo-mode nil)
+    (setq predictive-latex-mode nil)
 
     ;; if we're the TeX-master, first disable predictive mode in all related
     ;; LaTeX buffers, which we find by looking for buffers that share the
@@ -449,11 +457,6 @@ function automatically when predictive mode is enabled in
     ;; restore main and auxiliary dicts
     (kill-local-variable 'predictive-buffer-dict)
     (kill-local-variable 'predictive-auxiliary-dict)
-    ;; restore `auto-completion-override-syntax-alist' to saved setting
-    (kill-local-variable 'auto-completion-override-syntax-alist)
-    (setq auto-completion-override-syntax-alist
-	  predictive-restore-override-syntax-alist)
-    (kill-local-variable 'predictive-restore-override-syntax-alist)
     ;; remove other local variable settings
     (kill-local-variable 'predictive-menu-function)
     (kill-local-variable 'words-include-escapes)
@@ -820,8 +823,7 @@ function automatically when predictive mode is enabled in
 
 (defun predictive-latex-load-keybindings ()
   "Load the predictive mode LaTeX key bindings."
-  (setq predictive-restore-override-syntax-alist
-	auto-completion-override-syntax-alist)
+  (predictive-setup-save-local-state 'auto-completion-override-syntax-alist)
   (make-local-variable 'auto-completion-override-syntax-alist)
 
   ;; get behaviours defined in `auto-completion-syntax-alist'
@@ -834,131 +836,130 @@ function automatically when predictive mode is enabled in
 
     ;; make "\", "$", "_", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist
-	  (append
-	   `((?\\ . ((lambda ()
-		       (let ((i 0))
-			 (save-excursion
-			   (while (eq (char-before) ?\\)
-			     (backward-char)
-			     (incf i)))
-			 (if (oddp i) 'add ',punct-resolve)))
-		     ,word-complete))
-	     (?$ . (,punct-resolve none))
-	     (?_ . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?^ . (,punct-resolve none))
-	     (?{ . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (cond
-		       ((auto-overlays-at-point
-			 nil '((lambda (dic)
-				 (or (eq dic 'predictive-latex-env-dict)
-				     (eq dic 'dict-latex-docclass)
-				     (eq dic 'dict-latex-bibstyle)))
-			       dict))
-			(complete-in-buffer
-			 auto-completion-source "" 'not-set 'auto)
-			'none)
-		       ((eq (char-before) ?\\) ',word-complete)
-		       (t 'none)))))
-	     (?} . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before) ?\\) ',word-complete 'none))))
-	     (?\" . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))
-		     (lambda ()
-		       (if (or (eq (char-before) ?\\)
-			       (not (fboundp 'TeX-insert-quote)))
-			   t
-			 (TeX-insert-quote nil)
-			 nil))))
-	     ;; (?' . ((lambda ()
-	     ;; 	      (if (eq (char-before) ?\\)
-	     ;; 		  'add ',punct-resolve))
-	     ;; 	    (lambda ()
-	     ;; 	      (if (eq (char-before (1- (point))) ?\\)
-	     ;; 		  ',word-complete 'none))))
-	     (?\( . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))))
-	     (?\) . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))))
-	     (?@ . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before) ?\\) ',word-complete 'none))))
-	     (?+ . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?, . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?- . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?\; . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))))
-	     (?! . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?< . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?= . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?> . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
-	     (?\[ . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))))
-	     (?\] . ((lambda ()
-		       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		     (lambda ()
-		       (if (eq (char-before (1- (point))) ?\\)
-			   ',word-complete 'none))))
-	     (?` . ((lambda ()
-		      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-		    (lambda ()
-		      (if (eq (char-before (1- (point))) ?\\)
-			  ',word-complete 'none))))
- 	     )
-	   auto-completion-override-syntax-alist) ; append
-	  )
-    ))
+	  `((t . ,(append
+		   `((?\\ . ((lambda ()
+			       (let ((i 0))
+				 (save-excursion
+				   (while (eq (char-before) ?\\)
+				     (backward-char)
+				     (incf i)))
+				 (if (oddp i) 'add ',punct-resolve)))
+			     ,word-complete))
+		     (?$ . (,punct-resolve none))
+		     (?_ . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?^ . (,punct-resolve none))
+		     (?{ . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (cond
+			       ((auto-overlays-at-point
+				 nil '((lambda (dic)
+					 (or (eq dic 'predictive-latex-env-dict)
+					     (eq dic 'dict-latex-docclass)
+					     (eq dic 'dict-latex-bibstyle)))
+				       dict))
+				(complete-in-buffer-1
+				 (auto-completion-source) "" 'not-set 'auto)
+				'none)
+			       ((eq (char-before) ?\\) ',word-complete)
+			       (t 'none)))))
+		     (?} . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before) ?\\) ',word-complete 'none))))
+		     (?\" . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))
+			     (lambda ()
+			       (if (or (eq (char-before) ?\\)
+				       (not (fboundp 'TeX-insert-quote)))
+				   t
+				 (TeX-insert-quote nil)
+				 nil))))
+		     ;; (?' . ((lambda ()
+		     ;; 	      (if (eq (char-before) ?\\)
+		     ;; 		  'add ',punct-resolve))
+		     ;; 	    (lambda ()
+		     ;; 	      (if (eq (char-before (1- (point))) ?\\)
+		     ;; 		  ',word-complete 'none))))
+		     (?\( . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))))
+		     (?\) . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))))
+		     (?@ . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before) ?\\) ',word-complete 'none))))
+		     (?+ . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?, . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?- . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?\; . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))))
+		     (?! . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?< . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?= . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?> . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     (?\[ . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))))
+		     (?\] . ((lambda ()
+			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			     (lambda ()
+			       (if (eq (char-before (1- (point))) ?\\)
+				   ',word-complete 'none))))
+		     (?` . ((lambda ()
+			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
+			    (lambda ()
+			      (if (eq (char-before (1- (point))) ?\\)
+				  ',word-complete 'none))))
+		     )
+		   (cdr (assq t auto-completion-override-syntax-alist))))) ; append
+	  )))
 
 
 
