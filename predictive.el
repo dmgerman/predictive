@@ -757,20 +757,20 @@ Return modified alist."
 		  (buffer-name)))))))
 
 
-(defsubst predictive-setup-save-local-state (var)
-  ;; Saved buffer-local value of variable VAR (a symbol), is any.
-  (when (local-variable-p var)
-    (push
-     (cons 'auto-completion-default-source auto-completion-default-source)
-     predictive-setup-saved-local-state)))
+(defun predictive-setup-save-local-state (var)
+  ;; Saved buffer-local value of variable VAR (a symbol), if any.
+  (push (if (local-variable-p var) (cons var (symbol-value var)) var)
+	predictive-setup-saved-local-state))
 
 
-(defsubst predictive-setup-restore-local-state ()
+(defun predictive-setup-restore-local-state ()
   ;; Restore buffer-local configuration state saved in
   ;; `predictive-setup-saved-local-state'
   (dolist (el predictive-setup-saved-local-state)
-    (kill-local-variable (car el))
-    (set (make-local-variable (car el)) (cdr el))))
+    (if (symbolp el)
+	(kill-local-variable el)
+      (kill-local-variable (car el))
+      (set (make-local-variable (car el)) (cdr el)))))
 
 
 (defun predictive-lookup-word-p (word &optional ignored)
@@ -2183,7 +2183,7 @@ prefix argument."
 ;;; ================================================================
 ;;;           Internal functions to do with completion
 
-(defun predictive-complete (prefix &optional maxnum)
+(defun predictive-complete (prefix &optional maxnum dict)
   "Try to complete string PREFIX, returning at most MAXNUM
 completion candidates, ordered by their weighting.
 
@@ -2192,10 +2192,21 @@ returned in alphabetical order, rather than by weight.
 
 If `predictive-ignore-initial-caps' is enabled and the first
 character of PREFIX is capitalized, also search for completions
-for the uncapitalized version."
+for the uncapitalized version.
 
-  (let ((dict (predictive-current-dict))
-	pfx filter completions)
+DICT specifies the dictionary (or list of dictionaries) to
+complete from. The default is to call `predictive-current-dict'
+to determine which dictionary to use."
+
+  (let (pfx filter completions)
+    ;; get dictionary
+    (if (not dict)
+	(setq dict (predictive-current-dict))
+      ;; map over dict list, transforming names into dicts
+      (setq dict
+	    (mapcar
+	     (lambda (dic) (if (symbolp dic) (symbol-value dic) dic))
+	     (or (and (listp dict) dict) (list dict)))))
 
     ;; construct the completion filter
     (let ((completion-filter predictive-completion-filter))
@@ -2565,7 +2576,6 @@ completion is accepted (hence the ignored arguments)."
        ((functionp dict) (setq dict (funcall dict)))
        ((symbolp dict)   (setq dict (symbol-value dict))))
       ;; otherwise, process the list of dictionaries
-      (unless (listp dict) (setq dict (list dict)))
       (mapcar
        (lambda (dic)
 	 ;; if element is a function or symbol, evaluate it first
@@ -2635,16 +2645,14 @@ locally according to the face at point.
 \(Obviously, if `predictive-dict-faces' specifies font-lock faces
 - the usual case - then `font-lock-mode' must be enabled in the
 buffer for them to take effect.\)"
-  (let ((face (get-text-property (point) 'face)))
+  (let* ((face0 (get-text-property (point) 'face))
+	 (face1 (if (eq (point) (point-min))
+		    face0
+		  (get-text-property (1- (point)) 'face))))
     (catch 'dic
       (dolist (f predictive-dict-faces)
-	(when (or (eq (car f) face)  ; might as well check easy case first
-		  (and (symbolp f) (listp face) (memq f face))
-		  (and (listp f) (listp face)
-		       (catch 'no-match
-			 (dolist (el f)
-			   (unless (memq el face) (throw 'no-match nil)))
-			 t)))
+	(when (and (completion-ui-face-matches-p (car f) face0)
+		   (completion-ui-face-matches-p (car f) face1))
 	  (throw 'dic (cdr f)))))))
 
 
@@ -3020,11 +3028,11 @@ without asking for confirmation."
  :name predictive
  :completion-args 2
  :accept-functions (lambda (prefix completion &optional arg)
-		    (run-hook-with-args 'predictive-accept-functions
-					prefix completion arg))
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
-		    (run-hook-with-args 'predictive-reject-functions
-					prefix completion arg))
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
  :menu predictive-menu-function
  :browser predictive-browser-function
  :word-thing predictive-word-thing
