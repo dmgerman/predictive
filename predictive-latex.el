@@ -242,7 +242,7 @@ strings become the sub-menu entries.")
 (defconst predictive-latex-odd-backslash-regexp
   "\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\")
 (defconst predictive-latex-not-closebrace-regexp
-  "\\(\\w\\|\\s_\\|\\s.\\)*")
+  "\\(\\w\\|\\s_\\|\\s.\\|$\\)*")
 
 
 
@@ -250,25 +250,199 @@ strings become the sub-menu entries.")
 ;;;=========================================================
 ;;;           Register LaTeX Completion-UI sources
 
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-math
+(completion-ui-register-derived-source
+ predictive-latex predictive
+ :override-syntax-alist
+     ((?\\ (lambda ()
+	     (let ((i 0))
+	       (save-excursion
+		 (while (eq (char-before) ?\\)
+		   (backward-char)
+		   (incf i)))
+	       (if (oddp i)
+		   'add predictive-latex-punctuation-resolve-behaviour)))
+	   predictive-latex-word-completion-behaviour)
+      (?$ predictive-latex-punctuation-resolve-behaviour none)
+      (?_ (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?^ predictive-latex-punctuation-resolve-behaviour none)
+      (?{ (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (let ((source (auto-completion-source)))
+	      (cond
+	       ((or (eq source 'predictive-latex-env)
+		    (eq source 'predictive-latex-docclass)
+		    (eq source 'predictive-latex-bibstyle))
+		(complete-in-buffer source "")
+		'none)
+	       ((eq (char-before) ?\\)
+		predictive-latex-word-completion-behaviour)
+	       (t 'none)))))
+      (?} (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?\" (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none))
+	   (lambda ()
+	     (if (or (eq (char-before) ?\\)
+		     (not (fboundp 'TeX-insert-quote)))
+		 t
+	       (TeX-insert-quote nil)
+	       nil)))
+      ;; (?' (lambda ()
+      ;; 	(if (eq (char-before) ?\\)
+      ;; 	    'add predictive-latex-punctuation-resolve-behaviour))
+      ;;     (lambda ()
+      ;;       (if (eq (char-before (1- (point))) ?\\)
+      ;; 	    predictive-latex-word-completion-behaviour 'none)))
+      (?\( (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none)))
+      (?\) (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none)))
+      (?# (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?@ (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?+ (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?, (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?- (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?\; (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none)))
+      (?! (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?< (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?= (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?> (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      (?\[ (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none)))
+      (?\] (lambda ()
+	     (if (eq (char-before) ?\\)
+		 'add predictive-latex-punctuation-resolve-behaviour))
+	   (lambda ()
+	     (if (eq (char-before (1- (point))) ?\\)
+		 predictive-latex-word-completion-behaviour 'none)))
+      (?` (lambda ()
+	    (if (eq (char-before) ?\\)
+		'add predictive-latex-punctuation-resolve-behaviour))
+	  (lambda ()
+	    (if (eq (char-before (1- (point))) ?\\)
+		predictive-latex-word-completion-behaviour 'none)))
+      )
+ :word-thing predictive-latex-word
+ :menu (lambda (overlay)
+	 (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
+	     (predictive-latex-construct-browser-menu overlay)
+	   (completion-construct-menu overlay)))
+ :browser predictive-latex-construct-browser-menu
+ :no-auto-completion t
+ :no-command t
+ :no-predictive t)
+
+
+(completion-ui-register-derived-source
+ predictive-latex-math predictive-latex
+ :completion-function predictive-complete
  :completion-args 2
  :other-args (predictive-latex-math-dict)
+ ;; :override-syntax-alist
+ ;;     ((?' . (predictive-latex-punctuation-resolve-behaviour none t))
+ ;;      (?$ predictive-latex-punctuation-resolve-behaviour none))
+ :word-thing predictive-latex-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-menu
+ :no-auto-completion t
+ :no-command t
+ :no-predictive t)
+
+
+(completion-ui-register-derived-source
+ predictive-latex-preamble predictive
+ :completion-function predictive-complete
+ :completion-args 2
+ :other-args (predictive-latex-preamble-dict)
  :accept-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
- :override-syntax-alist
-     ((?' . (predictive-latex-punctuation-resolve-behaviour none t)))
- :menu predictive-menu-function
- :browser predictive-browser-function
  :word-thing predictive-latex-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-menu
  :no-auto-completion t
- :no-predictive t
- :no-command t)
+ :no-command t
+ :no-predictive t)
 
 
 (completion-ui-register-source
@@ -289,12 +463,14 @@ strings become the sub-menu entries.")
 			     (delete-region (car env) (cdr env))))
 			 'add)
 		       predictive-latex-word-completion-behaviour t)))
- :menu predictive-latex-construct-browser-menu
- :browser predictive-browser-function
+ :override-syntax-alist
+     ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-function
  :no-auto-completion t
- :no-predictive t
- :no-command t)
+ :no-command t
+ :no-predictive t)
 
 
 (completion-ui-register-source
@@ -326,12 +502,12 @@ strings become the sub-menu entries.")
       (?_ . ((lambda () (predictive-latex-completion-add-till-regexp "\\W"))
 	     predictive-latex-word-completion-behaviour))
       (?} . (predictive-latex-punctuation-resolve-behaviour none)))
- :menu predictive-latex-construct-browser-menu
- :browser predictive-browser-function
  :word-thing predictive-latex-label-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-menu
  :no-auto-completion t
- :no-predictive t
- :no-command t)
+ :no-command t
+ :no-predictive t)
 
 
 (completion-ui-register-source
@@ -358,12 +534,14 @@ strings become the sub-menu entries.")
 			   (goto-char pos))
 	       predictive-latex-word-completion-behaviour)
 	     t)))
- :menu predictive-latex-construct-browser-menu
- :browser predictive-browser-function
+ :override-syntax-alist
+     ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-menu
  :no-auto-completion t
- :no-predictive t
- :no-command t)
+ :no-command t
+ :no-predictive t)
 
 
 (completion-ui-register-source
@@ -390,31 +568,14 @@ strings become the sub-menu entries.")
 		 (goto-char pos))
 	       predictive-latex-word-completion-behaviour)
 	     t)))
- :menu predictive-latex-construct-browser-menu
- :browser predictive-browser-function
+ :override-syntax-alist
+     ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
- :no-auto-completion t
- :no-predictive t
- :no-command t)
-
-
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-preamble
- :completion-args 2
- :other-args (predictive-latex-preamble-dict)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
  :menu predictive-latex-construct-browser-menu
- :browser predictive-browser-function
- :word-thing predictive-latex-word
+ :browser predictive-latex-construct-browser-menu
  :no-auto-completion t
- :no-predictive t
- :no-command t)
+ :no-command t
+ :no-predictive t)
 
 
 
@@ -436,7 +597,8 @@ function automatically when predictive mode is enabled in
     (catch 'load-fail
       ;; make predictive completion the default auto-completion source
       (predictive-setup-save-local-state 'auto-completion-default-source)
-      (set (make-local-variable 'auto-completion-default-source) 'predictive)
+      (set (make-local-variable 'auto-completion-default-source)
+	   'predictive-latex)
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
       ;; save overlays and dictionaries along with buffer
@@ -444,9 +606,33 @@ function automatically when predictive mode is enabled in
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil 'local)
 
       ;; configure automatic selection of completion sources and dicts
+      (predictive-setup-save-local-state 'auto-completion-source-regexps)
       (predictive-setup-save-local-state 'auto-completion-source-faces)
       (set (make-local-variable 'auto-completion-source-faces)
 	   '((font-latex-math-face . predictive-latex-math)))
+      (set (make-local-variable 'auto-completion-source-regexps)
+       `((,(concat predictive-latex-odd-backslash-regexp
+		       "\\label{"
+		       predictive-latex-not-closebrace-regexp)
+	      looking-at nil)
+	 (,(concat predictive-latex-odd-backslash-regexp
+		   "\\(begin\\|end\\){"
+		   predictive-latex-not-closebrace-regexp)
+	  looking-at predictive-latex-env)
+	 (,(concat predictive-latex-odd-backslash-regexp
+		   "ref{"
+		   predictive-latex-not-closebrace-regexp)
+	  looking-at predictive-latex-label)
+	 (,(concat predictive-latex-odd-backslash-regexp
+		   "documentclass\\(\\[.*\\]\\)?{"
+		   predictive-latex-not-closebrace-regexp)
+	  looking-at predictive-latex-docclass)
+	 (,(concat predictive-latex-odd-backslash-regexp
+		   "bibliographystyle\\(\\[.*\\]\\)?{"
+		   predictive-latex-not-closebrace-regexp)
+	  looking-at predictive-latex-bibstyle)
+	 (,(concat predictive-latex-odd-backslash-regexp "text{")
+	  before-point predictive)))
 
       ;; display help if first character of accepted completion is "\" and
       ;; after point motion
@@ -454,13 +640,6 @@ function automatically when predictive mode is enabled in
 	(add-hook 'predictive-accept-functions 'predictive-display-help
 		  nil 'local)
 	(add-hook 'post-command-hook 'predictive-display-help nil 'local))
-      ;; use latex browser menu if first character of prefix is "\"
-      (predictive-setup-save-local-state 'predictive-menu-function)
-      (set (make-local-variable 'predictive-menu-function)
-	   (lambda (overlay)
-	     (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
-		 (predictive-latex-construct-browser-menu overlay)
-	       (completion-construct-menu overlay))))
       ;; store filename for comparison when saving (see
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
@@ -581,7 +760,7 @@ function automatically when predictive mode is enabled in
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
-	(predictive-latex-load-regexps)
+	(predictive-latex-load-auto-overlay-definitions)
 
 	;; start the auto-overlays
 	;; Note: we skip the check that regexp definitions haven't changed if
@@ -596,12 +775,9 @@ function automatically when predictive mode is enabled in
 	  (set-buffer-modified-p restore-modified))
 	))
 
-      ;; load the keybindings and related settings
-      (predictive-latex-load-keybindings)
+      ;; load the syntax-related settings
+      (predictive-latex-load-syntax)
       ;; consider \ as start of a word
-      (predictive-setup-save-local-state 'predictive-word-thing)
-      (set (make-local-variable 'predictive-word-thing)
-	   'predictive-latex-word)
       (predictive-setup-save-local-state 'words-include-excapes)
       (set (make-local-variable 'words-include-escapes) nil)
       t))  ; indicate successful setup
@@ -642,13 +818,13 @@ function automatically when predictive mode is enabled in
     ;; restore main and auxiliary dicts
     (kill-local-variable 'predictive-buffer-dict)
     (kill-local-variable 'predictive-auxiliary-dict)
-    ;; remove other local variable settings
-    (kill-local-variable 'predictive-menu-function)
-    (kill-local-variable 'words-include-escapes)
+    ;; restore default LaTeX dicts
     (kill-local-variable 'predictive-latex-dict)
     (kill-local-variable 'predictive-latex-math-dict)
+    (kill-local-variable 'predictive-latex-preamble-dict)
     (kill-local-variable 'predictive-latex-env-dict)
-    (kill-local-variable 'predictive-map)
+    (kill-local-variable 'predictive-latex-bibstyle-dict)
+    ;; remove other local variable settings
     (kill-local-variable 'predictive-latex-previous-filename)
     ;; remove hooks that display help
     (when predictive-latex-display-help
@@ -663,7 +839,7 @@ function automatically when predictive mode is enabled in
 
 
 
-(defun predictive-latex-load-regexps ()
+(defun predictive-latex-load-auto-overlay-definitions ()
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
@@ -677,116 +853,7 @@ function automatically when predictive mode is enabled in
      'predictive
      `(line :id comment
 	    ("%" (dict . predictive-main-dict)
-	     (priority . 50) (exclusive . t)
-	     (completion-menu-function
-	      . predictive-latex-construct-browser-menu)
-	     (face . (background-color . ,predictive-overlay-debug-colour)))))
-
-    ;; \begin{ and \end{ start and end LaTeX environments. Other \<command>{'s
-    ;; do various other things. All are ended by } but not by \}. The { is
-    ;; included to ensure all { and } match, but \{ is excluded
-    (auto-overlay-load-definition
-     'predictive
-     `(nested :id brace
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\usepackage{\\)" . 3)
-	       :edge start
-	       (dict . t)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\label{\\)" . 3)
-	       :edge start
-	       :id label
-	       (dict . t)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(eq\\)?ref{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-label)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cite{\\)" . 3)
-	       :edge start
-	       (dict . t) (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-env)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-env)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-docclass)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-bibstyle)
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-
-	      ;; Note: the following regexps contain a lot of \'s because they
-	      ;; have to check whether number of \'s in front of { is even or
-	      ;; odd.
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\({\\)" . 3)
-	       :edge start
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(}\\)" . 3)
-	       :edge end
-	       (priority . 40)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ))
-
-
-    ;; ;; $'s delimit the start and end of maths regions...
-    ;; (auto-overlay-load-definition
-    ;;  'predictive
-    ;;  `(self :id inline-math
-    ;; 	    ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
-    ;; 	     (completion-menu-function
-    ;; 	      . predictive-latex-construct-browser-menu)
-    ;; 	     (auto-completion-override-syntax-alist
-    ;; 	      . ((?' . (,punct-resolve none t))))
-    ;; 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
-
-    ;; ;; ...as do \[ and \], but not \\[ and \\] etc.
-    ;; ;; Note: regexps contain a lot of \'s because they have to check whether
-    ;; ;; number of \'s in front of { is even or odd
-    ;; (auto-overlay-load-definition
-    ;;  'predictive
-    ;;  `(nested :id display-math
-    ;; 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 3)
-    ;; 	       :edge start
-    ;; 	       (dict . predictive-latex-math-dict) (priority . 30)
-    ;; 	       (completion-menu-function
-    ;; 		. predictive-latex-construct-browser-menu)
-    ;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-    ;; 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
-    ;; 	       :edge end
-    ;; 	       (dict . predictive-latex-math-dict) (priority . 30)
-    ;; 	       (completion-menu-function
-    ;; 		. predictive-latex-construct-browser-menu)
-    ;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
-    ;; 	      ))
-
+	     (priority . 100) (exclusive . t))))
 
     ;; preamble lives between \documentclass{...} and \begin{document}
     (auto-overlay-load-definition
@@ -802,52 +869,6 @@ function automatically when predictive mode is enabled in
 	       (priority . 20))
 	      ))
 
-
-    ;; ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
-    ;; ;; "electric" by using a special env overlay class (defined below) if the
-    ;; ;; corresponding customization option is enabled
-    ;; (if predictive-latex-electric-environments
-    ;; 	(auto-overlay-load-definition
-    ;; 	 'predictive
-    ;; 	 '(predictive-latex-env :id environment))
-    ;;   (auto-overlay-load-definition
-    ;;    'predictive
-    ;;    '(nested :id environment)))
-    ;; ;; load the regexps into the list
-    ;; (auto-overlay-load-regexp
-    ;;  'predictive 'environment
-    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
-    ;;    :edge start
-    ;;    (dict . predictive-latex-math-dict)
-    ;;    (priority . 10)
-    ;;    (completion-menu-function . predictive-latex-construct-browser-menu)
-    ;;    (auto-completion-override-syntax-alist
-    ;; 	. ((?' . (,punct-resolve none t))))
-    ;;    (face . (background-color . ,predictive-overlay-debug-colour))))
-    ;; (auto-overlay-load-regexp
-    ;;  'predictive 'environment
-    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
-    ;;    :edge end
-    ;;    (dict . predictive-latex-math-dict)
-    ;;    (priority . 10)
-    ;;    (completion-menu-function . predictive-latex-construct-browser-menu)
-    ;;    (face . (background-color . ,predictive-overlay-debug-colour))))
-    ;; (auto-overlay-load-regexp
-    ;;  'predictive 'environment
-    ;;  '(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
-    ;;    :edge start
-    ;;    (priority . 10)
-    ;;    (dict . nil)
-    ;;    (face . nil)))
-    ;; (auto-overlay-load-regexp
-    ;;  'predictive 'environment
-    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 3)
-    ;;    :edge end
-    ;;    (priority . 10)
-    ;;    (dict . nil)
-    ;;    (face . nil)))
-
-
     ;; \documentclass defines the document type. Through the use of a special
     ;; "docclass" regexp class defined below, this automagically changes the
     ;; main dictionary if one is defined for the docclass in
@@ -857,7 +878,6 @@ function automatically when predictive mode is enabled in
      '(predictive-latex-docclass
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
 
-
     ;; \usepackage loads a latex package. Through the use of a special
     ;; "usepackage" regexp class defined below, this automagically loads new
     ;; dictionaries and auto-overlay regexps.
@@ -866,7 +886,6 @@ function automatically when predictive mode is enabled in
      '(predictive-latex-usepackage
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}"
 	 . 4))))
-
 
     ;; \label creates a cross-reference label. Through the use of a special
     ;; "auto-dict" regexp class defined below, this automagically adds the label
@@ -917,23 +936,20 @@ function automatically when predictive mode is enabled in
 	 . 3)
 	(auto-dict . predictive-latex-local-math-dict))))
 
-    ;; the sectioning commands automagically add the section names to a local
-    ;; sections dictionary, purely for navigation
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id section
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
-	(auto-dict . predictive-latex-section-dict))))
+    ;; ;; the sectioning commands automagically add the section names to a local
+    ;; ;; sections dictionary, purely for navigation
+    ;; (auto-overlay-load-definition
+    ;;  'predictive
+    ;;  '(predictive-auto-dict
+    ;;    :id section
+    ;;    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
+    ;; 	(auto-dict . predictive-latex-section-dict))))
     ))
 
 
 
-(defun predictive-latex-load-keybindings ()
-  "Load the predictive mode LaTeX key bindings."
-  (predictive-setup-save-local-state 'auto-completion-override-syntax-alist)
-  (make-local-variable 'auto-completion-override-syntax-alist)
-
+(defun predictive-latex-load-syntax ()
+  "Load the predictive mode LaTeX Completion-UI syntax behaviour."
   ;; get behaviours defined in `auto-completion-syntax-alist'
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
@@ -944,134 +960,7 @@ function automatically when predictive mode is enabled in
     ;; store behaviours in variables for source syntax-alists
     (setq predictive-latex-word-completion-behaviour word-complete)
     (setq predictive-latex-punctuation-resolve-behaviour punct-resolve)
-    (setq predictive-latex-whitespace-resolve-behaviour whitesp-resolve)
-
-    ;; make "\", "$", "_", "{" and "}" do the right thing
-    (setq auto-completion-override-syntax-alist
-	  `((t . ,(append
-		   `((?\\ . ((lambda ()
-			       (let ((i 0))
-				 (save-excursion
-				   (while (eq (char-before) ?\\)
-				     (backward-char)
-				     (incf i)))
-				 (if (oddp i) 'add ',punct-resolve)))
-			     ,word-complete))
-		     (?$ . (,punct-resolve none))
-		     (?_ . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?^ . (,punct-resolve none))
-		     (?{ . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (cond
-			       ((auto-overlays-at-point
-				 nil '((lambda (dic)
-					 (or (eq dic 'predictive-latex-env-dict)
-					     (eq dic 'dict-latex-docclass)
-					     (eq dic 'dict-latex-bibstyle)))
-				       dict))
-				(complete-in-buffer-1
-				 (auto-completion-source) "" 'not-set 'auto)
-				'none)
-			       ((eq (char-before) ?\\) ',word-complete)
-			       (t 'none)))))
-		     (?} . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before) ?\\) ',word-complete 'none))))
-		     (?\" . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))
-			     (lambda ()
-			       (if (or (eq (char-before) ?\\)
-				       (not (fboundp 'TeX-insert-quote)))
-				   t
-				 (TeX-insert-quote nil)
-				 nil))))
-		     ;; (?' . ((lambda ()
-		     ;; 	      (if (eq (char-before) ?\\)
-		     ;; 		  'add ',punct-resolve))
-		     ;; 	    (lambda ()
-		     ;; 	      (if (eq (char-before (1- (point))) ?\\)
-		     ;; 		  ',word-complete 'none))))
-		     (?\( . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))))
-		     (?\) . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))))
-		     (?@ . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before) ?\\) ',word-complete 'none))))
-		     (?+ . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?, . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?- . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?\; . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))))
-		     (?! . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?< . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?= . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?> . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     (?\[ . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))))
-		     (?\] . ((lambda ()
-			       (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			     (lambda ()
-			       (if (eq (char-before (1- (point))) ?\\)
-				   ',word-complete 'none))))
-		     (?` . ((lambda ()
-			      (if (eq (char-before) ?\\) 'add ',punct-resolve))
-			    (lambda ()
-			      (if (eq (char-before (1- (point))) ?\\)
-				  ',word-complete 'none))))
-		     )
-		   (cdr (assq t auto-completion-override-syntax-alist))))) ; append
-	  )))
+    (setq predictive-latex-whitespace-resolve-behaviour whitesp-resolve)))
 
 
 
@@ -1823,9 +1712,9 @@ the package, if they exist."
     ;; try to load lisp library for the package
     (require (intern (concat "predictive-latex-" package)) nil t)
     ;; run load function for package, if one is defined
-    (setq func (nth 1 (assoc package predictive-latex-usepackage-functions)))
+    (setq func (cdr (assoc package predictive-latex-usepackage-functions)))
     (when func
-      (funcall func)
+      (funcall func 1)
       (setq loaded t))
     ;; display message if we've loaded something
     (when loaded
@@ -1857,8 +1746,8 @@ they exist."
   ;; try to load lisp library for the package
   (require (intern (concat "predictive-latex-" package)) nil t)
   ;; run unload function for package, if one is defined
-  (let ((func (nth 2 (assoc package predictive-latex-usepackage-functions))))
-    (when func (funcall func)))
+  (let ((func (cdr (assoc package predictive-latex-usepackage-functions))))
+    (when func (funcall func -1)))
   ;; display informative message
   (message (format "LaTeX package \"%s\" unloaded" package)))
 

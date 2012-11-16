@@ -6,7 +6,7 @@
 ;; Copyright (C) 2004-2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.9.2
+;; Version: 0.10
 ;; Keywords: predictive, latex, package, cleveref, cref
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -29,98 +29,68 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-cleveref)
 
-;; add load and unload functions to alist
-;;(assoc-delete-all "cleveref" predictive-latex-usepackage-functions)
-(push '("cleveref" predictive-latex-load-cleveref
-	predictive-latex-unload-cleveref)
+;; register package setup function
+(predictive-assoc-delete-all "cleveref" predictive-latex-usepackage-functions)
+(push '("cleveref" . predictive-latex-setup-cleveref)
       predictive-latex-usepackage-functions)
 
-
-;; set up 'predictive-latex-cleveref-label-word to be a `thing-at-point'
+;; set up `predictive-latex-cleveref-label-word' to be a `thing-at-point'
 ;; symbol
 (put 'predictive-latex-cleveref-label-word 'forward-op
      'predictive-latex-cleveref-label-forward-word)
 
-
-;; variables used to hold old definitions of label regexps
-(defvar predictive-latex-cleveref-restore-label-regexp nil)
+;; variable used to hold old definition of label auto-overlay
 (defvar predictive-latex-cleveref-restore-label-definition nil)
-(defvar predictive-latex-cleveref-restore-vref-regexp nil)
-(make-variable-buffer-local
- 'predictive-latex-cleveref-restore-label-regexp)
-(make-variable-buffer-local
- 'predictive-latex-cleveref-restore-label-definition)
-(make-variable-buffer-local
- 'predictive-latex-cleveref-restore-vref-definition)
+
+
+;; derive cleveref-style label completion source from standard label source
+(completion-ui-register-derived-source
+ predictive-latex-cleveref-label predictive-latex-label
+ :override-syntax-alist
+     ((?: . ((lambda ()
+	       (predictive-latex-completion-add-till-regexp ":"))
+	     predictive-latex-word-completion-behaviour))
+      (?_ . ((lambda ()
+	       (predictive-latex-completion-add-till-regexp "\\W"))
+	     predictive-latex-word-completion-behaviour))
+      (?, . (predictive-latex-punctuation-resolve-behaviour none))
+      (?} . (predictive-latex-punctuation-resolve-behaviour none)))
+ :word-thing predictive-latex-cleveref-label-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
 
 
 
-(defun predictive-latex-load-cleveref ()
-  ;; load cleveref regexps
-  (destructuring-bind (word-resolve word-complete word-insert
-		       punct-resolve punct-complete punct-insert
-		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
-
+(defun predictive-latex-setup-cleveref (&optional arg)
+  ;; With positive ARG, load cleveref package support. With negative ARG,
+  ;; unload it.
+  (cond
+   ;; --- load cleveref support ---
+   ((> arg 0)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
     (push (cons "\\\\[cC]ref\\(range\\|\\)" 'predictive-latex-label-dict)
 	  predictive-latex-browser-submenu-alist)
 
-    ;; load regexps
-    ;; \cref and \vref
-    (setq predictive-latex-cleveref-restore-vref-regexp
-	  (auto-overlay-unload-regexp 'predictive 'brace 'vref))
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\([cCvV]ref\\(\\|range\\)\\*?\\|\\(name\\|label\\)[cC]ref\\){\\)"
-	. 3)
-       :edge start
-       :id cref
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist
-	. ((?w . ((lambda ()
-		    (let ((label (bounds-of-thing-at-point
-				  'predictive-latex-cleveref-label-word)))
-		      (when (and label (= (point) (car label)))
-			(delete-region (car label) (cdr label))))
-		    'add)
-		  ,word-complete t))
-	   (?_ . (add ,word-complete))
-	   (?  . (,whitesp-resolve none))
-	   (?. . (add ,word-complete))
-	   (t  . (reject none))))
-       (auto-completion-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp ":"))
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-till-regexp "\\W"))
-		  ,word-complete))
-	   (?, . (,punct-resolve none))
-	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
+    ;; add completion source regexps
+    (set (make-local-variable 'auto-completion-source-regexps)
+	 (nconc
+	  ;; label with optarg
+	  `((,(concat predictive-latex-odd-backslash-regexp
+		      "\\label\\(\\[.*?\\]\\)?{"
+		      predictive-latex-not-closebrace-regexp)
+	     looking-at nil)
+	    ;; \cref and \vref
+	    (,(concat predictive-latex-odd-backslash-regexp
+		      "\\([cCvV]ref\\(\\|range\\)\\*?"
+		      "\\|\\(name\\|label\\)[cC]ref\\){"
+		      predictive-latex-not-closebrace-regexp)
+	     looking-at predictive-latex-cleveref-label))
+	  auto-completion-source-regexps))
 
-    ;; \label with optional argument replaces normal \label regexps
-    (setq predictive-latex-cleveref-restore-label-regexp
-	  (auto-overlay-unload-regexp 'predictive 'brace 'label))
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\label\\(\\[.*?\\]\\)?{\\)" . 3)
-       :edge start
-       :id label
-       (dict . t)
-       (priority . 40)
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
+    ;; \label with optional argument replaces normal \label definition
     (setq predictive-latex-cleveref-restore-label-definition
 	  (auto-overlay-unload-definition 'predictive 'label))
     (auto-overlay-load-definition
@@ -129,30 +99,37 @@
        :id label
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label\\(\\[.*?\\]\\)?{\\(.*?\\)}"
 	 . 4)
-       (auto-dict . predictive-latex-label-dict)))
-     t)))
+	(auto-dict . predictive-latex-label-dict)))
+     t))
 
+   ;; --- unload cleveref support ---
+   ((< arg 0)
+    ;; remove browser sub-menu definition
+    (setq predictive-latex-browser-submenu-alist
+	  (predictive-assoc-delete-all
+	   "\\\\[cC]ref\\(range\\|\\)"
+	   predictive-latex-browser-submenu-alist))
 
+    ;; remove completion source regexps
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp
+		   "\\label\\(\\[.*?\\]\\)?{"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps))
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp
+		   "\\([cCvV]ref\\(\\|range\\)\\*?"
+		   "\\|\\(name\\|label\\)[cC]ref\\){"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps))
 
-(defun predictive-latex-unload-cleveref ()
-  ;; remove browser sub-menu definition
-  (setq predictive-latex-browser-submenu-alist
-	(predictive-assoc-delete-all "\\\\[cC]ref\\(range\\|\\)"
-				     predictive-latex-browser-submenu-alist))
-  ;; Unload cleveref regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'cref)
-  (when predictive-latex-cleveref-restore-vref-regexp
-    (auto-overlay-load-regexp
-     'predictive 'brace predictive-latex-cleveref-restore-vref-regexp t))
-  (auto-overlay-unload-regexp 'predictive 'brace 'label)
-  (auto-overlay-unload-definition 'predictive 'label)
-  (auto-overlay-load-regexp
-   'predictive 'brace predictive-latex-cleveref-restore-label-regexp t)
-  (auto-overlay-load-definition
-   'predictive predictive-latex-cleveref-restore-label-definition)
-  (kill-local-variable 'predictive-latex-cleveref-restore-vref-regexp)
-  (kill-local-variable 'predictive-latex-cleveref-restore-label-regexp)
-  (kill-local-variable 'predictive-latex-cleveref-restore-label-definition))
+    ;; unload cleveref auto-overlay definition
+    (auto-overlay-load-definition
+     'predictive predictive-latex-cleveref-restore-label-definition)
+    (kill-local-variable 'predictive-latex-cleveref-restore-label-definition)
+    )))
 
 
 
@@ -190,7 +167,9 @@
 ;;; 	(if (re-search-forward "\\(\\w\\|\\s_\\|\\s.\\)+" nil t)
 ;;; 	    (when (= (char-before) ?,) (backward-char))
 ;;; 	  (goto-char (point-max)))))
-    )
-)
+    ))
+
+
+(provide 'predictive-latex-cleveref)
 
 ;;; predictive-latex-cleveref ends here

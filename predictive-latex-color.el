@@ -28,46 +28,84 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-color)
 
-;; add load and unload functions to alist
-(push '("color" predictive-latex-load-color
-	predictive-latex-unload-color)
+;; register package setup function
+(predictive-assoc-delete-all "color" predictive-latex-usepackage-functions)
+(push '("color" . predictive-latex-setup-color)
       predictive-latex-usepackage-functions)
 
 
+;; define LaTeX colour completion source
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-color
+ :completion-args 2
+ :other-args (dict-latex-colours)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :syntax-alist ((?w . ((lambda ()
+			 (let ((env (bounds-of-thing-at-point
+				     'predictive-latex-word)))
+			   (when (and env (= (point) (car env)))
+			     (delete-region (car env) (cdr env))))
+			 'add)
+		       predictive-latex-word-completion-behaviour t)))
+ :override-syntax-alist
+     ((?} predictive-latex-punctuation-resolve-behaviour 'none))
+ :word-thing predictive-latex-word
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-latex-construct-browser-function
+ :no-auto-completion t
+ :no-command t
+ :no-predictive t)
 
-(defun predictive-latex-load-color ()
-  ;; Load colour dictionary
-  (predictive-load-dict 'dict-latex-colours)
-  ;; add new browser sub-menu definition
-  (make-local-variable 'predictive-latex-browser-submenu-alist)
-  (push (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)
-	predictive-latex-browser-submenu-alist)
-  ;; Load regexps
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{\\)" . 3)
-     :edge start
-     :id color
-     (dict . dict-latex-colours)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t))
 
 
+(defun predictive-latex-setup-color (arg)
+  ;; With positive ARG, load cleveref package support. With negative ARG,
+  ;; unload it.
+  (cond
+   ;; --- load color support ---
+   ((> arg 0)
+    ;; load colour dictionary
+    (predictive-load-dict 'dict-latex-colours)
+    ;; add new browser sub-menu definition
+    (make-local-variable 'predictive-latex-browser-submenu-alist)
+    (push (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)
+	  predictive-latex-browser-submenu-alist)
+    ;; add completion source regexps
+    (set (make-local-variable 'auto-completion-source-regexps)
+	 (nconc
+	  ;; label with optarg
+	  `((,(concat predictive-latex-odd-backslash-regexp
+		      "\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{"
+    		      predictive-latex-not-closebrace-regexp)
+	     looking-at predictive-latex-color))
+	  auto-completion-source-regexps)))
 
-(defun predictive-latex-unload-color ()
-  ;; remove browser sub-menu definition
-  (setq predictive-latex-browser-submenu-alist
-	(predictive-assoc-delete-all "\\\\\\(text\\|page\\|\\)color"
-				     predictive-latex-browser-submenu-alist))
-  ;; unload regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'color)
-;;;   (auto-overlay-unload-regexp 'predictive 'brace 'textcolor)
-;;;   (auto-overlay-unload-regexp 'predictive 'brace 'pagecolor)
-  ;; unload colour dictionary
-  (predictive-unload-dict 'dict-latex-colours))
+   ;; --- unload color support ---
+   ((< arg 0)
+    ;; remove browser sub-menu definition
+    (setq predictive-latex-browser-submenu-alist
+	  (predictive-assoc-delete-all
+	   "\\\\\\(text\\|page\\|\\)color"
+	   predictive-latex-browser-submenu-alist))
+    ;; remove auto-completion source regexps
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp
+		   "\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{\\)"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps))
+    ;; unload colour dictionary
+    (predictive-unload-dict 'dict-latex-colours))
+   ))
 
+
+(provide 'predictive-latex-color)
 
 ;;; predictive-latex-color ends here

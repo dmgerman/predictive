@@ -29,76 +29,57 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-ntheorem)
 
-;; add load and unload functions to alist
-;;(assoc-delete-all "cleveref" predictive-latex-usepackage-functions)
-(push '("ntheorem" predictive-latex-load-ntheorem
-	predictive-latex-unload-ntheorem)
+;; register package setup function
+(predictive-assoc-delete-all "ntheorem" predictive-latex-usepackage-functions)
+(push '("ntheorem" . predictive-latex-setup-ntheorem)
       predictive-latex-usepackage-functions)
 
 
-(defun predictive-latex-load-ntheorem ()
-  ;; load ntheorem regexps
+(defun predictive-latex-setup-ntheorem (arg)
+  ;; With positive ARG, load varioref package support. With negative ARG,
+  ;; unload it.
+  (cond
+   ;; --- load ntheorem support ---
+   ((> arg 0)
+    ;; add completion source regexp
+    (set (make-local-variable 'auto-completion-source-regexps)
+	 (nconc
+	  ;; \thref etc.
+	  `((,(concat predictive-latex-odd-backslash-regexp "thref{"
+		      predictive-latex-not-closebrace-regexp)
+	     looking-at predictive-latex-label))
+	  auto-completion-source-regexps))
 
-  (destructuring-bind (word-resolve word-complete word-insert
-		       punct-resolve punct-complete punct-insert
-		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
-
-    ;; \thref
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\thref{\\)" . 3)
-       :edge start
-       :id thref
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-cleveref-label-word)
-       (auto-completion-syntax-alist . ((?w . (add ,word-complete))
-       					(?_ . (add ,word-complete))
-       					(?  . (whitesp-resolve none))
-       					(?. . (add ,word-complete))
-       					(t  . (reject none))))
-       (auto-completion-override-syntax-alist
-       	. ((?: . ((lambda ()
-       		    (predictive-latex-completion-add-till-regexp ":"))
-       		  ,word-complete))
-       	   (?_ . ((lambda ()
-       		    (predictive-latex-completion-add-till-regexp "\\W"))
-       		  ,word-complete))
-       	   (?, . (,punct-resolve none))
-       	   (?} . (,punct-resolve none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
-
-    ;; \newshadedtheorem
+    ;; load \newshadedtheorem and \newframedtheorem auto-overlay definitions
     (auto-overlay-load-definition
      'predictive
      `(word
        :id newshadedtheorem
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newshadedtheorem{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-local-env-dict))))
-
-    ;; \newframedtheorem
+    	(auto-dict . predictive-latex-local-env-dict))))
     (auto-overlay-load-definition
      'predictive
      `(word
        :id newframedtheorem
        (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newframedtheorem{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-local-env-dict))))
-    ))
+    	(auto-dict . predictive-latex-local-env-dict)))))
+
+   ;; --- unload ntheorem support ---
+   ((< arg 0)
+    ;; remove completion source regexps
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp "thref{"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps))
+
+    ;; unload auto-overlay definitions
+    (auto-overlay-unload-definition 'predictive 'newshadedtheorem)
+    (auto-overlay-unload-definition 'predictive 'newframedtheorem))
+   ))
 
 
-
-(defun predictive-latex-unload-ntheorem ()
-  ;; Unload cleveref regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'thref)
-  (auto-overlay-unload-definition 'predictive 'newshadedtheorem)
-  (auto-overlay-unload-definition 'predictive 'newframedtheorem)
-)
+(provide 'predictive-latex-ntheorem)
 
 ;;; predictive-latex-ntheorem ends here

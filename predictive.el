@@ -931,7 +931,8 @@ When within a pop-up frame:
     (mapc 'predictive-load-dict (predictive-main-dict))
     ;; replace Completion-UI sources with their predictive variants
     (set (make-local-variable 'completion-ui-source-definitions)
-	 predictive-completion-ui-source-definitions)
+	 (append predictive-completion-ui-source-definitions
+		 completion-ui-source-definitions))
 
     ;; save dictionaries used in the buffer when bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
@@ -2972,22 +2973,14 @@ without asking for confirmation."
     (setq predictive-name (intern (concat "predictive-" (symbol-name name))))
 
     ;; if source already sets :sort-by-frequency or explicitly disables
-    ;; predictive support, add it unmodified to predictive-mode's list of
-    ;; source definitions
+    ;; predictive support, don't generate predictive variant
     (if (or (plist-get args :no-predictive)
 	    (plist-get args :sort-by-frequency))
-	(let ((existing
-	       (assq name predictive-completion-ui-source-definitions)))
-	  (if existing
-	      (setcdr existing
-		      (cdr (assq name completion-ui-source-definitions)))
-	    (push (assq name completion-ui-source-definitions)
-		  predictive-completion-ui-source-definitions))
-	  ;; load frequency data for source if it collects source-specific
-	  ;; data and predictive support isn't disabled
-	  (unless (or (plist-get args :no-predictive)
-		      (eq (plist-get args :sort-by-frequency) 'global))
-	    (predictive-load-source-frequency-data name nil 'noerror)))
+	;; load frequency data for source if it collects source-specific
+	;; data and predictive support isn't disabled
+	(unless (or (plist-get args :no-predictive)
+		    (eq (plist-get args :sort-by-frequency) 'global))
+	  (predictive-load-source-frequency-data name nil 'noerror))
 
       ;; otherwise, generate predictive variant of source
       (plist-put args :name predictive-name)

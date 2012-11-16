@@ -2501,7 +2501,7 @@ functions called from the
       (setq popup-tip-function (symbol-value popup-tip-function)))
     popup-tip-function)
   ;; default fall-back
-  'completion-construct-popup-tip-text)
+  'completion-construct-tooltip-text)
 
 
 (defun completion-ui-source-popup-frame-function (source &optional overlay)

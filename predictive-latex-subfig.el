@@ -29,71 +29,50 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-subfig)
 
-;; add load and unload functions to alist
-;;(assoc-delete-all "smartref" predictive-latex-usepackage-functions)
-(push '("subfig" predictive-latex-load-subfig
-	predictive-latex-unload-subfig)
+;; register package setup function
+(predictive-assoc-delete-all "subfig" predictive-latex-usepackage-functions)
+(push '("subfig" . predictive-latex-setup-subfig)
       predictive-latex-usepackage-functions)
 
 
 
-(defun predictive-latex-load-subfig ()
-  (destructuring-bind (word-resolve word-complete word-insert
-		       punct-resolve punct-complete punct-insert
-		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w)
-	      (auto-completion-lookup-behaviour nil ?.)
-	      (auto-completion-lookup-behaviour nil ? ))
-  ;; (let* ((word-behaviour (completion-lookup-behaviour nil ?w))
-  ;; 	 (word-complete (completion-get-completion-behaviour word-behaviour))
-  ;; 	 (word-resolve (completion-get-resolve-behaviour word-behaviour))
-  ;; 	 (punct-behaviour (completion-lookup-behaviour nil ?.))
-  ;; 	 (punct-complete (completion-get-completion-behaviour punct-behaviour))
-  ;; 	 (punct-resolve (completion-get-resolve-behaviour punct-behaviour))
-  ;; 	 (whitesp-behaviour (completion-lookup-behaviour nil ? ))
-  ;; 	 (whitesp-complete (completion-get-completion-behaviour
-  ;; 			    whitesp-behaviour))
-  ;; 	 (whitesp-resolve (completion-get-resolve-behaviour
-  ;; 			   whitesp-behaviour)))
+(defun predictive-latex-setup-subfig (arg)
+  ;; With positive ARG, load subfig package support. With negative ARG,
+  ;; unload it.
+  (cond
+   ;; --- load subfig support ---
+   ((> arg 0)
+    ;; add new browser sub-menu definition
+    (make-local-variable 'predictive-latex-browser-submenu-alist)
+    (push (cons "\\\\subref" 'predictive-latex-label-dict)
+	  predictive-latex-browser-submenu-alist)
 
-    ;; Load subfig regexps
-    (auto-overlay-load-regexp
-     'predictive 'brace
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\subref{\\)" . 3)
-       :id subref
-       :edge start
-       (dict . predictive-latex-label-dict)
-       (priority . 40)
-       (completion-menu . predictive-latex-construct-browser-menu)
-       (completion-word-thing . predictive-latex-label-word)
-       (completion-dynamic-syntax-alist . ((?w . (add ,word-complete))
-					   (?_ . (add ,word-complete))
-					   (?  . (,whitesp-resolve none))
-					   (?. . (add ,word-complete))
-					   (t  . (reject none))))
-       (completion-dynamic-override-syntax-alist
-	. ((?: . ((lambda ()
-		    (predictive-latex-completion-add-to-regexp ":")
-		    nil)
-		  ,word-complete))
-	   (?_ . ((lambda ()
-		    (predictive-latex-completion-add-to-regexp "\\W")
-		    nil)
-		  ,word-complete))
-	   (?} . (,punct-resolve t none))))
-       (face . (background-color . ,predictive-overlay-debug-color)))
-     t)
+    ;; add completion source regexps
+    (set (make-local-variable 'auto-completion-source-regexps)
+	 (nconc
+	  ;; \subref
+	  `((,(concat predictive-latex-odd-backslash-regexp "subref{"
+		      predictive-latex-not-closebrace-regexp)
+	     looking-at predictive-latex-label))
+	  auto-completion-source-regexps)))
 
-    )
-)
+   ;; --- unload subfig support ---
+   ((< arg 0)
+    ;; remove browser sub-menu definition
+    (setq predictive-latex-browser-submenu-alist
+	  (predictive-assoc-delete-all "\\\\subref"
+	   predictive-latex-browser-submenu-alist))
+
+    ;; remove completion source regexps
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp "subref{"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps)))
+   ))
 
 
-
-(defun predictive-latex-unload-subfig ()
-  ;; Unload subfig regexps
-  (auto-overlay-unload-regexp 'predictive 'brace 'subref)
-)
+(provide 'predictive-latex-subfig)
 
 ;;; predictive-latex-subfig ends here

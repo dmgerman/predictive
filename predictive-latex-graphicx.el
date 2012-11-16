@@ -29,34 +29,42 @@
 ;;; Code:
 
 (require 'predictive-latex)
-(provide 'predictive-latex-graphicx)
 
-;; add load and unload functions to alist
-(push '("graphicx" predictive-latex-load-graphicx
-	predictive-latex-unload-graphicx)
+;; register package setup function
+(predictive-assoc-delete-all "graphicx" predictive-latex-usepackage-functions)
+(push '("graphicx" . predictive-latex-setup-graphicx)
       predictive-latex-usepackage-functions)
 
 
 
-(defun predictive-latex-load-graphicx ()
-  ;; load regexp
-  (auto-overlay-load-regexp
-   'predictive 'brace
-   `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\includegraphics\\(\\[.*?\\]\\)?{\\)"
-      . 3)
-     :edge start
-     :id graphicx
-     (dict . t)
-     (priority . 40)
-     (face . (background-color . ,predictive-overlay-debug-color)))
-   t)
-)
+(defun predictive-latex-setup-graphicx (arg)
+  ;; With positive ARG, load graphicx package support. With negative ARG,
+  ;; unload it.
+  (cond
+   ;; --- load graphicx support ---
+   ((> arg 0)
+    ;; add completion source regexps
+    (set (make-local-variable 'auto-completion-source-regexps)
+	 (nconc
+	  ;; label with optarg
+	  `((,(concat predictive-latex-odd-backslash-regexp
+		      "includegraphics\\(\\[.*?\\]\\)?{"
+		      predictive-latex-not-closebrace-regexp)
+	     looking-at nil))
+	  auto-completion-source-regexps)))
+
+   ;; --- unload graphicx support ---
+   ((< arg 0)
+    ;; remove completion source regexps
+    (setq auto-completion-source-regexps
+	  (predictive-assoc-delete-all
+	   (concat predictive-latex-odd-backslash-regexp
+		   "includegraphics\\(\\[.*?\\]\\)?{"
+		   predictive-latex-not-closebrace-regexp)
+	   auto-completion-source-regexps)))
+   ))
 
 
-
-(defun predictive-latex-unload-graphicx ()
-  ;; unload regexp
-  (auto-overlay-unload-regexp 'predictive 'brace 'graphicx)
-)
+(provide 'predictive-latex-graphicx)
 
 ;;; predictive-latex-graphicx ends here
