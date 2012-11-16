@@ -214,6 +214,14 @@ strings become the sub-menu entries.")
 (make-variable-buffer-local 'predictive-latex-section-dict)
 
 
+;; variables used to store `auto-completion-syntax-alist' completion,
+;; punctuation and whitespace behaviours
+(defvar predictive-latex-punctuation-resolve-behaviour nil)
+(make-variable-buffer-local 'predictive-latex-punctuation-resolve-behaviour)
+(defvar predictive-latex-word-completion-behaviour nil)
+(make-variable-buffer-local 'predictive-latex-word-completion-behaviour)
+(defvar predictive-latex-whitespace-resolve-behaviour nil)
+(make-variable-buffer-local 'predictive-latex-whitespace-resolve-behaviour)
 
 
 ;; variable storing filename before saving, to detect renaming
@@ -240,7 +248,179 @@ strings become the sub-menu entries.")
 
 
 ;;;=========================================================
-;;;                  Setup function
+;;;           Register LaTeX Completion-UI sources
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-math
+ :completion-args 2
+ :other-args (predictive-latex-math-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :override-syntax-alist
+     ((?' . (predictive-latex-punctuation-resolve-behaviour none t)))
+ :menu predictive-menu-function
+ :browser predictive-browser-function
+ :word-thing predictive-latex-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-env
+ :completion-args 2
+ :other-args (predictive-latex-env-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :syntax-alist ((?w . ((lambda ()
+			 (let ((env (bounds-of-thing-at-point
+				     'predictive-latex-word)))
+			   (when (and env (= (point) (car env)))
+			     (delete-region (car env) (cdr env))))
+			 'add)
+		       predictive-latex-word-completion-behaviour t)))
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-browser-function
+ :word-thing predictive-latex-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-label
+ :completion-args 2
+ :other-args (predictive-latex-label-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :syntax-alist
+     ((?w . ((lambda ()
+	       (let ((label (bounds-of-thing-at-point
+			     'predictive-latex-label-word)))
+		 (when (and label (= (point) (car label)))
+		   (delete-region (car label) (cdr label))))
+	       'add)
+	     predictive-latex-word-completion-behaviour t))
+      (?_ . (add predictive-latex-word-completion-behaviour))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
+      (?. . (add predictive-latex-word-completion-behaviour))
+      (t  . (reject none)))
+ :override-syntax-alist
+     ((?: . ((lambda () (predictive-latex-completion-add-till-regexp ":"))
+	     predictive-latex-word-completion-behaviour))
+      (?_ . ((lambda () (predictive-latex-completion-add-till-regexp "\\W"))
+	     predictive-latex-word-completion-behaviour))
+      (?} . (predictive-latex-punctuation-resolve-behaviour none)))
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-browser-function
+ :word-thing predictive-latex-label-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-docclass
+ :completion-args 2
+ :other-args (predictive-latex-docclass-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :syntax-alist
+     ((?w . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+			   (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t)))
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-browser-function
+ :word-thing predictive-latex-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-bibstyle
+ :completion-args 2
+ :other-args (predictive-latex-bibstyle-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :syntax-alist
+     ((?w . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+		 (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t)))
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-browser-function
+ :word-thing predictive-latex-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+(completion-ui-register-source
+ predictive-complete
+ :name predictive-latex-preamble
+ :completion-args 2
+ :other-args (predictive-latex-preamble-dict)
+ :accept-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
+ :menu predictive-latex-construct-browser-menu
+ :browser predictive-browser-function
+ :word-thing predictive-latex-word
+ :no-auto-completion t
+ :no-predictive t
+ :no-command t)
+
+
+
+
+;;;=========================================================
+;;;                  The setup function
 
 (defun predictive-setup-latex (arg)
   "With a positive ARG, set up predictive mode for LaTeX.
@@ -260,8 +440,13 @@ function automatically when predictive mode is enabled in
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
       ;; save overlays and dictionaries along with buffer
-      (add-hook 'after-save-hook 'predictive-latex-after-save nil t)
-      (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil t)
+      (add-hook 'after-save-hook 'predictive-latex-after-save nil 'local)
+      (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil 'local)
+
+      ;; configure automatic selection of completion sources and dicts
+      (predictive-setup-save-local-state 'auto-completion-source-faces)
+      (set (make-local-variable 'auto-completion-source-faces)
+	   '((font-latex-math-face . predictive-latex-math)))
 
       ;; display help if first character of accepted completion is "\" and
       ;; after point motion
@@ -325,7 +510,7 @@ function automatically when predictive mode is enabled in
 	  ;; start the auto-overlays
 	  ;; Note: we skip the check that regexp definitions haven't changed
 	  ;;       if there's a file of saved overlay data to use, and
-	  ;;       restoring buffer's modified flag afterwards (if used,
+	  ;;       restore buffer's modified flag afterwards (if enabled,
 	  ;;       automatic synchronization of LaTeX envionments can modify
 	  ;;       buffer without actually changing buffer text)
 	  (let ((restore-modified (buffer-modified-p)))
@@ -467,18 +652,19 @@ function automatically when predictive mode is enabled in
     (kill-local-variable 'predictive-latex-previous-filename)
     ;; remove hooks that display help
     (when predictive-latex-display-help
-      (remove-hook 'predictive-accept-functions 'predictive-display-help t)
-      (remove-hook 'post-command-hook 'predictive-display-help t))
+      (remove-hook 'predictive-accept-functions 'predictive-display-help 'local)
+      (remove-hook 'post-command-hook 'predictive-display-help 'local))
     ;; remove hook functions that save overlays etc.
-    (remove-hook 'after-save-hook 'predictive-latex-after-save t)
-    (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer t)
-    t)))  ; indicate successful reversion of changes
+    (remove-hook 'after-save-hook 'predictive-latex-after-save 'local)
+    (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer 'local)
+    ;; restore saved state
+    (predictive-setup-restore-local-state)
+    t)))  ; indicate successful disabling
 
 
 
 (defun predictive-latex-load-regexps ()
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
-
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
@@ -517,33 +703,8 @@ function automatically when predictive mode is enabled in
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\(eq\\)?ref{\\)" . 3)
 	       :edge start
-	       (dict . predictive-latex-label-dict)
+	       (completion-source . predictive-latex-label)
 	       (priority . 40)
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
-	       (completion-word-thing . predictive-latex-label-word)
-	       (auto-completion-syntax-alist
-		. ((?w . ((lambda ()
-			    (let ((label (bounds-of-thing-at-point
-					  'predictive-latex-label-word)))
-			      (when (and label (= (point) (car label)))
-				(delete-region (car label) (cdr label))))
-			    'add)
-			  ,word-complete t))
-		   (?_ . (add ,word-complete))
-		   (?  . (,whitesp-resolve none))
-		   (?. . (add ,word-complete))
-		   (t  . (reject none))))
-	       (auto-completion-override-syntax-alist
-		. ((?:
-		    . ((lambda ()
-			 (predictive-latex-completion-add-till-regexp ":"))
-		       ,word-complete))
-		   (?_
-		    . ((lambda ()
-			 (predictive-latex-completion-add-till-regexp "\\W"))
-		       ,word-complete))
-		   (?} . (,punct-resolve none))))
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\cite{\\)" . 3)
@@ -553,82 +714,32 @@ function automatically when predictive mode is enabled in
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{\\)" . 3)
 	       :edge start
-	       (dict . predictive-latex-env-dict) (priority . 40)
-	       (auto-completion-syntax-alist
-		. ((?w . ((lambda ()
-			    (let ((env (bounds-of-thing-at-point
-					  'predictive-latex-word)))
-			      (when (and env (= (point) (car env)))
-				(delete-region (car env) (cdr env))))
-			    'add)
-			  ,word-complete t))))
-	       ;; (auto-completion-override-syntax-alist
-	       ;;  . ((?* . (add ,word-complete t))))
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
+	       (completion-source . predictive-latex-env)
+	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\end{\\)" . 3)
 	       :edge start
-	       (dict . predictive-latex-env-dict) (priority . 40)
-	       (auto-completion-syntax-alist
-		. ((?w . ((lambda ()
-			    (let ((env (bounds-of-thing-at-point
-					  'predictive-latex-word)))
-			      (when (and env (= (point) (car env)))
-				(delete-region (car env) (cdr env))))
-			    'add)
-			  ,word-complete t))))
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
+	       (completion-source . predictive-latex-env)
+	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\text{\\)" . 3)
 	       :edge start
-	       (dict . predictive-main-dict) (priority . 40)
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
+	       (completion-source . predictive)
+	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
-	       (dict . dict-latex-docclass) (priority . 40)
-	       (auto-completion-syntax-alist
-		. ((?w . (add
-			  (lambda ()
-			    (let ((pos (point)))
-			      (when (and
-				     (re-search-forward
-				      "[[:alpha:]]*?}" (line-end-position) t)
-				     (= (match-beginning 0) pos))
-				(backward-char)
-				(delete-region pos (point)))
-			      (goto-char pos))
-			    ',word-complete)
-			  t))))
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
+	       (completion-source . predictive-latex-docclass)
+	       (priority . 40)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\bibliographystyle\\(\\[.*\\]\\)?{\\)" . 3)
 	       :edge start
-	       (dict . dict-latex-bibstyle)
+	       (completion-source . predictive-latex-bibstyle)
 	       (priority . 40)
-	       (auto-completion-syntax-alist
-		. ((?w . (add
-			  (lambda ()
-			    (let ((pos (point)))
-			      (when (and
-				     (re-search-forward
-				      "[[:alpha:]]*?}" (line-end-position) t)
-				     (= (match-beginning 0) pos))
-				(backward-char)
-				(delete-region pos (point)))
-			      (goto-char pos))
-			    ',word-complete)
-			  t))))
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
 	       (face . (background-color . ,predictive-overlay-debug-colour)))
 
 	      ;; Note: the following regexps contain a lot of \'s because they
@@ -645,36 +756,36 @@ function automatically when predictive mode is enabled in
 	      ))
 
 
-    ;; $'s delimit the start and end of maths regions...
-    (auto-overlay-load-definition
-     'predictive
-     `(self :id inline-math
-	    ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
-	     (completion-menu-function
-	      . predictive-latex-construct-browser-menu)
-	     (auto-completion-override-syntax-alist
-	      . ((?' . (,punct-resolve none t))))
-	     (face . (background-color . ,predictive-overlay-debug-colour)))))
+    ;; ;; $'s delimit the start and end of maths regions...
+    ;; (auto-overlay-load-definition
+    ;;  'predictive
+    ;;  `(self :id inline-math
+    ;; 	    ("\\$" (dict . predictive-latex-math-dict) (priority . 30)
+    ;; 	     (completion-menu-function
+    ;; 	      . predictive-latex-construct-browser-menu)
+    ;; 	     (auto-completion-override-syntax-alist
+    ;; 	      . ((?' . (,punct-resolve none t))))
+    ;; 	     (face . (background-color . ,predictive-overlay-debug-colour)))))
 
-    ;; ...as do \[ and \], but not \\[ and \\] etc.
-    ;; Note: regexps contain a lot of \'s because they have to check whether
-    ;; number of \'s in front of { is even or odd
-    (auto-overlay-load-definition
-     'predictive
-     `(nested :id display-math
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 3)
-	       :edge start
-	       (dict . predictive-latex-math-dict) (priority . 30)
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
-	       :edge end
-	       (dict . predictive-latex-math-dict) (priority . 30)
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu)
-	       (face . (background-color . ,predictive-overlay-debug-colour)))
-	      ))
+    ;; ;; ...as do \[ and \], but not \\[ and \\] etc.
+    ;; ;; Note: regexps contain a lot of \'s because they have to check whether
+    ;; ;; number of \'s in front of { is even or odd
+    ;; (auto-overlay-load-definition
+    ;;  'predictive
+    ;;  `(nested :id display-math
+    ;; 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 3)
+    ;; 	       :edge start
+    ;; 	       (dict . predictive-latex-math-dict) (priority . 30)
+    ;; 	       (completion-menu-function
+    ;; 		. predictive-latex-construct-browser-menu)
+    ;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+    ;; 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
+    ;; 	       :edge end
+    ;; 	       (dict . predictive-latex-math-dict) (priority . 30)
+    ;; 	       (completion-menu-function
+    ;; 		. predictive-latex-construct-browser-menu)
+    ;; 	       (face . (background-color . ,predictive-overlay-debug-colour)))
+    ;; 	      ))
 
 
     ;; preamble lives between \documentclass{...} and \begin{document}
@@ -683,61 +794,58 @@ function automatically when predictive mode is enabled in
      `(nested :id preamble
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
 	       :edge start
-	       (dict . predictive-latex-preamble-dict)
-	       (priority . 20)
-	       (completion-menu-function . predictive-latex-construct-browser-menu))
+	       (completion-source . predictive-latex-preamble)
+	       (priority . 20))
 	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
 	       :edge end
-	       (dict . predictive-latex-preamble-dict)
-	       (priority . 20)
-	       (completion-menu-function
-		. predictive-latex-construct-browser-menu))
+	       (completion-source . predictive-latex-preamble)
+	       (priority . 20))
 	      ))
 
 
-    ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
-    ;; "electric" by using a special env overlay class (defined below) if the
-    ;; corresponding customization option is enabled
-    (if predictive-latex-electric-environments
-	(auto-overlay-load-definition
-	 'predictive
-	 '(predictive-latex-env :id environment))
-      (auto-overlay-load-definition
-       'predictive
-       '(nested :id environment)))
-    ;; load the regexps into the list
-    (auto-overlay-load-regexp
-     'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
-       :edge start
-       (dict . predictive-latex-math-dict)
-       (priority . 10)
-       (completion-menu-function . predictive-latex-construct-browser-menu)
-       (auto-completion-override-syntax-alist
-	. ((?' . (,punct-resolve none t))))
-       (face . (background-color . ,predictive-overlay-debug-colour))))
-    (auto-overlay-load-regexp
-     'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
-       :edge end
-       (dict . predictive-latex-math-dict)
-       (priority . 10)
-       (completion-menu-function . predictive-latex-construct-browser-menu)
-       (face . (background-color . ,predictive-overlay-debug-colour))))
-    (auto-overlay-load-regexp
-     'predictive 'environment
-     '(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
-       :edge start
-       (priority . 10)
-       (dict . nil)
-       (face . nil)))
-    (auto-overlay-load-regexp
-     'predictive 'environment
-     `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 3)
-       :edge end
-       (priority . 10)
-       (dict . nil)
-       (face . nil)))
+    ;; ;; \begin{...} and \end{...} start and end LaTeX environments, which we make
+    ;; ;; "electric" by using a special env overlay class (defined below) if the
+    ;; ;; corresponding customization option is enabled
+    ;; (if predictive-latex-electric-environments
+    ;; 	(auto-overlay-load-definition
+    ;; 	 'predictive
+    ;; 	 '(predictive-latex-env :id environment))
+    ;;   (auto-overlay-load-definition
+    ;;    'predictive
+    ;;    '(nested :id environment)))
+    ;; ;; load the regexps into the list
+    ;; (auto-overlay-load-regexp
+    ;;  'predictive 'environment
+    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+    ;;    :edge start
+    ;;    (dict . predictive-latex-math-dict)
+    ;;    (priority . 10)
+    ;;    (completion-menu-function . predictive-latex-construct-browser-menu)
+    ;;    (auto-completion-override-syntax-alist
+    ;; 	. ((?' . (,punct-resolve none t))))
+    ;;    (face . (background-color . ,predictive-overlay-debug-colour))))
+    ;; (auto-overlay-load-regexp
+    ;;  'predictive 'environment
+    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+    ;;    :edge end
+    ;;    (dict . predictive-latex-math-dict)
+    ;;    (priority . 10)
+    ;;    (completion-menu-function . predictive-latex-construct-browser-menu)
+    ;;    (face . (background-color . ,predictive-overlay-debug-colour))))
+    ;; (auto-overlay-load-regexp
+    ;;  'predictive 'environment
+    ;;  '(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
+    ;;    :edge start
+    ;;    (priority . 10)
+    ;;    (dict . nil)
+    ;;    (face . nil)))
+    ;; (auto-overlay-load-regexp
+    ;;  'predictive 'environment
+    ;;  `(("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 3)
+    ;;    :edge end
+    ;;    (priority . 10)
+    ;;    (dict . nil)
+    ;;    (face . nil)))
 
 
     ;; \documentclass defines the document type. Through the use of a special
@@ -833,6 +941,10 @@ function automatically when predictive mode is enabled in
       (append (auto-completion-lookup-behaviour nil ?w 'predictive)
 	      (auto-completion-lookup-behaviour nil ?. 'predictive)
 	      (auto-completion-lookup-behaviour nil ?  'predictive))
+    ;; store behaviours in variables for source syntax-alists
+    (setq predictive-latex-word-completion-behaviour word-complete)
+    (setq predictive-latex-punctuation-resolve-behaviour punct-resolve)
+    (setq predictive-latex-whitespace-resolve-behaviour whitesp-resolve)
 
     ;; make "\", "$", "_", "{" and "}" do the right thing
     (setq auto-completion-override-syntax-alist

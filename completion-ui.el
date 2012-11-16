@@ -413,10 +413,10 @@ and `complete-word-at-point'."
 
 
 (defcustom auto-completion-source-functions
-  '(auto-completion-regexp-source
-    auto-completion-face-source
-    auto-completion-text-property-source
-    auto-completion-overlay-source)
+  '(auto-completion-text-property-source
+    auto-completion-overlay-source
+    auto-completion-regexp-source
+    auto-completion-face-source)
   "A non-standard hook used to select a completion source
 for `auto-completion-mode' and `complete-word-at-point'.
 
