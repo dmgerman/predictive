@@ -285,13 +285,16 @@ different value for each completion source."
 
 (defun completion-ui-get-value-for-source
   (source value-list &optional no-default)
-  ;; extract value that applies to SOURCE from VALUE-LIST
+  ;; Extract value that applies to SOURCE from VALUE-LIST. Falls back to
+  ;; default value unless NO-DEFAULT is non-nil.
   (when (symbolp value-list) (setq value-list (symbol-value value-list)))
-  (cdr (or (assq (if (overlayp source)
-		     (overlay-get source 'completion-source)
-		   source)
-		 value-list)
-	   (if no-default nil (assq t value-list)))))
+  (when (overlayp source)
+    (setq source (overlay-get source 'completion-source)))
+  (or (cdr (assq source value-list))
+      (and (setq source (completion-ui-source-inherit-from source))
+	   (completion-ui-get-value-for-source
+	    source value-list no-default))
+      (and (not no-default) (cdr (assq t value-list)))))
 
 
 (defun completion-ui-update-per-source-defcustoms (source &optional del)
@@ -1729,6 +1732,11 @@ completion overlay for the current completion.
        (setq name (substring name (match-end 0))))
      (intern name)))
 
+(defmacro completion-ui--frequency-hash-table-name (name sort-by-frequency)
+  (cond
+   ((eq sort-by-frequency 'global) "completion-ui--frequency-data")
+   (t `(concat "completion-ui--" (symbol-name ,name) "-frequency-data"))))
+
 (defmacro completion-ui--source-def-name (def)
   `(car ,def))
 
@@ -1765,16 +1773,14 @@ completion overlay for the current completion.
 (defmacro completion-ui--source-def-popup-frame-function (def)
   `(plist-get ,def :popup-frame-function))
 
-(defmacro completion-ui--source-def-menu-function (def)
+(defmacro completion-ui--source-def-menu (def)
   `(plist-get ,def :menu))
 
-(defmacro completion-ui--source-def-browser-function (def)
+(defmacro completion-ui--source-def-browser (def)
   `(plist-get ,def :browser))
 
-(defmacro completion-ui--frequency-hash-table-name (name sort-by-frequency)
-  (cond
-   ((eq sort-by-frequency 'global) "completion-ui--frequency-data")
-   (t `(concat "completion-ui--" (symbol-name ,name) "-frequency-data"))))
+(defmacro completion-ui--source-def-inherit-from (def)
+  `(plist-get ,def :inherit-from))
 
 
 (defvar completion-ui-register-source-functions nil
@@ -1789,13 +1795,13 @@ passed on to the hook functions.")
 
 (defmacro* completion-ui-register-source
     (completion-function &rest args
-     &key name completion-args other-args
-     non-prefix-completion prefix-function word-thing
-     command-name no-command no-auto-completion
-     accept-functions reject-functions sort-by-frequency
+     &key name completion-args other-args non-prefix-completion
+     command-name no-command no-auto-completion inherit-from
+     prefix-function word-thing sort-by-frequency
+     accept-functions reject-functions
      tooltip-function popup-tip-function popup-frame-function menu browser
      &allow-other-keys)
-  "Register a Completion-UI source.
+  "Define a Completion-UI source.
 
 \(Note that none of the arguments should be quoted.\)
 
@@ -1814,9 +1820,9 @@ candidates for that prefix.
 
 If COMPLETION-FUNCTION takes two arguments, the second one must
 be an optional argument. It is passed the prefix to complete in
-the first argument. The second argument may be used to specify
-the maximum number of completion candidates to return. If it is
-nil, all possible candidates should be returned.
+the first argument. The second argument is used to specify the
+maximum number of completion candidates to return. If it is nil,
+all possible candidates should be returned.
 
 The following keyword arguments are useful when using a
 COMPLETION-FUNCTION that takes additional arguments that should
@@ -1862,11 +1868,34 @@ The following keyword arguments are also meaningful:
          source. Default is to automatically define a new
          interactive command called `complete-<name>' which
          completes the prefix at point using the new source.
-         (See also :command-name keyword, below.)
 
 :command-name SYMBOL
          Override the default interactive command
          name (cf. :no-command keyword, above).
+
+:sort-by-frequency SYMBOL
+        A non-nil value causes completions from this source to be
+        sorted by frequency. Completion-UI will record usage
+        frequency data for this source, and automatically sort
+        its completions by frequency. If set to the symbol
+        `global', frequency data will be pooled with data from
+        other completion sources. If set to the symbol `source',
+        frequency data will be accumulated separately for this
+        source. (Any other non-nil value defaults to `source'.)
+
+
+:inherit-from SOURCE
+         Inherit any of the following keywords that are
+         unspecified from another completion SOURCE (a symbol).
+
+:non-prefix-completion BOOLEAN
+        A non-nil value specifies that this completion source
+        does something other than prefix completion
+        \(e.g. searching for regular expression matches\), so
+        that the \"prefix\" is instead interpreted as some kind
+        of pattern used to find matches, and the completions
+        should *replace* that prefix when selected. Completion-UI
+        will adapt the completion user-interfaces accordingly.
 
 :prefix-function FUNCTION
          Function to call to return the prefix to complete at
@@ -1881,15 +1910,6 @@ The following keyword arguments are also meaningful:
          keyword, above). Note that we require `forward-op' to be
          defined for :word-thing, which is *not* the case for all
          pre-defined \"things\" in `thing-at-point'.
-
-:non-prefix-completion BOOLEAN
-        A non-nil value specified that this completion source
-        does something other than prefix completion
-        \(e.g. searching for regular expression matches\), so
-        that the \"prefix\" is instead interpreted as some kind
-        of pattern used to find matches, and the completions
-        should *replace* that prefix when selected. Completion-UI
-        will adapt the user-interface appropriately.
 
 :accept-functions FUNCTION|LIST
         A function or list of functions to call when a completion
@@ -1906,16 +1926,6 @@ The following keyword arguments are also meaningful:
         candidate that was rejected, and any prefix argument
         supplied by the user if the accept command was called
         interactively.
-
-:sort-by-frequency SYMBOL
-        A non-nil value causes completions from this source to be
-        sorted by frequency. Completion-UI will record usage
-        frequency data for this source, and automatically sort
-        its completions by frequency. If set to the symbol
-        `global', frequency data will be pooled with data from
-        other completion sources. If set to the symbol `source',
-        frequency data will be accumulated separately for this
-        source. (Any other non-nil value defaults to `source'.)
 
 :syntax-alist ALIST
         If specified, entries in the alist override those in
@@ -1961,7 +1971,9 @@ pop-up frame, menu, and browser menu.
 
 
 The special hook `completion-ui-register-source-functions' is
-called after registering the completion source.
+called after registering the completion source. The hook
+functions are called with exactly the same arguments as passed to
+`completion-ui-register-source'.
 
 Arbitrary additional keyword arguments can be passed in the
 argument list. These have no effect in
@@ -2101,353 +2113,454 @@ functions called from the
 	      accept-functions)
 	))
 
+    `(progn
+       ;; define the completion source
+       ,(completion-ui--define-source name cmplfun (copy-sequence args)
+				     (unless no-command command-name)
+				     no-auto-completion)
+       ;; if gathering separate frequency data for this source, create hash table
+       ;; to store frequency data
+       ,(when (and sort-by-frequency (not (eq sort-by-frequency 'global)))
+	  (let ((hash-table-name
+		 (intern (completion-ui--frequency-hash-table-name
+			  name sort-by-frequency))))
+	    `(defvar ,hash-table-name (make-hash-table :test 'equal))))
 
-    ;; construct interface definiton
-    (let (source-def)
-      (let* ((keyargs (cons nil (copy-sequence args)))
-	     (p keyargs))
-	(while (cdr p)
-	  (if (memq (cadr p) '(:name :completion-args :other-args
-				     :command-name :no-command :no-auto-completion
-				     :sort-by-frequency))
-	      (setcdr p (nthcdr 3 p))
-	    (setq p (cddr p))))
-	(setq keyargs (cdr keyargs))  ; drop leading nil
-	(setq source-def (cons name (append (list cmplfun) keyargs))))
+       ;; run hooks
+       ,(progn
+	  (setq args (plist-put (copy-sequence args) :name name))
+	  (let ((elt args))
+	    (while (cadr elt)
+	      (setf (cadr elt) `(quote ,(cadr elt))
+		    elt (cddr elt))))
+	  `(run-hook-with-args 'completion-ui-register-source-functions
+			       ',completion-function ,@args)))))
 
-      `(progn
-	 ;; construct code to add source definition to list (or replace
-	 ;; existing definition)
-	 (let ((existing (assq ',name completion-ui-source-definitions)))
-	   (if (not existing)
-	       (push ',source-def completion-ui-source-definitions)
-	     (message "Completion-UI source `%s' already registered\
+
+(defalias 'completion-ui-define-source 'completion-ui-register-source)
+
+
+(defmacro* completion-ui-register-derived-source
+  (name parent &rest args
+   &key completion-function completion-args other-args
+   non-prefix-completion sort-by-frequency
+   command-name no-command no-auto-completion
+   prefix-function word-thing accept-functions reject-functions
+   tooltip-function popup-tip-function popup-frame-function menu browser
+   &allow-other-keys)
+
+  (setq args (plist-put args :inherit-from parent))
+  (setq args (plist-put args :name name))
+
+  ;; if a completion-function is specified, we can just pass everything to
+  ;; `completion-ui-define-source' with parent source specified in keywords
+  (if completion-function
+      `(completion-ui-define-source ,completion-function ,@args)
+
+    ;; otherwise...
+    ;; drop keywords that are meaningless without a completion-function
+    (setq args (cons nil args))
+    (let ((p args))
+      (while (cdr p)
+	(if (memq (cadr p) '(:completion-function :completion-args :other-args
+			     :non-prefix-completion))
+	    (setcdr p (nthcdr 3 p))
+	  (setq p (cddr p)))))
+    (setq args (cdr args))  ; drop leading nil
+
+    ;; if :sort-by-frequency is specified, need to get completion-function
+    ;; from parent and pass everything to `completion-ui-define-source'
+    (if sort-by-frequency
+	`(completion-ui-define-source
+	  ,(completion-ui-source-completion-function parent) ,@args)
+
+      ;; otherwise, can define a source with a null completion-function, where
+      ;; the parent source is specified in the keyword args
+      (completion-ui--define-source name nil args
+				    (unless no-command command-name)
+				    no-auto-completion))))
+
+
+(defalias 'completion-ui-define-derived-source
+  'completion-ui-register-derived-source)
+
+
+(defun completion-ui--define-source
+  (name cmplfun keyargs &optional command-name no-auto-completion)
+  ;; construct completion source definiton
+  (let (source-def)
+    ;; drop keywords that are only meaningful for constructing the definition
+    (setq keyargs (cons nil keyargs))
+    (let ((p keyargs))
+      (while (cdr p)
+	(if (memq (cadr p) '(:name :completion-args :other-args
+			     :command-name :no-command :no-auto-completion
+			     :sort-by-frequency))
+	    (setcdr p (nthcdr 3 p))
+	  (setq p (cddr p))))
+      (setq keyargs (cdr keyargs))  ; drop leading nil
+      ;; construct source definition
+      (setq source-def (cons name (append (list cmplfun) keyargs))))
+
+    `(progn
+       ;; add source definition to list (or replace existing definition)
+       (let ((existing (assq ',name completion-ui-source-definitions)))
+	 (if (not existing)
+	     (push ',source-def completion-ui-source-definitions)
+	   (message "Completion-UI source `%s' already registered\
  - replacing existing definition" ',name)
-	     (setcdr existing ',(cdr source-def))))
+	   (setcdr existing ',(cdr source-def))))
 
-	 ;; if gathering separate frequency data for this source, create hash
-	 ;; table to store frequency data
-	 ,(when (and sort-by-frequency (not (eq sort-by-frequency 'global)))
-	    (let ((hash-table-name
-		   (intern (completion-ui--frequency-hash-table-name
-			    name sort-by-frequency))))
-	      `(defvar ,hash-table-name (make-hash-table :test 'equal))))
+       ;; construct code to define completion command
+       ,(when command-name
+	  `(defun ,command-name
+	     (&optional n)
+	     ,(concat "Complete or cycle word at point using "
+		      (symbol-name name) " source.")
+	     (interactive "p")
+	     (complete-or-cycle-word-at-point ',name n)))
 
-	 ;; construct code to define completion command
-	 ,(unless no-command
-	    `(defun ,command-name
-	       (&optional n)
-	       ,(concat "Complete or cycle word at point using "
-			(symbol-name name) " source.")
-	       (interactive "p")
-	       (complete-or-cycle-word-at-point ',name n)))
+       ;; update list of choices in `auto-completion-default-source'
+       ;; defcustom
+       ,(if no-auto-completion
+	    `(delete '(const ,name)
+		     (get 'auto-completion-default-source 'custom-type))
+	  `(let ((choices (get 'auto-completion-default-source 'custom-type)))
+	     (unless (member '(const ,name) choices)
+	       (nconc (cdr choices) '((const ,name))))))
 
-	 ;; update list of choices in `auto-completion-default-source'
-	 ;; defcustom
-	 ,(if no-auto-completion
-	      `(delete '(const ,name)
-		       (get 'auto-completion-default-source 'custom-type))
-	    `(let ((choices (get 'auto-completion-default-source 'custom-type)))
-	       (unless (member '(const ,name) choices)
-		 (nconc (cdr choices) '((const ,name))))))
-
-	 ;; update list of choices in other per-source defcustoms
-	 (completion-ui-update-per-source-defcustoms ',name)
-
-	 ;; run hooks
-	 ,(progn
-	    (setq args (plist-put args :name name))
-	    (let ((elt args))
-	      (while (cadr elt)
-		(setf (cadr elt) `(quote ,(cadr elt))
-		      elt (cddr elt))))
-	    `(run-hook-with-args 'completion-ui-register-source-functions
-				 ',completion-function ,@args))
-	 ))))
+       ;; update list of choices in other per-source defcustoms
+       (completion-ui-update-per-source-defcustoms ',name)
+       )))
 
 
 
+;;; === functions for retrieving completion source properties ===
 
-(defmacro completion-ui-completion-source (source &optional overlay)
-  ;; return SOURCE or completion-source for OVERLAY at point
-  `(or ,(when overlay
-  	  `(and ,overlay (overlay-get ,overlay 'completion-source)))
-       ;; ,(when source
-       ;; 	  `(and (fboundp 'auto-overlay-local-binding)
-       ;; 		(let ((completion-source ,source))
-       ;; 		  (auto-overlay-local-binding 'completion-source))))
-       ,source))
+(defsubst completion-ui-completion-source (source &optional overlay)
+  ;; return SOURCE, or completion-source for OVERLAY if specified
+  (or (and overlay (overlay-get overlay 'completion-source))
+      ;; (and (fboundp 'auto-overlay-local-binding)
+      ;; 	   (let ((completion-source source))
+      ;; 	     (auto-overlay-local-binding 'completion-source)))
+      source))
 
 
-(defmacro completion-ui-source-completion-function
-  (source &optional overlay)
-  ;; return completion-function for SOURCE or OVERLAY at point
-  `(completion-ui--source-def-completion-function
-    (assq (completion-ui-completion-source ,source ,overlay)
-  	  completion-ui-source-definitions)))
+(defun completion-ui-source-inherit-from (source &optional overlay)
+  ;; return completion source that SOURCE inherits from, if any
+  (completion-ui--source-def-inherit-from
+   (assq (completion-ui-completion-source source overlay)
+	 completion-ui-source-definitions)))
+
+
+(defun completion-ui-source-completion-function (source &optional overlay)
+  ;; return completion-function for SOURCE, or for OVERLAY if specified
+  (or (and overlay (overlay-get overlay 'completion-function))
+      (let ((def (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions)))
+	;; source definition
+	(or (completion-ui--source-def-completion-function def)
+	    ;; derived source
+	    (and (completion-ui--source-def-inherit-from def)
+		 (completion-ui-source-completion-function
+		  (completion-ui--source-def-inherit-from def)))))))
+
+
+(defun completion-ui-source-non-prefix-completion (source &optional overlay)
+  ;; return non-prefix-completion setting for SOURCE or OVERLAY
+  (or (and overlay (overlay-get overlay 'completion-non-prefix-completion))
+      (let ((def (assq (completion-ui-completion-source source overlay)
+		       completion-ui-source-definitions)))
+	;; source definition
+	(if (completion-ui--source-def-completion-function def)
+	    (completion-ui--source-def-non-prefix-completion def)
+	  ;; derived source
+	  (and (completion-ui--source-def-inherit-from def)
+	       (completion-ui-source-non-prefix-completion
+		(completion-ui--source-def-inherit-from def)))))))
 
 
 (defun completion-ui-source-prefix-function (source &optional overlay)
-  ;; return prefix-function for SOURCE or OVERLAY at point
+  ;; return prefix-function at point for SOURCE or OVERLAY
   (or (and overlay (overlay-get overlay 'completion-prefix-function))
-      (and source
-	   (let (prefix-function)
-	     ;; get overlay-local binding, falling back to SOURCE definition
-	     (if (fboundp 'auto-overlay-local-binding)
-		 (let ((completion-prefix-function
-			(completion-ui--source-def-prefix-function
-			 (assq (completion-ui-completion-source source)
-			       completion-ui-source-definitions))))
-		   (setq prefix-function
-			 (auto-overlay-local-binding
-			  'completion-prefix-function)))
-	       (setq prefix-function
-		     (completion-ui--source-def-prefix-function
-		      (assq (completion-ui-completion-source source)
-			    completion-ui-source-definitions))))
-	     ;; evaluate result until we get a function
-	     (while (and prefix-function
-			 (not (functionp prefix-function))
-			 (boundp prefix-function))
-	       (setq prefix-function (symbol-value prefix-function)))
-	     prefix-function))
+      (let* ((def (assq (completion-ui-completion-source source overlay)
+			completion-ui-source-definitions))
+	     (prefix-function
+	      (or
+	       ;; try overlay-local binding
+	       (and (fboundp 'auto-overlay-local-binding)
+		    (auto-overlay-local-binding
+		     'completion-prefix-function nil 'only-overlay))
+	       ;; source definition
+	       (completion-ui--source-def-prefix-function def)
+	       ;; derived source
+	       (and (completion-ui--source-def-inherit-from def)
+		    (completion-ui-source-prefix-function
+		     (completion-ui--source-def-inherit-from def))))))
+	;; evaluate result until we get a function
+	(while (and prefix-function
+		    (not (functionp prefix-function))
+		    (boundp prefix-function))
+	  (setq prefix-function (symbol-value prefix-function)))
+	prefix-function)
       ;; default fall-back
       'completion-prefix))
 
 
-(defun completion-ui-source-word-thing
-  (source &optional overlay)
-  ;; return word-thing for SOURCE or OVERLAY at point
+(defun completion-ui-source-word-thing (source &optional overlay)
+  ;; return word-thing at point for SOURCE or OVERLAY
   (or (and overlay (overlay-get overlay 'completion-word-thing))
-      (and source
-	   (let (word-thing)
-	     ;; get overlay-local binding, falling back to SOURCE definition
-	     (if (fboundp 'auto-overlay-local-binding)
-		 (let ((completion-word-thing
-			(completion-ui--source-def-word-thing
-			 (assq (completion-ui-completion-source source)
-			       completion-ui-source-definitions))))
-		   (setq word-thing (auto-overlay-local-binding
-				     'completion-word-thing)))
-	       (setq word-thing
-		     (completion-ui--source-def-word-thing
-		      (assq (completion-ui-completion-source source)
-			    completion-ui-source-definitions))))
-	     ;; evaluate result until we get a thing-at-point symbol
-	     (while (and word-thing
-			 (not (or (get word-thing 'forward-op)
-				  (fboundp
-				   (intern-soft
-				    (format "forward-%s" word-thing)))))
-			 (boundp word-thing))
-	       (setq word-thing (symbol-value word-thing)))
-	     word-thing))
+      (let* ((def (assq (completion-ui-completion-source source overlay)
+			completion-ui-source-definitions))
+	     (word-thing
+	      (or
+	       ;; try overlay-local binding
+	       (and (fboundp 'auto-overlay-local-binding)
+		    (auto-overlay-local-binding
+		     'completion-word-thing nil 'only-overlay))
+	       ;; source definition
+	       (completion-ui--source-def-word-thing def)
+	       ;; derived source
+	       (and (completion-ui--source-def-inherit-from def)
+		    (completion-ui-source-word-thing
+		     (completion-ui--source-def-inherit-from def))))))
+	;; evaluate result until we get a thing-at-point symbol
+	(while (and word-thing
+		    (not (or (get word-thing 'forward-op)
+			     (fboundp (intern-soft
+				       (format "forward-%s" word-thing)))))
+		    (boundp word-thing))
+	  (setq word-thing (symbol-value word-thing)))
+	word-thing)
       ;; default fall-back
       'word))
 
 
-(defun completion-ui-source-syntax-alist (source)
-  ;; return override-syntax-alist setting for SOURCE
-  (completion-ui--source-def-syntax-alist
-   (assq (completion-ui-completion-source source)
-	 completion-ui-source-definitions)))
-
-
-(defun completion-ui-source-override-syntax-alist (source)
-  ;; return override-syntax-alist setting for SOURCE
-  (completion-ui--source-def-override-syntax-alist
-   (assq (completion-ui-completion-source source)
-	 completion-ui-source-definitions)))
-
-
-(defun completion-ui-source-non-prefix-completion
-  (source &optional overlay)
-  ;; return non-prefix-completion setting for SOURCE or OVERLAY at point
-  (or (and overlay (overlay-get overlay 'completion-non-prefix-completion))
-      (and source
-	   (or (and (fboundp 'auto-overlay-local-binding)
-		    (let ((completion-non-prefix-completion
-			   (completion-ui--source-def-non-prefix-completion
-			    (assq (completion-ui-completion-source source)
-				  completion-ui-source-definitions))))
-		      (auto-overlay-local-binding
-		       'completion-non-prefix-completion)))
-	       (completion-ui--source-def-non-prefix-completion
-		(assq (completion-ui-completion-source source)
-		      completion-ui-source-definitions))))
-      nil))  ; default fall-back
-
-
-(defmacro completion-ui-source-accept-functions
-  (source &optional overlay)
+(defun completion-ui-source-accept-functions (source &optional overlay)
   ;; return accept-functions for SOURCE or OVERLAY
-  `(completion-ui--source-def-accept-functions
-    (assq (completion-ui-completion-source ,source ,overlay)
-  	  completion-ui-source-definitions)))
+  (let ((def (assq (completion-ui-completion-source source overlay)
+		   completion-ui-source-definitions)))
+    ;; source definition
+    (or (completion-ui--source-def-accept-functions def)
+	;; derived source
+	(and (completion-ui--source-def-inherit-from def)
+	     (completion-ui-source-accept-functions
+	      (completion-ui--source-def-inherit-from def))))))
 
 
-(defmacro completion-ui-source-reject-functions
-  (source &optional overlay)
+(defun completion-ui-source-reject-functions (source &optional overlay)
   ;; return reject-functions for SOURCE or OVERLAY
-  `(completion-ui--source-def-reject-functions
-    (assq (completion-ui-completion-source ,source ,overlay)
-  	  completion-ui-source-definitions)))
+  (let ((def (assq (completion-ui-completion-source source overlay)
+		   completion-ui-source-definitions)))
+    ;; source definition
+    (or (completion-ui--source-def-reject-functions def)
+	;; derived source
+	(and (completion-ui--source-def-inherit-from def)
+	     (completion-ui-source-reject-functions
+	      (completion-ui--source-def-inherit-from def))))))
 
 
-(defun completion-ui-source-popup-frame-function
-  (source &optional overlay)
-  ;; return popup-frame-function for SOURCE of OVERLAY at point
-  (or (let (popup-frame-function)
-	;; get overlay-local binding, falling back to SOURCE definition
-	(if (fboundp 'auto-overlay-local-binding)
-	    (let ((completion-popup-frame-function
-  		   (completion-ui--source-def-popup-frame-function
-  		    (assq (completion-ui-completion-source source overlay)
-  			  completion-ui-source-definitions))))
-  	      (setq popup-frame-function
+(defun completion-ui-source-syntax-alist (source &optional overlay)
+  ;; return syntax-alist at point for SOURCE or OVERLAY
+  (or (and overlay (overlay-get overlay 'auto-completion-syntax-alist))
+      (let* ((def (assq (completion-ui-completion-source source)
+			completion-ui-source-definitions))
+	     (syntax-alist
+	      (or
+	       ;; try overlay-local binding
+	       (and (fboundp 'auto-overlay-local-binding)
 		    (auto-overlay-local-binding
-		     'completion-popup-frame-function)))
-	  (setq popup-frame-function
-		(completion-ui--source-def-popup-frame-function
-		 (assq (completion-ui-completion-source source overlay)
-		       completion-ui-source-definitions))))
-	;; evaluate result until we get a function
-	(while (and popup-frame-function
-		    (not (functionp popup-frame-function))
-		    (boundp popup-frame-function))
-	  (setq popup-frame-function (symbol-value popup-frame-function)))
-	popup-frame-function)
-      ;; default fall-back
-      'completion-construct-popup-frame-text))
+		     'auto-completion-syntax-alist nil 'only-overlay))
+	       ;; source definition
+	       (completion-ui--source-def-syntax-alist def)
+	       ;; derived source
+	       (and (completion-ui--source-def-inherit-from def)
+		    (completion-ui-source-syntax-alist
+		     (completion-ui--source-def-inherit-from def))))))
+	;; evaluate result until we get a thing-at-point symbol
+	(while (and syntax-alist
+		    (symbolp syntax-alist)
+		    (boundp syntax-alist))
+	  (setq syntax-alist (symbol-value syntax-alist)))
+	syntax-alist)))
 
 
-(defun completion-ui-source-tooltip-function
-  (source &optional overlay)
-  ;; return tooltip-function for SOURCE of OVERLAY at point
-  (or (let (tooltip-function)
-	;; get overlay-local binding, falling back to SOURCE definition
-	(if (fboundp 'auto-overlay-local-binding)
-	    (let ((completion-tooltip-function
-		   (completion-ui--source-def-tooltip-function
-		    (assq (completion-ui-completion-source source overlay)
-			  completion-ui-source-definitions))))
-	      (setq tooltip-function
+(defun completion-ui-source-override-syntax-alist (source &optional overlay)
+  ;; return override-syntax-alist at point for SOURCE or OVERLAY
+  (or (and overlay (overlay-get overlay 'auto-completion-override-syntax-alist))
+      (let* ((def (assq (completion-ui-completion-source source)
+			completion-ui-source-definitions))
+	     (override-alist
+	      (or
+	       ;; try overlay-local binding
+	       (and (fboundp 'auto-overlay-local-binding)
 		    (auto-overlay-local-binding
-		     'completion-tooltip-function)))
-	  (setq tooltip-function
-		(completion-ui--source-def-tooltip-function
-		 (assq (completion-ui-completion-source source overlay)
-		       completion-ui-source-definitions))))
-	;; evaluate result until we get a function
-	(while (and tooltip-function
-		    (not (functionp tooltip-function))
-		    (boundp tooltip-function))
-	  (setq tooltip-function (symbol-value tooltip-function)))
-	tooltip-function)
-      ;; default fall-back
-      'completion-construct-tooltip-text))
+		     'auto-completion-override-syntax-alist
+		     nil 'only-overlay))
+	       ;; source definition
+	       (completion-ui--source-def-override-syntax-alist def)
+	       ;; derived source
+	       (and (completion-ui--source-def-inherit-from def)
+		    (completion-ui-source-override-syntax-alist
+		     (completion-ui--source-def-inherit-from def))))))
+	;; evaluate result until we get a thing-at-point symbol
+	(while (and override-alist
+		    (symbolp override-alist)
+		    (boundp override-alist))
+	  (setq override-alist (symbol-value override-alist)))
+	override-alist)))
 
 
-(defun completion-ui-source-popup-tip-function
-  (source &optional overlay)
-  ;; return popup-tip-function for SOURCE of OVERLAY at point
-  (or (let (popup-tip-function)
-	;; get overlay-local binding, falling back to SOURCE definition
-	(if (fboundp 'auto-overlay-local-binding)
-	    (let ((completion-popup-tip-function
-		   (completion-ui--source-def-popup-tip-function
-		    (assq (completion-ui-completion-source source overlay)
-			  completion-ui-source-definitions))))
-	      (setq popup-tip-function
-		    (auto-overlay-local-binding
-		     'completion-popup-tip-function)))
-	  (setq popup-tip-function
-		(completion-ui--source-def-popup-tip-function
-		 (assq (completion-ui-completion-source source overlay)
-		       completion-ui-source-definitions))))
-	;; evaluate result until we get a function
-	(while (and popup-tip-function
-		    (not (functionp popup-tip-function))
-		    (boundp popup-tip-function))
-	  (setq popup-tip-function (symbol-value popup-tip-function)))
-	popup-tip-function)
-      ;; default fall-back
-      'completion-construct-tooltip-text))
+(defun completion-ui-source-tooltip-function (source &optional overlay)
+  ;; return tooltip-function at point for SOURCE or OVERLAY
+  (let* ((def (assq (completion-ui-completion-source source overlay)
+		    completion-ui-source-definitions))
+	 (tooltip-function
+	  (or
+	   ;; try overlay-local binding
+	   (and (fboundp 'auto-overlay-local-binding)
+		(auto-overlay-local-binding
+		 'completion-tooltip-function nil 'only-overlay))
+	   ;; source definition
+	   (completion-ui--source-def-tooltip-function def)
+	   ;; derived source
+	   (and (completion-ui--source-def-inherit-from def)
+		(completion-ui-source-tooltip-function
+		 (completion-ui--source-def-inherit-from def))))))
+    ;; evaluate result until we get a function
+    (while (and tooltip-function
+		(not (functionp tooltip-function))
+		(boundp tooltip-function))
+      (setq tooltip-function (symbol-value tooltip-function)))
+    tooltip-function)
+  ;; default fall-back
+  'completion-construct-tooltip-text)
 
 
-(defun completion-ui-source-menu
-  (source &optional overlay)
-  ;; return menu for SOURCE of OVERLAY at point
-  (or (let (menu-function)
-	;; get overlay-local binding, falling back to SOURCE definition
-	(if (fboundp 'auto-overlay-local-binding)
-  	    (let ((completion-menu-function
-  		   (completion-ui--source-def-menu-function
-  		    (assq (completion-ui-completion-source source overlay)
-  			  completion-ui-source-definitions))))
-  	      (setq menu-function
-		    (auto-overlay-local-binding 'completion-menu-function)))
-	  (setq menu-function
-		(completion-ui--source-def-menu-function
-		 (assq (completion-ui-completion-source source overlay)
-		       completion-ui-source-definitions))))
-	;; evaluate result until we get a function
-	(while (and menu-function
-		    (not (functionp menu-function))
-		    (boundp menu-function))
-	  (setq menu-function (symbol-value menu-function)))
-	menu-function)
-      ;; default fall-back
-      'completion-construct-menu))
+(defun completion-ui-source-popup-tip-function (source &optional overlay)
+  ;; return popup-tip-function at point for SOURCE or OVERLAY
+  (let* ((def (assq (completion-ui-completion-source source overlay)
+		    completion-ui-source-definitions))
+	 (popup-tip-function
+	  (or
+	   ;; try overlay-local binding
+	   (and (fboundp 'auto-overlay-local-binding)
+		(auto-overlay-local-binding
+		 'completion-popup-tip-function nil 'only-overlay))
+	   ;; source definition
+	   (completion-ui--source-def-popup-tip-function def)
+	   ;; derived source
+	   (and (completion-ui--source-def-inherit-from def)
+		(completion-ui-source-popup-tip-function
+		 (completion-ui--source-def-inherit-from def))))))
+    ;; evaluate result until we get a function
+    (while (and popup-tip-function
+		(not (functionp popup-tip-function))
+		(boundp popup-tip-function))
+      (setq popup-tip-function (symbol-value popup-tip-function)))
+    popup-tip-function)
+  ;; default fall-back
+  'completion-construct-popup-tip-text)
 
 
-(defun completion-ui-source-browser
-  (source &optional overlay)
-  ;; return browser for SOURCE of OVERLAY at point
-  (or (let (browser-function)
-	;; get overlay-local binding, falling back to SOURCE definition
-	(if (fboundp 'auto-overlay-local-binding)
-  	    (let ((completion-browser-function
-  		   (completion-ui--source-def-browser-function
-  		    (assq (completion-ui-completion-source source overlay)
-  			  completion-ui-source-definitions))))
-  	      (setq browser-function
-		    (auto-overlay-local-binding
-		     'completion-browser-function)))
-	  (setq browser-function
-		(completion-ui--source-def-browser-function
-		 (assq (completion-ui-completion-source source overlay)
-		       completion-ui-source-definitions))))
-	;; evaluate result until we get a function
-	(while (and browser-function
-		    (not (functionp browser-function))
-		    (boundp browser-function))
-	  (setq browser-function (symbol-value browser-function)))
-	browser-function)
-      ;; default fall-back
-      'completion-construct-browser-menu))
+(defun completion-ui-source-popup-frame-function (source &optional overlay)
+  ;; return popup-frame-function at point for SOURCE or OVERLAY
+  (let* ((def (assq (completion-ui-completion-source source overlay)
+		    completion-ui-source-definitions))
+	 (popup-frame-function
+	  (or
+	   ;; try overlay-local binding
+	   (and (fboundp 'auto-overlay-local-binding)
+		(auto-overlay-local-binding
+		 'completion-popup-frame-function nil 'only-overlay))
+	   ;; source definition
+	   (completion-ui--source-def-popup-frame-function def)
+	   ;; derived source
+	   (and (completion-ui--source-def-inherit-from def)
+		(completion-ui-source-popup-frame-function
+		 (completion-ui--source-def-inherit-from def))))))
+    ;; evaluate result until we get a function
+    (while (and popup-frame-function
+		(not (functionp popup-frame-function))
+		(boundp popup-frame-function))
+      (setq popup-frame-function (symbol-value popup-frame-function)))
+    popup-frame-function)
+  ;; default fall-back
+  'completion-construct-popup-frame-text)
+
+
+(defun completion-ui-source-menu (source &optional overlay)
+  ;; return menu at point for SOURCE or OVERLAY
+  (let* ((def (assq (completion-ui-completion-source source overlay)
+		    completion-ui-source-definitions))
+	 (menu
+	  (or
+	   ;; try overlay-local binding
+	   (and (fboundp 'auto-overlay-local-binding)
+		(auto-overlay-local-binding
+		 'completion-menu nil 'only-overlay))
+	   ;; source definition
+	   (completion-ui--source-def-menu def)
+	   ;; derived source
+	   (and (completion-ui--source-def-inherit-from def)
+		(completion-ui-source-menu
+		 (completion-ui--source-def-inherit-from def))))))
+    ;; evaluate result until we get a function
+    (while (and menu
+		(not (or (functionp menu) (keymapp menu)))
+		(boundp menu))
+      (setq menu (symbol-value menu)))
+    menu)
+  ;; default fall-back
+  'completion-construct-menu)
+
+
+(defun completion-ui-source-browser (source &optional overlay)
+  ;; return browser at point for SOURCE or OVERLAY
+  (let* ((def (assq (completion-ui-completion-source source overlay)
+		    completion-ui-source-definitions))
+	 (browser
+	  (or
+	   ;; try overlay-local binding
+	   (and (fboundp 'auto-overlay-local-binding)
+		(auto-overlay-local-binding
+		 'completion-browser nil 'only-overlay))
+	   ;; source definition
+	   (completion-ui--source-def-browser def)
+	   ;; derived source
+	   (and (completion-ui--source-def-inherit-from def)
+		(completion-ui-source-browser
+		 (completion-ui--source-def-inherit-from def))))))
+    ;; evaluate result until we get a function
+    (while (and browser
+		(not (or (functionp browser) (keymapp browser)))
+		(boundp browser))
+      (setq browser (symbol-value browser)))
+    browser)
+  ;; default fall-back
+  'completion-construct-browser-menu)
 
 
 
-(defmacro completion-ui-source-run-accept-functions
+(defsubst completion-ui-source-run-accept-functions
   (source prefix completion &optional arg)
   ;; Run accept functions for SOURCE, passing the accepted COMPLETION of
   ;; PREFIX and any user-supplied ARG. SOURCE can be a completion overlay, in
   ;; which case its completion source is used.
-  `(let ((funcs (if (overlayp ,source)
-		    (completion-ui-source-accept-functions nil ,source)
-		  (completion-ui-source-accept-functions ,source))))
-     (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
+  (let ((funcs (if (overlayp source)
+		   (completion-ui-source-accept-functions nil source)
+		 (completion-ui-source-accept-functions source))))
+    (run-hook-with-args 'funcs prefix completion arg)))
 
 
-(defmacro completion-ui-source-run-reject-functions
+(defsubst completion-ui-source-run-reject-functions
   (source prefix completion &optional arg)
   ;; run reject functions for completion OVERLAY, passing the rejected
   ;; COMPLETION of PREFIX and any user-supplied ARG
-  `(let ((funcs (if (overlayp ,source)
-		    (completion-ui-source-accept-functions nil ,source)
-		  (completion-ui-source-accept-functions ,source))))
-     (run-hook-with-args 'funcs ,prefix ,completion ,arg)))
+  (let ((funcs (if (overlayp source)
+		   (completion-ui-source-reject-functions nil source)
+		 (completion-ui-source-reject-functions source))))
+    (run-hook-with-args 'funcs prefix completion arg)))
 
 
 
