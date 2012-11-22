@@ -2834,45 +2834,48 @@ The default completion source to use is the
 PREFIX-FUNCTION, and NON-PREFIX-COMPLETION override this
 default (see `complete-in-buffer' for more details)."
   (interactive)
-  (unless completion-source
-    (setq completion-source (auto-completion-source)))
 
-  ;; get completion overlay at point
-  (let* ((overlay (completion-ui-overlay-at-point))
-	 (word-thing
-	  (or (and overlay (overlay-get overlay 'prefix-word-thing))
-	      (and (fboundp 'auto-overlay-local-binding)
-		   (auto-overlay-local-binding 'completion-word-thing nil t))
-	      (and (symbolp prefix-function) (not (functionp prefix-function))
-		   prefix-function)
-	      (completion-ui-source-word-thing completion-source)
-	      'word)))
+  ;; abort if no completion source is defined at point
+  (when (or completion-source
+	    (setq completion-source (auto-completion-source)))
+    ;; get completion overlay at point
+    (let* ((overlay (completion-ui-overlay-at-point))
+	   (word-thing
+	    (or (and overlay (overlay-get overlay 'prefix-word-thing))
+		(and (fboundp 'auto-overlay-local-binding)
+		     (auto-overlay-local-binding
+		      'completion-word-thing nil t))
+		(and (symbolp prefix-function)
+		     (not (functionp prefix-function))
+		     prefix-function)
+		(completion-ui-source-word-thing completion-source)
+		'word)))
 
-    ;; if point is at start of an existing overlay, delete old completion
-    ;; before completing, preserving overlay so its prefix can be reused
-    (if (and overlay (= (point) (overlay-start overlay)))
-        (delete-region (overlay-start overlay) (overlay-end overlay))
+      ;; if point is at start of an existing overlay, delete old completion
+      ;; before completing, preserving overlay so its prefix can be reused
+      (if (and overlay (= (point) (overlay-start overlay)))
+	  (delete-region (overlay-start overlay) (overlay-end overlay))
 
-      ;; if there's a completion at point but point is not at start,
-      ;; delete overlay (effectively accepting old completion) and behave
-      ;; as if no completion was in progress
-      (when overlay
-	(completion-ui-delete-overlay overlay)
-	(setq overlay nil))
+	;; if there's a completion at point but point is not at start, delete
+	;; overlay (effectively accepting old completion) and behave as if no
+	;; completion was in progress
+	(when overlay
+	  (completion-ui-delete-overlay overlay)
+	  (setq overlay nil))
 
-      ;; if point is in middle of a word and `completion-overwrite' is
-      ;; enabled, delete rest of word before completing
-      (when (and completion-overwrite (completion-within-word-p word-thing))
-	(completion-overwrite-word-at-point word-thing)
-        ;; if there's now a completion overlay at point, delete it
-        (when (setq overlay (completion-ui-overlay-at-point))
-          (completion-ui-delete-overlay overlay)
-	  (setq overlay nil))))
+	;; if point is in middle of a word and `completion-overwrite' is
+	;; enabled, delete rest of word before completing
+	(when (and completion-overwrite (completion-within-word-p word-thing))
+	  (completion-overwrite-word-at-point word-thing)
+	  ;; if there's now a completion overlay at point, delete it
+	  (when (setq overlay (completion-ui-overlay-at-point))
+	    (completion-ui-delete-overlay overlay)
+	    (setq overlay nil))))
 
-    ;; do completion
-    (complete-in-buffer-1 completion-source prefix-function
-			  (if s-npcmpl non-prefix-completion 'not-set)
-			  nil overlay)))
+      ;; do completion
+      (complete-in-buffer-1 completion-source prefix-function
+			    (if s-npcmpl non-prefix-completion 'not-set)
+			    nil overlay))))
 
 
 
@@ -3444,148 +3447,149 @@ overlays."
  bound to non-printable character"))))
   (when (null syntax) (setq syntax (char-syntax char)))
 
-
   (let* ((source (auto-completion-source))
 	 (overlay (completion-ui-overlay-at-point))
-	 (word-thing (completion-ui-source-word-thing source overlay))
-	 wordstart prefix)
-    (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour)
-	(if no-syntax-override
-	    (auto-completion-lookup-behaviour nil syntax source)
-	  (auto-completion-lookup-behaviour char syntax source))
+	 word-thing wordstart prefix)
+    ;; if no auto-completion source is defined, just call `self-insert-command'
+    (if (null (or source overlay))
+	(if (eq char last-input-event) (self-insert-command 1) (insert char))
+      ;; otherwise...
+      (setq word-thing (completion-ui-source-word-thing source overlay))
+      (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour)
+	  (if no-syntax-override
+	      (auto-completion-lookup-behaviour nil syntax source)
+	    (auto-completion-lookup-behaviour char syntax source))
 
-      ;; ----- resolve behaviour -----
-      (completion-ui-resolve-old overlay)
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp resolve-behaviour)
-	(setq resolve-behaviour (funcall resolve-behaviour)))
-      ;; do whatever action was specified in alists
-      (cond
-       ;; no-op
-       ((null resolve-behaviour))
-
-       ;; accept
-       ((eq resolve-behaviour 'accept)
-	;; CHAR might not be a character if `last-input-event' included a
-	;; modifier (e.g. S-<space>)
-	(setq prefix (string char))
-	(setq wordstart t)
-	;; if there is a completion at point...
-	(when overlay
-	  ;; if point is at start of overlay, accept completion
-	  (if (= (point) (overlay-start overlay))
-	      (completion-accept nil overlay)
-	    ;; otherwise, delete overlay (effectively accepting old completion
-	    ;; but without running hooks)
-	    (completion-ui-delete-overlay overlay)
-	    (completion-ui-deactivate-interfaces overlay))
-	  (setq overlay nil)))
-
-       ;; reject
-       ((eq resolve-behaviour 'reject)
-	;; CHAR might not be a character if `last-input-event' included a
-	;; modifier (e.g. S-<space>)
-	(setq prefix (string char))
-	(setq wordstart t)
-	;; if there is a completion at point...
-	(when overlay
-	  ;; if point is at start of overlay, reject completion
-	  (if (= (point) (overlay-start overlay))
-	      (completion-reject nil overlay)
-	    ;; otherwise, delete overlay and everything following point
-	    (delete-region (point) (overlay-end overlay))
-	    (completion-ui-delete-overlay overlay)
-	    (completion-ui-deactivate-interfaces overlay))
-	  (setq overlay nil)))
-
-       ;; add to prefix
-       ((eq resolve-behaviour 'add)
-	;; if we're at the start of a word, prevent adjacent word from being
-	;; deleted below if `completion-overwrite' is non-nil
-	(when (completion-beginning-of-word-p word-thing) (setq wordstart t))
-	;; if point is within a completion overlay...
-	(when overlay
-	  ;; if point is at start of overlay, update prefix and prevent
-	  ;; adjacent words being deleted
-	  (if (= (point) (overlay-start overlay))
-	      (progn
-		(setq prefix (concat (overlay-get overlay 'prefix)
-				     (string char))
-		      wordstart t)
-		(completion-ui-deactivate-interfaces-pre-update overlay)
-		(completion-ui-setup-overlay
-		 prefix (when overlay
-			  (1+ (overlay-get overlay 'prefix-length)))
-		 nil nil nil nil nil overlay))
-	    ;; otherwise, delete overlay (effectively accepting the old
-	    ;; completion) and behave as if no completion was in progress
-	    (completion-ui-delete-overlay overlay)
-	    (completion-ui-deactivate-interfaces overlay)
-	    (setq overlay nil))))
-
-       ;; error
-       (t (error "Invalid entry in `auto-completion-syntax-alist'\
- or `auto-completion-override-syntax-alist', %s"
-		 (prin1-to-string resolve-behaviour))))
-
-
-      ;; ----- insersion behaviour -----
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp insert-behaviour)
-	(setq insert-behaviour (funcall insert-behaviour)))
-      ;; if we're inserting...
-      (when insert-behaviour
-	;; use `self-insert-command' if possible, since `auto-fill-mode'
-	;; depends on it
-	(if (eq char last-input-event)
-	    (self-insert-command 1)
-	  (insert char))
-	(when overlay (move-overlay overlay (point) (point))))
-
-
-      ;; ----- completion behaviour -----
-      ;; if behaviour alist entry is a function, call it
-      (when (functionp complete-behaviour)
-	(setq complete-behaviour (funcall complete-behaviour)))
-      (cond
-       ;; no-op
-       ((null complete-behaviour))
-
-       ;; not completing - clear up any overlay left lying around
-       ((eq complete-behaviour 'none)
-	(when overlay
-	  (completion-ui-deactivate-interfaces overlay)
-	  (completion-ui-delete-overlay overlay)))
-
-       ;; completing...
-       ((or (eq complete-behaviour 'word)
-	    (eq complete-behaviour 'string))
-	;; if point is in middle of a word, `completion-overwrite' is set, and
-	;; overwriting hasn't been disabled, delete rest of word prior to
-	;; completing
-	(when (and completion-overwrite
-		   (completion-within-word-p word-thing)
-		   (null wordstart))
-	  (completion-overwrite-word-at-point word-thing))
+	;; ----- resolve behaviour -----
+	(completion-ui-resolve-old overlay)
+	;; if behaviour alist entry is a function, call it
+	(when (functionp resolve-behaviour)
+	  (setq resolve-behaviour (funcall resolve-behaviour)))
+	;; do whatever action was specified in alists
 	(cond
-	 ;; if a prefix has been set, do completion
-	 (prefix
-	  (complete-in-buffer-1 source nil 'not-set 'auto overlay))
-	 ;; if doing basic completion, let prefix be found normally
-	 ((eq complete-behaviour 'string)
-	  (complete-in-buffer-1 source nil 'not-set 'auto overlay))
-	 ;; if completing word at point, delete any overlay at point to ensure
-	 ;; prefix is found anew, and do completion
-	 (t
-	  (when (setq overlay (completion-ui-overlay-at-point))
-	    (completion-ui-delete-overlay overlay))
-	  (complete-in-buffer-1 source nil 'not-set 'auto overlay))))
+	 ;; no-op
+	 ((null resolve-behaviour))
 
-       ;; error
-       (t (error "Invalid entry in `auto-completion-syntax-alist'\
+	 ;; accept
+	 ((eq resolve-behaviour 'accept)
+	  ;; CHAR might not be a character if `last-input-event' included a
+	  ;; modifier (e.g. S-<space>)
+	  (setq prefix (string char))
+	  (setq wordstart t)
+	  ;; if there is a completion at point...
+	  (when overlay
+	    ;; if point is at start of overlay, accept completion
+	    (if (= (point) (overlay-start overlay))
+		(completion-accept nil overlay)
+	      ;; otherwise, delete overlay (effectively accepting old completion
+	      ;; but without running hooks)
+	      (completion-ui-delete-overlay overlay)
+	      (completion-ui-deactivate-interfaces overlay))
+	    (setq overlay nil)))
+
+	 ;; reject
+	 ((eq resolve-behaviour 'reject)
+	  ;; CHAR might not be a character if `last-input-event' included a
+	  ;; modifier (e.g. S-<space>)
+	  (setq prefix (string char))
+	  (setq wordstart t)
+	  ;; if there is a completion at point...
+	  (when overlay
+	    ;; if point is at start of overlay, reject completion
+	    (if (= (point) (overlay-start overlay))
+		(completion-reject nil overlay)
+	      ;; otherwise, delete overlay and everything following point
+	      (delete-region (point) (overlay-end overlay))
+	      (completion-ui-delete-overlay overlay)
+	      (completion-ui-deactivate-interfaces overlay))
+	    (setq overlay nil)))
+
+	 ;; add to prefix
+	 ((eq resolve-behaviour 'add)
+	  ;; if we're at the start of a word, prevent adjacent word from being
+	  ;; deleted below if `completion-overwrite' is non-nil
+	  (when (completion-beginning-of-word-p word-thing) (setq wordstart t))
+	  ;; if point is within a completion overlay...
+	  (when overlay
+	    ;; if point is at start of overlay, update prefix and prevent
+	    ;; adjacent words being deleted
+	    (if (= (point) (overlay-start overlay))
+		(progn
+		  (setq prefix (concat (overlay-get overlay 'prefix)
+				       (string char))
+			wordstart t)
+		  (completion-ui-deactivate-interfaces-pre-update overlay)
+		  (completion-ui-setup-overlay
+		   prefix (when overlay
+			    (1+ (overlay-get overlay 'prefix-length)))
+		   nil nil nil nil nil overlay))
+	      ;; otherwise, delete overlay (effectively accepting the old
+	      ;; completion) and behave as if no completion was in progress
+	      (completion-ui-delete-overlay overlay)
+	      (completion-ui-deactivate-interfaces overlay)
+	      (setq overlay nil))))
+
+	 ;; error
+	 (t (error "Invalid entry in `auto-completion-syntax-alist'\
  or `auto-completion-override-syntax-alist', %s"
-		 (prin1-to-string complete-behaviour))))
-      )))
+		   (prin1-to-string resolve-behaviour))))
+
+
+	;; ----- insersion behaviour -----
+	;; if behaviour alist entry is a function, call it
+	(when (functionp insert-behaviour)
+	  (setq insert-behaviour (funcall insert-behaviour)))
+	;; if we're inserting...
+	(when insert-behaviour
+	  ;; use `self-insert-command' if possible, since `auto-fill-mode'
+	  ;; depends on it
+	  (if (eq char last-input-event) (self-insert-command 1) (insert char))
+	  (when overlay (move-overlay overlay (point) (point))))
+
+
+	;; ----- completion behaviour -----
+	;; if behaviour alist entry is a function, call it
+	(when (functionp complete-behaviour)
+	  (setq complete-behaviour (funcall complete-behaviour)))
+	(cond
+	 ;; no-op
+	 ((null complete-behaviour))
+
+	 ;; not completing - clear up any overlay left lying around
+	 ((eq complete-behaviour 'none)
+	  (when overlay
+	    (completion-ui-deactivate-interfaces overlay)
+	    (completion-ui-delete-overlay overlay)))
+
+	 ;; completing...
+	 ((or (eq complete-behaviour 'word)
+	      (eq complete-behaviour 'string))
+	  ;; if point is in middle of a word, `completion-overwrite' is set, and
+	  ;; overwriting hasn't been disabled, delete rest of word prior to
+	  ;; completing
+	  (when (and completion-overwrite
+		     (completion-within-word-p word-thing)
+		     (null wordstart))
+	    (completion-overwrite-word-at-point word-thing))
+	  (cond
+	   ;; if a prefix has been set, do completion
+	   (prefix
+	    (complete-in-buffer-1 source nil 'not-set 'auto overlay))
+	   ;; if doing basic completion, let prefix be found normally
+	   ((eq complete-behaviour 'string)
+	    (complete-in-buffer-1 source nil 'not-set 'auto overlay))
+	   ;; if completing word at point, delete any overlay at point to ensure
+	   ;; prefix is found anew, and do completion
+	   (t
+	    (when (setq overlay (completion-ui-overlay-at-point))
+	      (completion-ui-delete-overlay overlay))
+	    (complete-in-buffer-1 source nil 'not-set 'auto overlay))))
+
+	 ;; error
+	 (t (error "Invalid entry in `auto-completion-syntax-alist'\
+ or `auto-completion-override-syntax-alist', %s"
+		   (prin1-to-string complete-behaviour))))
+	))))
 
 
 
@@ -3766,80 +3770,88 @@ enabled, complete what remains of that word."
 
 
         ;; ----- auto-completing -----
-	(let* ((source (auto-completion-source))
-	       (word-thing (completion-ui-source-word-thing source))
-	       (wordstart (or overlay
-			      (completion-beginning-of-word-p word-thing))))
-	  ;; resolve any old provisional completions
-	  (completion-ui-resolve-old overlay)
-	  ;; if point is in a completion...
-	  (when overlay
-	    ;; delete provisional completion characters after point
-	    ;; FIXME: should this depend on
-	    ;;        `completion-accept-or-reject-by-default'?
-	    (delete-region (point) (overlay-end overlay))
-	    ;; store position of beginning of prefix
-	    (setq pos (- (overlay-start overlay)
-			 (overlay-get overlay 'prefix-length)))
-	    ;; delete the overlay, effectively accepting (rest of) completion
-	    (completion-ui-delete-overlay overlay)
-	    ;; deactivate the interfaces pending update
-	    (completion-ui-deactivate-interfaces-pre-update overlay))
+	(let ((source (completion-ui-completion-source
+		       (auto-completion-source) overlay))
+	      word-thing wordstart)
+	  ;; skip completion and just delete backwards if no auto-completion
+	  ;; source is specified
+	  (if (null source)
+	      (apply command args)
 
-	  ;; delete backwards
-	  (apply command args)
+	    ;; if auto-completing...
+	    (setq word-thing (completion-ui-source-word-thing source overlay)
+		  wordstart (or overlay
+				(completion-beginning-of-word-p word-thing)))
+	    ;; resolve any old provisional completions
+	    (completion-ui-resolve-old overlay)
+	    ;; if point is in a completion...
+	    (when overlay
+	      ;; delete provisional completion characters after point
+	      ;; FIXME: should this depend on
+	      ;;        `completion-accept-or-reject-by-default'?
+	      (delete-region (point) (overlay-end overlay))
+	      ;; store position of beginning of prefix
+	      (setq pos (- (overlay-start overlay)
+			   (overlay-get overlay 'prefix-length)))
+	      ;; delete the overlay, effectively accepting (rest of) completion
+	      (completion-ui-delete-overlay overlay)
+	      ;; deactivate the interfaces pending update
+	      (completion-ui-deactivate-interfaces-pre-update overlay))
 
-	  (cond
-	   ;; if we're not in or at the end of a word, or we're auto-updating
-	   ;; rather than auto-completing and we've deleted beyond current
-	   ;; completion, deactivate any user-interfaces and cancel any timer
-	   ;; that's been set up
-	   ((or (and (not auto-completion-mode)
-		     (or (not overlay)
-			 (<= (point)
-			    (- pos (overlay-get overlay 'prefix-length)))))
-		(and (not (completion-within-word-p word-thing))
-		     (not (completion-end-of-word-p word-thing))))
-	    (when (timerp completion--backward-delete-timer)
-	      (cancel-timer completion--backward-delete-timer))
-	    (setq completion--backward-delete-timer nil)
-	    (when overlay (completion-ui-deactivate-interfaces overlay)))
+	    ;; delete backwards
+	    (apply command args)
 
-	   ;; otherwise, we're in or at the end of a word, so complete the
-	   ;; word at point
-	   (t
-	    ;; if point was at start of completion or start of word before
-	    ;; deleting, and we're now within or at end of a word, setup
-	    ;; a new overlay to prevent word after point being deleted
-	    (when (or overlay
-		      (and wordstart
-			   (or (completion-within-word-p word-thing)
-			       (completion-end-of-word-p word-thing))))
-	      (let* ((prefix-fun
-		      (completion-ui-source-prefix-function source overlay))
-		     (prefix (let ((completion-word-thing word-thing))
-			       (funcall prefix-fun))))
-		(setq overlay
-		      (completion-ui-setup-overlay prefix nil nil nil source))
-		(move-overlay overlay (point) (point))))
+	    (cond
+	     ;; if we're not in or at the end of a word, or we're auto-updating
+	     ;; rather than auto-completing and we've deleted beyond current
+	     ;; completion, deactivate any user-interfaces and cancel any timer
+	     ;; that's been set up
+	     ((or (and (not auto-completion-mode)
+		       (or (not overlay)
+			   (<= (point)
+			       (- pos (overlay-get overlay 'prefix-length)))))
+		  (and (not (completion-within-word-p word-thing))
+		       (not (completion-end-of-word-p word-thing))))
+	      (when (timerp completion--backward-delete-timer)
+		(cancel-timer completion--backward-delete-timer))
+	      (setq completion--backward-delete-timer nil)
+	      (when overlay (completion-ui-deactivate-interfaces overlay)))
 
-	    ;; if there's no existing timer, set one up to complete remainder
-	    ;; of word after some idle time
-	    (when (timerp completion--backward-delete-timer)
-	      (cancel-timer completion--backward-delete-timer))
-	    (if auto-completion-backward-delete-delay
-		(setq completion--backward-delete-timer
-		      (run-with-idle-timer
-		       auto-completion-backward-delete-delay nil
-		       (lambda (source overlay point)
-			 (setq completion--backward-delete-timer nil)
-			 (complete-in-buffer-1
-			  source nil 'not-set
-			  'backward-delete overlay point))
-		       source overlay (point)))
-	      ;; if completing with no delay, do so
-	      (complete-in-buffer-1 source nil 'not-set 'auto overlay (point)))
-	    )))));)
+	     ;; otherwise, we're in or at the end of a word, so complete the
+	     ;; word at point
+	     (t
+	      ;; if point was at start of completion or start of word before
+	      ;; deleting, and we're now within or at end of a word, setup
+	      ;; a new overlay to prevent word after point being deleted
+	      (when (or overlay
+			(and wordstart
+			     (or (completion-within-word-p word-thing)
+				 (completion-end-of-word-p word-thing))))
+		(let* ((prefix-fun
+			(completion-ui-source-prefix-function source overlay))
+		       (prefix (let ((completion-word-thing word-thing))
+				 (funcall prefix-fun))))
+		  (setq overlay
+			(completion-ui-setup-overlay prefix nil nil nil source))
+		  (move-overlay overlay (point) (point))))
+
+	      ;; if there's no existing timer, set one up to complete remainder
+	      ;; of word after some idle time
+	      (when (timerp completion--backward-delete-timer)
+		(cancel-timer completion--backward-delete-timer))
+	      (if auto-completion-backward-delete-delay
+		  (setq completion--backward-delete-timer
+			(run-with-idle-timer
+			 auto-completion-backward-delete-delay nil
+			 (lambda (source overlay point)
+			   (setq completion--backward-delete-timer nil)
+			   (complete-in-buffer-1
+			    source nil 'not-set
+			    'backward-delete overlay point))
+			 source overlay (point)))
+		;; if completing with no delay, do so
+		(complete-in-buffer-1 source nil 'not-set 'auto overlay (point)))
+	      ))))));)
   )
 
 
@@ -4089,12 +4101,14 @@ enabled, complete what remains of that word."
   "Return the `auto-completion-mode' source active at POINT.
 POINT defaults to the point."
   (unless point (setq point (point)))
-  (or (run-hook-wrapped 'auto-completion-source-functions
-			(lambda (fun)
-			  (save-excursion
-			    (goto-char point)
-			    (funcall fun))))
-      auto-completion-default-source))
+  (let ((source
+	 (run-hook-wrapped 'auto-completion-source-functions
+			   (lambda (fun)
+			     (save-excursion
+			       (goto-char point)
+			       (funcall fun))))))
+    (if (eq source t) nil
+      (or source auto-completion-default-source))))
 
 
 (defun completion-prefix ()
@@ -4147,10 +4161,10 @@ locally when a regexp matches the current buffer line."
 	(save-excursion
 	  (if (eq (nth 1 r) 'looking-at)
 	      (when (thing-at-point-looking-at (nth 0 r))
-		(throw 'source (nth 2 r)))
+		(throw 'source (or (nth 2 r) t)))  ; use t to indicate null
 	    (goto-char (line-beginning-position))
 	    (when (re-search-forward (car r) pos t)
-	      (throw 'source (nth 2 r)))))))))
+	      (throw 'source (or (nth 2 r) t)))))))))  ; ditto
 
 
 (defun auto-completion-face-source ()
@@ -4175,7 +4189,7 @@ enabled in the buffer for them to take effect.\)"
       (dolist (f auto-completion-source-faces)
 	(when (and (completion-ui-face-matches-p (car f) face0)
 		   (completion-ui-face-matches-p (car f) face1))
-	  (throw 'source (cdr f)))))))
+	  (throw 'source (or (cdr f) t)))))))
 
 
 (defun completion-ui-face-matches-p (f face)
