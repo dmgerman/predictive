@@ -726,10 +726,6 @@ recursion can result from incorrectly configured key bindings set
 by the Emacs user.")
 
 
-;; dummy keyboard event used to force keybinding refresh
-(defconst completion--dummy-event 'completion-dummy-event)
-
-
 
 ;;; =================================================================
 ;;;            Set properties for delete-selection-mode
@@ -1251,7 +1247,14 @@ used if the current Emacs version lacks command remapping support."
     ;; `auto-completion-self-insert' manually
     (completion--bind-printable-chars
      completion-auto-update-overlay-map
-     'completion-auto-update-self-insert)))
+     'completion-auto-update-self-insert))
+  ;; bind dummy events used after backwards-delete
+  (define-key completion-auto-update-overlay-map
+    (vector 'completion-dummy-update-event)
+    'completion--update-after-backward-delete)
+  (define-key completion-auto-update-overlay-map
+    (vector 'completion-dummy-activate-event)
+    'completion--activate-after-backward-delete))
 
 
 
@@ -1351,7 +1354,13 @@ used if the current Emacs version lacks command remapping support."
       (define-key auto-completion-map [remap fill-paragraph]
 	'completion-fill-paragraph)
     (define-key auto-completion-map "\M-q" 'completion-fill-paragraph))
-  )
+  ;; bind dummy events used after backwards-delete
+  (define-key auto-completion-map
+    (vector 'completion-dummy-update-event)
+    'completion--update-after-backward-delete)
+  (define-key auto-completion-map
+    (vector 'completion-dummy-activate-event)
+    'completion--activate-after-backward-delete))
 
 
 
@@ -2720,30 +2729,16 @@ should be replaced by the completion."
 	    ;; `completion-backward-delete' timer, generate dummy keyboard
 	    ;; event to force keymap update, and bind that event a function
 	    ;; that activates the interfaces
-	    ;; (Note: hack to work around limitation that Emacs already
-	    ;;        computed the set of active keymaps before overlay
-	    ;;        existed, so overlay keymap gets ignored)
+	    ;; (Note: this is a hack to work around limitation that Emacs
+	    ;;        already computed the set of active keymaps before
+	    ;;        overlay existed, so overlay keymap gets ignored)
 	    (if (or (eq auto 'timer) (eq auto 'backward-delete))
 		(progn
 		  ;; dummy binding used to force keymap refresh
-		  (define-key auto-completion-map
-		    (vector completion--dummy-event)
-		    (if update
-			(lambda ()
-			  (interactive)
-			  (let ((overlay (completion-ui-overlay-at-point)))
-			    (completion-ui-update-interfaces overlay)
-			    (when (completion-ui-get-value-for-source
-				   overlay completion-auto-show)
-			      (completion-ui-auto-show overlay))))
-		      (lambda ()
-			(interactive)
-			(let ((overlay (completion-ui-overlay-at-point)))
-			  (completion-ui-activate-interfaces overlay)
-			  (when (completion-ui-get-value-for-source
-				 overlay completion-auto-show)
-			    (completion-ui-auto-show overlay))))))
-		  (push completion--dummy-event unread-command-events))
+		  (push (if update
+			    'completion-dummy-update-event
+			  'completion-dummy-activate-event)
+			unread-command-events))
 
 	      ;; activate completion user-interfaces
 	      (if update
@@ -2756,6 +2751,23 @@ should be replaced by the completion."
 	  ;; `completion-map' work-around hacks
 	  (setq completion-ui--activated t))
 	))))
+
+
+(defun completion--update-after-backward-delete ()
+  (interactive)
+  (let ((overlay (completion-ui-overlay-at-point)))
+    (completion-ui-update-interfaces overlay)
+    (when (completion-ui-get-value-for-source
+	   overlay completion-auto-show)
+      (completion-ui-auto-show overlay))))
+
+(defun completion--activate-after-backward-delete ()
+  (interactive)
+  (let ((overlay (completion-ui-overlay-at-point)))
+    (completion-ui-activate-interfaces overlay)
+    (when (completion-ui-get-value-for-source
+	   overlay completion-auto-show)
+      (completion-ui-auto-show overlay))))
 
 
 
@@ -3774,8 +3786,17 @@ enabled, complete what remains of that word."
 		       (auto-completion-source) overlay))
 	      word-thing wordstart)
 	  ;; skip completion and just delete backwards if no auto-completion
-	  ;; source is specified
-	  (if (null source)
+	  ;; source is specified; or if we're auto-updating, dynamic
+	  ;; completion is enabled, and we're not rejecting by default
+	  ;; (otherwise backward deletion effectively becomes impossible)
+	  (if (or (null source)
+		  (and (not auto-completion-mode)
+		       (and (boundp 'completion-ui-use-dynamic)
+			    (completion-ui-get-value-for-source
+			     overlay completion-ui-use-dynamic))
+		       (eq (completion-ui-get-value-for-source
+			    overlay completion-accept-or-reject-by-default)
+			   'accept)))
 	      (apply command args)
 
 	    ;; if auto-completing...
