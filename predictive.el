@@ -2619,12 +2619,13 @@ Associations between regexps and dictionaries are specified by
 When used in `predictive-dict-functions' (as in the default
 setting), this allows the predictive dictionary to be changed
 locally when a regexp matches the current buffer line."
-  (let ((pos (point)))
+  (let ((pos (point))
+	(bound (line-end-position)))
     (catch 'dic
       (dolist (r predictive-dict-regexps)
 	(save-excursion
 	  (if (eq (nth 1 r) 'looking-at)
-	      (when (thing-at-point-looking-at (nth 0 r))
+	      (when (completion-ui--thing-at-point-looking-at (nth 0 r) bound)
 		(throw 'dic (nth 2 r)))
 	    (goto-char (line-beginning-position))
 	    (when (re-search-forward (car r) pos t)

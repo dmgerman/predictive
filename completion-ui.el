@@ -1366,7 +1366,7 @@ used if the current Emacs version lacks command remapping support."
 
 
 ;;; ================================================================
-;;;                Replacements for CL functions
+;;;           Replacements for CL and other functions
 
 (defun completion--sublist (list start &optional end)
   "Return the sub-list of LIST from START to END.
@@ -1413,6 +1413,38 @@ SEQ1 and SEQ2 are the two argument lists, and PREDICATE is a
 	  (push (pop seq2) res)
 	  (push (pop seq1) res)))
     (nconc (nreverse res) seq1 seq2)))
+
+
+(defun completion-ui--thing-at-point-looking-at (regexp &optional bound)
+  "Return non-nil if point is in or just after a match for REGEXP.
+Set the match data from the earliest such match ending at or after
+point."
+  (save-excursion
+    (let ((old-point (point)) match)
+      (and (looking-at regexp)
+	   (>= (match-end 0) old-point)
+	   (or (null bound) (<= (match-end 0) bound))
+	   (setq match (point)))
+      ;; Search back repeatedly from end of next match.
+      ;; This may fail if next match ends before this match does.
+      (re-search-forward regexp bound 'limit)
+      (while (and (re-search-backward regexp nil t)
+		  (or (> (match-beginning 0) old-point)
+		      (and (looking-at regexp)	; Extend match-end past search start
+			   (>= (match-end 0) old-point)
+			   (or (null bound) (<= (match-end 0) bound))
+			   (setq match (point))))))
+      (if (not match) nil
+	(goto-char match)
+	;; Back up a char at a time in case search skipped
+	;; intermediate match straddling search start pos.
+	(while (and (not (bobp))
+		    (progn (backward-char 1) (looking-at regexp))
+		    (>= (match-end 0) old-point)
+		    (or (null bound) (<= (match-end 0) bound))
+		    (setq match (point))))
+	(goto-char match)
+	(looking-at regexp)))))
 
 
 
@@ -4176,12 +4208,15 @@ by `auto-completion-source-regexps' (which see).
 When used in `auto-completion-source-functions' (as in the
 default setting), this allows the completion source to be changed
 locally when a regexp matches the current buffer line."
-  (let ((pos (point)))
+  (let ((pos (point))
+	(bound (line-end-position)))
     (catch 'source
       (dolist (r auto-completion-source-regexps)
 	(save-excursion
 	  (if (eq (nth 1 r) 'looking-at)
-	      (when (thing-at-point-looking-at (nth 0 r))
+	      (when (and (completion-ui--thing-at-point-looking-at
+			  (nth 0 r) bound)
+			 (<= (match-beginning 0) pos))
 		(throw 'source (or (nth 2 r) t)))  ; use t to indicate null
 	    (goto-char (line-beginning-position))
 	    (when (re-search-forward (car r) pos t)
