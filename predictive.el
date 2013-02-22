@@ -2,7 +2,7 @@
 ;;; predictive.el --- predictive completion minor mode
 
 
-;; Copyright (C) 2004-2012 Toby Cubitt
+;; Copyright (C) 2004-2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.24

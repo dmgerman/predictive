@@ -2,7 +2,7 @@
 ;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
 
 
-;; Copyright (C) 2005-2010, 2012 Toby Cubitt
+;; Copyright (C) 2005-2010, 2012-2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.10.8

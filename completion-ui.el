@@ -2,7 +2,7 @@
 ;;; completion-ui.el --- in-buffer completion user interface
 
 
-;; Copyright (C) 2006-2012 Toby Cubitt
+;; Copyright (C) 2006-2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.12
