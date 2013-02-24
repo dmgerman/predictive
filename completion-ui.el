@@ -3856,10 +3856,11 @@ behaviour is instead as for `completion-backward-kill-line'.\)
 If there is a provisional completion at point after deleting, it
 is rejected."
   (interactive "P")
-  ;; if deleting backwards, call `completion-backward-delete' instead
-  (if (and (integerp n) (< n 0))
-      (completion-backward-delete 'kill-line (- n))
-    (completion-delete 'kill-line n)))
+  (let ((kill-cmd (if visual-line-mode 'kill-visual-line 'kill-line)))
+    ;; if deleting backwards, call `completion-backward-delete' instead
+    (if (and (integerp n) (< n 0))
+	(completion-backward-delete kill-cmd (- n))
+      (completion-delete kill-cmd n))))
 
 
 
@@ -3872,10 +3873,11 @@ Any provisional completion at point is first rejected. If
 deleting backwards into a word, and `auto-completion-mode' is
 enabled, complete what remains of that word."
   (interactive "p")
-  ;; if deleting forwards, call `completion-delete' instead
-  (if (< n 0)
-      (completion-delete 'kill-line (- n))
-    (completion-backward-delete 'kill-line n)))
+  (let ((kill-cmd (if visual-line-mode 'kill-visual-line 'kill-line)))
+    ;; if deleting forwards, call `completion-delete' instead
+    (if (< n 0)
+	(completion-delete kill-cmd (- n))
+      (completion-backward-delete kill-cmd n))))
 
 
 (defun completion-kill-paragraph (&optional n)
