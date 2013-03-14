@@ -602,7 +602,7 @@ function automatically when predictive mode is enabled in
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
       ;; save overlays and dictionaries along with buffer
-      (add-hook 'after-save-hook 'predictive-latex-after-save nil 'local)
+      ;;(add-hook 'after-save-hook 'predictive-latex-after-save nil 'local)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil 'local)
 
       ;; configure automatic selection of completion sources and dicts
@@ -831,7 +831,7 @@ function automatically when predictive mode is enabled in
       (remove-hook 'predictive-accept-functions 'predictive-display-help 'local)
       (remove-hook 'post-command-hook 'predictive-display-help 'local))
     ;; remove hook functions that save overlays etc.
-    (remove-hook 'after-save-hook 'predictive-latex-after-save 'local)
+    ;;(remove-hook 'after-save-hook 'predictive-latex-after-save 'local)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer 'local)
     ;; restore saved state
     (predictive-setup-restore-local-state)
@@ -969,17 +969,17 @@ function automatically when predictive mode is enabled in
   ;; save overlays if buffer was saved
   (unless (buffer-modified-p)
     (when (buffer-file-name)
-      (auto-overlay-save-overlays 'predictive nil
-				  predictive-local-auxiliary-file-directory))
+      (auto-overlay-save-overlays
+       'predictive nil predictive-local-auxiliary-file-directory))
     ;; if we're not the TeX-master, unload the regexps to unshare them
     (if (and (boundp 'TeX-master) (stringp TeX-master))
 	(auto-overlay-unload-set 'predictive)
       ;; if we're the TeX master, first disable predictive mode in all related
-      ;; LaTeX buffers,  which we find by  looking for buffers  that share the
-      ;; auto-overlays 'predictive regexp set
+      ;; LaTeX buffers, which we find by looking for buffers that share the
+      ;; `predictive' auto-overlays regexp set
       (dolist (buff (auto-o-get-buffer-list 'predictive))
 	;; TeX-master itself will be in list of buffers sharing regexp set, so
-	;; need to filter it out; test for null buffer name avoids deleted
+	;; need to filter it out; the test for null buffer name avoids deleted
 	;; buffers, though this should never occur.
 	(unless (or (eq buff (current-buffer)) (null (buffer-name buff)))
 	  (with-current-buffer buff (predictive-mode -1))))
