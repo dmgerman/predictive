@@ -63,6 +63,8 @@
 
   (let* ((prefix (overlay-get overlay 'prefix))
          (completions (overlay-get overlay 'completions))
+	 (use-hotkeys (completion-ui-get-value-for-source
+		       overlay completion-ui-use-hotkeys))
          (text "") cmpl)
 
     (dotimes (i (length completions))
@@ -70,8 +72,8 @@
       (unless (stringp cmpl) (setq cmpl (car cmpl)))
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
-      (if (or (eq completion-ui-use-hotkeys t)
-	      (and (eq completion-ui-use-hotkeys 'auto-show)
+      (if (or (eq use-hotkeys t)
+	      (and (eq use-hotkeys 'auto-show)
 		   (overlay-get overlay 'auto-show)))
 	  (if (< i (length completion-hotkey-list))
 	      (setq cmpl
