@@ -849,7 +849,7 @@ When within a pop-up frame:
 		 (prin1-to-string (cdr modefunc))))))
 
     ;; turn on auto-completion mode if necessary
-    (set (make-local-variable 'auto-completion-source) 'predictive)
+    (set (make-local-variable 'auto-completion-default-source) 'predictive)
     (when predictive-auto-complete (auto-completion-mode 1))
     ;; setup idle-timer to flush auto-learn and auto-add caches
     (setq predictive-flush-auto-learn-timer
@@ -865,7 +865,7 @@ When within a pop-up frame:
    ;; ----- disabling predictive mode -----
    (predictive-mode
     ;; turn off auto-completion mode if necessary
-    (kill-local-variable 'auto-completion-source)
+    (kill-local-variable 'auto-completion-default-source)
     (when predictive-auto-complete (auto-completion-mode -1))
     ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)

@@ -124,8 +124,52 @@ available for combining."
 
 
 
+(defun completion-ui-combining-complete (source-spec prefix &optional maxnum)
+  "Return a combined list of all completions
+from sources in SOURCE-SPEC.
+
+SOURCE-SPEC should be a list specifying how the completion
+sources are to be combined. Each element can be either a
+completion source (a symbol) in which case the source is always
+used, or a cons cell of the form
+
+  (SOURCE . TEST)
+
+where SOURCE is a completion source (a symbol), and TEST
+specifies a test used to determine whether SOURCE is used. TEST
+must be one of the following:
+
+function
+  called with no arguments
+  source is used if it returns non-nil
+
+regexp
+  `re-search-backward' to beginning of line
+  source is used if regexp matches
+
+sexp
+  `eval'ed
+  source is used if it evals to non-nil."
+  (let (completions)
+    (dolist (s source-spec)
+      (when (cond
+	     ((symbolp s) t)
+	     ((functionp (cdr s))
+	      (funcall (cdr s)))
+	     ((stringp (cdr s))
+	      (save-excursion
+		(re-search-backward (cdr s) (line-beginning-position) t)))
+	     (t (eval (cdr s))))
+	(setq completions
+	      (nconc completions (completion-ui-complete (car s) prefix maxnum))))
+      (if maxnum
+	  (butlast completions (- (length completions) maxnum))
+	completions))))
+
+
+
 (completion-ui-register-source
- completion-combine-sources
+ completion-ui-combining-complete
  :completion-args (2 3)
  :other-args (completion-ui-combine-sources-alist)
  :name Combine
@@ -133,7 +177,7 @@ available for combining."
 
 
 (completion-ui-register-source
- completion-combine-sources
+ completion-ui-combining-complete
  :completion-args (2)
  :other-args (completion-ui-combine-sources-alist)
  :name Combine-freq
@@ -330,14 +374,14 @@ available for combining."
 
   (defun completion--semantic-enable-auto-completion nil
     ;; set variables buffer-locally when enabling Semantic auto-completion
-    (when (eq auto-completion-source 'semantic)
+    (when (eq auto-completion-default-source 'semantic)
       (set (make-local-variable 'auto-completion-override-syntax-alist)
 	   '((?. . (add word))))))
 
 
   (defun completion--semantic-disable-auto-completion nil
     ;; unset buffer-local variables when disabling Semantic auto-completion
-    (when (eq auto-completion-source 'semantic)
+    (when (eq auto-completion-default-source 'semantic)
       (kill-local-variable 'auto-completion-override-syntax-alist)))
 
 

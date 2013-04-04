@@ -272,7 +272,7 @@ the end if it is to be accepted."
      ((or (eq accept-or-reject 'reject)
 	  (and auto-completion-mode
 	       (eq (overlay-get overlay 'completion-source)
-		   auto-completion-source)))
+		   (auto-completion-source))))
       (goto-char (overlay-start overlay)))
 
      ;; accept-common
