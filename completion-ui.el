@@ -3070,15 +3070,19 @@ candidates.\)"
 	  (completion-ui-update-interfaces overlay))))))
 
 
-(defun completion-accept-or-cycle (&optional overlay)
+(defun completion-accept-or-cycle (&optional n overlay)
   "Accept current completion if there's only one candidate.
-Otherwise, cycle through the completion candidates."
+Otherwise, cycle through the completion candidates.
+
+Optional argument N specifies the number of completions to cycle
+forwards \(backwards if negative\). Default is 1. Interactively,
+N is the prefix argument."
   (interactive)
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
   (when overlay
     (if (= (length (overlay-get overlay 'completions)) 1)
-	(completion-accept)
-      (completion-cycle))))
+	(completion-accept nil overlay)
+      (completion-cycle n overlay))))
 
 
 
