@@ -3014,17 +3014,12 @@ N is the prefix argument."
 
 
 (defun completion-tab-complete (&optional overlay)
-  "Tab-complete completion at point
-\(i.e. insert longest common prefix of all the completions\).
-
-If OVERLAY is supplied, use that instead of finding one. The
-point had better be within OVERLAY or your teeth will turn bright
-green over night."
+  "Tab-complete completion at point.
+\(I.e. insert longest common prefix of all the completion
+candidates.\)"
   (interactive)
-
   ;; look for completion overlay at point if none was specified
   (unless overlay (setq overlay (completion-ui-overlay-at-point)))
-
   ;; if within a completion overlay
   (when overlay
     (let* ((prefix (overlay-get overlay 'prefix))
@@ -3073,6 +3068,17 @@ green over night."
 	     nil 'not-set 'auto overlay)
           ;; otherwise, update completion interfaces
 	  (completion-ui-update-interfaces overlay))))))
+
+
+(defun completion-accept-or-cycle (&optional overlay)
+  "Accept current completion if there's only one candidate.
+Otherwise, cycle through the completion candidates."
+  (interactive)
+  (unless overlay (setq overlay (completion-ui-overlay-at-point)))
+  (when overlay
+    (if (= (length (overlay-get overlay 'completions)) 1)
+	(completion-accept)
+      (completion-cycle))))
 
 
 
