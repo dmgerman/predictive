@@ -56,13 +56,13 @@
 	 (nconc
 	  ;; \vref etc.
 	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "\\([vV]\\(\\|page\\)ref\\(\\|range\\)\\*?{\\)"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at predictive-latex-label)
+		      "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
+		      predictive-latex-brace-group-regexp)
+	     predictive-latex-label looking-at 1)
 	    ;; \fullref
-	    (,(concat predictive-latex-odd-backslash-regexp "fullref{"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at predictive-latex-label))
+	    (,(concat predictive-latex-odd-backslash-regexp
+		      "fullref" predictive-latex-brace-group-regexp)
+	     predictive-latex-label looking-at 1))
 	  auto-completion-source-regexps)))
 
    ;; --- unload varioref support ---
@@ -80,15 +80,13 @@
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "\\label\\(\\[.*?\\]\\)?{"
-		   predictive-latex-not-closebrace-regexp)
+		      "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
+		      predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps))
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "\\([cCvV]ref\\(\\|range\\)\\*?"
-		   "\\|\\(name\\|label\\)[cC]ref\\){"
-		   predictive-latex-not-closebrace-regexp)
+		      "fullref" predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps))
     )))
 

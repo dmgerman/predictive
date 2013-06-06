@@ -79,15 +79,15 @@
 	 (nconc
 	  ;; label with optarg
 	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "\\label\\(\\[.*?\\]\\)?{"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at nil)
+		      "label\\(?:\\[.*?\\]\\)?"
+		      predictive-latex-brace-group-regexp)
+	     nil looking-at 1)
 	    ;; \cref and \vref
 	    (,(concat predictive-latex-odd-backslash-regexp
-		      "\\([cCvV]ref\\(\\|range\\)\\*?"
-		      "\\|\\(name\\|label\\)[cC]ref\\){"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at predictive-latex-cleveref-label))
+		      "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
+		      "\\|\\(?:name\\|label\\)[cC]ref\\)"
+		      predictive-latex-brace-group-regexp)
+	     predictive-latex-cleveref-label looking-at 1))
 	  auto-completion-source-regexps))
 
     ;; \label with optional argument replaces normal \label definition
@@ -114,15 +114,15 @@
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "\\label\\(\\[.*?\\]\\)?{"
-		   predictive-latex-not-closebrace-regexp)
+		   "\\label\\(?:\\[.*?\\]\\)?"
+		   predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps))
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "\\([cCvV]ref\\(\\|range\\)\\*?"
-		   "\\|\\(name\\|label\\)[cC]ref\\){"
-		   predictive-latex-not-closebrace-regexp)
+		   "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
+		   "\\|\\(?:name\\|label\\)[cC]ref\\)"
+		   predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps))
 
     ;; unload cleveref auto-overlay definition

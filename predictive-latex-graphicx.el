@@ -48,9 +48,9 @@
 	 (nconc
 	  ;; label with optarg
 	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "includegraphics\\(\\[.*?\\]\\)?{"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at nil))
+		      "includegraphics\\(?:\\[.*?\\]\\)"
+		      predictive-latex-brace-group-regexp)
+	     nil looking-at 1))
 	  auto-completion-source-regexps)))
 
    ;; --- unload graphicx support ---
@@ -59,8 +59,8 @@
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "includegraphics\\(\\[.*?\\]\\)?{"
-		   predictive-latex-not-closebrace-regexp)
+		   "includegraphics\\(?:\\[.*?\\]\\)"
+		   predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps)))
    ))
 

@@ -82,9 +82,9 @@
 	 (nconc
 	  ;; label with optarg
 	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{"
-    		      predictive-latex-not-closebrace-regexp)
-	     looking-at predictive-latex-color))
+		      "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
+    		      predictive-latex-brace-group-regexp)
+	     predictive-latex-color looking-at 1))
 	  auto-completion-source-regexps)))
 
    ;; --- unload color support ---
@@ -98,8 +98,8 @@
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
 	   (concat predictive-latex-odd-backslash-regexp
-		   "\\(\\|text\\|page\\)color\\(\\[.*?\\]\\)?{\\)"
-		   predictive-latex-not-closebrace-regexp)
+		   "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
+		   predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps))
     ;; unload colour dictionary
     (predictive-unload-dict 'dict-latex-colours))

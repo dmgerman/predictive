@@ -52,9 +52,9 @@
     (set (make-local-variable 'auto-completion-source-regexps)
 	 (nconc
 	  ;; \subref
-	  `((,(concat predictive-latex-odd-backslash-regexp "subref{"
-		      predictive-latex-not-closebrace-regexp)
-	     looking-at predictive-latex-label))
+	  `((,(concat predictive-latex-odd-backslash-regexp
+		      "subref" predictive-latex-brace-group-regexp)
+	     predictive-latex-label looking-at 1))
 	  auto-completion-source-regexps)))
 
    ;; --- unload subfig support ---
@@ -67,8 +67,8 @@
     ;; remove completion source regexps
     (setq auto-completion-source-regexps
 	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp "subref{"
-		   predictive-latex-not-closebrace-regexp)
+	   (concat predictive-latex-odd-backslash-regexp
+		   "subref" predictive-latex-brace-group-regexp)
 	   auto-completion-source-regexps)))
    ))
 

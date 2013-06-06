@@ -238,11 +238,13 @@ strings become the sub-menu entries.")
     (predictive-latex-preamble-dict . "dict-latex-preamble-")
     (predictive-latex-env-dict . "dict-latex-env-")))
 
+
 ;; convenience consts defining useful regexp patterns
 (defconst predictive-latex-odd-backslash-regexp
-  "\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\")
-(defconst predictive-latex-not-closebrace-regexp
-  "\\(\\w\\|\\s_\\|\\s.\\|$\\)*")
+  "\\(?:[^\\]\\|^\\)\\(?:\\\\\\\\\\)*\\\\")
+
+(defconst predictive-latex-brace-group-regexp
+  "{\\(\\(?:\\w\\|\\s_\\|\\s.\\)*\\)")
 
 
 
@@ -612,27 +614,26 @@ function automatically when predictive mode is enabled in
 	   '((font-latex-math-face . predictive-latex-math)))
       (set (make-local-variable 'auto-completion-source-regexps)
        `((,(concat predictive-latex-odd-backslash-regexp
-		       "\\label{"
-		       predictive-latex-not-closebrace-regexp)
-	      looking-at nil)
+		   "label" predictive-latex-brace-group-regexp)
+	  nil looking-at 1)
 	 (,(concat predictive-latex-odd-backslash-regexp
-		   "\\(begin\\|end\\){"
-		   predictive-latex-not-closebrace-regexp)
-	  looking-at predictive-latex-env)
+		   "\\(?:begin\\|end\\)"
+		   predictive-latex-brace-group-regexp)
+	  predictive-latex-env looking-at 1)
 	 (,(concat predictive-latex-odd-backslash-regexp
-		   "ref{"
-		   predictive-latex-not-closebrace-regexp)
-	  looking-at predictive-latex-label)
+		   "ref" predictive-latex-brace-group-regexp)
+	  predictive-latex-label looking-at 1)
 	 (,(concat predictive-latex-odd-backslash-regexp
-		   "documentclass\\(\\[.*\\]\\)?{"
-		   predictive-latex-not-closebrace-regexp)
-	  looking-at predictive-latex-docclass)
+		   "documentclass\\(?:\\[.*\\]\\)?"
+		   predictive-latex-brace-group-regexp)
+	  predictive-latex-docclass looking-at 1)
 	 (,(concat predictive-latex-odd-backslash-regexp
-		   "bibliographystyle\\(\\[.*\\]\\)?{"
-		   predictive-latex-not-closebrace-regexp)
-	  looking-at predictive-latex-bibstyle)
-	 (,(concat predictive-latex-odd-backslash-regexp "text{")
-	  before-point predictive)))
+		   "bibliographystyle\\(?:\\[.*\\]\\)?"
+		   predictive-latex-brace-group-regexp)
+	  predictive-latex-bibstyle looking-at 1)
+	 (,(concat predictive-latex-odd-backslash-regexp
+		   "text{\\([^}]*\\)")
+	  predictive looking-at 1)))
 
       ;; display help if first character of accepted completion is "\" and
       ;; after point motion
