@@ -2818,43 +2818,47 @@ A negative prefix argument turns it off.")
 
 
 (defun predictive-which-dict-name ()
-  ;; Returns the current dictionary name. Used by the
+  ;; Returns the current dictionary/source name. Used by the
   ;; `predictive-which-dict-mode' mode-line format to display the current
   ;; dictionary the mode line.
 
-  ;; only run if predictive mode is enabled and point has moved since last run
-  (let ((dict (predictive-current-dict)) name list)
-    (when (dictree-p dict) (setq dict (list dict)))
-
-    ;; get current dictionary name(s)
-    (if (null dict)
-	(setq name "" list nil)
-
-      ;; if dict is the buffer-local meta-dictioary, display name of main
-      ;; dictionary it's based on instead
-      (if (and (string= (dictree-name (car dict))
-			(predictive-buffer-local-dict-name))
-	       (dictree-meta-dict-p (car dict)))
-	  (setq name (dictree-name (nth 1 (dictree-meta-dict-dictlist
-					   (car dict)))))
-	(setq name (dictree-name (car dict))))
-;;;   ;; truncate to 15 characters
-;;;   (when (> (length name) 15) (setq name (substring name 0 15)))
-      ;; filter list to remove "-dict-" and "-predictive-" prefixes
-      (when (string-match "-*dict-*\\|-*predictive-*" name)
-	(setq name (replace-match "" nil nil name)))
-
+  (let ((source (auto-completion-source))
+	dict name list)
+    (cond
+     ;; if auto-completion source is `predictive', get dictionary name(s)
+     ((eq source 'predictive)
+      (setq dict (predictive-current-dict))
+      (when (dictree-p dict) (setq dict (list dict)))
+      ;; get current dictionary name(s)
+      (if (null dict) (setq name "" list nil)
+	;; if dict is the buffer-local meta-dictioary, display name of main
+	;; dictionary it's based on instead
+	(if (and (string= (dictree-name (car dict))
+			  (predictive-buffer-local-dict-name))
+		 (dictree-meta-dict-p (car dict)))
+	    (setq name (dictree-name (nth 1 (dictree-meta-dict-dictlist
+					     (car dict)))))
+	  (setq name (dictree-name (car dict)))))
       ;; if current dictionary is a list, add "..." to end of name, and
       ;; construct list of all dictionary names for help-echo text
-      (if (= (length dict) 1)
-	  (setq list nil)
+      (when (> (length dict) 1)
 	(setq name (concat name "..."))
 	(setq list (mapconcat 'dictree-name dict "\n"))
 	;; filter list to remove "dict-" and "predictive-" prefixes
 	(while (string-match "^dict-*\\|^predictive-*" list)
 	  (setq list (replace-match "" nil nil list)))))
 
-    ;; return the dictionary name
+     ;; if auto-completion source is not `predictive', display source name
+     ;; instead of dictionary
+     (t (setq name (symbol-name source))))
+
+;;;   ;; truncate name to 15 characters
+;;;   (when (> (length name) 15) (setq name (substring name 0 15)))
+    ;; remove "-dict-" and "-predictive-" prefixes and postfixes
+    (when (string-match "-*dict-*\\|-*predictive-*" name)
+      (setq name (replace-match "" nil nil name)))
+
+    ;; return the dictionary/source name
     (cons name list)))
 
 
