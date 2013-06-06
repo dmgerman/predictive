@@ -4210,18 +4210,29 @@ When used in `auto-completion-source-functions' (as in the
 default setting), this allows the completion source to be changed
 locally when a regexp matches the current buffer line."
   (let ((pos (point))
-	(bound (line-end-position)))
+	(bound (line-end-position))
+	type group)
     (catch 'source
-      (dolist (r auto-completion-source-regexps)
+      (dolist (regexp auto-completion-source-regexps)
+	(setq type (nth 2 regexp))
 	(save-excursion
-	  (if (eq (nth 1 r) 'looking-at)
-	      (when (and (completion-ui--thing-at-point-looking-at
-			  (nth 0 r) bound)
-			 (<= (match-beginning 0) pos))
-		(throw 'source (or (nth 2 r) t)))  ; use t to indicate null
+	  (cond
+	   ((or (eq type 'looking-at) (null type))    ; default to `looking-at'
+	    (when (and (completion-ui--thing-at-point-looking-at
+			(car regexp) bound)
+		       (setq group (or (nth 3 regexp) 0))
+		       (<= (match-beginning group) pos)
+		       (>= (match-end group) pos))
+	      (throw 'source (or (nth 1 regexp) t)))) ; use t to indicate null
+
+	   ((eq type 'before-point)
 	    (goto-char (line-beginning-position))
-	    (when (re-search-forward (car r) pos t)
-	      (throw 'source (or (nth 2 r) t)))))))))  ; ditto
+	    (when (and (re-search-forward (car regexp) pos t)
+		       (setq group (or (nth 3 regexp) 0))
+		       (<= (match-beginning group) pos)
+		       (>= (match-end group) pos))
+	      (throw 'source (or (nth 1 regexp) t)))) ; use t to indicate null
+	   ))))))
 
 
 (defun auto-completion-face-source ()
