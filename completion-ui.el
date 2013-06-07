@@ -1416,38 +1416,6 @@ SEQ1 and SEQ2 are the two argument lists, and PREDICATE is a
     (nconc (nreverse res) seq1 seq2)))
 
 
-(defun completion-ui--thing-at-point-looking-at (regexp &optional bound)
-  "Return non-nil if point is in or just after a match for REGEXP.
-Set the match data from the earliest such match ending at or after
-point."
-  (save-excursion
-    (let ((old-point (point)) match)
-      (and (looking-at regexp)
-	   (>= (match-end 0) old-point)
-	   (or (null bound) (<= (match-end 0) bound))
-	   (setq match (point)))
-      ;; Search back repeatedly from end of next match.
-      ;; This may fail if next match ends before this match does.
-      (re-search-forward regexp bound 'limit)
-      (while (and (re-search-backward regexp nil t)
-		  (or (> (match-beginning 0) old-point)
-		      (and (looking-at regexp)	; Extend match-end past search start
-			   (>= (match-end 0) old-point)
-			   (or (null bound) (<= (match-end 0) bound))
-			   (setq match (point))))))
-      (if (not match) nil
-	(goto-char match)
-	;; Back up a char at a time in case search skipped
-	;; intermediate match straddling search start pos.
-	(while (and (not (bobp))
-		    (progn (backward-char 1) (looking-at regexp))
-		    (>= (match-end 0) old-point)
-		    (or (null bound) (<= (match-end 0) bound))
-		    (setq match (point))))
-	(goto-char match)
-	(looking-at regexp)))))
-
-
 
 ;;; =======================================================
 ;;;         Compatibility functions and aliases
@@ -4211,27 +4179,26 @@ default setting), this allows the completion source to be changed
 locally when a regexp matches the current buffer line."
   (let ((pos (point))
 	(bound (line-end-position))
-	type group)
+	type regexp group match)
     (catch 'source
-      (dolist (regexp auto-completion-source-regexps)
-	(setq type (nth 2 regexp))
+      (dolist (r auto-completion-source-regexps)
+	(setq regexp (car r) type (nth 2 r))
 	(save-excursion
 	  (cond
-	   ((or (eq type 'looking-at) (null type))    ; default to `looking-at'
-	    (when (and (completion-ui--thing-at-point-looking-at
-			(car regexp) bound)
-		       (setq group (or (nth 3 regexp) 0))
-		       (<= (match-beginning group) pos)
-		       (>= (match-end group) pos))
-	      (throw 'source (or (nth 1 regexp) t)))) ; use t to indicate null
+	   ((or (eq type 'looking-at) (null type))  ; default to `looking-at'
+	    (setq group (or (nth 3 r) 0))
+	    ;; search repeatedly, starting from last match, until we find
+	    (forward-line 0)
+	    (while (re-search-forward regexp bound t)
+	      (when (and (<= (match-beginning group) pos)
+			 (>= (match-end group) pos))
+		(throw 'source (or (nth 1 r) t)))   ; use t to indicate null
+	      (goto-char (1+ (match-beginning 0)))))
 
 	   ((eq type 'before-point)
 	    (goto-char (line-beginning-position))
-	    (when (and (re-search-forward (car regexp) pos t)
-		       (setq group (or (nth 3 regexp) 0))
-		       (<= (match-beginning group) pos)
-		       (>= (match-end group) pos))
-	      (throw 'source (or (nth 1 regexp) t)))) ; use t to indicate null
+	    (when (re-search-forward regexp pos t)
+	      (throw 'source (or (nth 1 r) t))))    ; use t to indicate null
 	   ))))))
 
 
