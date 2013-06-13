@@ -433,12 +433,6 @@ strings become the sub-menu entries.")
  :completion-function predictive-complete
  :completion-args 2
  :other-args (predictive-latex-preamble-dict)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
  :word-thing predictive-latex-word
  :menu predictive-latex-construct-browser-menu
  :browser predictive-latex-construct-browser-menu
@@ -458,13 +452,30 @@ strings become the sub-menu entries.")
  :reject-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
- :syntax-alist ((?w . ((lambda ()
-			 (let ((env (bounds-of-thing-at-point
-				     'predictive-latex-word)))
-			   (when (and env (= (point) (car env)))
-			     (delete-region (car env) (cdr env))))
-			 'add)
-		       predictive-latex-word-completion-behaviour t)))
+ :syntax-alist
+     ((?w . ((lambda ()
+	       (let ((env (bounds-of-thing-at-point
+			   'predictive-latex-word)))
+		 (when (and env (= (point) (car env)))
+		   (delete-region (car env) (cdr env))))
+	       'add)
+	     predictive-latex-word-completion-behaviour t))
+      (?_ . ((lambda ()
+	       (let ((env (bounds-of-thing-at-point
+			   'predictive-latex-word)))
+		 (when (and env (= (point) (car env)))
+		   (delete-region (car env) (cdr env))))
+	       'add)
+	     predictive-latex-word-completion-behaviour t))
+      (?. . ((lambda ()
+	       (let ((env (bounds-of-thing-at-point
+			   'predictive-latex-word)))
+		 (when (and env (= (point) (car env)))
+		   (delete-region (car env) (cdr env))))
+	       'add)
+	     predictive-latex-word-completion-behaviour t))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
+      (t  . (reject none)))
  :override-syntax-alist
      ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
@@ -495,8 +506,8 @@ strings become the sub-menu entries.")
 	       'add)
 	     predictive-latex-word-completion-behaviour t))
       (?_ . (add predictive-latex-word-completion-behaviour))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (?. . (add predictive-latex-word-completion-behaviour))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
  :override-syntax-alist
      ((?: . ((lambda () (predictive-latex-completion-add-till-regexp ":"))
@@ -535,7 +546,33 @@ strings become the sub-menu entries.")
 		   (delete-region pos (point)))
 			   (goto-char pos))
 	       predictive-latex-word-completion-behaviour)
-	     t)))
+	     t))
+      (?_ . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+			   (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
+      (?. . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+			   (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
+      (t  . (reject none)))
  :override-syntax-alist
      ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
@@ -567,9 +604,35 @@ strings become the sub-menu entries.")
 			(= (match-beginning 0) pos))
 		   (backward-char)
 		   (delete-region pos (point)))
-		 (goto-char pos))
+			   (goto-char pos))
 	       predictive-latex-word-completion-behaviour)
-	     t)))
+	     t))
+      (?_ . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+			   (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
+      (?. . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alpha:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+			   (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
+      (t  . (reject none)))
  :override-syntax-alist
      ((?} predictive-latex-punctuation-resolve-behaviour none))
  :word-thing predictive-latex-word
