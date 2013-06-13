@@ -1928,8 +1928,8 @@ Remaining arguments are ignored (they are there to allow
 	   (eq last-command 'forward-char)
 	   (eq last-command 'left-char)
 	   (eq last-command 'right-char))
-       (setq word (thing-at-point
-		   (completion-ui-source-word-thing 'predictive)))
+       (setq word (thing-at-point (completion-ui-source-word-thing
+				   (auto-completion-source))))
        (set-text-properties 0 (length word) nil word))
 
   (when word
