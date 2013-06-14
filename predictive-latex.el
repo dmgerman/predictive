@@ -63,14 +63,6 @@ When a document class is in the list, "
   :type '(repeat (cons string symbol)))
 
 
-(defcustom predictive-latex-display-help t
-  "When non-nil, display help on LaTeX commands.
-\(This relies on suitable help text being defined in the LaTeX
-dictionaries.\)"
-  :group 'predictive-latex
-  :type 'boolean)
-
-
 (defcustom predictive-latex-save-section-dict nil
   "When non-nil, save the LaTeX section dictionary.
 
@@ -698,12 +690,6 @@ function automatically when predictive mode is enabled in
 		   "text{\\([^}]*\\)")
 	  predictive looking-at 1)))
 
-      ;; display help if first character of accepted completion is "\" and
-      ;; after point motion
-      (when predictive-latex-display-help
-	(add-hook 'predictive-accept-functions 'predictive-display-help
-		  nil 'local)
-	(add-hook 'post-command-hook 'predictive-display-help nil 'local))
       ;; store filename for comparison when saving (see
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
@@ -890,10 +876,6 @@ function automatically when predictive mode is enabled in
     (kill-local-variable 'predictive-latex-bibstyle-dict)
     ;; remove other local variable settings
     (kill-local-variable 'predictive-latex-previous-filename)
-    ;; remove hooks that display help
-    (when predictive-latex-display-help
-      (remove-hook 'predictive-accept-functions 'predictive-display-help 'local)
-      (remove-hook 'post-command-hook 'predictive-display-help 'local))
     ;; remove hook functions that save overlays etc.
     ;;(remove-hook 'after-save-hook 'predictive-latex-after-save 'local)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer 'local)
