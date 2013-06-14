@@ -3,7 +3,7 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2009, 2012 Toby Cubitt
+;; Copyright (C) 2009, 2012-2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.3
@@ -45,25 +45,24 @@
    ((> arg 0)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\[vV]\\(\\|page\\)ref\\(range\\|\\)"
-		'predictive-latex-label-dict)
-	  predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\fullref" 'predictive-latex-label-dict)
-	  predictive-latex-browser-submenu-alist)
+    (nconc predictive-latex-browser-submenu-alist
+	   '(("\\\\[vV]\\(\\|page\\)ref\\(range\\|\\)"
+	      . predictive-latex-label-dict)
+	     ("\\\\fullref" . predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; \vref etc.
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
-		      predictive-latex-brace-group-regexp)
-	     predictive-latex-label looking-at 1)
-	    ;; \fullref
-	    (,(concat predictive-latex-odd-backslash-regexp
-		      "fullref" predictive-latex-brace-group-regexp)
-	     predictive-latex-label looking-at 1))
-	  auto-completion-source-regexps)))
+    (make-local-variable 'auto-completion-source-regexps)
+    (nconc
+     auto-completion-source-regexps
+     ;; \vref etc.
+     `((,(concat predictive-latex-odd-backslash-regexp
+		 "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
+		 predictive-latex-brace-group-regexp)
+	predictive-latex-label looking-at 1)
+       ;; \fullref
+       (,(concat predictive-latex-odd-backslash-regexp
+		 "fullref" predictive-latex-brace-group-regexp)
+	predictive-latex-label looking-at 1))))
 
    ;; --- unload varioref support ---
    ((< arg 0)

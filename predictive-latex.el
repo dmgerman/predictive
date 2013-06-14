@@ -145,11 +145,7 @@ the package name (a string), the next two being the functions to
 call when loading and unloading the package.")
 
 
-(defvar predictive-latex-browser-submenu-alist
-  '(("\\\\begin" . dict-latex-env)
-    ("\\\\documentclass" . dict-latex-docclass)
-    ("\\\\bibliographystyle" . dict-latex-bibstyle)
-    ("\\\\\\(eq\\|\\)ref" . predictive-latex-label-dict))
+(defvar predictive-latex-browser-submenu-alist nil
 "Alist associating regexps with sub-menu definitions.
 When a browser menu item matches a regexp in the alist, the
 associated definition is used to construct a sub-menu for that
@@ -661,48 +657,20 @@ function automatically when predictive mode is enabled in
       ;; save overlays and dictionaries along with buffer
       ;;(add-hook 'after-save-hook 'predictive-latex-after-save nil 'local)
       (add-hook 'kill-buffer-hook 'predictive-latex-kill-buffer nil 'local)
-
-      ;; configure automatic selection of completion sources and dicts
-      (predictive-setup-save-local-state 'auto-completion-source-regexps)
-      (predictive-setup-save-local-state 'auto-completion-source-faces)
-      (set (make-local-variable 'auto-completion-source-faces)
-	   '((font-latex-math-face . predictive-latex-math)))
-      (set (make-local-variable 'auto-completion-source-regexps)
-       `((,(concat predictive-latex-odd-backslash-regexp
-		   "label" predictive-latex-brace-group-regexp)
-	  nil looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "\\(?:begin\\|end\\)"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-env looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "ref" predictive-latex-brace-group-regexp)
-	  predictive-latex-label looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "documentclass\\(?:\\[.*\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-docclass looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "bibliographystyle\\(?:\\[.*\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-bibstyle looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "text{\\([^}]*\\)")
-	  predictive looking-at 1)))
-
       ;; store filename for comparison when saving (see
       ;; `predictive-latex-after-save')
       (setq predictive-latex-previous-filename (buffer-file-name))
-
 
       (cond
        ;; if we're not the TeX-master, visit the TeX master buffer, enable
        ;; predictive mode in it, and share buffer-local settings with it
        ((and (boundp 'TeX-master) (stringp TeX-master))
-	(let (filename buff used-dicts main-dict aux-dict
+	(let (filename buff source-regexps source-faces
+	      used-dicts main-dict aux-dict
 	      latex-dict math-dict preamble-dict env-dict
 	      label-dict local-latex-dict local-math-dict
-	      local-env-dict local-section-dict)
+	      local-env-dict local-section-dict
+	      browser-submenu)
 	  (setq filename (concat (file-name-sans-extension
 				  (expand-file-name TeX-master)) ".tex"))
 	  (unless (file-exists-p filename) (throw 'load-fail nil))
@@ -711,6 +679,8 @@ function automatically when predictive mode is enabled in
 	    (turn-on-predictive-mode)
 	    (setq buff (current-buffer)
 		  used-dicts         predictive-used-dict-list
+		  source-regexps     auto-completion-source-regexps
+		  source-faces       auto-completion-source-faces
 		  main-dict          predictive-buffer-dict
 		  aux-dict           predictive-auxiliary-dict
 		  latex-dict         predictive-latex-dict
@@ -721,9 +691,12 @@ function automatically when predictive mode is enabled in
 		  local-latex-dict   predictive-latex-local-latex-dict
 		  local-math-dict    predictive-latex-local-math-dict
 		  local-env-dict     predictive-latex-local-env-dict
-		  local-section-dict predictive-latex-section-dict))
+		  local-section-dict predictive-latex-section-dict
+		  browser-submenu    predictive-latex-browser-submenu-alist))
 	  (auto-overlay-share-regexp-set 'predictive buff)
-	  (setq predictive-used-dict-list         used-dicts
+	  (setq auto-completion-source-regexps    source-regexps
+		auto-completion-source-faces      source-faces
+		predictive-used-dict-list         used-dicts
 		predictive-buffer-dict            main-dict
 		predictive-auxiliary-dict         aux-dict
 		predictive-latex-dict             latex-dict
@@ -734,8 +707,8 @@ function automatically when predictive mode is enabled in
 		predictive-latex-local-latex-dict local-latex-dict
 		predictive-latex-local-latex-dict local-math-dict
 		predictive-latex-local-env-dict   local-env-dict
-		predictive-latex-section-dict     local-section-dict)
-
+		predictive-latex-section-dict     local-section-dict
+		predictive-latex-browser-submenu-alist browser-submenu)
 	  ;; start the auto-overlays
 	  ;; Note: we skip the check that regexp definitions haven't changed
 	  ;;       if there's a file of saved overlay data to use, and
@@ -750,7 +723,8 @@ function automatically when predictive mode is enabled in
 	  ))
 
 
-       ;; if we're the TeX master file, set up LaTeX auto-overlay regexps
+       ;; if we're the TeX master file, set up LaTeX auto-completion source
+       ;; and auto-overlay regexps
        ;; FIXME: should we handle null TeX-master case differently?
        (t
 	;; load the latex dictionaries
@@ -780,7 +754,6 @@ function automatically when predictive mode is enabled in
 	  (setf (dictree-autosave predictive-latex-section-dict) nil))
 	(unless predictive-latex-save-label-dict
 	  (setf (dictree-autosave predictive-latex-label-dict) nil))
-
 	;; add local env, maths and text-mode dicts to appropriate dict lists
 	;; Note: we add the local text-mode command dictionary to the maths
 	;;       dictionary list too, because there's no way to tell whether
@@ -803,9 +776,38 @@ function automatically when predictive mode is enabled in
 		      (if (dictree-p predictive-latex-local-env-dict)
 			  (list predictive-latex-local-env-dict)
 			predictive-latex-local-env-dict)))
-
 	;; set latex dictionaries to be used alongside main dictionaries
 	(setq predictive-auxiliary-dict predictive-latex-dict)
+
+	;; configure automatic selection of completion sources and dicts
+	(predictive-setup-save-local-state 'auto-completion-source-regexps)
+	(predictive-setup-save-local-state 'auto-completion-source-faces)
+	(set (make-local-variable 'auto-completion-source-faces)
+	     '(nil  ; allows non-TeX-master buffers to share face defs
+	       (font-latex-math-face . predictive-latex-math)))
+	(set (make-local-variable 'auto-completion-source-regexps)
+	     `(nil  ; allows non-TeX-master buffers to share regexp defs
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "label" predictive-latex-brace-group-regexp)
+		nil looking-at 1)
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "\\(?:begin\\|end\\)"
+			 predictive-latex-brace-group-regexp)
+		predictive-latex-env looking-at 1)
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "ref" predictive-latex-brace-group-regexp)
+		predictive-latex-label looking-at 1)
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "documentclass\\(?:\\[.*\\]\\)?"
+			 predictive-latex-brace-group-regexp)
+		predictive-latex-docclass looking-at 1)
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "bibliographystyle\\(?:\\[.*\\]\\)?"
+			 predictive-latex-brace-group-regexp)
+		predictive-latex-bibstyle looking-at 1)
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "text{\\([^}]*\\)")
+		predictive looking-at 1)))
 
 	;; delete any existing predictive auto-overlay regexps and load latex
 	;; auto-overlay regexps
@@ -830,6 +832,14 @@ function automatically when predictive mode is enabled in
       ;; consider \ as start of a word
       (predictive-setup-save-local-state 'words-include-excapes)
       (set (make-local-variable 'words-include-escapes) nil)
+
+      ;; set browser submenu definitions
+      (set (make-local-variable 'predictive-latex-browser-submenu-alist)
+	   '(("\\\\begin" . dict-latex-env)
+	     ("\\\\documentclass" . dict-latex-docclass)
+	     ("\\\\bibliographystyle" . dict-latex-bibstyle)
+	     ("\\\\\\(eq\\|\\)ref" . predictive-latex-label-dict)))
+
       t))  ; indicate successful setup
 
 
@@ -876,6 +886,7 @@ function automatically when predictive mode is enabled in
     (kill-local-variable 'predictive-latex-bibstyle-dict)
     ;; remove other local variable settings
     (kill-local-variable 'predictive-latex-previous-filename)
+    (kill-local-variable 'predictive-latex-browser-submenu-alist)
     ;; remove hook functions that save overlays etc.
     ;;(remove-hook 'after-save-hook 'predictive-latex-after-save 'local)
     (remove-hook 'kill-buffer-hook 'predictive-latex-kill-buffer 'local)

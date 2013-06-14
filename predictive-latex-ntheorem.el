@@ -3,7 +3,7 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2008, 2012 Toby Cubitt
+;; Copyright (C) 2008, 2012, 2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.1.2
@@ -43,13 +43,13 @@
    ;; --- load ntheorem support ---
    ((> arg 0)
     ;; add completion source regexp
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; \thref etc.
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "thref" predictive-latex-brace-group-regexp)
-	     predictive-latex-label looking-at 1))
-	  auto-completion-source-regexps))
+    (make-local-variable 'auto-completion-source-regexps)
+    (nconc
+     auto-completion-source-regexps
+     ;; \thref etc.
+     `((,(concat predictive-latex-odd-backslash-regexp
+		 "thref" predictive-latex-brace-group-regexp)
+	predictive-latex-label looking-at 1)))
 
     ;; load \newshadedtheorem and \newframedtheorem auto-overlay definitions
     (auto-overlay-load-definition

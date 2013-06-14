@@ -4182,24 +4182,25 @@ locally when a regexp matches the current buffer line."
 	type regexp group match)
     (catch 'source
       (dolist (r auto-completion-source-regexps)
-	(setq regexp (car r) type (nth 2 r))
-	(save-excursion
-	  (cond
-	   ((or (eq type 'looking-at) (null type))  ; default to `looking-at'
-	    (setq group (or (nth 3 r) 0))
-	    ;; search repeatedly, starting from last match, until we find
-	    (forward-line 0)
-	    (while (re-search-forward regexp bound t)
-	      (when (and (<= (match-beginning group) pos)
-			 (>= (match-end group) pos))
-		(throw 'source (or (nth 1 r) t)))   ; use t to indicate null
-	      (goto-char (1+ (match-beginning 0)))))
+	(unless (null r)
+	  (setq regexp (car r) type (nth 2 r))
+	  (save-excursion
+	    (cond
+	     ((or (eq type 'looking-at) (null type)) ; default to `looking-at'
+	      (setq group (or (nth 3 r) 0))
+	      ;; search repeatedly, starting from last match, until we find
+	      (forward-line 0)
+	      (while (re-search-forward regexp bound t)
+		(when (and (<= (match-beginning group) pos)
+			   (>= (match-end group) pos))
+		  (throw 'source (or (nth 1 r) t)))  ; use t to indicate null
+		(goto-char (1+ (match-beginning 0)))))
 
-	   ((eq type 'before-point)
-	    (goto-char (line-beginning-position))
-	    (when (re-search-forward regexp pos t)
-	      (throw 'source (or (nth 1 r) t))))    ; use t to indicate null
-	   ))))))
+	     ((eq type 'before-point)
+	      (goto-char (line-beginning-position))
+	      (when (re-search-forward regexp pos t)
+		(throw 'source (or (nth 1 r) t))))   ; use t to indicate null
+	     )))))))
 
 
 (defun auto-completion-face-source ()
@@ -4222,7 +4223,7 @@ enabled in the buffer for them to take effect.\)"
 		  (get-text-property (1- (point)) 'face))))
     (catch 'source
       (dolist (f auto-completion-source-faces)
-	(when (and (completion-ui-face-matches-p (car f) face0)
+	(when (and f (completion-ui-face-matches-p (car f) face0)
 		   (completion-ui-face-matches-p (car f) face1))
 	  (throw 'source (or (cdr f) t)))))))
 

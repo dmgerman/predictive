@@ -2,7 +2,7 @@
 ;;; predictive-latex-color.el --- predictive mode LaTeX color package support
 
 
-;; Copyright (C) 2008 Toby Cubitt
+;; Copyright (C) 2008, 2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.2.1
@@ -75,17 +75,17 @@
     (predictive-load-dict 'dict-latex-colours)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)
-	  predictive-latex-browser-submenu-alist)
+    (nconc predictive-latex-browser-submenu-alist
+	   '(("\\\\\\(text\\|page\\|\\)color" . dict-latex-colours)))
     ;; add completion source regexps
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; label with optarg
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
-    		      predictive-latex-brace-group-regexp)
-	     predictive-latex-color looking-at 1))
-	  auto-completion-source-regexps)))
+    (make-local-variable 'auto-completion-source-regexps)
+    (nconc
+     auto-completion-source-regexps
+     ;; color commands
+     `((,(concat predictive-latex-odd-backslash-regexp
+		 "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
+		 predictive-latex-brace-group-regexp)
+	predictive-latex-color looking-at 1))))
 
    ;; --- unload color support ---
    ((< arg 0)

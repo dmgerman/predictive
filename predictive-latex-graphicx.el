@@ -3,7 +3,7 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2004-2006 2008 Toby Cubitt
+;; Copyright (C) 2004-2006, 2008, 2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.2.2
@@ -44,14 +44,15 @@
    ;; --- load graphicx support ---
    ((> arg 0)
     ;; add completion source regexps
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; label with optarg
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "includegraphics\\(?:\\[.*?\\]\\)"
-		      predictive-latex-brace-group-regexp)
-	     nil looking-at 1))
-	  auto-completion-source-regexps)))
+    (make-local-variable 'auto-completion-source-regexps)
+    (nconc
+     auto-completion-source-regexps
+     ;; label with optarg
+     `((,(concat predictive-latex-odd-backslash-regexp
+		 "includegraphics\\(?:\\[.*?\\]\\)"
+		 predictive-latex-brace-group-regexp)
+	nil looking-at 1))
+     ))
 
    ;; --- unload graphicx support ---
    ((< arg 0)

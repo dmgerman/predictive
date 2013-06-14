@@ -3,7 +3,7 @@
 ;;;                                package support
 
 
-;; Copyright (C) 2006-2008,2012 Toby Cubitt
+;; Copyright (C) 2006-2008, 2012, 2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.2.2
@@ -45,17 +45,17 @@
    ((> arg 0)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\subref" 'predictive-latex-label-dict)
-	  predictive-latex-browser-submenu-alist)
+    (nconc predictive-latex-browser-submenu-alist
+	   '(("\\\\subref" . predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; \subref
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "subref" predictive-latex-brace-group-regexp)
-	     predictive-latex-label looking-at 1))
-	  auto-completion-source-regexps)))
+    (make-local-variable 'auto-completion-source-regexps)
+    (nconc
+     auto-completion-source-regexps
+     ;; \subref
+     `((,(concat predictive-latex-odd-backslash-regexp
+		 "subref" predictive-latex-brace-group-regexp)
+	predictive-latex-label looking-at 1))))
 
    ;; --- unload subfig support ---
    ((< arg 0)

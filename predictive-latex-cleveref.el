@@ -3,7 +3,7 @@
 ;;;                                  package support
 
 
-;; Copyright (C) 2004-2012 Toby Cubitt
+;; Copyright (C) 2004-2013 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.10
@@ -71,24 +71,25 @@
    ((> arg 0)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (push (cons "\\\\[cC]ref\\(range\\|\\)" 'predictive-latex-label-dict)
-	  predictive-latex-browser-submenu-alist)
+    (nconc predictive-latex-browser-submenu-alist
+	   '(("\\\\[cC]ref\\(range\\|\\)" . predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 (nconc
-	  ;; label with optarg
-	  `((,(concat predictive-latex-odd-backslash-regexp
-		      "label\\(?:\\[.*?\\]\\)?"
-		      predictive-latex-brace-group-regexp)
-	     nil looking-at 1)
-	    ;; \cref and \vref
-	    (,(concat predictive-latex-odd-backslash-regexp
-		      "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
-		      "\\|\\(?:name\\|label\\)[cC]ref\\)"
-		      predictive-latex-brace-group-regexp)
-	     predictive-latex-cleveref-label looking-at 1))
-	  auto-completion-source-regexps))
+    (make-local-variable 'auto-completion-source-regexps)
+    (setcdr auto-completion-source-regexps
+	    (nconc
+	     ;; label with optarg
+	     `((,(concat predictive-latex-odd-backslash-regexp
+			 "label\\(?:\\[.*?\\]\\)?"
+			 predictive-latex-brace-group-regexp)
+		nil looking-at 1)
+	       ;; \cref and \vref
+	       (,(concat predictive-latex-odd-backslash-regexp
+			 "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
+			 "\\|\\(?:name\\|label\\)[cC]ref\\)"
+			 predictive-latex-brace-group-regexp)
+		predictive-latex-cleveref-label looking-at 1))
+	     (cdr auto-completion-source-regexps)))
 
     ;; \label with optional argument replaces normal \label definition
     (setq predictive-latex-cleveref-restore-label-definition
