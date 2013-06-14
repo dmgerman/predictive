@@ -1116,9 +1116,10 @@ used if the current Emacs version lacks command remapping support."
   (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
   (define-key completion-overlay-map [(meta shift iso-lefttab)]
     'completion-cycle-backwards)
-  ;; C-RET accepts, C-DEL rejects
+  ;; C-RET accepts, C-DEL and C-q reject
   (define-key completion-overlay-map [(control return)] 'completion-accept)
   (define-key completion-overlay-map [(control backspace)] 'completion-reject)
+  (define-key completion-overlay-map "\C-q" 'completion-reject)
   ;; <tab> does traditional tab-completion
   (define-key completion-overlay-map "\t" 'completion-tab-complete)
   ;; C-<tab> scoots ahead
@@ -1141,21 +1142,21 @@ used if the current Emacs version lacks command remapping support."
   (setq auto-completion-overlay-map (make-sparse-keymap))
   (set-keymap-parent auto-completion-overlay-map completion-overlay-map)
 
-  ;; M-<space> abandons and inserts a space
-  (define-key auto-completion-overlay-map "\M- "
-    (lambda (&optional arg)
-      "Reject any current provisional completion and insert a space."
-      (interactive "P")
-      (completion-reject arg)
-      (insert " ")))
+  ;; ;; M-<space> abandons and inserts a space
+  ;; (define-key auto-completion-overlay-map "\M- "
+  ;;   (lambda (&optional arg)
+  ;;     "Reject any current provisional completion and insert a space."
+  ;;     (interactive "P")
+  ;;     (completion-reject arg)
+  ;;     (insert " ")))
 
   ;; Note: the only reason we don't use
   ;;       `completion-define-word-constituent-binding' here is that the
   ;;       lambda expressions it creates wouldn't be byte-compiled. Anywhere
   ;;       else, `completion-define-word-constituent-binding' should be used.
 
-  ;; M-S-<space> inserts a space as a word-constituent
-  (define-key auto-completion-overlay-map [?\M-\S- ]
+  ;; M-<space> inserts a space as a word-constituent
+  (define-key auto-completion-overlay-map [?\M- ]
     (lambda ()
       "Insert a space as though it were a word-constituent."
       (interactive)
@@ -1189,33 +1190,33 @@ used if the current Emacs version lacks command remapping support."
 ;;;       (interactive)
 ;;;       (auto-completion-self-insert ?/ ?w t)))
 
-  ;; M-( inserts "(" as a word-constituent
-  (define-key auto-completion-overlay-map "\M-("
-    (lambda ()
-      "Insert \"(\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?\( ?w t)))
+  ;; ;; M-( inserts "(" as a word-constituent
+  ;; (define-key auto-completion-overlay-map "\M-("
+  ;;   (lambda ()
+  ;;     "Insert \"(\" as though it were a word-constituent."
+  ;;     (interactive)
+  ;;     (auto-completion-self-insert ?\( ?w t)))
 
-  ;; M-( inserts ")" as a word-constituent
-  (define-key auto-completion-overlay-map "\M-)"
-    (lambda ()
-      "Insert \")\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?\) ?w t)))
+  ;; ;; M-( inserts ")" as a word-constituent
+  ;; (define-key auto-completion-overlay-map "\M-)"
+  ;;   (lambda ()
+  ;;     "Insert \")\" as though it were a word-constituent."
+  ;;     (interactive)
+  ;;     (auto-completion-self-insert ?\) ?w t)))
 
-  ;; M-{ inserts "{" as a word-constituent
-  (define-key auto-completion-overlay-map "\M-{"
-    (lambda ()
-      "Insert \"{\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?{ ?w t)))
+  ;; ;; M-{ inserts "{" as a word-constituent
+  ;; (define-key auto-completion-overlay-map "\M-{"
+  ;;   (lambda ()
+  ;;     "Insert \"{\" as though it were a word-constituent."
+  ;;     (interactive)
+  ;;     (auto-completion-self-insert ?{ ?w t)))
 
-  ;; M-} inserts "}" as a word-constituent
-  (define-key auto-completion-overlay-map "\M-("
-    (lambda ()
-      "Insert \"}\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?} ?w t)))
+  ;; ;; M-} inserts "}" as a word-constituent
+  ;; (define-key auto-completion-overlay-map "\M-}"
+  ;;   (lambda ()
+  ;;     "Insert \"}\" as though it were a word-constituent."
+  ;;     (interactive)
+  ;;     (auto-completion-self-insert ?} ?w t)))
 
   ;; if we can remap commands, remap `self-insert-command'
   (if (fboundp 'command-remapping)
