@@ -1141,29 +1141,23 @@ If point is already on a definition, cycle to next duplicate
 definition of the same thing."
   (interactive)
 
-  (let ((current-dict (predictive-current-dict))
-	word dict o-def type)
-    (when (dictree-p current-dict) (setq current-dict (list current-dict)))
-
+  (let ((source (auto-completion-source))
+	word dict type o-def)
     (or
      ;; when we're on either a cross-reference or a label definition...
-     (and (or (member (setq dict predictive-latex-label-dict)
-		      current-dict)
-	      (setq o-def (car (auto-overlays-at-point
-				nil '((identity auto-overlay)
-				      (eq set-id predictive)
-				      (eq definition-id label))))))
+     (and (or (eq source 'predictive-latex-label)
+	      ;; FIXME: allow for multiple levels of inheritance?
+	      (eq (completion-ui-source-inherit-from source)
+		  'predictive-latex-label))
 	  ;; look for label at point
 	  (setq word
-		(thing-at-point
-		 (let ((completion-word-thing 'predictive-latex-label-word))
-		   (auto-overlay-local-binding 'completion-word-thing))))
+		(thing-at-point (completion-ui-source-word-thing source)))
 	  (set-text-properties 0 (length word) nil word)
+	  (setq dict predictive-latex-label-dict)
 	  (setq type "label"))
 
      ;; when we're on either a LaTeX command or a definition thereof...
-     (and (or (member predictive-latex-local-latex-dict current-dict)
-	      (member predictive-latex-local-math-dict current-dict)
+     (and (or (eq source 'predictive-latex) (eq source 'predictive-latex-math)
 	      (setq o-def
 		    (car (auto-overlays-at-point
 			  nil `((identity auto-overlay)
@@ -1172,22 +1166,21 @@ definition of the same thing."
 				    (or (eq id 'newcommand)
 					(eq id 'DeclareMathOperator)))
 				 definition-id))))))
+	  ;; look for command at point
+	  (setq word (thing-at-point 'predictive-latex-word))
+	  (set-text-properties 0 (length word) nil word)
+	  ;; verify we're on a command by checking first character is "\"
+	  (= (elt word 0) ?\\)
 	  ;; set dict to temporary meta-dict that combines local-latex and
 	  ;; local-math dicts
 	  (setq dict (dictree-create-meta-dict
 		      (list predictive-latex-local-latex-dict
 			    predictive-latex-local-math-dict)
 		      nil nil nil t '+))
-	  ;; look for command at point
-	  (setq word (thing-at-point 'predictive-latex-word))
-	  (set-text-properties 0 (length word) nil word)
-	  ;; verify we're on a command by checking first character is "\"
-	  (= (elt word 0) ?\\)
 	  (setq type "command"))
 
      ;; when we're on either a LaTeX environment or definition thereof...
-     (and (or (member (setq dict predictive-latex-local-env-dict)
-		      current-dict)
+     (and (or (eq source 'predictive-latex-env)
 	      (setq o-def (car (auto-overlays-at-point
 				nil `((identity auto-overlay)
 				      (eq set-id predictive)
@@ -1198,6 +1191,7 @@ definition of the same thing."
 	  ;; look for environment at point
 	  (setq word (thing-at-point 'predictive-latex-word))
 	  (set-text-properties 0 (length word) nil word)
+	  (setq dict predictive-latex-local-env-dict)
 	  (setq type "environment")))
 
 
@@ -1207,7 +1201,7 @@ definition of the same thing."
       (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
       (cond
        ;; we only find out here whether a command or environment was defined
-       ;; or preamble or globally, so might have jumped no where
+       ;; in preamble or globally, so we might have jumped no where
        ((null o-def) (message "Nothing to jump to"))
        ;; display warning if multiply defined
        ((> (length o-def) 1)
