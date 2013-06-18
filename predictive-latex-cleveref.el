@@ -47,6 +47,23 @@
 ;; derive cleveref-style label completion source from standard label source
 (completion-ui-register-derived-source
  predictive-latex-cleveref-label predictive-latex-label
+ :syntax-alist
+     ((?w . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alnum:][:punct:]]*?\\([,}]\\)" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+		 (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
+      (?_ . (add predictive-latex-word-completion-behaviour))
+      (?. . (add predictive-latex-word-completion-behaviour))
+      (?  . (predictive-latex-whitespace-resolve-behaviour none))
+      (t  . (reject none)))
  :override-syntax-alist
      ((?: . ((lambda ()
 	       (predictive-latex-completion-add-till-regexp ":"))

@@ -146,7 +146,7 @@ call when loading and unloading the package.")
 
 
 (defvar predictive-latex-browser-submenu-alist nil
-"Alist associating regexps with sub-menu definitions.
+  "Alist associating regexps with sub-menu definitions.
 When a browser menu item matches a regexp in the alist, the
 associated definition is used to construct a sub-menu for that
 browser item.
@@ -486,13 +486,18 @@ strings become the sub-menu entries.")
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
-     ((?w . ((lambda ()
-	       (let ((label (bounds-of-thing-at-point
-			     'predictive-latex-label-word)))
-		 (when (and label (= (point) (car label)))
-		   (delete-region (car label) (cdr label))))
-	       'add)
-	     predictive-latex-word-completion-behaviour t))
+     ((?w . (add
+	     (lambda ()
+	       (let ((pos (point)))
+		 (when (and
+			(re-search-forward
+			 "[[:alnum:][:punct:]]*?}" (line-end-position) t)
+			(= (match-beginning 0) pos))
+		   (backward-char)
+		   (delete-region pos (point)))
+		 (goto-char pos))
+	       predictive-latex-word-completion-behaviour)
+	     t))
       (?_ . (add predictive-latex-word-completion-behaviour))
       (?. . (add predictive-latex-word-completion-behaviour))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
