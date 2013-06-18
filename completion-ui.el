@@ -2216,7 +2216,9 @@ functions called from the
        ;; add source definition to list (or replace existing definition)
        (let ((existing (assq ',name completion-ui-source-definitions)))
 	 (if (not existing)
-	     (push ',source-def completion-ui-source-definitions)
+	     (if completion-ui-source-definitions
+		 (nconc completion-ui-source-definitions '(,source-def))
+	       (setq completion-ui-source-definitions '(,source-def)))
 	   (message "Completion-UI source `%s' already registered\
  - replacing existing definition" ',name)
 	   (setcdr existing ',(cdr source-def))))
@@ -2661,9 +2663,12 @@ should be replaced by the completion."
 		  (overlay-get update 'non-prefix-completion))
 	;; otherwise, sort out arguments...
 	;; get completion-function
-	(setq completion-function
-	      (or (completion-ui-source-completion-function completion-source)
-		  completion-source))
+	(unless (functionp
+		 (setq completion-function
+		       (or (completion-ui-source-completion-function
+			    completion-source)
+			   completion-source)))
+	  (error "Unknown completion source %s" completion-source))
 	;; literal PREFIX-FUNCTION takes precedence
 	(if (stringp prefix-function)
 	    (setq prefix prefix-function)
