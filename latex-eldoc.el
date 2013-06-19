@@ -61,6 +61,20 @@ environment in the text where point is."
        31 35 (face (font-lock-keyword-face font-latex-sedate-face))
        36 41 (face (font-lock-function-name-face))))
 
+(set (intern "\\multicolumn" latex-eldoc-obarray)
+     #("\\multicolumn{<#cols>}{<col>}{<content>}  Table content spanning multiple columns"
+       0 12 (face (font-lock-keyword-face font-latex-sedate-face))
+       13 20 (face (font-lock-variable-name-face))
+       22 27 (face (font-lock-variable-name-face))
+       29 38 (face (font-lock-variable-name-face))))
+
+(set (intern "\\multirow" latex-eldoc-obarray)
+     #("\\multirow{<#rows>}{<width>|*}{<content>}  Table content spanning multiple rows"
+       0 9 (face (font-lock-keyword-face font-latex-sedate-face))
+       10 17 (face (font-lock-variable-name-face))
+       19 28 (face (font-lock-variable-name-face))
+       30 39 (face (font-lock-variable-name-face))))
+
 
 
 ;;; amsmath
