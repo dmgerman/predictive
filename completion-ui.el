@@ -1517,14 +1517,16 @@ The following two keyword arguments are mandatory:
         The function called to activate the user-interface. It
         should take one argument, a completion overlay, and do
         whatever is necessary to activate the user-interface for
-        that completion. The return value is ignored.
+        that completion. The return value is ignored. (See below
+        for details of the data passed in a completion overlay.)
 
 :deactivate FUNCTION
         The function called to deactivate the user-interface. It
         should take one argument, a completion overlay, and do
         whatever is necessary to deactivate the user-interface
-        for that completion. The return value is ignored.
-
+        for that completion. The return value is ignored. (See
+        below for details of the data passed in a completion
+        overlay.)
 
 The following optional keywords are also meaningful:
 
@@ -1545,7 +1547,7 @@ The following optional keywords are also meaningful:
         is to add it at the end. Interfaces functions are called
         in the order they appear in the list of definitions.
 
-        Note that this has no effect if a interface called NAME
+        Note that this has no effect if an interface called NAME
         is already defined, in which case the new definition
         replaces the old one at the same location in the list as
         before.
@@ -1553,8 +1555,8 @@ The following optional keywords are also meaningful:
 
 The remaining optional keyword arguments specify functions to
 call in various circumstances that might require updating the
-user-interface. They are all passed a single argument, a
-completion overlay for the current completion.
+user-interface. They are all passed a single argument: a
+completion overlay for the completion being updated.
 
 :update FUNCTION
         A function to call to update the user-interface after a
@@ -1572,7 +1574,60 @@ completion overlay for the current completion.
 
 :auto-show-helper FUNCTION
         A function to call whenever any auto-show interface is
-        activated for a completion."
+        activated for a completion.
+
+
+All data relevant to the current completion are stored in
+properties of the completion overlay, which can be retrieved
+using `overlay-get'. The following overlay properties store
+completion-related data:
+
+prefix
+        The prefix or string being completed.
+
+prefix-length
+        Length of the prefix or string currently being completed.
+
+completions
+        A list of completion candidates.
+
+completion-num
+        Index of currently selected completion candidate, or nil
+        if completions list is empty.
+
+completion-overlay
+        Always t for a completion overlay.
+
+completion-source
+        The completion source (symbol) used to obtain the
+        completion candidates, as defined by
+        `completion-ui-register-source'.
+
+completion-prefix-function
+        Function that was used to find the prefix or string to
+        complete (see `completion-ui-register-source').
+
+non-prefix-completion
+        Nil if doing standard prefix completion, non-nil if doing
+        something other than prefix completion (see
+        `completion-ui-register-source').
+
+prefix-replaced
+        Non-nil if buffer string being completed (stored in
+        prefix overlay property) is
+
+common-substring
+        If set, an overlay marking the longest common substring
+        of the provisional completion currently inserted in the
+        buffer.
+
+keymap
+        Keymap active within the completion overlay. Usually derived from
+        `completion-overlay-map' or `auto-completion-overlay-map'.
+
+auto-show
+       Name of auto-show interface (symbol) currently being
+       displayed, or nil if no auto-show interface is active."
 
   ;; remove `quote' from arguments
   (when (and (listp name) (eq (car name) 'quote))
@@ -2280,7 +2335,7 @@ functions called from the
 
 (defun completion-ui-source-non-prefix-completion (source &optional overlay)
   ;; return non-prefix-completion setting for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'completion-non-prefix-completion))
+  (or (and overlay (overlay-get overlay 'non-prefix-completion))
       (let ((def (assq (completion-ui-completion-source source overlay)
 		       completion-ui-source-definitions)))
 	;; source definition
@@ -2321,8 +2376,7 @@ functions called from the
 
 (defun completion-ui-source-word-thing (source &optional overlay)
   ;; return word-thing at point for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'completion-word-thing))
-      (let* ((def (assq (completion-ui-completion-source source overlay)
+  (or (let* ((def (assq (completion-ui-completion-source source overlay)
 			completion-ui-source-definitions))
 	     (word-thing
 	      (or
@@ -2859,8 +2913,7 @@ default (see `complete-in-buffer' for more details)."
     ;; get completion overlay at point
     (let* ((overlay (completion-ui-overlay-at-point))
 	   (word-thing
-	    (or (and overlay (overlay-get overlay 'prefix-word-thing))
-		(and (fboundp 'auto-overlay-local-binding)
+	    (or (and (fboundp 'auto-overlay-local-binding)
 		     (auto-overlay-local-binding
 		      'completion-word-thing nil t))
 		(and (symbolp prefix-function)
