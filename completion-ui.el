@@ -2307,53 +2307,66 @@ functions called from the
 
 ;;; === functions for retrieving completion source properties ===
 
-(defsubst completion-ui-completion-source (source &optional overlay)
-  ;; return SOURCE, or completion-source for OVERLAY if specified
-  (or (and overlay (overlay-get overlay 'completion-source))
+(defsubst completion-ui-completion-source (source)
+  ;; return SOURCE, or completion-source overlay property if SOURCE is an
+  ;; overlay
+  (or (and (overlayp source) (overlay-get source 'completion-source))
       ;; (and (fboundp 'auto-overlay-local-binding)
       ;; 	   (let ((completion-source source))
       ;; 	     (auto-overlay-local-binding 'completion-source)))
       source))
 
 
-(defun completion-ui-source-inherit-from (source &optional overlay)
+(defun completion-ui-source-inherit-from (source)
   ;; return completion source that SOURCE inherits from, if any
   (completion-ui--source-def-inherit-from
-   (assq (completion-ui-completion-source source overlay)
+   (assq (completion-ui-completion-source source)
 	 completion-ui-source-definitions)))
 
 
-(defun completion-ui-source-completion-function (source &optional overlay)
-  ;; return completion-function for SOURCE, or for OVERLAY if specified
-  (or (and overlay (overlay-get overlay 'completion-function))
-      (let ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-derives-from-p (source parent)
+  ;; Return non-nil if SOURCE is derived from PARENT (directly or indirectly),
+  ;; otherwise return nil. PARENT can also be a list, in which case it returns
+  ;; non-nil if SOURCE derives from any of the sources in the list.
+  (unless (listp parent) (setq parent (list parent)))
+  (catch 'inherits
+    (while (progn
+	     (when (memq source parent) (throw 'inherits t))
+	     (setq source (completion-ui-source-inherit-from source))))))
+
+
+(defun completion-ui-source-completion-function (source)
+  ;; return completion-function for SOURCE, or completion-function overlay
+  ;; property if SOURCE is an overlay
+  (or (and (overlayp source) (overlay-get source 'completion-function))
+      (let ((def (assq (completion-ui-completion-source source)
 		       completion-ui-source-definitions)))
 	;; source definition
 	(or (completion-ui--source-def-completion-function def)
 	    ;; derived source
-	    (and (completion-ui--source-def-inherit-from def)
-		 (completion-ui-source-completion-function
-		  (completion-ui--source-def-inherit-from def)))))))
+	    (and (setq source (completion-ui--source-def-inherit-from def))
+		 (completion-ui-source-completion-function source))))))
 
 
-(defun completion-ui-source-non-prefix-completion (source &optional overlay)
-  ;; return non-prefix-completion setting for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'non-prefix-completion))
-      (let ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-non-prefix-completion (source)
+  ;; return non-prefix-completion setting for SOURCE, or non-prefix-completion
+  ;; overlay property if SOURCE is an overlay
+  (or (and (overlayp source) (overlay-get source 'non-prefix-completion))
+      (let ((def (assq (completion-ui-completion-source source)
 		       completion-ui-source-definitions)))
 	;; source definition
 	(if (completion-ui--source-def-completion-function def)
 	    (completion-ui--source-def-non-prefix-completion def)
 	  ;; derived source
-	  (and (completion-ui--source-def-inherit-from def)
-	       (completion-ui-source-non-prefix-completion
-		(completion-ui--source-def-inherit-from def)))))))
+	  (and (setq source (completion-ui--source-def-inherit-from def))
+	       (completion-ui-source-non-prefix-completion source))))))
 
 
-(defun completion-ui-source-prefix-function (source &optional overlay)
-  ;; return prefix-function at point for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'completion-prefix-function))
-      (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-prefix-function (source)
+  ;; return prefix-function at point for SOURCE, or completion-prefix-function
+  ;; overlay property if SOURCE is an overlay
+  (or (and (overlayp source) (overlay-get source 'completion-prefix-function))
+      (let* ((def (assq (completion-ui-completion-source source)
 			completion-ui-source-definitions))
 	     (prefix-function
 	      (or
@@ -2364,9 +2377,8 @@ functions called from the
 	       ;; source definition
 	       (completion-ui--source-def-prefix-function def)
 	       ;; derived source
-	       (and (completion-ui--source-def-inherit-from def)
-		    (completion-ui-source-prefix-function
-		     (completion-ui--source-def-inherit-from def))))))
+	       (and (setq source (completion-ui--source-def-inherit-from def))
+		    (completion-ui-source-prefix-function source)))))
 	;; evaluate result until we get a function
 	(while (and prefix-function
 		    (not (functionp prefix-function))
@@ -2377,9 +2389,10 @@ functions called from the
       'completion-prefix))
 
 
-(defun completion-ui-source-word-thing (source &optional overlay)
-  ;; return word-thing at point for SOURCE or OVERLAY
-  (or (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-word-thing (source)
+  ;; return word-thing at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (or (let* ((def (assq (completion-ui-completion-source source)
 			completion-ui-source-definitions))
 	     (word-thing
 	      (or
@@ -2390,9 +2403,8 @@ functions called from the
 	       ;; source definition
 	       (completion-ui--source-def-word-thing def)
 	       ;; derived source
-	       (and (completion-ui--source-def-inherit-from def)
-		    (completion-ui-source-word-thing
-		     (completion-ui--source-def-inherit-from def))))))
+	       (and (setq source (completion-ui--source-def-inherit-from def))
+		    (completion-ui-source-word-thing source)))))
 	;; evaluate result until we get a thing-at-point symbol
 	(while (and word-thing
 		    (not (or (get word-thing 'forward-op)
@@ -2405,33 +2417,35 @@ functions called from the
       'word))
 
 
-(defun completion-ui-source-accept-functions (source &optional overlay)
-  ;; return accept-functions for SOURCE or OVERLAY
-  (let ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-accept-functions (source)
+  ;; return accept-functions for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let ((def (assq (completion-ui-completion-source source)
 		   completion-ui-source-definitions)))
     ;; source definition
     (or (completion-ui--source-def-accept-functions def)
 	;; derived source
-	(and (completion-ui--source-def-inherit-from def)
-	     (completion-ui-source-accept-functions
-	      (completion-ui--source-def-inherit-from def))))))
+	(and (setq source (completion-ui--source-def-inherit-from def))
+	     (completion-ui-source-accept-functions source)))))
 
 
-(defun completion-ui-source-reject-functions (source &optional overlay)
-  ;; return reject-functions for SOURCE or OVERLAY
-  (let ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-reject-functions (source)
+  ;; return reject-functions for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let ((def (assq (completion-ui-completion-source source)
 		   completion-ui-source-definitions)))
     ;; source definition
     (or (completion-ui--source-def-reject-functions def)
 	;; derived source
-	(and (completion-ui--source-def-inherit-from def)
-	     (completion-ui-source-reject-functions
-	      (completion-ui--source-def-inherit-from def))))))
+	(and (setq source (completion-ui--source-def-inherit-from def))
+	     (completion-ui-source-reject-functions source)))))
 
 
-(defun completion-ui-source-syntax-alist (source &optional overlay)
-  ;; return syntax-alist at point for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'auto-completion-syntax-alist))
+(defun completion-ui-source-syntax-alist (source)
+  ;; return syntax-alist at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (or (and (overlayp source)
+	   (overlay-get source 'auto-completion-syntax-alist))
       (let* ((def (assq (completion-ui-completion-source source)
 			completion-ui-source-definitions))
 	     (syntax-alist
@@ -2443,10 +2457,9 @@ functions called from the
 	       ;; source definition
 	       (completion-ui--source-def-syntax-alist def)
 	       ;; derived source
-	       (and (completion-ui--source-def-inherit-from def)
-		    (completion-ui-source-syntax-alist
-		     (completion-ui--source-def-inherit-from def))))))
-	;; evaluate result until we get a thing-at-point symbol
+	       (and (setq source (completion-ui--source-def-inherit-from def))
+		    (completion-ui-source-syntax-alist source)))))
+	;; evaluate result until we get a value
 	(while (and syntax-alist
 		    (symbolp syntax-alist)
 		    (boundp syntax-alist))
@@ -2454,9 +2467,11 @@ functions called from the
 	syntax-alist)))
 
 
-(defun completion-ui-source-override-syntax-alist (source &optional overlay)
-  ;; return override-syntax-alist at point for SOURCE or OVERLAY
-  (or (and overlay (overlay-get overlay 'auto-completion-override-syntax-alist))
+(defun completion-ui-source-override-syntax-alist (source)
+  ;; return override-syntax-alist at point for SOURCE, or for source specified
+  ;; by completion-source overlay property if SOURCE is an overlay
+  (or (and (overlayp source)
+	   (overlay-get source 'auto-completion-override-syntax-alist))
       (let* ((def (assq (completion-ui-completion-source source)
 			completion-ui-source-definitions))
 	     (override-alist
@@ -2469,10 +2484,9 @@ functions called from the
 	       ;; source definition
 	       (completion-ui--source-def-override-syntax-alist def)
 	       ;; derived source
-	       (and (completion-ui--source-def-inherit-from def)
-		    (completion-ui-source-override-syntax-alist
-		     (completion-ui--source-def-inherit-from def))))))
-	;; evaluate result until we get a thing-at-point symbol
+	       (and (setq source (completion-ui--source-def-inherit-from def))
+		    (completion-ui-source-override-syntax-alist source)))))
+	;; evaluate result until we get a value
 	(while (and override-alist
 		    (symbolp override-alist)
 		    (boundp override-alist))
@@ -2480,9 +2494,10 @@ functions called from the
 	override-alist)))
 
 
-(defun completion-ui-source-tooltip-function (source &optional overlay)
-  ;; return tooltip-function at point for SOURCE or OVERLAY
-  (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-tooltip-function (source)
+  ;; return tooltip-function at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let* ((def (assq (completion-ui-completion-source source)
 		    completion-ui-source-definitions))
 	 (tooltip-function
 	  (or
@@ -2493,22 +2508,22 @@ functions called from the
 	   ;; source definition
 	   (completion-ui--source-def-tooltip-function def)
 	   ;; derived source
-	   (and (completion-ui--source-def-inherit-from def)
-		(completion-ui-source-tooltip-function
-		 (completion-ui--source-def-inherit-from def))))))
+	   (and (setq source (completion-ui--source-def-inherit-from def))
+		(completion-ui-source-tooltip-function source)))))
     ;; evaluate result until we get a function
     (while (and tooltip-function
 		(not (functionp tooltip-function))
+		(symbolp tooltip-function)
 		(boundp tooltip-function))
       (setq tooltip-function (symbol-value tooltip-function)))
-    tooltip-function)
-  ;; default fall-back
-  'completion-construct-tooltip-text)
+    ;; default fall-back
+    (or tooltip-function 'completion-construct-tooltip-text)))
 
 
-(defun completion-ui-source-popup-tip-function (source &optional overlay)
-  ;; return popup-tip-function at point for SOURCE or OVERLAY
-  (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-popup-tip-function (source)
+  ;; return popup-tip-function at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let* ((def (assq (completion-ui-completion-source source)
 		    completion-ui-source-definitions))
 	 (popup-tip-function
 	  (or
@@ -2519,22 +2534,22 @@ functions called from the
 	   ;; source definition
 	   (completion-ui--source-def-popup-tip-function def)
 	   ;; derived source
-	   (and (completion-ui--source-def-inherit-from def)
-		(completion-ui-source-popup-tip-function
-		 (completion-ui--source-def-inherit-from def))))))
+	   (and (setq source (completion-ui--source-def-inherit-from def))
+		(completion-ui-source-popup-tip-function source)))))
     ;; evaluate result until we get a function
     (while (and popup-tip-function
 		(not (functionp popup-tip-function))
+		(symbolp popup-tip-function)
 		(boundp popup-tip-function))
       (setq popup-tip-function (symbol-value popup-tip-function)))
-    popup-tip-function)
-  ;; default fall-back
-  'completion-construct-tooltip-text)
+    ;; default fall-back
+    (or popup-tip-function 'completion-construct-tooltip-text)))
 
 
-(defun completion-ui-source-popup-frame-function (source &optional overlay)
-  ;; return popup-frame-function at point for SOURCE or OVERLAY
-  (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-popup-frame-function (source)
+  ;; return popup-frame-function at point for SOURCE, or for source specified
+  ;; by completion-source overlay property if SOURCE is an overlay
+  (let* ((def (assq (completion-ui-completion-source source)
 		    completion-ui-source-definitions))
 	 (popup-frame-function
 	  (or
@@ -2545,22 +2560,22 @@ functions called from the
 	   ;; source definition
 	   (completion-ui--source-def-popup-frame-function def)
 	   ;; derived source
-	   (and (completion-ui--source-def-inherit-from def)
-		(completion-ui-source-popup-frame-function
-		 (completion-ui--source-def-inherit-from def))))))
+	   (and (setq source (completion-ui--source-def-inherit-from def))
+		(completion-ui-source-popup-frame-function source)))))
     ;; evaluate result until we get a function
     (while (and popup-frame-function
 		(not (functionp popup-frame-function))
+		(symbolp popup-frame-function)
 		(boundp popup-frame-function))
       (setq popup-frame-function (symbol-value popup-frame-function)))
-    popup-frame-function)
-  ;; default fall-back
-  'completion-construct-popup-frame-text)
+    ;; default fall-back
+    (or popup-frame-function 'completion-construct-popup-frame-text)))
 
 
-(defun completion-ui-source-menu (source &optional overlay)
-  ;; return menu at point for SOURCE or OVERLAY
-  (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-menu (source)
+  ;; return menu at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let* ((def (assq (completion-ui-completion-source source)
 		    completion-ui-source-definitions))
 	 (menu
 	  (or
@@ -2571,22 +2586,22 @@ functions called from the
 	   ;; source definition
 	   (completion-ui--source-def-menu def)
 	   ;; derived source
-	   (and (completion-ui--source-def-inherit-from def)
-		(completion-ui-source-menu
-		 (completion-ui--source-def-inherit-from def))))))
+	   (and (setq source (completion-ui--source-def-inherit-from def))
+		(completion-ui-source-menu source)))))
     ;; evaluate result until we get a function
     (while (and menu
 		(not (or (functionp menu) (keymapp menu)))
+		(symbolp menu)
 		(boundp menu))
       (setq menu (symbol-value menu)))
-    menu)
-  ;; default fall-back
-  'completion-construct-menu)
+    ;; default fall-back
+    (or menu 'completion-construct-menu)))
 
 
-(defun completion-ui-source-browser (source &optional overlay)
-  ;; return browser at point for SOURCE or OVERLAY
-  (let* ((def (assq (completion-ui-completion-source source overlay)
+(defun completion-ui-source-browser (source)
+  ;; return browser at point for SOURCE, or for source specified by
+  ;; completion-source overlay property if SOURCE is an overlay
+  (let* ((def (assq (completion-ui-completion-source source)
 		    completion-ui-source-definitions))
 	 (browser
 	  (or
@@ -2597,17 +2612,16 @@ functions called from the
 	   ;; source definition
 	   (completion-ui--source-def-browser def)
 	   ;; derived source
-	   (and (completion-ui--source-def-inherit-from def)
-		(completion-ui-source-browser
-		 (completion-ui--source-def-inherit-from def))))))
+	   (and (setq source (completion-ui--source-def-inherit-from def))
+		(completion-ui-source-browser source)))))
     ;; evaluate result until we get a function
     (while (and browser
 		(not (or (functionp browser) (keymapp browser)))
+		(symbolp browser)
 		(boundp browser))
       (setq browser (symbol-value browser)))
-    browser)
-  ;; default fall-back
-  'completion-construct-browser-menu)
+    ;; default fall-back
+    (or browser 'completion-construct-browser-menu)))
 
 
 
@@ -2616,9 +2630,7 @@ functions called from the
   ;; Run accept functions for SOURCE, passing the accepted COMPLETION of
   ;; PREFIX and any user-supplied ARG. SOURCE can be a completion overlay, in
   ;; which case its completion source is used.
-  (let ((funcs (if (overlayp source)
-		   (completion-ui-source-accept-functions nil source)
-		 (completion-ui-source-accept-functions source))))
+  (let ((funcs (completion-ui-source-accept-functions source)))
     (run-hook-with-args 'funcs prefix completion arg)))
 
 
@@ -2626,9 +2638,7 @@ functions called from the
   (source prefix completion &optional arg)
   ;; run reject functions for completion OVERLAY, passing the rejected
   ;; COMPLETION of PREFIX and any user-supplied ARG
-  (let ((funcs (if (overlayp source)
-		   (completion-ui-source-reject-functions nil source)
-		 (completion-ui-source-reject-functions source))))
+  (let ((funcs (completion-ui-source-reject-functions source)))
     (run-hook-with-args 'funcs prefix completion arg)))
 
 
@@ -2713,7 +2723,7 @@ should be replaced by the completion."
       ;; if updating a completion overlay, use it's properties
       (if update
 	  (setq completion-function
-		  (completion-ui-source-completion-function nil update)
+		  (completion-ui-source-completion-function update)
 		prefix
 		  (overlay-get update 'prefix)
 		non-prefix-completion
@@ -3524,12 +3534,14 @@ overlays."
   (let* ((source (auto-completion-source))
 	 (overlay (completion-ui-overlay-at-point))
 	 word-thing wordstart prefix)
-    ;; if no auto-completion source is defined, just call `self-insert-command'
+    ;; if no auto-completion source is defined, just call
+    ;; `self-insert-command'
     (if (null (or source overlay))
 	(if (eq char last-input-event) (self-insert-command 1) (insert char))
       ;; otherwise...
-      (setq word-thing (completion-ui-source-word-thing source overlay))
-      (destructuring-bind (resolve-behaviour complete-behaviour insert-behaviour)
+      (setq word-thing (completion-ui-source-word-thing (or overlay source)))
+      (destructuring-bind
+	    (resolve-behaviour complete-behaviour insert-behaviour)
 	  (if no-syntax-override
 	      (auto-completion-lookup-behaviour nil syntax source)
 	    (auto-completion-lookup-behaviour char syntax source))
@@ -3845,7 +3857,7 @@ enabled, complete what remains of that word."
 
         ;; ----- auto-completing -----
 	(let ((source (completion-ui-completion-source
-		       (auto-completion-source) overlay))
+		       (or overlay (auto-completion-source))))
 	      word-thing wordstart)
 	  ;; skip completion and just delete backwards if no auto-completion
 	  ;; source is specified; or if we're auto-updating, dynamic
@@ -3862,7 +3874,8 @@ enabled, complete what remains of that word."
 	      (apply command args)
 
 	    ;; if auto-completing...
-	    (setq word-thing (completion-ui-source-word-thing source overlay)
+	    (setq word-thing
+ 		    (completion-ui-source-word-thing (or overlay source))
 		  wordstart (or overlay
 				(completion-beginning-of-word-p word-thing)))
 	    ;; resolve any old provisional completions
@@ -3911,7 +3924,8 @@ enabled, complete what remains of that word."
 			     (or (completion-within-word-p word-thing)
 				 (completion-end-of-word-p word-thing))))
 		(let* ((prefix-fun
-			(completion-ui-source-prefix-function source overlay))
+			(completion-ui-source-prefix-function
+			 (or overlay source)))
 		       (prefix (let ((completion-word-thing word-thing))
 				 (funcall prefix-fun))))
 		  (setq overlay

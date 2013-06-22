@@ -170,6 +170,8 @@ appending this to the end of the original item.
 Finally, if the sub-menu definition is a list of strings, those
 strings become the sub-menu entries.")
 
+(make-variable-buffer-local 'predictive-latex-browser-submenu-alist)
+
 
 ;; set up 'predictive-latex-word to be a `thing-at-point' symbol
 (put 'predictive-latex-word 'forward-op 'predictive-latex-forward-word)
@@ -266,9 +268,11 @@ strings become the sub-menu entries.")
 	  (lambda ()
 	    (let ((source (auto-completion-source)))
 	      (cond
-	       ((or (eq source 'predictive-latex-env)
-		    (eq source 'predictive-latex-docclass)
-		    (eq source 'predictive-latex-bibstyle))
+	       ((completion-ui-source-derives-from-p
+		 source '(predictive-latex-env
+			  predictive-latex-label
+			  predictive-latex-docclass
+			  predictive-latex-bibstyle))
 		(complete-in-buffer source "")
 		'none)
 	       ((eq (char-before) ?\\)
@@ -700,9 +704,11 @@ function automatically when predictive mode is enabled in
 		  local-section-dict predictive-latex-section-dict
 		  browser-submenu    predictive-latex-browser-submenu-alist))
 	  (auto-overlay-share-regexp-set 'predictive buff)
-	  (setq auto-completion-source-regexps    source-regexps
-		auto-completion-source-faces      source-faces
-		predictive-used-dict-list         used-dicts
+	  (set (make-local-variable 'auto-completion-source-regexps)
+	       source-regexps)
+	  (set (make-local-variable 'auto-completion-source-faces)
+	       source-faces)
+	  (setq predictive-used-dict-list         used-dicts
 		predictive-buffer-dict            main-dict
 		predictive-auxiliary-dict         aux-dict
 		predictive-latex-dict             latex-dict
@@ -1187,10 +1193,7 @@ definition of the same thing."
 	word dict type o-def)
     (or
      ;; when we're on either a cross-reference or a label definition...
-     (and (or (eq source 'predictive-latex-label)
-	      ;; FIXME: allow for multiple levels of inheritance?
-	      (eq (completion-ui-source-inherit-from source)
-		  'predictive-latex-label))
+     (and (completion-ui-source-derives-from-p source 'predictive-latex-label)
 	  ;; look for label at point
 	  (setq word
 		(thing-at-point (completion-ui-source-word-thing source)))
@@ -1199,7 +1202,8 @@ definition of the same thing."
 	  (setq type "label"))
 
      ;; when we're on either a LaTeX command or a definition thereof...
-     (and (or (eq source 'predictive-latex) (eq source 'predictive-latex-math)
+     (and (or (completion-ui-source-derives-from-p
+	       source '(predictive-latex 'predictive-latex-math))
 	      (setq o-def
 		    (car (auto-overlays-at-point
 			  nil `((identity auto-overlay)
@@ -1222,7 +1226,8 @@ definition of the same thing."
 	  (setq type "command"))
 
      ;; when we're on either a LaTeX environment or definition thereof...
-     (and (or (eq source 'predictive-latex-env)
+     (and (or (completion-ui-source-derives-from-p
+	       source 'predictive-latex-env)
 	      (setq o-def (car (auto-overlays-at-point
 				nil `((identity auto-overlay)
 				      (eq set-id predictive)
