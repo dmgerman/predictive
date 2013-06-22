@@ -245,153 +245,58 @@ strings become the sub-menu entries.")
 (completion-ui-register-derived-source
  predictive-latex predictive
  :override-syntax-alist
-     ((?\\ (lambda ()
-	     (let ((i 0))
-	       (save-excursion
-		 (while (eq (char-before) ?\\)
-		   (backward-char)
-		   (incf i)))
-	       (if (oddp i)
-		   'add predictive-latex-punctuation-resolve-behaviour)))
+     ;; the \ character starts a LaTeX command unless it is preceded by an odd
+     ;; number of \'s, in which case it is part of a \\ command
+     ((?\\ predictive-latex-single-char-command-resolve-behaviour
 	   predictive-latex-word-completion-behaviour)
       (?$ predictive-latex-punctuation-resolve-behaviour none)
-      (?_ (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
+      ;; typing a '{' character immediately triggers a new completion process
+      ;; in some contexts
+      (?{ predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-smart-open-brace-completion-behaviour)
+      ;; typing a '"' character does smart quote insertion
+      (?\" predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour
+	   predictive-latex-smart-quote-insert-behaviour)
+      ;; various characters form part of one-character LaTeX commands if
+      ;; preceded by a '\'
+      (?} predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?_ predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
       (?^ predictive-latex-punctuation-resolve-behaviour none)
-      (?{ (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (let ((source (auto-completion-source)))
-	      (cond
-	       ((completion-ui-source-derives-from-p
-		 source '(predictive-latex-env
-			  predictive-latex-label
-			  predictive-latex-docclass
-			  predictive-latex-bibstyle))
-		(complete-in-buffer source "")
-		'none)
-	       ((eq (char-before) ?\\)
-		predictive-latex-word-completion-behaviour)
-	       (t 'none)))))
-      (?} (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?\" (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none))
-	   (lambda ()
-	     (if (or (eq (char-before) ?\\)
-		     (not (fboundp 'TeX-insert-quote)))
-		 t
-	       (TeX-insert-quote nil)
-	       nil)))
-      ;; (?' (lambda ()
-      ;; 	(if (eq (char-before) ?\\)
-      ;; 	    'add predictive-latex-punctuation-resolve-behaviour))
-      ;;     (lambda ()
-      ;;       (if (eq (char-before (1- (point))) ?\\)
-      ;; 	    predictive-latex-word-completion-behaviour 'none)))
-      (?\( (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none)))
-      (?\) (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none)))
-      (?# (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?@ (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?+ (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?, (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?- (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?\; (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none)))
-      (?! (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?< (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?= (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?> (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
-      (?\[ (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none)))
-      (?\] (lambda ()
-	     (if (eq (char-before) ?\\)
-		 'add predictive-latex-punctuation-resolve-behaviour))
-	   (lambda ()
-	     (if (eq (char-before (1- (point))) ?\\)
-		 predictive-latex-word-completion-behaviour 'none)))
-      (?` (lambda ()
-	    (if (eq (char-before) ?\\)
-		'add predictive-latex-punctuation-resolve-behaviour))
-	  (lambda ()
-	    (if (eq (char-before (1- (point))) ?\\)
-		predictive-latex-word-completion-behaviour 'none)))
+;;    (?' predictive-latex-single-char-command-resolve-behaviour
+;;        predictive-latex-single-char-command-completion-behaviour)
+      (?\( predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour)
+      (?\) predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour)
+      (?# predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?@ predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?+ predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?, predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?- predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?\; predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour)
+      (?! predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?< predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?= predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?> predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
+      (?\[ predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour)
+      (?\] predictive-latex-single-char-command-resolve-behaviour
+	   predictive-latex-single-char-command-completion-behaviour)
+      (?` predictive-latex-single-char-command-resolve-behaviour
+	  predictive-latex-single-char-command-completion-behaviour)
       )
  :word-thing predictive-latex-word
  :menu (lambda (overlay)
@@ -447,25 +352,11 @@ strings become the sub-menu entries.")
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
-     ((?w . ((lambda ()
-	       (let ((env (bounds-of-thing-at-point 'predictive-latex-word)))
-		 (when (and env (= (point) (car env)))
-		   (delete-region (car env) (cdr env))))
-	       'add)
+     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
 	     predictive-latex-word-completion-behaviour t))
-      (?_ . ((lambda ()
-	       (let ((env (bounds-of-thing-at-point
-			   'predictive-latex-word)))
-		 (when (and env (= (point) (car env)))
-		   (delete-region (car env) (cdr env))))
-	       'add)
-	     predictive-latex-word-completion-behaviour t))
-      (?. . ((lambda ()
-	       (let ((env (bounds-of-thing-at-point
-			   'predictive-latex-word)))
-		 (when (and env (= (point) (car env)))
-		   (delete-region (car env) (cdr env))))
-	       'add)
+      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
 	     predictive-latex-word-completion-behaviour t))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
@@ -491,20 +382,12 @@ strings become the sub-menu entries.")
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
-     ((?w . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alnum:][:punct:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-		 (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?_ . (add predictive-latex-word-completion-behaviour))
-      (?. . (add predictive-latex-word-completion-behaviour))
+     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
  :override-syntax-alist
@@ -525,7 +408,7 @@ strings become the sub-menu entries.")
  predictive-complete
  :name predictive-latex-docclass
  :completion-args 2
- :other-args (predictive-latex-docclass-dict)
+ :other-args (dict-latex-docclass)
  :accept-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
@@ -533,42 +416,12 @@ strings become the sub-menu entries.")
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
-     ((?w . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?_ . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?. . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
+     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
  :override-syntax-alist
@@ -585,7 +438,7 @@ strings become the sub-menu entries.")
  predictive-complete
  :name predictive-latex-bibstyle
  :completion-args 2
- :other-args (predictive-latex-bibstyle-dict)
+ :other-args (dict-latex-bibstyle)
  :accept-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
@@ -593,42 +446,12 @@ strings become the sub-menu entries.")
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
-     ((?w . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?_ . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?. . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alpha:]]*?}" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-			   (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
+     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
  :override-syntax-alist
@@ -2189,6 +2012,77 @@ Intended to be used as the \"resolve\" entry in
   ;; to the prefix
   'add)
 
+
+(defun predictive-latex-odd-backslash-p ()
+  ;; return non-nil if there are an odd number of \'s before point, otherwise
+  ;; return nil
+  (let ((i 0))
+    (save-excursion (while (eq (char-before) ?\\) (backward-char) (incf i)))
+    (= (mod i 2) 1)))
+
+
+(defun predictive-latex-single-char-command-resolve-behaviour ()
+  ;; return appropriate `auto-completion-syntax-override-alist' resolve
+  ;; behaviour for a character that can form a single-character LaTeX command
+  (if (predictive-latex-odd-backslash-p)
+      'add predictive-latex-punctuation-resolve-behaviour))
+
+
+(defun predictive-latex-single-char-command-completion-behaviour ()
+  ;; return appropriate `auto-completion-syntax-override-alist' completion
+  ;; behaviour for a character that can form a single-character LaTeX command
+  (if (save-excursion (forward-char -1) (predictive-latex-odd-backslash-p))
+      predictive-latex-word-completion-behaviour 'none))
+
+
+(defun predictive-latex-smart-open-brace-completion-behaviour ()
+  ;; do something smart when inserting a '{' character, and return appropriate
+  ;; `auto-completion-syntax-override-source' behaviour
+  (let ((source (auto-completion-source)))
+    (cond
+     ((completion-ui-source-derives-from-p
+       source '(predictive-latex-env
+		predictive-latex-label
+		predictive-latex-docclass
+		predictive-latex-bibstyle))
+      (complete-in-buffer source "")
+      'none)
+     (t (predictive-latex-single-char-command-completion-behaviour)))))
+
+
+(defun predictive-latex-smart-quote-insert-behaviour ()
+  ;; do smart quote insertion, and return appropriate
+  ;;`auto-completion-syntax-override-alist' insertion behaviour
+  (cond
+   ((predictive-latex-odd-backslash-p) t)
+   ((eq (char-before) ?\\)
+    (insert TeX-open-quote)
+    nil)
+   ((fboundp 'TeX-insert-quote)
+    (TeX-insert-quote nil)
+    nil)
+   (t t)))
+
+
+(defun predictive-latex-smart-within-braces-resolve-behaviour
+  (&optional terminator)
+  ;; overwrite entire THING if inserting new character at beginning of word
+  ;; within braces, and word being overritten is immediately followed by text
+  ;; matching TERMINATOR regexp.
+  (when completion-overwrite
+    (unless terminator (setq terminator "}"))
+    (let ((source (auto-completion-source))
+	  (pos (point)) word-thing bounds)
+      (when (and source
+		 (setq bounds
+		       (bounds-of-thing-at-point
+			(completion-ui-source-word-thing source)))
+		 (= (car bounds) pos)
+		 (save-excursion
+		   (goto-char (cdr bounds))
+		   (looking-at terminator)))
+	(delete-region pos (cdr bounds))))
+    'add))
 
 
 (defun predictive-latex-forward-word (&optional n)

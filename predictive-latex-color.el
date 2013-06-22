@@ -47,15 +47,10 @@
  :reject-functions (lambda (prefix completion &optional arg)
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
- :syntax-alist ((?w . ((lambda ()
-			 (let ((env (bounds-of-thing-at-point
-				     'predictive-latex-word)))
-			   (when (and env (= (point) (car env)))
-			     (delete-region (car env) (cdr env))))
-			 'add)
-		       predictive-latex-word-completion-behaviour t)))
+ :syntax-alist ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+		       predictive-latex-word-completion-behaviour)))
  :override-syntax-alist
-     ((?} predictive-latex-punctuation-resolve-behaviour 'none))
+     ((?} . (predictive-latex-punctuation-resolve-behaviour none)))
  :word-thing predictive-latex-word
  :menu predictive-latex-construct-browser-menu
  :browser predictive-latex-construct-browser-function

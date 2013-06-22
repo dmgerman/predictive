@@ -48,20 +48,12 @@
 (completion-ui-register-derived-source
  predictive-latex-cleveref-label predictive-latex-label
  :syntax-alist
-     ((?w . (add
-	     (lambda ()
-	       (let ((pos (point)))
-		 (when (and
-			(re-search-forward
-			 "[[:alnum:][:punct:]]*?\\([,}]\\)" (line-end-position) t)
-			(= (match-beginning 0) pos))
-		   (backward-char)
-		   (delete-region pos (point)))
-		 (goto-char pos))
-	       predictive-latex-word-completion-behaviour)
-	     t))
-      (?_ . (add predictive-latex-word-completion-behaviour))
-      (?. . (add predictive-latex-word-completion-behaviour))
+     ((?w . (predictive-latex-cleveref-label-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?_ . (predictive-latex-cleveref-label-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
+      (?. . (predictive-latex-cleveref-label-resolve-behaviour
+	     predictive-latex-word-completion-behaviour))
       (?  . (predictive-latex-whitespace-resolve-behaviour none))
       (t  . (reject none)))
  :override-syntax-alist
@@ -78,6 +70,9 @@
  :no-predictive t
  :no-command t)
 
+
+(defun predictive-latex-cleveref-label-resolve-behaviour ()
+  (predictive-latex-smart-within-braces-resolve-behaviour "\\([,}]\\)"))
 
 
 (defun predictive-latex-setup-cleveref (&optional arg)
