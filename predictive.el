@@ -817,9 +817,16 @@ disabling `predictive-use-auto-learn-cache'."
 ;;;                     Compatibility stuff
 
 (unless (fboundp 'replace-regexp-in-string)
-  (require 'predictive-compat)
+  (defun predictive-replace-regexp-in-string (regexp rep string)
+    "Replace all matches for REGEXP with REP in STRING.
+Return a new string containing the replacements."
+    (let ((str string))
+      (while (string-match regexp str)
+	(setq str (replace-match rep nil nil str)))
+      str))
+
   (defalias 'replace-regexp-in-string
-            'predictive-compat-replace-regexp-in-string))
+    'predictive-replace-regexp-in-string))
 
 
 
