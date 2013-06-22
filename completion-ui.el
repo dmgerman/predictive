@@ -438,22 +438,25 @@ Used to automatically select a completion source for
 `auto-completion-mode' and `complete-word-at-point' based on
 regexp matches.
 
-Each entry must be a list of three elements: a regexp, one of the
-symbols `before-point' or `looking-at', and a completion
-source (symbol).
+Each entry must be a list of at least three elements: a regexp, a
+completion source (symbol), and one of the symbols `before-point'
+or `looking-at'. A `looking-at' entry can optionally contain a
+fourth element: an integer specifying the regexp group within
+which the completion source should apply.
 
 The regexps are tried in order to see if they match in the
 current line. If `before-point' is specified, the regexp must
 match text strictly before point. If `looking-at' is specified,
-the regexp must match text at point according to the
-`thing-at-point-looking-at' function.
+the regexp must match text around the point. If a regexp group is
+specified, the regexp will only match if point is within the text
+matching that group.
 
 If a regexp matches, its associated completion source is returned
 and no further regexps are tried.
 
 This only takes effect if the `auto-completion-regexp-source'
-function is included in `auto-completion-source-functions' (as in
-the default setting) ."
+function is included in `auto-completion-source-functions' (the
+default setting) ."
   :group 'auto-completion-mode
   :type '(repeat (list regexp
 		       (choice :tag "Where " :value before-point

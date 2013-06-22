@@ -134,22 +134,25 @@ If all of the hook functions return nil,
 Used to automatically select a dictionary based on regexp
 matches.
 
-Each entry must be a list of three elements: a regexp, one of the
-symbols `before-point' or `looking-at', and either a single
-dictionary or a list of dictionaries.
+Each entry must be a list of at least three elements: a regexp, a
+dictionary or list of dictionaries, and one of the symbols
+`before-point' or `looking-at'. A `looking-at' entry can
+optionally contain a fourth element: an integer specifying the
+regexp group within which the completion source should apply.
 
 The regexps are tried in order to see if they match in the
 current line. If `before-point' is specified, the regexp must
 match text strictly before point. If `looking-at' is specified,
-the regexp must match text at point according to the
-`thing-at-point-looking-at' function.
+the regexp must match the text around the point. If a regexp
+group is specified, the regexp will only match if point is within
+the text matching that group.
 
 If a regexp matches, its associated dictionary (or list of
 dictionaries) is returned and no further regexps are tried.
 
 This only takes effect if the `predictive-current-regexp-dict'
-function is included in `predictive-dict-functions' (as in the
-default setting) ."
+function is included in `predictive-dict-functions' (the default
+setting)."
   :group 'predictive
   :type '(repeat (list regexp
 		       (choice :tag "Where " :value before-point
@@ -2628,16 +2631,29 @@ When used in `predictive-dict-functions' (as in the default
 setting), this allows the predictive dictionary to be changed
 locally when a regexp matches the current buffer line."
   (let ((pos (point))
-	(bound (line-end-position)))
+	(bound (line-end-position))
+	type regexp group match)
     (catch 'dic
       (dolist (r predictive-dict-regexps)
-	(save-excursion
-	  (if (eq (nth 1 r) 'looking-at)
-	      (when (completion-ui--thing-at-point-looking-at (nth 0 r) bound)
-		(throw 'dic (nth 2 r)))
-	    (goto-char (line-beginning-position))
-	    (when (re-search-forward (car r) pos t)
-	      (throw 'dic (nth 2 r)))))))))
+	(unless (null r)
+	  (setq regexp (car r) type (nth 2 r))
+	  (save-excursion
+	    (cond
+	     ((or (eq type 'looking-at) (null type)) ; default to `looking-at'
+	      (setq group (or (nth 3 r) 0))
+	      ;; search repeatedly, starting from last match, until we find
+	      (forward-line 0)
+	      (while (re-search-forward regexp bound t)
+		(when (and (<= (match-beginning group) pos)
+			   (>= (match-end group) pos))
+		  (throw 'dic (or (nth 1 r) t)))     ; use t to indicate null
+		(goto-char (1+ (match-beginning 0)))))
+
+	     ((eq type 'before-point)
+	      (goto-char (line-beginning-position))
+	      (when (re-search-forward regexp pos t)
+		(throw 'dic (or (nth 1 r) t))))      ; use t to indicate null
+	     )))))))
 
 
 (defun predictive-current-face-dict ()
