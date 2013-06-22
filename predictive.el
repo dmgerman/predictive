@@ -760,20 +760,22 @@ Return modified alist."
 		  (buffer-name)))))))
 
 
-(defun predictive-setup-save-local-state (var)
-  ;; Saved buffer-local value of variable VAR (a symbol), if any.
-  (push (if (local-variable-p var) (cons var (symbol-value var)) var)
-	predictive-setup-saved-local-state))
+(defun predictive-setup-save-local-state (&rest vars)
+  ;; Saved buffer-local values of variables VARS (symbols), if any.
+  (dolist (var vars)
+    (push (if (local-variable-p var) (cons var (symbol-value var)) var)
+	  predictive-setup-saved-local-state)))
 
 
 (defun predictive-setup-restore-local-state ()
   ;; Restore buffer-local configuration state saved in
   ;; `predictive-setup-saved-local-state'
-  (dolist (el predictive-setup-saved-local-state)
-    (if (symbolp el)
-	(kill-local-variable el)
-      (kill-local-variable (car el))
-      (set (make-local-variable (car el)) (cdr el)))))
+  (let (el)
+    (while (setq el (pop predictive-setup-saved-local-state))
+      (if (symbolp el)
+	  (kill-local-variable el)
+	(kill-local-variable (car el))
+	(set (make-local-variable (car el)) (cdr el))))))
 
 
 (defun predictive-lookup-word-p (word &optional ignored)

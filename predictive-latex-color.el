@@ -69,15 +69,14 @@
     ;; load colour dictionary
     (predictive-load-dict 'dict-latex-colours)
     ;; add new browser sub-menu definition
-    (make-local-variable 'predictive-latex-browser-submenu-alist)
     (nconc predictive-latex-browser-submenu-alist
-	   '(("\\\\\\(text\\|page\\|\\)color" . dict-latex-colours)))
+	   (list (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)))
     ;; add completion source regexps
-    (make-local-variable 'auto-completion-source-regexps)
     (nconc
      auto-completion-source-regexps
      ;; color commands
-     `((,(concat predictive-latex-odd-backslash-regexp
+     (list
+      `(,(concat predictive-latex-odd-backslash-regexp
 		 "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
 		 predictive-latex-brace-group-regexp)
 	predictive-latex-color looking-at 1))))

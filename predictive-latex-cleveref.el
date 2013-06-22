@@ -82,21 +82,21 @@
    ;; --- load cleveref support ---
    ((> arg 0)
     ;; add new browser sub-menu definition
-    (make-local-variable 'predictive-latex-browser-submenu-alist)
     (nconc predictive-latex-browser-submenu-alist
-	   '(("\\\\[cC]ref\\(range\\|\\)" . predictive-latex-label-dict)))
+	   (list (cons "\\\\[cC]ref\\(range\\|\\)"
+		       'predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (make-local-variable 'auto-completion-source-regexps)
     (setcdr auto-completion-source-regexps
 	    (nconc
 	     ;; label with optarg
-	     `((,(concat predictive-latex-odd-backslash-regexp
+	     (list
+	      `(,(concat predictive-latex-odd-backslash-regexp
 			 "label\\(?:\\[.*?\\]\\)?"
 			 predictive-latex-brace-group-regexp)
 		nil looking-at 1)
-	       ;; \cref and \vref
-	       (,(concat predictive-latex-odd-backslash-regexp
+	      ;; \cref and \vref
+	      `(,(concat predictive-latex-odd-backslash-regexp
 			 "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
 			 "\\|\\(?:name\\|label\\)[cC]ref\\)"
 			 predictive-latex-brace-group-regexp)
