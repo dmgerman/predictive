@@ -435,6 +435,8 @@ strings become the sub-menu entries.")
  :completion-args 2
  :other-args (predictive-latex-env-dict)
  :accept-functions (lambda (prefix completion &optional arg)
+		     (when predictive-latex-electric-environments
+		       (predictive-latex-update-matching-env completion))
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
@@ -442,8 +444,7 @@ strings become the sub-menu entries.")
 					 prefix completion arg))
  :syntax-alist
      ((?w . ((lambda ()
-	       (let ((env (bounds-of-thing-at-point
-			   'predictive-latex-word)))
+	       (let ((env (bounds-of-thing-at-point 'predictive-latex-word)))
 		 (when (and env (= (point) (car env)))
 		   (delete-region (car env) (cdr env))))
 	       'add)
@@ -1131,6 +1132,42 @@ function automatically when predictive mode is enabled in
 		       (auto-o-overlay-filename 'predictive)))
   (predictive-mode 1))
 
+
+(defun predictive-latex-update-matching-env (&optional env)
+  "Update matching begin/end environment to match the one at point."
+  (interactive)
+  (unless env (setq env (thing-at-point 'predictive-latex-word)))
+
+  (let ((pos (point)) match)
+    (save-excursion
+      (forward-char)
+      (cond
+       ((and (re-search-backward "\\\\begin{[[:alnum:]]*}"
+				 (line-beginning-position) t)
+	     (= (match-end 0) (1+ pos)))
+	(goto-char pos)
+	(when (and (setq pos (condition-case nil
+				 (LaTeX-find-matching-end)
+			       (error nil)))
+		   (re-search-backward "\\\\end{\\([[:alnum:]]*\\)}"
+				       (line-beginning-position) t)
+		   (= (match-end 0) pos))
+	  (setq match (match-end 1))))
+
+       ((and (re-search-backward "\\\\end{[[:alnum:]]*}"
+				 (line-beginning-position) t)
+	     (= (match-end 0) (1+ pos)))
+	(goto-char pos)
+	(when (and (setq pos (condition-case nil
+				 (LaTeX-find-matching-begin)
+			       (error nil)))
+		   (looking-at "\\\\begin{\\([[:alnum:]]*\\)}"))
+	  (setq match (match-end 1)))))
+
+      (when match
+	(goto-char match)
+	(delete-region (match-beginning 1) (match-end 1))
+	(insert env)))))
 
 
 
