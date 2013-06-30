@@ -516,6 +516,8 @@ function automatically when predictive mode is enabled in
 	   '(auto-completion-regexp-source
 	     auto-completion-face-source
 	     predictive-latex-math-environment))
+      ;; configure syntax-related settings
+      (predictive-latex-load-syntax)
       ;; consider \ as start of a word
       (predictive-setup-save-local-state 'words-include-excapes)
       (set (make-local-variable 'words-include-escapes) nil)
@@ -556,7 +558,6 @@ function automatically when predictive mode is enabled in
        (t
 	(predictive-latex-load-dicts)
 	(predictive-latex-load-regexps)
-	(predictive-latex-load-syntax)
 	;; load latex auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
 	(predictive-latex-load-auto-overlay-definitions)
@@ -712,110 +713,104 @@ function automatically when predictive mode is enabled in
 
 (defun predictive-latex-load-auto-overlay-definitions ()
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
-  (destructuring-bind (word-resolve word-complete word-insert
-		       punct-resolve punct-complete punct-insert
-		       whitesp-resolve whitesp-complete whitesp-insert)
-	(append (auto-completion-lookup-behaviour nil ?w 'no-overlay)
-	      (auto-completion-lookup-behaviour nil ?. 'no-overlay)
-	      (auto-completion-lookup-behaviour nil ?  'no-overlay))
 
-    ;; %'s start comments that last till end of line
-    (auto-overlay-load-definition
-     'predictive
-     `(line :id comment
-	    ("%" (dict . predictive-main-dict)
-	     (priority . 100) (exclusive . t))))
+  ;; %'s start comments that last till end of line
+  (auto-overlay-load-definition
+   'predictive
+   `(line :id comment
+	  ("%" (dict . predictive-main-dict)
+	   (priority . 100) (exclusive . t))))
 
-    ;; preamble lives between \documentclass{...} and \begin{document}
-    (auto-overlay-load-definition
-     'predictive
-     `(nested :id preamble
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
-	       :edge start
-	       (completion-source . predictive-latex-preamble)
-	       (priority . 20))
-	      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
-	       :edge end
-	       (completion-source . predictive-latex-preamble)
-	       (priority . 20))
-	      ))
+  ;; preamble lives between \documentclass{...} and \begin{document}
+  (auto-overlay-load-definition
+   'predictive
+   `(nested :id preamble
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
+	     :edge start
+	     (completion-source . predictive-latex-preamble)
+	     (priority . 20))
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
+	     :edge end
+	     (completion-source . predictive-latex-preamble)
+	     (priority . 20))
+	    ))
 
-    ;; \documentclass defines the document type. Through the use of a special
-    ;; "docclass" regexp class defined below, this automagically changes the
-    ;; main dictionary if one is defined for the docclass in
-    ;; `predictive-latex-docclass-alist'
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-latex-docclass
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
+  ;; \documentclass defines the document type. Through the use of a special
+  ;; "docclass" regexp class defined below, this automagically changes the
+  ;; main dictionary if one is defined for the docclass in
+  ;; `predictive-latex-docclass-alist'
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-docclass
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
 
-    ;; \usepackage loads a latex package. Through the use of a special
-    ;; "usepackage" regexp class defined below, this automagically loads new
-    ;; dictionaries and auto-overlay regexps.
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-latex-usepackage
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}"
-	 . 4))))
+  ;; \usepackage loads a latex package. Through the use of a special
+  ;; "usepackage" regexp class defined below, this automagically loads new
+  ;; dictionaries and auto-overlay regexps.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-latex-usepackage
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\usepackage\\(\\[.*?\\]\\)?{\\(.*?\\)}"
+       . 4))))
 
-    ;; \label creates a cross-reference label. Through the use of a special
-    ;; "auto-dict" regexp class defined below, this automagically adds the label
-    ;; to the label dictionary.
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id label
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-label-dict))))
+  ;; \label creates a cross-reference label. Through the use of a special
+  ;; "auto-dict" regexp class defined below, this automagically adds the label
+  ;; to the label dictionary.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-auto-dict
+     :id label
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\label{\\(.*?\\)}" . 3)
+      (auto-dict . predictive-latex-label-dict))))
 
-    ;; \newcommand defines a new command. Through the use of a special
-    ;; "auto-dict" regexp class defined below, this automagically adds the
-    ;; command to the LaTeX and math dictionaries (there's no way to tell
-    ;; whether the new command is a text-mode or math-mode command, so we add it
-    ;; to both).
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id newcommand
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newcommand\\*?{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-local-latex-dict))))
+  ;; \newcommand defines a new command. Through the use of a special
+  ;; "auto-dict" regexp class defined below, this automagically adds the
+  ;; command to the LaTeX and math dictionaries (there's no way to tell
+  ;; whether the new command is a text-mode or math-mode command, so we add it
+  ;; to both).
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-auto-dict
+     :id newcommand
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newcommand\\*?{\\(.*?\\)}" . 3)
+      (auto-dict . predictive-latex-local-latex-dict))))
 
-    ;; \newenvironment and \newtheorem define new environments. Through the use
-    ;; of a special "auto-dict" regexp class defined below, this automagically
-    ;; adds the environment to the local environment dictionary.
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id newenvironment
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newenvironment{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-local-env-dict))))
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id newtheorem
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newtheorem{\\(.*?\\)}" . 3)
-	(auto-dict . predictive-latex-local-env-dict))))
+  ;; \newenvironment and \newtheorem define new environments. Through the use
+  ;; of a special "auto-dict" regexp class defined below, this automagically
+  ;; adds the environment to the local environment dictionary.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-auto-dict
+     :id newenvironment
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newenvironment{\\(.*?\\)}" . 3)
+      (auto-dict . predictive-latex-local-env-dict))))
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-auto-dict
+     :id newtheorem
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\newtheorem{\\(.*?\\)}" . 3)
+      (auto-dict . predictive-latex-local-env-dict))))
 
-    ;; \DeclareMathOperator defines a new math-mode command. Through the use of
-    ;; a special "auto-dict" regexp class defined below, this automagically adds
-    ;; the environment to the local maths dictionary.
-    (auto-overlay-load-definition
-     'predictive
-     '(predictive-auto-dict
-       :id DeclareMathOperator
-       (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\DeclareMathOperator\\*?{\\(.*?\\)}"
-	 . 3)
-	(auto-dict . predictive-latex-local-math-dict))))
+  ;; \DeclareMathOperator defines a new math-mode command. Through the use of
+  ;; a special "auto-dict" regexp class defined below, this automagically adds
+  ;; the environment to the local maths dictionary.
+  (auto-overlay-load-definition
+   'predictive
+   '(predictive-auto-dict
+     :id DeclareMathOperator
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\DeclareMathOperator\\*?{\\(.*?\\)}"
+       . 3)
+      (auto-dict . predictive-latex-local-math-dict))))
 
-    ;; ;; the sectioning commands automagically add the section names to a local
-    ;; ;; sections dictionary, purely for navigation
-    ;; (auto-overlay-load-definition
-    ;;  'predictive
-    ;;  '(predictive-auto-dict
-    ;;    :id section
-    ;;    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
-    ;; 	(auto-dict . predictive-latex-section-dict))))
-    ))
+  ;; ;; the sectioning commands automagically add the section names to a local
+  ;; ;; sections dictionary, purely for navigation
+  ;; (auto-overlay-load-definition
+  ;;  'predictive
+  ;;  '(predictive-auto-dict
+  ;;    :id section
+  ;;    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\\\(\\(sub\\)\\{,2\\}section\\*?\\|chapter\\){\\(.*?\\)}" . 5)
+  ;; 	(auto-dict . predictive-latex-section-dict))))
+  )
 
 
 (defun predictive-latex-load-syntax ()
