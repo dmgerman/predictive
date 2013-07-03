@@ -184,7 +184,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
 
       ;; construct the popup-tip text
       (let ((text (funcall
-		   (completion-ui-source-popup-tip-function nil overlay)
+		   (completion-ui-source-popup-tip-function overlay)
 		   overlay)))
 	(when (string= (substring text -1) "\n")
 	  (setq text (substring text 0 -1)))

@@ -375,7 +375,7 @@ The function is called after a completion command, possibly after
 a delay of `completion-auto-show-delay' seconds if one is set. It
 is passed one argument, a completion overlay."
   :group 'completion-ui
-  :type '(choice (const nil)))
+  :type '(choice (const :tag "none" nil) function))
 
 
 (completion-ui-defcustom-per-source completion-auto-show-delay 3
@@ -2767,11 +2767,15 @@ should be replaced by the completion."
       ;; create/update completion overlay (need to create overlay irrespective
       ;; of `auto-completion-min-chars' and `auto-completion-delay', to mark
       ;; end of prefix in case point is immediately before a word)
-      (let* ((overlay (move-overlay (completion-ui-setup-overlay
-				     prefix 'unchanged nil nil
-				     completion-source prefix-function
-				     non-prefix-completion update)
-				    (point) (point)))
+      (let* ((overlay (move-overlay
+		       (completion-ui-setup-overlay prefix
+			:prefix-length 'unchanged
+			:completion-source completion-source
+			:prefix-function prefix-function
+			:non-prefix-completion non-prefix-completion
+			:auto-completion auto
+			:overlay update)
+		       (point) (point)))
 	     (min-chars (completion-ui-get-value-for-source
 			 overlay auto-completion-min-chars))
 	     (delay (completion-ui-get-value-for-source
@@ -2796,7 +2800,10 @@ should be replaced by the completion."
 			   prefix (completion-ui-get-value-for-source
 				   completion-source
 				   completion-max-candidates)))
-	    (completion-ui-setup-overlay prefix 'unchanged completions)
+	    (completion-ui-setup-overlay prefix
+	     :prefix-length 'unchanged
+	     :completions completions
+	     :auto-completion auto)
 
 	    ;; if running from an `auto-completion-delay' or
 	    ;; `completion-backward-delete' timer, generate dummy keyboard
@@ -3213,7 +3220,7 @@ the oceans will boil away."
 	;; recomplete
 	(let ((overwrite-mode nil)) (insert str))
 	(move-overlay overlay (point) (point))
-	(completion-ui-setup-overlay str nil nil nil nil nil nil overlay)
+	(completion-ui-setup-overlay str :overlay overlay)
 	(complete-in-buffer-1 nil nil 'not-set nil overlay)
 	;; reposition point at start of completion, so that user can continue
 	;; extending or contracting the prefix
@@ -3315,8 +3322,7 @@ candidates.\)"
         (let ((overwrite-mode nil)) (insert str))
 	;; update overlay properties
         (move-overlay overlay (point) (point))
-	(completion-ui-setup-overlay
-	 str nil nil nil nil nil 'unchanged overlay)
+	(completion-ui-setup-overlay str :overlay overlay)
         ;; when auto-completing, do so
         (if (or (completion-ui-get-value-for-source
 		 overlay completion-auto-update)
@@ -3605,10 +3611,10 @@ overlays."
 				       (string char))
 			wordstart t)
 		  (completion-ui-deactivate-interfaces-pre-update overlay)
-		  (completion-ui-setup-overlay
-		   prefix (when overlay
-			    (1+ (overlay-get overlay 'prefix-length)))
-		   nil nil nil nil nil overlay))
+		  (completion-ui-setup-overlay prefix
+		   :prefix-length (when overlay
+				    (1+ (overlay-get overlay 'prefix-length)))
+		   :overlay overlay))
 	      ;; otherwise, delete overlay (effectively accepting the old
 	      ;; completion) and behave as if no completion was in progress
 	      (completion-ui-delete-overlay overlay)
@@ -3719,7 +3725,7 @@ based on current syntax table."
 	;; re-complete new prefix
 	(unless dont-complete
 	  (move-overlay overlay (point) (point))
-	  (completion-ui-setup-overlay prefix nil nil nil nil nil nil overlay)
+	  (completion-ui-setup-overlay prefix :overlay overlay)
 	  (complete-in-buffer-1
 	   (overlay-get overlay 'completion-source)
 	   nil 'not-set 'auto overlay)))
@@ -3929,7 +3935,9 @@ enabled, complete what remains of that word."
 		       (prefix (let ((completion-word-thing word-thing))
 				 (funcall prefix-fun))))
 		  (setq overlay
-			(completion-ui-setup-overlay prefix nil nil nil source))
+			(completion-ui-setup-overlay prefix
+			 :completion-source source
+			 :auto-completion 'backward-delete))
 		  (move-overlay overlay (point) (point))))
 
 	      ;; if there's no existing timer, set one up to complete remainder
@@ -4313,10 +4321,10 @@ enabled in the buffer for them to take effect.\)"
 	     t))))
 
 
-(defun completion-ui-setup-overlay
-    (prefix &optional prefix-length completions num
-	    completion-source prefix-function
-	    non-prefix-completion overlay)
+(defun* completion-ui-setup-overlay
+    (prefix &key prefix-length completions num
+	    completion-source prefix-function non-prefix-completion
+	    auto-completion overlay)
   "Set completion overlay properties according to the arguments.
 
 If OVERLAY isn't supplied, look for one at point, and create a
@@ -4324,7 +4332,7 @@ new one if none exists.
 
 If PREFIX-LENGTH is null, it defaults to the length of PREFIX. If
 NUM is null, it defaults to 1. To leave these properties
-unchanged, use any non-numeric and non-null value.
+unchanged, use any non-numeric non-null value.
 
 The COMPLETION-SOURCE, COMPLETION-PREFIX-FUNCTION and
 NON-PREFIX-COMPLETION properties are ignored and the
@@ -4345,6 +4353,7 @@ point) are being set."
     (overlay-put overlay 'priority 100)
     (overlay-put overlay 'completion-source completion-source)
     (overlay-put overlay 'completion-prefix-function prefix-function)
+    (overlay-put overlay 'auto-completion auto-completion)
     ;; set overlay keymap
     (let ((map (make-sparse-keymap)))
       (overlay-put overlay 'keymap map)

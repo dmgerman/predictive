@@ -1871,7 +1871,7 @@ Intended to be used as the \"resolve\" entry in
 		predictive-latex-label
 		predictive-latex-docclass
 		predictive-latex-bibstyle))
-      (complete-in-buffer source "")
+      (complete-in-buffer-1 source "" 'not-set 'auto)
       'none)
      (t (predictive-latex-single-char-command-completion-behaviour)))))
 

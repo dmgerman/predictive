@@ -161,7 +161,7 @@ none."
 
   (when overlay
     (unless menu
-      (setq menu (completion-ui-source-menu nil overlay)))
+      (setq menu (completion-ui-source-menu overlay)))
 
     (let ((prefix (overlay-get overlay 'prefix))
 	  keymap result)
@@ -248,7 +248,7 @@ Note: can be overridden by \"overlay local\" binding of
   ;; this function is really just a call to `completion-show-menu' but passing
   ;; the browser menu function as the menu argument
   (completion-show-menu
-   overlay (or menu (completion-ui-source-browser nil overlay))))
+   overlay (or menu (completion-ui-source-browser overlay))))
 
 
 
@@ -320,7 +320,7 @@ and OVERLAY. They should return menu keymaps."
 
   ;; main browser menu is just a browser submenu...
   (let* ((completions
-	  (funcall (completion-ui-source-completion-function nil overlay)
+	  (funcall (completion-ui-source-completion-function overlay)
 		   (overlay-get overlay 'prefix)))
 	 (menu (funcall sub-menu-func completions
 			menu-item-func sub-menu-func overlay)))

@@ -208,7 +208,7 @@ If no OVERLAY is supplied, tries to find one at point."
            (prefix (overlay-get overlay 'prefix))
            (completions (overlay-get overlay 'completions))
            (num (overlay-get overlay 'completion-num))
-           (popup-fun (completion-ui-source-popup-frame-function nil overlay))
+           (popup-fun (completion-ui-source-popup-frame-function overlay))
            (lines (funcall popup-fun overlay))
            (maxlen (if (null lines) 0 (apply 'max (mapcar 'length lines))))
            (pos (save-excursion
