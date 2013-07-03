@@ -972,7 +972,7 @@ function automatically when predictive mode is enabled in
 	     (and (not delimited) (search-forward from-string)))
     (when (and (save-excursion
 		 (backward-char)
-		 (memq 'dict-latex-math (predictive-current-dict)))
+		 (eq (auto-completion-source) 'predictive-latex-math))
 	       (save-match-data (y-or-n-p "Replace? ")))
       (replace-match to-string nil t))))
 
@@ -987,9 +987,9 @@ function automatically when predictive mode is enabled in
   (while (re-search-forward regexp nil t)
       (when (and (save-excursion
 		   (backward-char)
-		   (memq 'dict-latex-math (predictive-current-dict)))
+		   (eq (auto-completion-source) 'predictive-latex-math))
 		 (save-match-data (y-or-n-p "Replace? ")))
-      (replace-match to-string))))
+	(replace-match to-string))))
 
 
 
