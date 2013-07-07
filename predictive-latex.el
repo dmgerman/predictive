@@ -962,37 +962,6 @@ function automatically when predictive mode is enabled in
 ;;;=======================================================================
 ;;;                  Miscelaneous interactive commands
 
-(defun predictive-latex-query-replace-math
-  (from-string to-string &optional delimited)
-  "Query-replace in LaTeX math environments."
-  (interactive "sQuery replace math: \nsReplace with: \nP")
-  (when delimited
-    (setq from-string (concat "\\b" (regexp-quote from-string) "\\b")))
-  (while (or (and delimited (re-search-forward from-string nil t))
-	     (and (not delimited) (search-forward from-string)))
-    (when (and (save-excursion
-		 (backward-char)
-		 (eq (auto-completion-source) 'predictive-latex-math))
-	       (save-match-data (y-or-n-p "Replace? ")))
-      (replace-match to-string nil t))))
-
-
-
-(defun predictive-latex-query-replace-regexp-math
-  (regexp to-string &optional delimited)
-  "Query-replace-regexp in LaTeX math environments."
-  (interactive "sQuery replace math regexp: \nsReplace with: \nP")
-  (when delimited
-    (setq regexp (concat "\\b" regexp "\\b")))
-  (while (re-search-forward regexp nil t)
-      (when (and (save-excursion
-		   (backward-char)
-		   (eq (auto-completion-source) 'predictive-latex-math))
-		 (save-match-data (y-or-n-p "Replace? ")))
-	(replace-match to-string))))
-
-
-
 (defun predictive-latex-reparse-buffer ()
   "Reparse a LaTeX buffer from scratch."
   (interactive)
@@ -1005,17 +974,19 @@ function automatically when predictive mode is enabled in
 
 
 (defun predictive-latex-update-matching-env (&optional env)
-  "Update matching begin/end environment to match the one at point."
+  "Update matching LaTeX \begin or \end to match the one at point."
   (interactive)
   (unless env (setq env (thing-at-point 'predictive-latex-word)))
 
   (let ((pos (point)) match)
     (save-excursion
-      (forward-char)
       (cond
-       ((and (re-search-backward "\\\\begin{[[:alnum:]]*}"
+       ;; at \begin, find matching \end
+       ((and (or (end-of-line) t)
+	     (re-search-backward "\\\\begin{\\([[:alnum:]]*\\)}"
 				 (line-beginning-position) t)
-	     (= (match-end 0) (1+ pos)))
+	     (>= pos (match-beginning 1))
+	     (<= pos (match-end 1)))
 	(goto-char pos)
 	(when (and (setq pos (condition-case nil
 				 (LaTeX-find-matching-end)
@@ -1024,17 +995,19 @@ function automatically when predictive mode is enabled in
 				       (line-beginning-position) t)
 		   (= (match-end 0) pos))
 	  (setq match (match-end 1))))
-
-       ((and (re-search-backward "\\\\end{[[:alnum:]]*}"
+       ;; at \end, find matching \begin
+       ((and (or (end-of-line) t)
+	     (re-search-backward "\\\\end{\\([[:alnum:]]*\\)}"
 				 (line-beginning-position) t)
-	     (= (match-end 0) (1+ pos)))
+	     (>= pos (match-beginning 1))
+	     (<= pos (match-end 1)))
 	(goto-char pos)
 	(when (and (setq pos (condition-case nil
 				 (LaTeX-find-matching-begin)
 			       (error nil)))
 		   (looking-at "\\\\begin{\\([[:alnum:]]*\\)}"))
 	  (setq match (match-end 1)))))
-
+      ;; update matching \begin or \end
       (when match
 	(goto-char match)
 	(delete-region (match-beginning 1) (match-end 1))
