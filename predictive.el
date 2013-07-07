@@ -1462,7 +1462,10 @@ WEIGHT is specified by the prefix argument."
 		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to add"
-			      (let ((str (thing-at-point 'word)))
+			      (let ((str (thing-at-point
+					  (or (completion-ui-source-word-thing
+					       (auto-completion-source))
+					      'word))))
 				(when str (concat " (default \"" str "\")")))
 			      ": "))
 		     current-prefix-arg))
@@ -1470,7 +1473,9 @@ WEIGHT is specified by the prefix argument."
   (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     (when (string= word "")
-      (let ((str (thing-at-point 'word)))
+      (let ((str (thing-at-point (or (completion-ui-source-word-thing
+				      (auto-completion-source))
+				     'word))))
 	(if (null str)
 	    (error "No word supplied")
 	  (setq word str))))
@@ -1533,13 +1538,18 @@ Interactively, WORD and DICT are read from the minibuffer."
 		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to delete"
-			      (let ((str (thing-at-point 'word)))
+			      (let ((str (thing-at-point
+					  (or (completion-ui-source-word-thing
+					       (auto-completion-source))
+					      'word))))
 				(when str (concat " (default \"" str "\")")))
 			      ": "))))
   ;; sort out arguments
   (and (symbolp dict) (setq dict (symbol-value dict)))
   (and (called-interactively-p 'any) (string= word "")
-       (let ((str (thing-at-point 'word)))
+       (let ((str (thing-at-point (or (completion-ui-source-word-thing
+				       (auto-completion-source))
+				      'word))))
 	 (if (null str)
 	     (error "No word supplied")
 	   (set-text-properties 0 (length str) nil str)
@@ -1635,7 +1645,10 @@ as the weight of WORD."
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
 		     (let ((wrd (if (or (null word) (string= word ""))
-				    (thing-at-point 'word)
+				    (thing-at-point
+				     (or (completion-ui-source-word-thing
+					  (auto-completion-source))
+					 'word))
 				  word)))
 		       (read-string
 			(format "Prefix for \"%s\" (default \"%s\"): "
@@ -1646,7 +1659,9 @@ as the weight of WORD."
   (when (called-interactively-p 'any)
     ;; default to word at point
     (when (or (null word) (string= word ""))
-      (let ((str (thing-at-point 'word)))
+      (let ((str (thing-at-point (or (completion-ui-source-word-thing
+				      (auto-completion-source))
+				     'word))))
 	(if (null str)
 	    (error "No word supplied")
 	  (set-text-properties 0 (length str) nil str)
@@ -1720,7 +1735,10 @@ least as large as the weight of WORD."
 				 (format "Word (default \"%s\"): "
 					 (thing-at-point 'word))))
 		     (let ((wrd (if (or (null word) (string= word ""))
-				    (thing-at-point 'word)
+				    (thing-at-point
+				     (or (completion-ui-source-word-thing
+					  (auto-completion-source))
+					 'word))
 				  word)))
 		       (read-string
 			(format "Remove prefix of \"%s\" (default \"%s\"): "
@@ -1730,7 +1748,9 @@ least as large as the weight of WORD."
   (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     (when (or (null word) (string= word ""))
-      (let ((str (thing-at-point 'word)))
+      (let ((str (thing-at-point (or (completion-ui-source-word-thing
+				      (auto-completion-source))
+				     'word))))
 	(if (null str)
 	    (error "No word supplied")
 	  (set-text-properties 0 (length str) nil str)
