@@ -3813,7 +3813,7 @@ enabled, complete what remains of that word."
          pos)
     ;(combine-after-change-calls
 
-      ;; ----- not auto-completing -----
+      ;; ----- not auto-completing or auto-updating -----
       (if (and (not auto-completion-mode)
 	       (not (completion-ui-get-value-for-source
 		     overlay completion-auto-update)))
@@ -3861,7 +3861,7 @@ enabled, complete what remains of that word."
             (apply command args))
 
 
-        ;; ----- auto-completing -----
+        ;; ----- auto-completing or auto-updating -----
 	(let ((source (completion-ui-completion-source
 		       (or overlay (auto-completion-source))))
 	      word-thing wordstart)
@@ -3879,12 +3879,7 @@ enabled, complete what remains of that word."
 			   'accept)))
 	      (apply command args)
 
-	    ;; if auto-completing...
-	    (setq word-thing
- 		    (completion-ui-source-word-thing (or overlay source))
-		  wordstart (or overlay
-				(completion-beginning-of-word-p word-thing)))
-	    ;; resolve any old provisional completions
+	    ;; --- resolve previous completion ---
 	    (completion-ui-resolve-old overlay)
 	    ;; if point is in a completion...
 	    (when overlay
@@ -3895,19 +3890,23 @@ enabled, complete what remains of that word."
 	      ;; store position of beginning of prefix
 	      (setq pos (- (overlay-start overlay)
 			   (overlay-get overlay 'prefix-length)))
-	      ;; delete the overlay, effectively accepting (rest of) completion
-	      (completion-ui-delete-overlay overlay)
 	      ;; deactivate the interfaces pending update
-	      (completion-ui-deactivate-interfaces-pre-update overlay))
+	      (completion-ui-deactivate-interfaces-pre-update overlay)
+	      ;; delete the overlay, effectively accepting (rest of) completion
+	      (completion-ui-delete-overlay overlay))
 
-	    ;; delete backwards
+	    ;; --- delete backwards ---
 	    (apply command args)
 
+	    ;; --- do auto-completion or auto-updating ---
+	    (setq source (auto-completion-source)
+		  word-thing (completion-ui-source-word-thing source)
+		  wordstart(completion-beginning-of-word-p word-thing))
 	    (cond
-	     ;; if we're not in or at the end of a word, or we're auto-updating
-	     ;; rather than auto-completing and we've deleted beyond current
-	     ;; completion, deactivate any user-interfaces and cancel any timer
-	     ;; that's been set up
+	     ;; if we're not now in or at the end of a word, or we're
+	     ;; auto-updating rather than auto-completing and we've deleted
+	     ;; beyond current completion, deactivate any user-interfaces and
+	     ;; cancel any timer that's been set up
 	     ((or (and (not auto-completion-mode)
 		       (or (not overlay)
 			   (<= (point)
@@ -3919,8 +3918,8 @@ enabled, complete what remains of that word."
 	      (setq completion--backward-delete-timer nil)
 	      (when overlay (completion-ui-deactivate-interfaces overlay)))
 
-	     ;; otherwise, we're in or at the end of a word, so complete the
-	     ;; word at point
+	     ;; otherwise, we're now in or at the end of a word, so complete
+	     ;; the word at point
 	     (t
 	      ;; if point was at start of completion or start of word before
 	      ;; deleting, and we're now within or at end of a word, setup
@@ -3930,8 +3929,7 @@ enabled, complete what remains of that word."
 			     (or (completion-within-word-p word-thing)
 				 (completion-end-of-word-p word-thing))))
 		(let* ((prefix-fun
-			(completion-ui-source-prefix-function
-			 (or overlay source)))
+			(completion-ui-source-prefix-function source))
 		       (prefix (let ((completion-word-thing word-thing))
 				 (funcall prefix-fun))))
 		  (setq overlay
