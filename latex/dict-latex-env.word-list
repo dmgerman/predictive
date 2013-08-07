@@ -9,6 +9,7 @@
 "alignedat" 0 (:prefixes ("align" "aligned"))
 "array" 0
 "bmatrix" 0
+"cases" 0
 "center" 0
 "description" 0
 "displaymath" 0
