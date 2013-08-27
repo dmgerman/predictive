@@ -15,11 +15,11 @@
 "\\Bra" 0
 "\\BraKet" 0 (:prefixes ("\\Bra"))
 "\\Braket" 0 (:prefixes ("\\Bra"))
-"\\CC" 0
+"\\C" 0
 "\\Comm" 0
-"\\EE" 0
+"\\E" 0
 "\\Expect" 0
-"\\FF" 0
+"\\F" 0
 "\\HS" 0
 "\\Ket" 0
 "\\Ketbra" 0 (:prefixes ("\\Ket"))
@@ -27,17 +27,16 @@
 "\\MatnormF" 0 (:prefixes ("\\Matnorm"))
 "\\MatnormHS" 0 (:prefixes ("\\Matnorm"))
 "\\MatnormTr" 0 (:prefixes ("\\Matnorm"))
-"\\NN" 0
+"\\N" 0
 "\\Order" 0
-"\\PP" 0
 "\\Proj" 0
-"\\QQ" 0
-"\\RR" 0
+"\\Q" 0
+"\\R" 0
 "\\Span" 0
-"\\UU" 0
+"\\U" 0
 "\\WLOG" 0
 "\\Wlog" 0
-"\\ZZ" 0
+"\\Z" 0
 "\\abs" 0
 "\\anticomm" 0
 "\\bigAbs" 0
