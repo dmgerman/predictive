@@ -125,6 +125,8 @@ between \\begin{...} and \\end{...} commands."
       minor-mode-map-alist)
 
 ;; override AUCTeX bindings so completion works
+(define-key predictive-latex-map [?{]  'completion-self-insert)
+(define-key predictive-latex-map [?}]  'completion-self-insert)
 (define-key predictive-latex-map [?$]  'completion-self-insert)
 (define-key predictive-latex-map [?\"] 'completion-self-insert)
 (define-key predictive-latex-map [?_]  'completion-self-insert)
