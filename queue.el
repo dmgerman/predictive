@@ -5,7 +5,7 @@
 ;; Author: Inge Wallin <inge@lysator.liu.se>
 ;;         Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1
+;; Version: 0.1.1
 ;; Keywords: extensions, data structures, queue
 ;; URL: http://www.dr-qubit.org/emacs.php
 ;; Repository: http://www.dr-qubit.org/git/predictive.git
@@ -88,12 +88,12 @@ Returns nil if the queue is empty."
   (pop (queue-head queue)))
 
 
-(defmacro queue-empty (queue)
+(defun queue-empty (queue)
   "Return t if QUEUE is empty, otherwise return nil."
   (null (queue-head queue)))
 
 
-(defmacro queue-first (queue)
+(defun queue-first (queue)
   "Return the first element of QUEUE or nil if it is empty,
 without removing it from the QUEUE."
   (car (queue-head queue)))
