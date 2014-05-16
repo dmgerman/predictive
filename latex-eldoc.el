@@ -75,6 +75,14 @@ environment in the text where point is."
        19 28 (face (font-lock-variable-name-face))
        30 39 (face (font-lock-variable-name-face))))
 
+(set (intern "\\raisebox" latex-eldoc-obarray)
+     #("\\raisebox{<height>}[<extend-above>][<extend-below>]{<content>}  Raise
+box content vertically."
+       0 9 (face (font-lock-keyword-face font-latex-sedate-face))
+       10 18 (face (font-lock-variable-name-face))
+       20 34 (face (font-lock-variable-name-face))
+       36 50 (face (font-lock-variable-name-face))
+       52 61 (face (font-lock-variable-name-face))))
 
 
 ;;; amsmath
