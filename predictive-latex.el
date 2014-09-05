@@ -2,7 +2,7 @@
 ;;;                         (assumes AMSmath)
 
 
-;; Copyright (C) 2004-2012 Toby Cubitt
+;; Copyright (C) 2004-2014 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.12.12
@@ -473,13 +473,27 @@ within a LaTeX math environment.")
  :no-predictive t)
 
 
-(defun predictive-latex-math-environment ()
+(defun predictive-latex-math-source ()
   ;; Return 'predictive-latex-math auto-completion source if within a LaTeX
-  ;; math environment. Locally added to `auto-completion-source-functions' by
-  ;; `predictive-setup-latex'.
+  ;; math environment.
   (when (member (LaTeX-current-environment)
 		predictive-latex-math-environments)
+    ;; display warning if we found anything by this legacy method, since
+    ;; anything found here should have been caught by auto-overlays
+    (message "Completion source was found by legacy\
+`LaTeX-current-environment' method -- this shouldn't happen!")
     'predictive-latex-math))
+
+
+(defun predictive-latex-face-source ()
+  ;; Call `auto-completion-face-source' to find auto-completion source.
+  (let ((source (auto-completion-face-source)))
+    (when source
+      ;; display warning if we found anything by this legacy method, since
+      ;; anything found here should have been caught by auto-overlays
+      (message "Completion source was found by legacy\
+ font-lock face method -- this shouldn't happen!")
+      source)))
 
 
 
@@ -516,8 +530,9 @@ function automatically when predictive mode is enabled in
       (predictive-setup-save-local-state 'auto-completion-source-functions)
       (set (make-local-variable 'auto-completion-source-functions)
 	   '(auto-completion-regexp-source
-	     auto-completion-face-source
-	     predictive-latex-math-environment))
+	     auto-completion-overlay-source
+	     predictive-latex-face-source
+	     predictive-latex-math-source))
       ;; configure syntax-related settings
       (predictive-latex-load-syntax)
       ;; consider \ as start of a word
@@ -719,23 +734,71 @@ function automatically when predictive mode is enabled in
   ;; %'s start comments that last till end of line
   (auto-overlay-load-definition
    'predictive
-   `(line :id comment
+   '(line :id comment
 	  ("%" (dict . predictive-main-dict)
 	   (priority . 100) (exclusive . t))))
+
+
+  ;; $'s delimit the start and end of maths regions...
+  (auto-overlay-load-definition
+   'predictive
+   '(self :id inline-math
+	  ("\\$"
+	   (completion-source . predictive-latex-math)
+	   (priority . 30))))
+
+  ;; ...as do \[ and \], but not \\[ and \\] etc.
+  ;; Note: regexps contain a lot of \'s because they have to check whether
+  ;; number of \'s in front of { is even or odd
+  (auto-overlay-load-definition
+   'predictive
+   '(nested :id display-math
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 3)
+	     :edge start
+	     (completion-source . predictive-latex-math)
+	     (priority . 30)
+	     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
+	      :edge end
+	      (completion-source . predictive-latex-math)
+	      (priority . 30)))))
+
+
+  ;; \begin{...} and \end{...} start and end LaTeX environments
+  (auto-overlay-load-definition
+   'predictive
+   '(nested :id environment
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+	     :edge start
+	     (completion-source . predictive-latex-math)
+	     (priority . 10))
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
+	     :edge end
+	     (completion-source . predictive-latex-math)
+	     (priority . 10))
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
+	     :edge start
+	     (priority . 10)
+	     (completion-source . nil))
+	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(.*?\\)}" 0 3)
+	     :edge end
+	     (priority . 10)
+	     (completion-source . nil))))
+
 
   ;; preamble lives between \documentclass{...} and \begin{document}
   (auto-overlay-load-definition
    'predictive
-   `(nested :id preamble
-	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
-	     :edge start
-	     (completion-source . predictive-latex-preamble)
+   '(flat :id preamble
+	  (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
+	   :edge start
+	   (completion-source . predictive-latex-preamble)
+	   (priority . 20))
+	  (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
+	   :edge end
+	   (completion-source . predictive-latex-preamble)
 	     (priority . 20))
-	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
-	     :edge end
-	     (completion-source . predictive-latex-preamble)
-	     (priority . 20))
-	    ))
+	  ))
+
 
   ;; \documentclass defines the document type. Through the use of a special
   ;; "docclass" regexp class defined below, this automagically changes the
@@ -744,8 +807,8 @@ function automatically when predictive mode is enabled in
   (auto-overlay-load-definition
    'predictive
    '(predictive-latex-docclass
-     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}" . 4))))
-
+     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}"
+       . 4))))
   ;; \usepackage loads a latex package. Through the use of a special
   ;; "usepackage" regexp class defined below, this automagically loads new
   ;; dictionaries and auto-overlay regexps.
@@ -968,7 +1031,7 @@ function automatically when predictive mode is enabled in
   "Reparse a LaTeX buffer from scratch."
   (interactive)
   (predictive-mode -1)
-  ;; using an internale auto-overlay function is ugly, but then this command
+  ;; using an internal auto-overlay function is ugly -- but then this command
   ;; shouldn't be necessary anyway!
   (delete-file (concat predictive-local-auxiliary-file-directory
 		       (auto-o-overlay-filename 'predictive)))
