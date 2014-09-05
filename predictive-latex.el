@@ -253,6 +253,16 @@ within a LaTeX math environment.")
 
 (completion-ui-register-derived-source
  predictive-latex predictive
+ :accept-functions (lambda (prefix compleiton &optional arg)
+		     (predictive-auto-learn
+		      completion (predictive-main-dict))
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg (predictive-auto-learn
+				prefix (predictive-main-dict)))
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
  :override-syntax-alist
      ;; the \ character starts a LaTeX command unless it is preceded by an odd
      ;; number of \'s, in which case it is part of a \\ command
@@ -323,6 +333,16 @@ within a LaTeX math environment.")
  :completion-function predictive-complete
  :completion-args 2
  :other-args (predictive-latex-math-dict)
+ :accept-functions (lambda (prefix compleiton &optional arg)
+		     (predictive-auto-learn
+		      completion predictive-latex-math-dict)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg (predictive-auto-learn
+				prefix predictive-latex-math-dict))
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
  ;; :override-syntax-alist
  ;;     ((?' . (predictive-latex-punctuation-resolve-behaviour none t))
  ;;      (?$ predictive-latex-punctuation-resolve-behaviour none))
@@ -339,6 +359,16 @@ within a LaTeX math environment.")
  :completion-function predictive-complete
  :completion-args 2
  :other-args (predictive-latex-preamble-dict)
+ :accept-functions (lambda (prefix compleiton &optional arg)
+		     (predictive-auto-learn
+		      completion predictive-latex-preamble-dict)
+		     (run-hook-with-args 'predictive-accept-functions
+					 prefix completion arg))
+ :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg (predictive-auto-learn
+				prefix predictive-latex-preamble-dict))
+		     (run-hook-with-args 'predictive-reject-functions
+					 prefix completion arg))
  :word-thing predictive-latex-word
  :menu predictive-latex-construct-browser-menu
  :browser predictive-latex-construct-browser-menu
@@ -353,11 +383,18 @@ within a LaTeX math environment.")
  :completion-args 2
  :other-args (predictive-latex-env-dict)
  :accept-functions (lambda (prefix completion &optional arg)
+		     (predictive-auto-learn
+		      completion predictive-latex-env-dict)
 		     (when predictive-latex-electric-environments
 		       (predictive-latex-update-matching-env completion))
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg
+		       (predictive-auto-learn
+			prefix predictive-latex-preamble-dict)
+		       (when predictive-latex-electric-environments
+			 (predictive-latex-update-matching-env prefix)))
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
@@ -385,9 +422,14 @@ within a LaTeX math environment.")
  :completion-args 2
  :other-args (predictive-latex-label-dict)
  :accept-functions (lambda (prefix completion &optional arg)
+		     (predictive-auto-learn
+		      completion predictive-latex-label-dict)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg
+		       (predictive-auto-learn
+			prefix predictive-latex-label-dict))
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
@@ -419,9 +461,12 @@ within a LaTeX math environment.")
  :completion-args 2
  :other-args (dict-latex-docclass)
  :accept-functions (lambda (prefix completion &optional arg)
+		     (predictive-auto-learn completion dict-latex-docclass)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg
+		       (predictive-auto-learn prefix dict-latex-docclass))
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
@@ -449,9 +494,12 @@ within a LaTeX math environment.")
  :completion-args 2
  :other-args (dict-latex-bibstyle)
  :accept-functions (lambda (prefix completion &optional arg)
+		     (predictive-auto-learn completion dict-latex-bibstyle)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg
+		       (predictive-auto-learn prefix dict-latex-bibstyle))
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :syntax-alist
@@ -735,7 +783,7 @@ function automatically when predictive mode is enabled in
   (auto-overlay-load-definition
    'predictive
    '(line :id comment
-	  ("%" (dict . predictive-main-dict)
+	  ("%" (completion-source . predictive-latex)
 	   (priority . 100) (exclusive . t))))
 
 
@@ -1901,7 +1949,7 @@ Intended to be used as the \"resolve\" entry in
 
 (defun predictive-latex-smart-open-brace-completion-behaviour ()
   ;; do something smart when inserting a '{' character, and return appropriate
-  ;; `auto-completion-syntax-override-source' behaviour
+  ;; `auto-completion-syntax-override-alist' behaviour
   (let ((source (auto-completion-source)))
     (cond
      ((completion-ui-source-derives-from-p

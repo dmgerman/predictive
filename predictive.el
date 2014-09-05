@@ -2,7 +2,7 @@
 ;;; predictive.el --- predictive completion minor mode
 
 
-;; Copyright (C) 2004-2013 Toby Cubitt
+;; Copyright (C) 2004-2014 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.24
@@ -578,16 +578,14 @@ enabled."
   "Hook run after predictive mode is disabled.")
 
 
-(defvar predictive-accept-functions '(predictive-auto-learn)
+(defvar predictive-accept-functions nil
   "Hook run after a predictive completion is accepted.
 The functions are called with two or three arguments: the prefix,
 the accepted completion, and any prefix argument supplied by the
 user when the completion was accepted interactively.")
 
 
-(defvar predictive-reject-functions
-  '((lambda (prefix word &optional arg)
-      (when arg (predictive-auto-learn nil prefix))))
+(defvar predictive-reject-functions nil
   "Hook run after a predictive completion is rejected.
 The functions are called with two or three arguments: the prefix,
 the rejected completion, and any prefix argument supplied by the
@@ -2396,17 +2394,15 @@ to determine which dictionary to use."
 
 
 
-(defun predictive-auto-learn (ignored1 word &optional ignored2)
+(defun predictive-auto-learn (word &optional dict)
   "Function to deal with auto-learning WORD.
 Usually called from `predictive' source's accept hooks after a
 completion is accepted (hence the ignored arguments)."
 
-  (let ((dict (predictive-current-dict))
-	found dic)
-
+  (unless dict (setq dict (predictive-current-dict)))
+  (let (found dic)
     ;; if there is a current dict...
-    (unless (eq dict t)
-      (when (dictree-p dict) (setq dict (list dict)))
+    (when (setq dict (predictive-process-dict-arg dict))
       ;; if ignoring initial caps, look for uncapitalized word too
       (let (wordlist)
 	(if (and predictive-ignore-initial-caps
@@ -2591,36 +2587,41 @@ completion is accepted (hence the ignored arguments)."
    predictive-auxiliary-dict))
 
 
+(defun predictive-process-dict-arg (dict)
+  ;; Process DICT arg into a list of dictionaries.
+  ;; t indicates no active dictionary, so return nil
+  (if (eq dict t) nil
+    ;; if value is a function or symbol, evaluate it first
+    (cond
+     ((functionp dict) (setq dict (funcall dict)))
+     ((symbolp dict)   (setq dict (symbol-value dict))))
+    ;; otherwise, process the list of dictionaries
+    (mapcar
+     (lambda (dic)
+       ;; if element is a function or symbol, evaluate it first
+       (cond
+	((functionp dic) (setq dic (funcall dic)))
+	((symbolp dic)   (setq dic (symbol-value dic))))
+       ;; return dict, or throw error if we haven't got one by now
+       (or (and (dictree-p dic) dic)
+	   (error "Wrong type in element of dictionary list: functionp,\
+ symbolp, dict-p, or t %s" (prin1-to-string dic))))
+     (or (and (listp dict) dict) (list dict)))  ; map over dict list
+  ))
+
+
 (defun predictive-current-dict (&optional point)
   "Return a list of the active dictionary(ies) at POINT
 \(defaults to the point\)."
   (unless point (setq point (point)))
   ;; run hook to get dict, defaulting to main dict
-  (let ((dict (or (run-hook-wrapped 'predictive-dict-functions
-				    (lambda (fun)
-				      (save-excursion
-					(goto-char point)
-					(funcall fun))))
-		  (predictive-main-dict))))
-    ;; t indicates no active dictionary, so return nil
-    (if (eq dict t) nil
-      ;; if value is a function or symbol, evaluate it first
-      (cond
-       ((functionp dict) (setq dict (funcall dict)))
-       ((symbolp dict)   (setq dict (symbol-value dict))))
-      ;; otherwise, process the list of dictionaries
-      (mapcar
-       (lambda (dic)
-	 ;; if element is a function or symbol, evaluate it first
-	 (cond
-	  ((functionp dic) (setq dic (funcall dic)))
-	  ((symbolp dic)   (setq dic (symbol-value dic))))
-	 ;; return dict, or throw error if we haven't got one by now
-	 (or (and (dictree-p dic) dic)
-	     (error "Wrong type in element of dictionary list: functionp,\
- symbolp, dict-p,or t at %d %s" point (prin1-to-string dic))))
-       (or (and (listp dict) dict) (list dict)))  ; map over dict list
-      )))
+  (predictive-process-dict-arg
+   (or (run-hook-wrapped 'predictive-dict-functions
+			 (lambda (fun)
+			   (save-excursion
+			     (goto-char point)
+			     (funcall fun))))
+       (predictive-main-dict))))
 
 
 (defun predictive-current-text-property-dict ()
@@ -3071,9 +3072,11 @@ without asking for confirmation."
  :name predictive
  :completion-args 2
  :accept-functions (lambda (prefix completion &optional arg)
+		     (predictive-auto-learn completion)
 		     (run-hook-with-args 'predictive-accept-functions
 					 prefix completion arg))
  :reject-functions (lambda (prefix completion &optional arg)
+		     (when arg (predictive-auto-learn prefix))
 		     (run-hook-with-args 'predictive-reject-functions
 					 prefix completion arg))
  :menu predictive-menu-function
