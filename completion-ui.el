@@ -1617,7 +1617,8 @@ non-prefix-completion
 
 prefix-replaced
         Non-nil if buffer string being completed (stored in
-        prefix overlay property) is
+        prefix overlay property) has been replaced with new text
+        in the buffer.
 
 common-substring
         If set, an overlay marking the longest common substring
@@ -2728,6 +2729,7 @@ should be replaced by the completion."
 		  (overlay-get update 'prefix)
 		non-prefix-completion
 		  (overlay-get update 'non-prefix-completion))
+	
 	;; otherwise, sort out arguments...
 	;; get completion-function
 	(unless (functionp
