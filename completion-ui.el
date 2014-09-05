@@ -2,7 +2,7 @@
 ;;; completion-ui.el --- in-buffer completion user interface
 
 
-;; Copyright (C) 2006-2013 Toby Cubitt
+;; Copyright (C) 2006-2014 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.12
@@ -830,7 +830,9 @@ SYNTAX."
         (define-key map [remap kill-paragraphs]
           'completion-kill-paragraph)
         (define-key map [remap backward-kill-paragraph]
-          'completion-backward-kill-paragraph))
+          'completion-backward-kill-paragraph)
+	(define-key map [remap kill-region]
+	  'completion-kill-region))
 
     ;; Otherwise, can't do better than define bindings for the keys
     ;; that are currently bound to them
@@ -845,6 +847,7 @@ SYNTAX."
                            (kill-sexp . completion-kill-sexp)
 			   (kill-line . completion-kill-line)
                            (kill-paragraph . completion-kill-paragraph)
+			   (kill-region . completion-kill-region)
                            (backward-delete-char
                             . completion-backward-delete-char)
                            (delete-backward-char
@@ -4197,6 +4200,24 @@ enabled, complete what remains of that word."
       (completion-delete 'kill-paragraph (- n))
     (completion-backward-delete 'backward-kill-paragraph n)))
 
+
+(defun completion-kill-region (beg end)
+  "Kill (\"cut\") text between point and mark.
+This deletes the text from the buffer and saves it in the kill ring.
+The command \\[yank] can retrieve it from there.
+\(If you want to save the region without killing it, use \\[kill-ring-save].)
+
+If you want to append the killed region to the last killed text,
+use \\[append-next-kill] before \\[kill-region].
+
+If the buffer is read-only, Emacs will beep and refrain from deleting
+the text, but put the text in the kill ring anyway.  This means that
+you can use the killing commands to copy text from a read-only buffer.
+
+If there is a provisional completion at point after deleting, it
+is rejected."
+  (interactive (list (point) (mark)))
+  (completion-delete 'kill-region beg end))
 
 
 
