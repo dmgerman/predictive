@@ -2729,7 +2729,7 @@ should be replaced by the completion."
 		  (overlay-get update 'prefix)
 		non-prefix-completion
 		  (overlay-get update 'non-prefix-completion))
-	
+
 	;; otherwise, sort out arguments...
 	;; get completion-function
 	(unless (functionp
@@ -3755,7 +3755,7 @@ based on current syntax table."
 ;;;                          Undo
 
 (defun completion-resolve-before-undo (beg end)
-  "Resolve completions between BEG and END before undoing.
+  "Resolve completions before undoing.
 Added to `before-change-functions' hook."
   ;; check if current command is an undo
   (when undo-in-progress
@@ -3765,7 +3765,8 @@ Added to `before-change-functions' hook."
 	   (if (eq completion-how-to-resolve-old-completions 'leave)
 	       'accept
 	     completion-how-to-resolve-old-completions)))
-      (completion-ui-resolve-old nil beg end))))
+      ; (completion-ui-resolve-old nil beg end)
+      (completion-ui-resolve-old))))
 
 
 

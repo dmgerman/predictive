@@ -973,9 +973,9 @@ overlays were saved."
   ;; order.
 
   ;; ignore changes that aren't either insertions or deletions
-  (when ;(and (not undo-in-progress)
+  (when (and (not undo-in-progress)
 	     (or (and (/= beg end) (=  len 0))    ; insertion
-		 (and (=  beg end) (/= len 0)));)  ; deletion
+		 (and (=  beg end) (/= len 0))))  ; deletion
     ;; repeat until all the pending functions have been cleared (it may be
     ;; necessary to run multiple times since the pending functions may
     ;; themselves cause more functions to be added to the pending lists)
@@ -1008,17 +1008,17 @@ overlays were saved."
 	(setq auto-o-pending-post-update nil))
       ))
 
-  ;; FIXME: horrible hack to delete all marker update entries in latest
-  ;;        `buffer-undo-list' change group, since undoing these can badly
-  ;;        mess up the overlays
-  (while (and (consp (car buffer-undo-list))
-	      (markerp (caar buffer-undo-list)))
-    (setq buffer-undo-list (cdr buffer-undo-list)))
-  (let ((p buffer-undo-list))
-    (while (cadr p)
-      (if (and (consp (cadr p)) (markerp (car (cadr p))))
-  	  (setcdr p (cddr p))
-  	(setq p (cdr p)))))
+  ;; ;; FIXME: horrible hack to delete all marker update entries in latest
+  ;; ;;        `buffer-undo-list' change group, since undoing these can badly
+  ;; ;;        mess up the overlays
+  ;; (while (and (consp (car buffer-undo-list))
+  ;; 	      (markerp (caar buffer-undo-list)))
+  ;;   (setq buffer-undo-list (cdr buffer-undo-list)))
+  ;; (let ((p buffer-undo-list))
+  ;;   (while (cadr p)
+  ;;     (if (and (consp (cadr p)) (markerp (car (cadr p))))
+  ;; 	  (setcdr p (cddr p))
+  ;; 	(setq p (cdr p)))))
   )
 
 
