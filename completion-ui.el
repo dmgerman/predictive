@@ -119,7 +119,7 @@
 ;; To bind "M-<tab>" to `complete-elisp' in `emacs-lisp-mode', you would bind
 ;; the command in the `emacs-lisp-mode-map' keymap:
 ;;
-;;   (define-key emacs-lisp-mode-map [?\M-\t] 'complete-elisp)
+;;   (define-key emacs-lisp-mode-map [M-tab] 'complete-elisp)
 ;;
 ;; You're free to bind the `complete-<name>' commands to any keys of your
 ;; choosing, though "M-<tab>" or "M-/" fit best with the default Completion-UI
@@ -1116,7 +1116,7 @@ used if the current Emacs version lacks command remapping support."
 				     'completion-self-insert))
 
   ;; M-<tab> and M-/ cycle word at point
-  (define-key completion-overlay-map [?\M-\t] 'completion-cycle)
+  (define-key completion-overlay-map [M-tab] 'completion-cycle)
   (define-key completion-overlay-map "\M-/" 'completion-cycle)
   ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
   (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
@@ -1279,7 +1279,7 @@ used if the current Emacs version lacks command remapping support."
     (setq completion-map (make-sparse-keymap)))
 
   ;; ;; M-<tab> and M-/ cycle or complete word at point
-  ;; (define-key completion-map [?\M-\t] 'complete-or-cycle-word-at-point)
+  ;; (define-key completion-map [M-tab] 'complete-or-cycle-word-at-point)
   ;; (define-key completion-map "\M-/" 'complete-or-cycle-word-at-point)
   ;; ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
   ;; (define-key completion-map [(meta shift iso-lefttab)]
@@ -1729,48 +1729,48 @@ auto-show
      (when (functionp func) (funcall func ,overlay))))
 
 
-(defmacro completion-ui-activate-interfaces (overlay)
+(defun completion-ui-activate-interfaces (overlay)
   ;; Activate all enabled user-interfaces for current completion OVERLAY
-  `(dolist (interface-def completion-ui-interface-definitions)
-     (when (completion-ui-interface-enabled-p interface-def overlay)
-       (completion-ui-interface-activate interface-def ,overlay))))
+  (dolist (interface-def completion-ui-interface-definitions)
+    (when (completion-ui-interface-enabled-p interface-def overlay)
+      (completion-ui-interface-activate interface-def overlay))))
 
 
-(defmacro completion-ui-deactivate-interfaces (overlay)
+(defun completion-ui-deactivate-interfaces (overlay)
   ;; Deactivate all enabled user-interfaces for current completion OVERLAY.
-  `(dolist (interface-def completion-ui-interface-definitions)
-     (when (completion-ui-interface-enabled-p interface-def overlay)
-       (completion-ui-interface-deactivate interface-def ,overlay))))
+  (dolist (interface-def completion-ui-interface-definitions)
+    (when (completion-ui-interface-enabled-p interface-def overlay)
+      (completion-ui-interface-deactivate interface-def overlay))))
 
 
-(defmacro completion-ui-deactivate-interfaces-pre-update (overlay)
+(defun completion-ui-deactivate-interfaces-pre-update (overlay)
   ;; Deactivate all non-updatable interfaces
-  `(dolist (interface-def completion-ui-interface-definitions)
-     (when (and (completion-ui-interface-enabled-p interface-def overlay)
-		(not (completion-ui--interface-update-function
-		      interface-def)))
-       (completion-ui-interface-deactivate interface-def ,overlay))))
+  (dolist (interface-def completion-ui-interface-definitions)
+    (when (and (completion-ui-interface-enabled-p interface-def overlay)
+	       (not (completion-ui--interface-update-function
+		     interface-def)))
+      (completion-ui-interface-deactivate interface-def overlay))))
 
 
-(defmacro completion-ui-update-interfaces (overlay)
+(defun completion-ui-update-interfaces (overlay)
   ;; Run update interfaces, falling back to activating them
-  `(let (func)
-     (dolist (interface-def completion-ui-interface-definitions)
-       (when (completion-ui-interface-enabled-p interface-def overlay)
-	 (if (setq func (completion-ui--interface-update-function
-			 interface-def))
-	     (when (functionp func) (funcall func ,overlay))
-	   (completion-ui-interface-activate interface-def ,overlay))))))
+  (let (func)
+    (dolist (interface-def completion-ui-interface-definitions)
+      (when (completion-ui-interface-enabled-p interface-def overlay)
+	(if (setq func (completion-ui--interface-update-function
+			interface-def))
+	    (when (functionp func) (funcall func overlay))
+	  (completion-ui-interface-activate interface-def overlay))))))
 
 
-(defmacro completion-ui-activate-auto-show-interface (overlay)
+(defun completion-ui-activate-auto-show-interface (overlay)
   ;; Activate auto-show interface for current completion OVERLAY.
-  `(funcall
-    (completion-ui--interface-auto-show
-     (assq (completion-ui-get-value-for-source
-	    overlay completion-auto-show)
-	   completion-ui-interface-definitions))
-    overlay))
+  (funcall
+   (completion-ui--interface-auto-show
+    (assq (completion-ui-get-value-for-source
+	   overlay completion-auto-show)
+	  completion-ui-interface-definitions))
+   overlay))
 
 
 (defun completion-ui-call-auto-show-interface-helpers (overlay)
@@ -1783,12 +1783,13 @@ auto-show
 	 (funcall func overlay)))))
 
 
-(defmacro completion-ui-deactivate-auto-show-interface (overlay)
+(defun completion-ui-deactivate-auto-show-interface (overlay)
   ;; Deactivate auto-show interface for current completion OVERLAY.
-  `(completion-ui-interface-deactivate
-    (assq (overlay-get ,overlay 'auto-show)
-	  completion-ui-interface-definitions))
-  `(overlay-put ,overlay 'auto-show nil))
+  (completion-ui-interface-deactivate
+   (assq (overlay-get overlay 'auto-show)
+	 completion-ui-interface-definitions)
+   overlay)
+  (overlay-put overlay 'auto-show nil))
 
 
 
@@ -3907,7 +3908,7 @@ enabled, complete what remains of that word."
 	    ;; --- do auto-completion or auto-updating ---
 	    (setq source (auto-completion-source)
 		  word-thing (completion-ui-source-word-thing source)
-		  wordstart(completion-beginning-of-word-p word-thing))
+		  wordstart (completion-beginning-of-word-p word-thing))
 	    (cond
 	     ;; if we're not now in or at the end of a word, or we're
 	     ;; auto-updating rather than auto-completing and we've deleted
@@ -3941,11 +3942,11 @@ enabled, complete what remains of that word."
 		  (setq overlay
 			(completion-ui-setup-overlay prefix
 			 :completion-source source
-			 :auto-completion 'backward-delete))
+			 :auto-completion 'backward-delete
+			 :overlay overlay))
 		  (move-overlay overlay (point) (point))))
 
-	      ;; if there's no existing timer, set one up to complete remainder
-	      ;; of word after some idle time
+	      ;; set up timer to re-complete after some idle time
 	      (when (timerp completion--backward-delete-timer)
 		(cancel-timer completion--backward-delete-timer))
 	      (if auto-completion-backward-delete-delay

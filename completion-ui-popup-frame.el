@@ -108,20 +108,43 @@ Note: this can be overridden by an \"overlay local\" binding (see
       'completion-popup-frame-previous-line)
     (define-key map [remap scroll-up]
       'completion-popup-frame-scroll-up)
+    (define-key map [remap scroll-up-command]
+      'completion-popup-frame-scroll-up)
     (define-key map [remap scroll-down]
       'completion-popup-frame-scroll-down)
-    (define-key map [remap scroll-down]
+    (define-key map [remap scroll-down-command]
       'completion-popup-frame-scroll-down)
     (define-key map [remap beginning-of-buffer]
       'completion-popup-frame-beginning-of-buffer)
     (define-key map [remap end-of-buffer]
       'completion-popup-frame-end-of-buffer)
+
+    ;; FIXME: unfortunately, default binding ([t], below) masks above command
+    ;;        remapping bindings, which looks like an Emacs bug. To work
+    ;;        around this, we also bind the default motion keys explicitly
+    (define-key map [down] 'completion-popup-frame-next-line)
+    (define-key map [C-n] 'completion-popup-frame-next-line)
+    (define-key map [up] 'completion-popup-frame-previous-line)
+    (define-key map "\C-p" 'completion-popup-frame-previous-line)
+    (define-key map [next] 'completion-popup-frame-scroll-up)
+    (define-key map "\C-v" 'completion-popup-frame-scroll-up)
+    (define-key map [prior] 'completion-popup-frame-scroll-down)
+    (define-key map [M-v] 'completion-popup-frame-scroll-down)
+    (define-key map [home] 'completion-popup-frame-beginning-of-buffer)
+    (define-key map [begin] 'completion-popup-frame-beginning-of-buffer)
+    (define-key map [C-home] 'completion-popup-frame-beginning-of-buffer)
+    (define-key map [M-<] 'completion-popup-frame-beginning-of-buffer)
+    (define-key map [end] 'completion-popup-frame-end-of-buffer)
+    (define-key map [C-end] 'completion-popup-frame-end-of-buffer)
+    (define-key map [M-<] 'completion-popup-frame-end-of-buffer)
+
     (define-key map "\C-u"   'universal-argument)
     (define-key map [?\C--]  'negative-argument)
     (define-key map [C-up]   'completion-popup-frame-dismiss)
     (define-key map [M-up]   'completion-popup-frame-dismiss)
-    (define-key map [?\M-\t] 'completion-popup-frame-toggle-show-all)
+    (define-key map [M-tab] 'completion-popup-frame-toggle-show-all)
     (define-key map "\M-/"   'completion-popup-frame-toggle-show-all)
+
     (define-key map [t]      'completion-popup-frame-unread-key)
     (setq completion-popup-frame-mode-map map)))
 
@@ -183,7 +206,7 @@ pop-up frame, rather than just the first few."
 
 
 (defun completion-deactivate-popup-frame-keys (overlay)
-  "Disable tooltip key bindings for OVERLAY."
+  "Disable pop-up frame key bindings for OVERLAY."
   (map-keymap
    (lambda (key binding)
      (define-key (overlay-get overlay 'keymap) (vector key) nil))
@@ -432,7 +455,9 @@ methods. Toggling will show all possible completions."
           (completion-construct-popup-frame-text
 	   completion-popup-frame-parent-overlay))
     (setq maxlen (if (null lines) 0 (apply 'max (mapcar 'length lines))))
-    (set-frame-size (selected-frame) (1+ maxlen) (frame-height))
+    (set-frame-size (selected-frame) (1+ maxlen)
+		    (1+ (min (length completions)
+			     completion-popup-frame-max-height)))
     ;; insert completions in pop-up frame
     (mapc (lambda (str) (insert str "\n")) lines)
     (delete-char -1)
