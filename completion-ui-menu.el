@@ -2,10 +2,10 @@
 ;;; completion-ui-menu.el --- menu user-interface for Completion-UI
 
 
-;; Copyright (C) 2009, 2012 Toby Cubitt
+;; Copyright (C) 2009, 2012, 2014 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.2
+;; Version: 0.1.3
 ;; Keywords: completion, user interface, menu
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -184,25 +184,31 @@ none."
 
       ;; if we've constructed a menu, display it
       (when keymap
-        (setq result
-              (x-popup-menu
-	       (save-excursion
-		 (goto-char (overlay-start overlay))
-		 (list
-		  (let ((pos (completion-window-posn-at-point
-			      nil nil
-			      (car completion-menu-offset)
-			      (+ (frame-char-height) 3
-				 (cdr completion-menu-offset)))))
-		    (list (car pos) (cdr pos)))
-		  (selected-window))
-		 ;; (completion-posn-at-point-as-event
-		 ;;  nil nil
-		 ;;  (car completion-menu-offset)
-		 ;;  (+ (frame-char-height) 3
-		 ;;     (cdr completion-menu-offset)))
-		 )
-	       keymap))
+	(let (win-pos frame-pos)
+	  (save-excursion
+	    (goto-char (overlay-start overlay))
+	    (setq win-pos (completion-window-posn-at-point
+			   nil nil
+			   (car completion-menu-offset)
+			   (+ (frame-char-height) 3
+			      (cdr completion-menu-offset)))
+		  frame-pos (completion-frame-posn-at-point)))
+	  ;; FIXME: minor hack ensure mouse is visible by moving it near (but
+	  ;;        not into!) menu
+	  ;;        `x-popup-menu' fails to display menu if mouse cursor has
+	  ;;        been removed, which can happen if user is using unclutter
+	  ;;        or similar. Also, if pointer is within menu, switching to
+	  ;;        browser and back seems to sporadically fail to display the
+	  ;;        menu.
+	  (set-mouse-pixel-position
+	   (selected-frame)
+	   (- (car frame-pos) 20)
+	   (+ (cdr frame-pos) (frame-char-height) 10))
+	  (sit-for .1)
+	  (setq result
+		(x-popup-menu
+		 (list (list (car win-pos) (cdr win-pos)) (selected-window))
+		 keymap)))
 
         ;; if they ain't selected nuffin', don't do nuffin'!
         (when result
