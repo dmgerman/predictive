@@ -267,7 +267,6 @@ the end if it is to be accepted."
   (let ((accept-or-reject
 	 (completion-ui-get-value-for-source
 	  overlay completion-accept-or-reject-by-default)))
-    (message "%s" (auto-completion-source))
     (cond
      ;; reject, auto-completion-mode, or completion-auto-update
      ((or (eq accept-or-reject 'reject)

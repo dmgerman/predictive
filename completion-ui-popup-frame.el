@@ -177,6 +177,13 @@ Note: this can be overridden by an \"overlay local\" binding (see
 ;;; ============================================================
 ;;;                 Interface functions
 
+(defun completion-ui-source-popup-frame-function (source)
+  ;; return popup-frame-function at point for SOURCE
+  (completion-ui-source-get-val
+   source :popup-frame-function 'completion-construct-popup-frame-text
+   'completion-popup-frame-function 'functionp))
+
+
 (defun completion-activate-popup-frame (&optional overlay all)
   "Show the completion pop-up frame.
 With a prefix argument, display all possible completions in the
@@ -301,12 +308,9 @@ If no OVERLAY is supplied, tries to find one at point."
   ;; if showing all completions, revert to storing just the first maxnum
   (when completion-popup-frame-show-all
     (let* ((prefix (overlay-get overlay 'prefix))
-	   (cmpl-fun (or (completion-ui-source-completion-function
-			  (overlay-get overlay 'completion-source))
-			 (overlay-get overlay 'completion-source)))
-	   (completions (funcall cmpl-fun prefix
-				 (completion-ui-get-value-for-source
-				  overlay completion-max-candidates))))
+	   (collection (overlay-get overlay 'collection))
+	   ;; FIXME: restrict to maxnum candidates?
+	   (completions (all-completions prefix collection)))
       (overlay-put overlay 'completions completions)))
   ;; select main Emacs frame if we're in a pop-up frame
   (when completion-popup-frame-parent-frame
@@ -414,11 +418,8 @@ methods. Toggling will show all possible completions."
 
   (let ((prefix (overlay-get completion-popup-frame-parent-overlay
                              'prefix))
-	(cmpl-fun (or (completion-ui-source-completion-function
-		       (overlay-get completion-popup-frame-parent-overlay
-			       'completion-source))
-		      (overlay-get completion-popup-frame-parent-overlay
-			       'completion-source)))
+	(collection (overlay-get completion-popup-frame-parent-overlay
+				 'collection))
 	(hotkeys (completion-ui-get-value-for-source
 		  completion-popup-frame-parent-overlay
 		  completion-ui-use-hotkeys))
@@ -432,7 +433,8 @@ methods. Toggling will show all possible completions."
        "Finding all completions (C-g to cancel if taking too long)...")
       (with-current-buffer
 	  (overlay-buffer completion-popup-frame-parent-overlay)
-        (setq completions (funcall cmpl-fun prefix)))
+	(let ((completion-max-candidates '(t . nil)))
+	  (setq completions (all-completions prefix collection))))
       (overlay-put completion-popup-frame-parent-overlay
                    'completions completions))
 
@@ -442,10 +444,7 @@ methods. Toggling will show all possible completions."
       (with-current-buffer
 	  (overlay-buffer completion-popup-frame-parent-overlay)
         (setq completions
-	      (funcall cmpl-fun prefix
-		       (completion-ui-get-value-for-source
-			completion-popup-frame-parent-overlay
-			completion-max-candidates))))
+	      (all-completions prefix collection)))
       (overlay-put completion-popup-frame-parent-overlay
                    'completions completions)))
 

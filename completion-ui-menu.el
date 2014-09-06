@@ -112,6 +112,22 @@ These key bindings get added to the completion overlay keymap.")
 ;;; ============================================================
 ;;;                 Interface functions
 
+(defun completion-ui-source-menu (source)
+  ;; return completion menu at point for SOURCE
+  (completion-ui-source-get-val
+   source :menu 'completion-construct-menu
+   'completion-menu
+   (lambda (v) (or (functionp v) (keymapp v)))))
+
+
+(defun completion-ui-source-browser (source)
+  ;; return completion browser menu at point for SOURCE
+  (completion-ui-source-get-val
+   source :browser-menu 'completion-construct-browser-menu
+   'completion-browser
+   (lambda (v) (or (functionp v) (keymapp v)))))
+
+
 (defun completion-activate-menu (&optional overlay browser)
   "Show the completion menu.
 With a prefix argument, show the completion browser."
@@ -325,9 +341,9 @@ and OVERLAY. They should return menu keymaps."
     (setq sub-menu-func 'completion-browser-sub-menu))
 
   ;; main browser menu is just a browser submenu...
-  (let* ((completions
-	  (funcall (completion-ui-source-completion-function overlay)
-		   (overlay-get overlay 'prefix)))
+  (let* ((completion-max-candidates '(t . nil))
+	 (completions (all-completions (overlay-get overlay 'prefix)
+				       (overlay-get overlay 'collection)))
 	 (menu (funcall sub-menu-func completions
 			menu-item-func sub-menu-func overlay)))
     ;; ... with an item added for switching to the basic completion
@@ -480,12 +496,8 @@ and OVERLAY. They should return menu keymaps."
   "Construct predictive completion browser menu item."
 
   (let* ((prefix (overlay-get overlay 'prefix))
-	 (cmpl-function (or (completion-ui-source-completion-function
-			     (overlay-get overlay 'completion-source))
-			    (overlay-get overlay 'completion-source)))
-	 (cmpl-prefix-function
-	  (overlay-get overlay 'completion-prefix-function))
-	 (non-prefix-completion (overlay-get overlay 'non-prefix-completion))
+	 (collection (overlay-get overlay 'collection))
+	 (non-prefix-completion (overlay-get overlay :non-prefix-completion))
 
 	 ;; If `non-prefix-completion' is null, get completions for entry,
 	 ;; dropping the empty string which corresponds to the same entry
@@ -499,13 +511,14 @@ and OVERLAY. They should return menu keymaps."
 		overlay completion-browser-recurse-on-completions)
 	       (not non-prefix-completion)
 	       (not (string= (if (stringp cmpl) cmpl (car cmpl)) ""))
-	       ;; note :have to replace any prefix length data in completions
+	       ;; Note: have to replace any prefix length data in completions
 	       ;; list with prefix length data from original prefix
 	       (mapcar
 		(if (stringp cmpl)
 		    (lambda (c) (if (stringp c) c (car c)))
 		  (lambda (c) (cons (if (stringp c) c (car c)) (cdr cmpl))))
-		(cdr (funcall cmpl-function cmpl))))))
+		;; FIXME: ensure we get all completions?
+		(cdr (all-completions cmpl collection))))))
     ;; if there are no completions (other than the entry itself), create a
     ;; selectable completion item
     (if (null completions)

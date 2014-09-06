@@ -186,6 +186,13 @@ when a tooltip is displayed.")
 ;;; ============================================================
 ;;;                 Interface functions
 
+(defun completion-ui-source-tooltip-function (source)
+  ;; return popup-frame-function at point for SOURCE
+  (completion-ui-source-get-val
+   source :tooltip-function 'completion-construct-tooltip-text
+   'completion-tooltip-function 'functionp))
+
+
 (defun completion-activate-tooltip (&optional overlay)
   "Show the completion tooltip.
 
@@ -232,7 +239,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
           text w-h)
 
       ;; construct the tooltip text
-      (setq text (funcall (completion-ui-source-tooltip-function nil overlay)
+      (setq text (funcall (completion-ui-source-tooltip-function overlay)
                           overlay))
       (when (string= (substring text -1) "\n")
         (setq text (substring text 0 -1)))

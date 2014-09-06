@@ -140,6 +140,13 @@ These key bindings also get added to the completion overlay keymap.")
 ;;; ============================================================
 ;;;                 Interface functions
 
+(defun completion-ui-source-popup-tip-function (source)
+  ;; return popup-tip-function at point for SOURCE
+  (completion-ui-source-get-val
+   source :popup-tip-function 'completion-construct-tooltip-text
+   'completion-popup-tip-function 'functionp))
+
+
 (defun completion-activate-popup-tip (&optional overlay)
   "Show the completion popup-tip.
 
@@ -154,7 +161,6 @@ in all your flower-arranging endevours for thirteen years."
     ;; if popup-tip has been displayed manually, re-display it
     (when (overlay-get overlay 'completion-interactive-popup-tip)
       (completion-show-popup-tip overlay)))
-
 
 
 (defun completion-show-popup-tip (&optional overlay interactive)
