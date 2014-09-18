@@ -229,6 +229,61 @@ within a LaTeX math environment.")
 (make-variable-buffer-local 'predictive-latex-previous-filename)
 
 
+(defconst predictive-latex-override-syntax-alist
+  ;; the \ character starts a LaTeX command unless it is preceded by an odd
+  ;; number of \'s, in which case it is part of a \\ command
+  '((?\\ predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-word-completion-behaviour)
+    (?$ predictive-latex-punctuation-resolve-behaviour none)
+    ;; typing a '{' character immediately triggers a new completion process
+    ;; in some contexts
+    (?{ predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-smart-open-brace-completion-behaviour)
+    ;; typing a '"' character does smart quote insertion
+    (?\" predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour
+	 predictive-latex-smart-quote-insert-behaviour)
+    ;; various characters form part of one-character LaTeX commands if
+    ;; preceded by a '\'
+    (?} predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?_ predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?^ predictive-latex-punctuation-resolve-behaviour none)
+    ;; (?' predictive-latex-single-char-command-resolve-behaviour
+    ;;     predictive-latex-single-char-command-completion-behaviour)
+    (?\( predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour)
+    (?\) predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour)
+    (?# predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?@ predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?+ predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?, predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?- predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?\; predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour)
+    (?! predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?< predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?= predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?> predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)
+    (?\[ predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour)
+    (?\] predictive-latex-single-char-command-resolve-behaviour
+	 predictive-latex-single-char-command-completion-behaviour)
+    (?` predictive-latex-single-char-command-resolve-behaviour
+	predictive-latex-single-char-command-completion-behaviour)))
+
+
 ;; convenience const holding alist associating latex dictionary variables and
 ;; corresponding dictionary name prefixes
 (defconst predictive-latex-dict-classes
@@ -251,297 +306,336 @@ within a LaTeX math environment.")
 ;;;=========================================================
 ;;;           Register LaTeX Completion-UI sources
 
-(completion-ui-register-derived-source
- predictive-latex predictive
- :accept-functions (lambda (prefix compleiton &optional arg)
-		     (predictive-auto-learn
-		      completion (predictive-main-dict))
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg (predictive-auto-learn
-				prefix (predictive-main-dict)))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :override-syntax-alist
-     ;; the \ character starts a LaTeX command unless it is preceded by an odd
-     ;; number of \'s, in which case it is part of a \\ command
-     ((?\\ predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-word-completion-behaviour)
-      (?$ predictive-latex-punctuation-resolve-behaviour none)
-      ;; typing a '{' character immediately triggers a new completion process
-      ;; in some contexts
-      (?{ predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-smart-open-brace-completion-behaviour)
-      ;; typing a '"' character does smart quote insertion
-      (?\" predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour
-	   predictive-latex-smart-quote-insert-behaviour)
-      ;; various characters form part of one-character LaTeX commands if
-      ;; preceded by a '\'
-      (?} predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?_ predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?^ predictive-latex-punctuation-resolve-behaviour none)
-;;    (?' predictive-latex-single-char-command-resolve-behaviour
-;;        predictive-latex-single-char-command-completion-behaviour)
-      (?\( predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour)
-      (?\) predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour)
-      (?# predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?@ predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?+ predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?, predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?- predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?\; predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour)
-      (?! predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?< predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?= predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?> predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      (?\[ predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour)
-      (?\] predictive-latex-single-char-command-resolve-behaviour
-	   predictive-latex-single-char-command-completion-behaviour)
-      (?` predictive-latex-single-char-command-resolve-behaviour
-	  predictive-latex-single-char-command-completion-behaviour)
-      )
- :word-thing predictive-latex-word
- :menu (lambda (overlay)
-	 (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
-	     (predictive-latex-construct-browser-menu overlay)
-	   (completion-construct-menu overlay)))
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-completion-at-point
+  predictive-complete
+  :name predictive-latex
+  :completion-args 2
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :accept-functions (lambda (prefix compleiton &optional arg)
+		      (predictive-auto-learn
+		       completion (predictive-main-dict))
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg (predictive-auto-learn
+				 prefix (predictive-main-dict)))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :override-syntax-alist predictive-latex-override-syntax-alist
+  :menu (lambda (overlay)
+	  (if (eq (aref (overlay-get overlay 'prefix) 0) ?\\)
+	      (predictive-latex-construct-browser-menu overlay)
+	    (completion-construct-menu overlay)))
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
-(completion-ui-register-derived-source
- predictive-latex-math predictive-latex
- :completion-function predictive-complete
- :completion-args 2
- :other-args (predictive-latex-math-dict)
- :accept-functions (lambda (prefix compleiton &optional arg)
-		     (predictive-auto-learn
-		      completion predictive-latex-math-dict)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg (predictive-auto-learn
-				prefix predictive-latex-math-dict))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- ;; :override-syntax-alist
- ;;     ((?' . (predictive-latex-punctuation-resolve-behaviour none t))
- ;;      (?$ predictive-latex-punctuation-resolve-behaviour none))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(defun predictive-latex-text-completion-at-point ()
+  "Function used in `completion-at-point-functions'
+to revert to completing using predictive-latex source where
+appropriate in LaTeX buffers."
+  (when (or (eq (auto-overlay-local-binding
+		 'completion-source nil 'only-overlay)
+		'predictive-latex-completion-at-point)
+	    (looking-back
+	     (concat predictive-latex-odd-backslash-regexp
+		     "text" predictive-latex-brace-group-regexp)
+	     (line-beginning-position)))
+    (predictive-latex-completion-at-point)))
 
 
-(completion-ui-register-derived-source
- predictive-latex-preamble predictive
- :completion-function predictive-complete
- :completion-args 2
- :other-args (predictive-latex-preamble-dict)
- :accept-functions (lambda (prefix compleiton &optional arg)
-		     (predictive-auto-learn
-		      completion predictive-latex-preamble-dict)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg (predictive-auto-learn
-				prefix predictive-latex-preamble-dict))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-math-completion-at-point
+  predictive-complete
+  :name predictive-latex
+  :type math
+  :completion-args 2
+  :other-args (predictive-latex-math-dict)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (eq (auto-overlay-local-binding
+			    'completion-source nil 'only-overlay)
+			   'latex-math))
+  :accept-functions (lambda (prefix compleiton &optional arg)
+		      (predictive-auto-learn
+		       completion predictive-latex-math-dict)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg (predictive-auto-learn
+				 prefix predictive-latex-math-dict))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :override-syntax-alist predictive-latex-override-syntax-alist
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-env
- :completion-args 2
- :other-args (predictive-latex-env-dict)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (predictive-auto-learn
-		      completion predictive-latex-env-dict)
-		     (when predictive-latex-electric-environments
-		       (predictive-latex-update-matching-env completion))
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg
-		       (predictive-auto-learn
-			prefix predictive-latex-preamble-dict)
-		       (when predictive-latex-electric-environments
-			 (predictive-latex-update-matching-env prefix)))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :syntax-alist
-     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour t))
-      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour t))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
-      (t  . (reject none)))
- :override-syntax-alist
-     ((?} predictive-latex-punctuation-resolve-behaviour none))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-function
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-preamble-completion-at-point
+  predictive-complete
+  :name predictive-latex
+  :completion-args 2
+  :other-args (predictive-latex-preamble-dict)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (eq (auto-overlay-local-binding
+			    'completion-source nil 'only-overlay)
+			   'latex-preamble))
+  :accept-functions (lambda (prefix compleiton &optional arg)
+		      (predictive-auto-learn
+		       completion predictive-latex-preamble-dict)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg (predictive-auto-learn
+				 prefix predictive-latex-preamble-dict))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :override-syntax-alist predictive-latex-override-syntax-alist
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-label
- :completion-args 2
- :other-args (predictive-latex-label-dict)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (predictive-auto-learn
-		      completion predictive-latex-label-dict)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg
-		       (predictive-auto-learn
-			prefix predictive-latex-label-dict))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :syntax-alist
-     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
-      (t  . (reject none)))
- :override-syntax-alist
-     ((?: . ((lambda () (predictive-latex-completion-add-till-regexp ":"))
-	     predictive-latex-word-completion-behaviour))
-      (?_ . ((lambda () (predictive-latex-completion-add-till-regexp "\\W"))
-	     predictive-latex-word-completion-behaviour))
-      (?} . (predictive-latex-punctuation-resolve-behaviour none)))
- :word-thing predictive-latex-label-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-env-completion-at-point
+  predictive-complete
+  :name predictive-latex-env  ; use different :name here because we don't want
+  :type env	    	      ; predictive-latex `auto-completion-syntax-alist'
+  :completion-args 2          ; customizations to override :syntax-alist
+  :other-args (predictive-latex-env-dict)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (looking-back
+			(concat predictive-latex-odd-backslash-regexp
+				"\\(?:begin\\|end\\)"
+				predictive-latex-brace-group-regexp)
+			(line-beginning-position)))
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (predictive-auto-learn
+		       completion predictive-latex-env-dict)
+		      (when predictive-latex-electric-environments
+			(predictive-latex-update-matching-env completion))
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg
+			(predictive-auto-learn
+			 prefix predictive-latex-preamble-dict)
+			(when predictive-latex-electric-environments
+			  (predictive-latex-update-matching-env prefix)))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :syntax-alist
+      ((?w . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?_ . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?. . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?  . (predictive-latex-whitespace-resolve-behaviour none))
+       (t  . (reject none)))
+  :override-syntax-alist
+      ((?} predictive-latex-punctuation-resolve-behaviour none))
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-function
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-docclass
- :completion-args 2
- :other-args (dict-latex-docclass)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (predictive-auto-learn completion dict-latex-docclass)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg
-		       (predictive-auto-learn prefix dict-latex-docclass))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :syntax-alist
-     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
-      (t  . (reject none)))
- :override-syntax-alist
-     ((?} predictive-latex-punctuation-resolve-behaviour none))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(defvar predictive-latex-label-regexps
+  (list (concat predictive-latex-odd-backslash-regexp
+		"\\(page\\)?ref"
+		predictive-latex-brace-group-regexp))
+  "List of regexps that activate predictive-label completion.")
 
 
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-bibstyle
- :completion-args 2
- :other-args (dict-latex-bibstyle)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (predictive-auto-learn completion dict-latex-bibstyle)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg
-		       (predictive-auto-learn prefix dict-latex-bibstyle))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :syntax-alist
-     ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?_ . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?. . (predictive-latex-smart-within-braces-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
-      (t  . (reject none)))
- :override-syntax-alist
-     ((?} predictive-latex-punctuation-resolve-behaviour none))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-menu
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-label-completion-at-point
+  predictive-complete
+  :name predictive-latex-label  ; use different :name here - see above
+  :type label
+  :completion-args 2
+  :other-args (predictive-latex-label-dict)
+  :word-thing 'predictive-latex-label-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (catch 'match
+			 (dolist (regex predictive-latex-label-regexps)
+			   (when (looking-back
+				  regex (line-beginning-position))
+			     (throw 'match t)))))
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (predictive-auto-learn
+		       completion predictive-latex-label-dict)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg
+			(predictive-auto-learn
+			 prefix predictive-latex-label-dict))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :syntax-alist
+      ((?w . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?_ . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?. . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?  . (predictive-latex-whitespace-resolve-behaviour none))
+       (t  . (reject none)))
+  :override-syntax-alist
+      ((?: . ((lambda () (predictive-latex-completion-add-till-regexp ":"))
+ 	     predictive-latex-word-completion-behaviour))
+       (?_ . ((lambda () (predictive-latex-completion-add-till-regexp "\\W"))
+ 	     predictive-latex-word-completion-behaviour))
+       (?} . (predictive-latex-punctuation-resolve-behaviour none)))
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
-(defun predictive-latex-math-source ()
-  ;; Return 'predictive-latex-math auto-completion source if within a LaTeX
-  ;; math environment.
-  (when (member (LaTeX-current-environment)
-		predictive-latex-math-environments)
-    ;; display warning if we found anything by this legacy method, since
-    ;; anything found here should have been caught by auto-overlays
-    (message "Completion source was found by legacy\
-`LaTeX-current-environment' method -- this shouldn't happen!")
-    'predictive-latex-math))
+(defun predictive-latex-label-no-completion-at-point ()
+  "Function used in `completion-at-point-functions'
+to disable completion within a \"\\label\" argument."
+  (when (looking-back
+	 (concat predictive-latex-odd-backslash-regexp
+		 "label" predictive-latex-brace-group-regexp)
+	 (line-beginning-position))
+    t))
 
 
-(defun predictive-latex-face-source ()
-  ;; Call `auto-completion-face-source' to find auto-completion source.
-  (let ((source (auto-completion-face-source)))
-    (when source
-      ;; display warning if we found anything by this legacy method, since
-      ;; anything found here should have been caught by auto-overlays
-      (message "Completion source was found by legacy\
- font-lock face method -- this shouldn't happen!")
-      source)))
+(define-completion-at-point-function
+  predictive-latex-docclass-completion-at-point
+  predictive-complete
+  :name predictive-latex-docclass  ; use different :name here - see above
+  :type docclass
+  :completion-args 2
+  :other-args (dict-latex-docclass)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (looking-back
+			(concat predictive-latex-odd-backslash-regexp
+				"documentclass\\(?:\\[.*\\]\\)?"
+				predictive-latex-brace-group-regexp)
+			(line-beginning-position)))
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (predictive-auto-learn completion dict-latex-docclass)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg
+			(predictive-auto-learn prefix dict-latex-docclass))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :syntax-alist
+      ((?w . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?_ . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?. . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?  . (predictive-latex-whitespace-resolve-behaviour none))
+       (t  . (reject none)))
+  :override-syntax-alist
+      ((?} predictive-latex-punctuation-resolve-behaviour none))
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
+
+
+(define-completion-at-point-function
+  predictive-latex-bibstyle-completion-at-point
+  predictive-complete
+  :name predictive-latex-bibstyle  ; use different :name here - see above
+  :type bibstyle
+  :completion-args 2
+  :other-args (dict-latex-bibstyle)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (looking-back
+			(concat predictive-latex-odd-backslash-regexp
+				"bibliographystyle\\(?:\\[.*\\]\\)?"
+				predictive-latex-brace-group-regexp)
+			(line-beginning-position)))
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (predictive-auto-learn completion dict-latex-bibstyle)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg
+			(predictive-auto-learn prefix dict-latex-bibstyle))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :syntax-alist
+      ((?w . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?_ . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?. . (add predictive-latex-word-completion-behaviour
+		  predictive-latex-smart-within-braces-insert-behaviour))
+       (?  . (predictive-latex-whitespace-resolve-behaviour none))
+       (t  . (reject none)))
+  :override-syntax-alist
+      ((?} predictive-latex-punctuation-resolve-behaviour none))
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-menu
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
+
+
+;; (defun predictive-latex-legacy-completion-at-point ()
+;;   ;; Function used in `completion-at-point-functions' to select
+;;   ;; predictive-latex completion source using legacy methods.
+;;   (cond
+;;    ((completion-ui-face-match 'font-latex-math-face)
+;;     (message "Completion source was found by legacy \
+;;  font-lock face method -- this shouldn't happen!")
+;;     (predictive-latex-math-completion-at-point))
+;;    ((member (LaTeX-current-environment)
+;; 	    predictive-latex-math-environments)
+;;     (message "Completion source was found by legacy \
+;; `LaTeX-current-environment' method -- this shouldn't happen!")
+;;     (predictive-latex-math-completion-at-point))))
+
+
+(defun predictive-latex-insert-before (list elt newelt)
+  "Destructively insert ELT before MATCH in LIST.
+
+Write `(setq foo (predictive-latex-insert-before foo elt newelt))'
+to be sure of correctly changing the value of a list `foo'."
+  (let ((tail (memq elt list)))
+    (when tail
+      (setcdr tail (cons (car tail) (cdr tail)))
+      (setcar tail newelt))))
+
+
+(defun predictive-latex-insert-after (list elt newelt)
+  "Destructively insert ELT after MATCH in LIST."
+  (let ((tail (memq elt list)))
+    (when tail (setcdr tail (cons newelt (cdr tail))))))
 
 
 
@@ -561,10 +655,6 @@ function automatically when predictive mode is enabled in
    ;; ----- enabling LaTeX setup -----
    ((> arg 0)
     (catch 'load-fail
-      ;; make predictive completion the default auto-completion source
-      (predictive-setup-save-local-state 'auto-completion-default-source)
-      (set (make-local-variable 'auto-completion-default-source)
-	   'predictive-latex)
       ;; enable `predictive-latex-map' keymap
       (setq predictive-latex-mode t)
       ;; save overlays and dictionaries along with buffer
@@ -574,13 +664,19 @@ function automatically when predictive mode is enabled in
       ;; `predictive-latex-after-save')
       (predictive-setup-save-local-state 'predictive-latex-previous-filename)
       (setq predictive-latex-previous-filename (buffer-file-name))
-      ;; set custom list of functions for determining auto-completion source
-      (predictive-setup-save-local-state 'auto-completion-source-functions)
-      (set (make-local-variable 'auto-completion-source-functions)
-	   '(auto-completion-regexp-source
-	     auto-completion-overlay-source
-	     predictive-latex-face-source
-	     predictive-latex-math-source))
+      ;; set custom function for determining auto-completion source
+      (predictive-setup-save-local-state 'auto-completion-at-point-functions)
+      (set (make-local-variable 'auto-completion-at-point-functions)
+	   (list 'predictive-latex-env-completion-at-point
+		 'predictive-latex-label-completion-at-point
+		 'predictive-latex-label-no-completion-at-point
+		 'predictive-latex-text-completion-at-point
+		 'predictive-latex-math-completion-at-point
+		 'predictive-latex-preamble-completion-at-point
+		 'predictive-latex-docclass-completion-at-point
+		 'predictive-latex-bibstyle-completion-at-point
+		 ;; 'predictive-latex-legacy-completion-at-point
+		 'predictive-latex-completion-at-point))
       ;; configure syntax-related settings
       (predictive-latex-load-syntax)
       ;; consider \ as start of a word
@@ -622,7 +718,7 @@ function automatically when predictive mode is enabled in
        ;; FIXME: should we handle null TeX-master case differently?
        (t
 	(predictive-latex-load-dicts)
-	(predictive-latex-load-regexps)
+	;; (predictive-latex-load-regexps)
 	;; load latex auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
 	(predictive-latex-load-auto-overlay-definitions)
@@ -742,40 +838,6 @@ function automatically when predictive mode is enabled in
 
 
 
-(defun predictive-latex-load-regexps ()
-  ;; load the predictive-mode `auto-completion-source-regexps'
-  ;; configure automatic selection of completion sources and dicts
-  (predictive-setup-save-local-state 'auto-completion-source-faces)
-  (set (make-local-variable 'auto-completion-source-faces)
-       '(nil  ; allows non-TeX-master buffers to share face defs
-	 (font-latex-math-face . predictive-latex-math)))
-  (predictive-setup-save-local-state 'auto-completion-source-regexps)
-  (set (make-local-variable 'auto-completion-source-regexps)
-       `(nil  ; allows non-TeX-master buffers to share regexp defs
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "label" predictive-latex-brace-group-regexp)
-	  nil looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "\\(?:begin\\|end\\)"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-env looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "ref" predictive-latex-brace-group-regexp)
-	  predictive-latex-label looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "documentclass\\(?:\\[.*\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-docclass looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "bibliographystyle\\(?:\\[.*\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	  predictive-latex-bibstyle looking-at 1)
-	 (,(concat predictive-latex-odd-backslash-regexp
-		   "text{\\([^}]*\\)")
-	  predictive looking-at 1))))
-
-
-
 (defun predictive-latex-load-auto-overlay-definitions ()
   "Load the predictive mode LaTeX auto-overlay regexp definitions."
 
@@ -786,13 +848,12 @@ function automatically when predictive mode is enabled in
 	  ("%" (completion-source . predictive-latex)
 	   (priority . 100) (exclusive . t))))
 
-
   ;; $'s delimit the start and end of maths regions...
   (auto-overlay-load-definition
    'predictive
    '(self :id inline-math
 	  ("\\$"
-	   (completion-source . predictive-latex-math)
+	   (completion-source . latex-math)
 	   (priority . 30))))
 
   ;; ...as do \[ and \], but not \\[ and \\] etc.
@@ -803,13 +864,12 @@ function automatically when predictive mode is enabled in
    '(nested :id display-math
 	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\[\\)" . 3)
 	     :edge start
-	     (completion-source . predictive-latex-math)
+	     (completion-source . latex-math)
 	     (priority . 30)
 	     (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\\\]\\)" . 3)
 	      :edge end
-	      (completion-source . predictive-latex-math)
+	      (completion-source . latex-math)
 	      (priority . 30)))))
-
 
   ;; \begin{...} and \end{...} start and end LaTeX environments
   (auto-overlay-load-definition
@@ -817,11 +877,11 @@ function automatically when predictive mode is enabled in
    '(nested :id environment
 	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
 	     :edge start
-	     (completion-source . predictive-latex-math)
+	     (completion-source . latex-math)
 	     (priority . 10))
 	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\end{\\(equation\\*?\\|displaymath\\|align\\(at\\)?\\*?\\|flalign\\*?\\|gather\\*?\\|multline\\*?\\)}" 0 3)
 	     :edge end
-	     (completion-source . predictive-latex-math)
+	     (completion-source . latex-math)
 	     (priority . 10))
 	    (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\begin{\\(.*?\\)}" 0 3)
 	     :edge start
@@ -832,21 +892,19 @@ function automatically when predictive mode is enabled in
 	     (priority . 10)
 	     (completion-source . nil))))
 
-
   ;; preamble lives between \documentclass{...} and \begin{document}
   (auto-overlay-load-definition
    'predictive
    '(flat :id preamble
 	  (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\documentclass\\(\\[.*?\\]\\)?{.*?}\\)" . 3)
 	   :edge start
-	   (completion-source . predictive-latex-preamble)
+	   (completion-source . latex-preamble)
 	   (priority . 20))
 	  (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\(\\\\begin{document}\\)" . 3)
 	   :edge end
-	   (completion-source . predictive-latex-preamble)
+	   (completion-source . latex-preamble)
 	     (priority . 20))
 	  ))
-
 
   ;; \documentclass defines the document type. Through the use of a special
   ;; "docclass" regexp class defined below, this automagically changes the
@@ -857,6 +915,7 @@ function automatically when predictive mode is enabled in
    '(predictive-latex-docclass
      (("\\([^\\]\\|^\\)\\(\\\\\\\\\\)*\\\\documentclass\\(\\[.*?\\]\\)?{\\(.*?\\)}"
        . 4))))
+
   ;; \usepackage loads a latex package. Through the use of a special
   ;; "usepackage" regexp class defined below, this automagically loads new
   ;; dictionaries and auto-overlay regexps.
@@ -927,14 +986,14 @@ function automatically when predictive mode is enabled in
 
 
 (defun predictive-latex-load-syntax ()
-  "Load the predictive mode LaTeX Completion-UI syntax behaviour."
+  "Configure the `predictive-mode' LaTeX syntax behaviour."
   ;; get behaviours defined in `auto-completion-syntax-alist'
   (destructuring-bind (word-resolve word-complete word-insert
 		       punct-resolve punct-complete punct-insert
 		       whitesp-resolve whitesp-complete whitesp-insert)
-      (append (auto-completion-lookup-behaviour nil ?w 'predictive)
-	      (auto-completion-lookup-behaviour nil ?. 'predictive)
-	      (auto-completion-lookup-behaviour nil ?  'predictive))
+      (append (auto-completion-lookup-behaviour nil ?w '(:name predictive-latex))
+	      (auto-completion-lookup-behaviour nil ?. '(:name predictive-latex))
+	      (auto-completion-lookup-behaviour nil ?  '(:name predictive-latex)))
     ;; store behaviours in variables for source syntax-alists
     (setq predictive-latex-word-completion-behaviour word-complete)
     (setq predictive-latex-punctuation-resolve-behaviour punct-resolve)
@@ -944,12 +1003,11 @@ function automatically when predictive mode is enabled in
 
 (defun predictive-latex-inherit-from-TeX-master ()
   ;; inherit predictive-latex settings from `TeX-master'
-  (let (filename buff source-regexps source-faces
-		 used-dicts main-dict aux-dict
-		 latex-dict math-dict preamble-dict env-dict
-		 label-dict local-latex-dict local-math-dict
-		 local-env-dict local-section-dict
-		 browser-submenu)
+  (let (filename buff label-regexps browser-submenu
+	used-dicts main-dict aux-dict
+	latex-dict math-dict preamble-dict env-dict
+	label-dict local-latex-dict local-math-dict
+	local-env-dict local-section-dict)
     (setq filename (concat (file-name-sans-extension
 			    (expand-file-name TeX-master)) ".tex"))
     (unless (file-exists-p filename) (throw 'load-fail nil))
@@ -957,9 +1015,8 @@ function automatically when predictive mode is enabled in
       (find-file filename)
       (turn-on-predictive-mode)
       (setq buff (current-buffer)
+	    label-regexps     predictive-latex-label-regexps
 	    used-dicts         predictive-used-dict-list
-	    source-regexps     auto-completion-source-regexps
-	    source-faces       auto-completion-source-faces
 	    main-dict          predictive-buffer-dict
 	    aux-dict           predictive-auxiliary-dict
 	    latex-dict         predictive-latex-dict
@@ -974,13 +1031,9 @@ function automatically when predictive mode is enabled in
 	    browser-submenu    predictive-latex-browser-submenu-alist))
     (auto-overlay-share-regexp-set 'predictive buff)
 
-    (predictive-setup-save-local-state
-     'auto-completion-source-regexps
-     'auto-completion-source-faces)
-    (set (make-local-variable 'auto-completion-source-regexps)
-	 source-regexps)
-    (set (make-local-variable 'auto-completion-source-faces)
-	 source-faces)
+    (predictive-setup-save-local-state 'predictive-latex-label-regexps)
+    (set (make-local-variable 'predictive-latex-label-regexps)
+	 label-regexps)
 
     (predictive-setup-save-local-state
      'predictive-used-dict-list
@@ -1140,71 +1193,67 @@ If point is already on a definition, cycle to next duplicate
 definition of the same thing."
   (interactive)
 
-  (let ((source (auto-completion-source))
-	word dict type o-def)
-    (or
-     ;; when we're on either a cross-reference or a label definition...
-     (and (completion-ui-source-derives-from-p source 'predictive-latex-label)
-	  ;; look for label at point
-	  (setq word
-		(thing-at-point (completion-ui-source-word-thing source)))
-	  (set-text-properties 0 (length word) nil word)
-	  (setq dict predictive-latex-label-dict)
-	  (setq type "label"))
+  (pcase (run-hook-wrapped 'auto-completion-at-point-functions
+			   #'completion--capf-wrapper 'all)
+    (`(,hookfun . (,start ,end ,collection . ,props))
+     (let (word dict type o-def)
+       (setq type (plist-get props :type))
+       (cond
+	;; when we're on either a cross-reference or a label definition...
+	((eq type 'label)
+	 ;; look for label at point
+	 (setq word (thing-at-point (or (plist-get props :word-thing)
+					'predictive-latex-label-word)))
+	 (set-text-properties 0 (length word) nil word)
+	 (setq dict predictive-latex-label-dict))
 
-     ;; when we're on either a LaTeX command or a definition thereof...
-     (and (or (completion-ui-source-derives-from-p
-	       source '(predictive-latex 'predictive-latex-math))
-	      (setq o-def
-		    (car (auto-overlays-at-point
-			  nil `((identity auto-overlay)
-				(eq set-id predictive)
-				(,(lambda (id)
-				    (or (eq id 'newcommand)
-					(eq id 'DeclareMathOperator)))
-				 definition-id))))))
-	  ;; look for command at point
-	  (setq word (thing-at-point 'predictive-latex-word))
-	  (set-text-properties 0 (length word) nil word)
-	  ;; verify we're on a command by checking first character is "\"
-	  (= (elt word 0) ?\\)
-	  ;; set dict to temporary meta-dict that combines local-latex and
-	  ;; local-math dicts
-	  (setq dict (dictree-create-meta-dict
-		      (list predictive-latex-local-latex-dict
-			    predictive-latex-local-math-dict)
-		      nil nil nil t '+))
-	  (setq type "command"))
+	;; when we're on either a LaTeX environment or definition thereof...
+	((and (or (eq type 'env)
+		  (setq o-def (car (auto-overlays-at-point
+				    nil `((identity auto-overlay)
+					  (eq set-id predictive)
+					  (,(lambda (id)
+					      (or (eq id 'newenvironment)
+						  (eq id 'newtheorem)))
+					   definition-id)))))))
+	 ;; look for environment at point
+	 (setq word (thing-at-point 'predictive-latex-word))
+	 (set-text-properties 0 (length word) nil word)
+	 (setq dict predictive-latex-local-env-dict))
 
-     ;; when we're on either a LaTeX environment or definition thereof...
-     (and (or (completion-ui-source-derives-from-p
-	       source 'predictive-latex-env)
-	      (setq o-def (car (auto-overlays-at-point
-				nil `((identity auto-overlay)
-				      (eq set-id predictive)
-				      (,(lambda (id)
-					  (or (eq id 'newenvironment)
-					      (eq id 'newtheorem)))
-				       definition-id))))))
-	  ;; look for environment at point
-	  (setq word (thing-at-point 'predictive-latex-word))
-	  (set-text-properties 0 (length word) nil word)
-	  (setq dict predictive-latex-local-env-dict)
-	  (setq type "environment")))
+	;; when we're on either a LaTeX command or a definition thereof...
+	((or (setq o-def (car (auto-overlays-at-point
+			       nil `((identity auto-overlay)
+				     (eq set-id predictive)
+				     (,(lambda (id)
+					 (or (eq id 'newcommand)
+					     (eq id 'DeclareMathOperator)))
+				      definition-id)))))
+	     ;; look for command at point
+	     (and (setq word (thing-at-point 'predictive-latex-word))
+		  (= (elt word 0) ?\\)))
+	 (setq type 'command)
+	 (set-text-properties 0 (length word) nil word)
+	 ;; set dict to temporary meta-dict that combines local-latex and
+	 ;; local-math dicts
+	 (setq dict (dictree-create-meta-dict
+		     (list predictive-latex-local-latex-dict
+			   predictive-latex-local-math-dict)
+		     nil nil nil t '+))))
 
 
-    (if (null type)
-	(message "Nothing to jump to")
-      ;; jump to definition
-      (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
-      (cond
-       ;; we only find out here whether a command or environment was defined
-       ;; in preamble or globally, so we might have jumped no where
-       ((null o-def) (message "Nothing to jump to"))
-       ;; display warning if multiply defined
-       ((> (length o-def) 1)
-	(message "LaTeX %s \"%s\" multiply defined" type word))))
-    ))
+       (if (null type)
+	   (message "Nothing to jump to")
+	 ;; jump to definition
+	 (setq o-def (predictive-auto-dict-jump-to-def dict word o-def))
+	 (cond
+	  ;; we only find out here whether a command or environment was
+	  ;; defined in preamble or globally, so we might have jumped no where
+	  ((null o-def) (message "Nothing to jump to"))
+	  ;; display warning if multiply defined
+	  ((> (length o-def) 1)
+	   (message "LaTeX %s \"%s\" multiply defined" type word))))
+       ))))
 
 
 
@@ -1900,7 +1949,6 @@ character and re-complete.
 Intended to be used as the \"resolve\" entry in
 `completion-dynamic-syntax-alist' or
 `completion-dynamic-override-syntax-alist'."
-
   (let (overlay completion)
     ;; if completion characters contain REGEXP, accept characters up to first
     ;; regexp match, and add them to the completion overlay prefix
@@ -1919,7 +1967,6 @@ Intended to be used as the \"resolve\" entry in
 		   (+ (overlay-get overlay 'prefix-length)
 		      (match-beginning 0)))
       (goto-char (overlay-start overlay))))
-
   ;; return 'add, causing `completion-self-insert' to add last typed character
   ;; to the prefix
   'add)
@@ -1950,16 +1997,19 @@ Intended to be used as the \"resolve\" entry in
 (defun predictive-latex-smart-open-brace-completion-behaviour ()
   ;; do something smart when inserting a '{' character, and return appropriate
   ;; `auto-completion-syntax-override-alist' behaviour
-  (let ((source (auto-completion-source)))
-    (cond
-     ((completion-ui-source-derives-from-p
-       source '(predictive-latex-env
-		predictive-latex-label
-		predictive-latex-docclass
-		predictive-latex-bibstyle))
-      (complete-in-buffer-1 source "" 'not-set 'auto)
-      'none)
-     (t (predictive-latex-single-char-command-completion-behaviour)))))
+  (pcase (run-hook-wrapped 'auto-completion-at-point-functions
+			   #'completion--capf-wrapper 'all)
+    (`(,hookfun . (,start ,end ,collection . ,props))
+     (cond
+      ((memq (plist-get props :type) '(env label docclass bibstyle))
+       (setq props (append (list 'completion-at-point-function hookfun)
+			   props))
+       (complete-in-buffer-1 collection (point) (point)
+			     props 'auto-complete)
+       nil)
+      (t (predictive-latex-single-char-command-completion-behaviour))))
+
+    (_ (predictive-latex-single-char-command-completion-behaviour))))
 
 
 (defun predictive-latex-smart-quote-insert-behaviour ()
@@ -1976,25 +2026,28 @@ Intended to be used as the \"resolve\" entry in
    (t t)))
 
 
-(defun predictive-latex-smart-within-braces-resolve-behaviour
+(defun predictive-latex-smart-within-braces-insert-behaviour
   (&optional terminator)
-  ;; overwrite entire THING if inserting new character at beginning of word
-  ;; within braces, and word being overritten is immediately followed by text
-  ;; matching TERMINATOR regexp.
+  ;; overwrite entire `thing-at-point' if inserting new character at beginning
+  ;; of word within braces, and word being overritten is immediately followed
+  ;; by text matching TERMINATOR regexp.
   (when completion-overwrite
     (unless terminator (setq terminator "}"))
-    (let ((source (auto-completion-source))
-	  (pos (point)) word-thing bounds)
-      (when (and source
-		 (setq bounds
-		       (bounds-of-thing-at-point
-			(completion-ui-source-word-thing source)))
+    (let ((pos (point))
+	  word-thing bounds)
+      (pcase (run-hook-wrapped 'auto-completion-at-point-functions
+			       #'completion--capf-wrapper 'all)
+	(`(,hookfun . (,start ,end ,collection . ,props))
+	 (setq word-thing (or (plist-get props :word-thing)
+			      'predictive-latex-word)))
+	(_ (setq word-thing 'predictive-latex-word)))
+      (when (and (setq bounds (bounds-of-thing-at-point word-thing))
 		 (= (car bounds) pos)
 		 (save-excursion
 		   (goto-char (cdr bounds))
 		   (looking-at terminator)))
-	(delete-region pos (cdr bounds))))
-    'add))
+	(delete-region pos (cdr bounds)))))
+  t)
 
 
 (defun predictive-latex-forward-word (&optional n)
@@ -2036,16 +2089,18 @@ Intended to be used as the \"resolve\" entry in
       ;; go forward, counting \ as part of word, \\ as entire word
       (dotimes (i (or n 1))
 	(if (or (and (eq (char-before) ?\\)
-		     (not (= (char-syntax (char-before)) ?w)))
+		     (not (= (char-syntax (char-after)) ?w))
+		     (not (= (char-syntax (char-after)) ? )))
 		(and (char-before)
 		     (= (char-syntax (char-before)) ?w)
 		     (eq (char-after) ?*)))
 	    (forward-char)
 	  (when (re-search-forward "\\\\\\|\\w" nil t)
 	    (backward-char))
-	  (re-search-forward "\\\\\\W\\|\\\\\\w+\\|\\w+" nil t)
+	  (re-search-forward "\\\\\\w+\\|\\w+\\|\\\\\\W\\|\\\\$" nil t)
 	  (cond
 	   ((eq (char-before) ?\n) (backward-char))
+	   ((eq (char-before) ? ) (backward-char))
 	   ((eq (char-after) ?*) (forward-char))))))))
 
 

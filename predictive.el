@@ -931,11 +931,6 @@ When within a pop-up frame:
    ((not predictive-mode)
     ;; make sure main dictionaries are loaded
     (mapc 'predictive-load-dict (predictive-main-dict))
-    ;; replace Completion-UI sources with their predictive variants
-    (set (make-local-variable 'completion-ui-source-definitions)
-	 (append predictive-completion-ui-source-definitions
-		 completion-ui-source-definitions))
-
     ;; save dictionaries used in the buffer when bufer is killed
     (when predictive-dict-autosave-on-kill-buffer
       (add-hook 'kill-buffer-query-functions 'predictive-save-used-dicts
@@ -983,7 +978,6 @@ When within a pop-up frame:
    ;; ----- disabling predictive mode -----
    (predictive-mode
     ;; turn off auto-completion mode if necessary
-    ;;(kill-local-variable 'auto-completion-default-source)
     (when predictive-auto-complete (auto-completion-mode -1))
     ;; cancel auto-learn timer and flush the caches
     (cancel-timer predictive-flush-auto-learn-timer)
@@ -997,8 +991,6 @@ When within a pop-up frame:
     ;; save Completion-UI frequency data
     (dolist (source predictive-completion-ui-source-definitions)
       (predictive-save-source-frequency-data (car source) nil 'overwrite))
-    ;; restore Completion-UI sources
-    (kill-local-variable 'completion-ui-source-definitions)
 
     ;; if major-mode setup function failed to load, just reset the flag
     (if predictive-disable-major-mode-setup
@@ -1053,8 +1045,10 @@ function automatically when predictive mode is enabled in
 `text-mode' and any mode derived from it."
   (cond  ;; make predictive completion the default auto-completion source
    ((> arg 0)
-    (predictive-setup-save-local-state 'auto-completion-default-source)
-    (set (make-local-variable 'auto-completion-default-source) 'predictive))
+    ;; take over `auto-completion-at-point-functions'
+    (predictive-setup-save-local-state 'auto-completion-at-point-functions)
+    (set (make-local-variable 'auto-completion-at-point-functions)
+	 '(predictive-completion-at-point)))
    ((< arg 0) (predictive-setup-restore-local-state)))
   t)  ; return t to indicate successful setup
 
@@ -1070,11 +1064,10 @@ function automatically when predictive mode is enabled in
   (cond
    ;; enabling
    ((> arg 0)
-    (predictive-setup-save-local-state 'auto-completion-default-source)
-    (predictive-setup-save-local-state 'auto-completion-source-faces)
+    (predictive-setup-save-local-state 'auto-completion-at-point-functions)
     ;; make predictive elisp completion the default auto-completion source
-    (set (make-local-variable 'auto-completion-default-source)
-	 'predictive-elisp)
+    (set (make-local-variable 'auto-completion-at-point-functions)
+	 '(predictive-elisp))
     ;; use predictive completion in comments and strings
     (set (make-local-variable 'auto-completion-source-faces)
 	 '((font-lock-comment-face . predictive)
@@ -1450,25 +1443,19 @@ WEIGHT is specified by the prefix argument."
 		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to add"
-			      (let ((str (thing-at-point
-					  (or (completion-ui-source-word-thing
-					       (auto-completion-source))
-					      'word))))
+			      (let ((str (completion-ui-word-at-point)))
 				(when str (concat " (default \"" str "\")")))
 			      ": "))
 		     current-prefix-arg))
   ;; sort out arguments
   (and (symbolp dict) (setq dict (symbol-value dict)))
-  (when (called-interactively-p 'any)
-    (when (string= word "")
-      (let ((str (thing-at-point (or (completion-ui-source-word-thing
-				      (auto-completion-source))
-				     'word))))
-	(if (null str)
-	    (error "No word supplied")
-	  (setq word str))))
-    ;; sort out weight argument
-    (unless (null weight) (setq weight (prefix-numeric-value weight))))
+  (and (called-interactively-p 'any) (string= word "")
+       (let ((str (completion-ui-word-at-point)))
+	 (if (null str)
+	     (error "No word supplied")
+	   (setq word str))))
+  ;; sort out weight argument
+  (unless (null weight) (setq weight (prefix-numeric-value weight)))
   ;; strip any text properties from word
   (set-text-properties 0 (length word) nil word)
 
@@ -1526,21 +1513,15 @@ Interactively, WORD and DICT are read from the minibuffer."
 		      (car (predictive-current-dict)))
 		     (read-from-minibuffer
 		      (concat "Word to delete"
-			      (let ((str (thing-at-point
-					  (or (completion-ui-source-word-thing
-					       (auto-completion-source))
-					      'word))))
+			      (let ((str (completion-ui-word-at-point)))
 				(when str (concat " (default \"" str "\")")))
 			      ": "))))
   ;; sort out arguments
   (and (symbolp dict) (setq dict (symbol-value dict)))
-  (and (called-interactively-p 'any) (string= word "")
-       (let ((str (thing-at-point (or (completion-ui-source-word-thing
-				       (auto-completion-source))
-				      'word))))
+  (and (called-interactively-p 'any) (or (null word) (string= word ""))
+       (let ((str (completion-ui-word-at-point)))
 	 (if (null str)
 	     (error "No word supplied")
-	   (set-text-properties 0 (length str) nil str)
 	   (setq word str))))
   ;; delete word
   (if (dictree-delete dict word)
@@ -1629,30 +1610,27 @@ as the weight of WORD."
 				    (dictree-name dic) "): ")
 			  "Dictionary: "))
 		      (car (predictive-current-dict)))
-		     (setq word (read-string
-				 (format "Word (default \"%s\"): "
-					 (thing-at-point 'word))))
-		     (let ((wrd (if (or (null word) (string= word ""))
-				    (thing-at-point
-				     (or (completion-ui-source-word-thing
-					  (auto-completion-source))
-					 'word))
-				  word)))
-		       (read-string
-			(format "Prefix for \"%s\" (default \"%s\"): "
-				wrd (or (predictive-guess-prefix wrd) ""))))
+		     (setq word
+			   (read-string
+			    (concat
+			     "Word"
+			     (let ((str (completion-ui-word-at-point)))
+			       (when str (concat " (default \"" str "\")")))
+			     ": ")))
+		     (read-string
+		      (concat
+		       "Prefix for \"" word "\""
+		       (let ((pfx (and word (predictive-guess-prefix word))))
+			 (if pfx (concat " (default\"" pfx "\"): ") ": "))))
 		     ))
   ;; sort out arguments
   (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
     ;; default to word at point
     (when (or (null word) (string= word ""))
-      (let ((str (thing-at-point (or (completion-ui-source-word-thing
-				      (auto-completion-source))
-				     'word))))
+      (let ((str (completion-ui-word-at-point)))
 	(if (null str)
 	    (error "No word supplied")
-	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     ;; default to guessed prefix, throwing error if there is no guess
     (when (or (null prefix) (string= prefix ""))
@@ -1662,33 +1640,33 @@ as the weight of WORD."
     (when (not (dictree-member-p dict word))
       (error "\"%s\" not found in dictionary %s" word (dictree-name dict))))
 
-    ;; prompt for confirmation if prefix isn't really a prefix for word
-    (when (and (dictree-member-p dict word)
-	       (dictree-member-p dict prefix)
-	       (or (not (called-interactively-p 'any))
-		   (and (> (length word) (length prefix))
-			(string= (substring word 0 (length prefix)) prefix))
-		   (y-or-n-p
-		    (format
-		     "\"%s\" is not a prefix of \"%s\". Continue anyway? "
-		     prefix word))))
+  ;; prompt for confirmation if prefix isn't really a prefix for word
+  (when (and (dictree-member-p dict word)
+	     (dictree-member-p dict prefix)
+	     (or (not (called-interactively-p 'any))
+		 (and (> (length word) (length prefix))
+		      (string= (substring word 0 (length prefix)) prefix))
+		 (y-or-n-p
+		  (format
+		   "\"%s\" is not a prefix of \"%s\". Continue anyway? "
+		   prefix word))))
 
-      (let ((prefixes (dictree-get-property dict word :prefixes)))
-	;; unless prefix is already defined, define it
-	(if (member prefix prefixes)
-	    (when (called-interactively-p 'interactive)
-	      (message "\"%s\" is already a prefix of \"%s\" in dictionary %s"
-		       prefix word (dictree-name dict)))
-	  (dictree-put-property dict word :prefixes (cons prefix prefixes))
+    (let ((prefixes (dictree-get-property dict word :prefixes)))
+      ;; unless prefix is already defined, define it
+      (if (member prefix prefixes)
 	  (when (called-interactively-p 'interactive)
-	    (message "Defined \"%s\" as prefix of \"%s\" in dictionary %s"
-		     prefix word (dictree-name dict)))))
+	    (message "\"%s\" is already a prefix of \"%s\" in dictionary %s"
+		     prefix word (dictree-name dict)))
+	(dictree-put-property dict word :prefixes (cons prefix prefixes))
+	(when (called-interactively-p 'interactive)
+	  (message "Defined \"%s\" as prefix of \"%s\" in dictionary %s"
+		   prefix word (dictree-name dict)))))
 
-      ;; make sure prefix's weight is at least as large as word's
-      (let ((weight (dictree-lookup dict word))
-	    (pweight (dictree-lookup dict prefix)))
-	(and weight (or (null pweight) (< pweight weight))
-	     (dictree-insert dict prefix weight (lambda (a b) a))))))
+    ;; make sure prefix's weight is at least as large as word's
+    (let ((weight (dictree-lookup dict word))
+	  (pweight (dictree-lookup dict prefix)))
+      (and weight (or (null pweight) (< pweight weight))
+	   (dictree-insert dict prefix weight (lambda (a b) a))))))
 
 
 
@@ -1719,29 +1697,29 @@ least as large as the weight of WORD."
 				    (dictree-name dic) "): ")
 			  "Dictionary: "))
 		      (car (predictive-current-dict)))
-		     (setq word (read-string
-				 (format "Word (default \"%s\"): "
-					 (thing-at-point 'word))))
-		     (let ((wrd (if (or (null word) (string= word ""))
-				    (thing-at-point
-				     (or (completion-ui-source-word-thing
-					  (auto-completion-source))
-					 'word))
-				  word)))
-		       (read-string
-			(format "Remove prefix of \"%s\" (default \"%s\"): "
-				wrd (or (predictive-guess-prefix wrd) ""))))
+		     (setq word
+			   (read-string
+			    (concat
+			     "Word"
+			     (let ((str (completion-ui-word-at-point)))
+			       (when str (concat " (default \"" str "\")")))
+			     ": ")))
+		     (read-string
+		      (concat
+		       "Remove prefix for \"" word "\""
+		       (let ((pfx (and word (predictive-guess-prefix word))))
+			 (if pfx
+			     (concat " (default\"" pfx "\"): ")
+			   ": "))))
 		     ))
   ;; sort out arguments
   (and (symbolp dict) (setq dict (symbol-value dict)))
   (when (called-interactively-p 'any)
+    ;; default to word at point
     (when (or (null word) (string= word ""))
-      (let ((str (thing-at-point (or (completion-ui-source-word-thing
-				      (auto-completion-source))
-				     'word))))
+      (let ((str (completion-ui-word-at-point)))
 	(if (null str)
 	    (error "No word supplied")
-	  (set-text-properties 0 (length str) nil str)
 	  (setq word str))))
     (when (or (null prefix) (string= prefix ""))
       (setq prefix (predictive-guess-prefix word))))
@@ -1948,10 +1926,7 @@ Remaining arguments are ignored (they are there to allow
 	   (eq last-command 'forward-char)
 	   (eq last-command 'left-char)
 	   (eq last-command 'right-char))
-       (setq word (thing-at-point (completion-ui-source-word-thing
-				   (auto-completion-source))))
-       (set-text-properties 0 (length word) nil word))
-
+       (setq word (thing-at-point (completion-ui-word-at-point))))
   (when word
     (let ((dict (predictive-current-dict))
 	  help)
@@ -2150,8 +2125,8 @@ prefix argument."
 	       (predictive-capitalized-p word)
 	       (setq word (downcase word)))
 	  ;; call the current auto-completion source's accept functions
-	  (completion-ui-source-run-accept-functions
-	   (auto-completion-source) word word arg)
+	  (completion-ui-run-accept-functions
+	   (completion-ui-accept-functions-at-point) word word arg)
 	  (when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
 	    (setq percent (/ (float (point)) (point-max)))
 	    (message "Learning words...(%s%%)"
@@ -2243,8 +2218,8 @@ to determine which dictionary to use."
       ;; expand prefix
       (setq pfx (predictive-expand-prefix prefix))
       ;; if expanded prefix is a regexp, do a regexp search, using RESULTFUN
-      ;; argument of `dictree-regexp-search' to convert dump word weights and
-      ;; convert regexp group data into prefix length
+      ;; argument of `dictree-regexp-search' to ditch word weights and convert
+      ;; regexp group data into prefix length
       (if (eq (car pfx) 'regexp)
 	  (setq completions
 	  	(dictree-regexp-search
@@ -2858,7 +2833,9 @@ A negative prefix argument turns it off.")
   ;; `predictive-which-dict-mode' mode-line format to display the current
   ;; dictionary the mode line.
 
-  (let ((source (auto-completion-source))
+  (let ((source (completion-ui-source-get-prop
+		 (completion-ui-source-at-point)
+		 :name))
 	dict name list)
     (cond
      ;; if auto-completion source is `predictive', get dictionary name(s)
@@ -3002,54 +2979,52 @@ without asking for confirmation."
 
 
 
-(defun predictive--register-source (completion-function &rest args)
-  ;; Hook function for `completion-ui-register-source-functions' which
-  ;; auto-generates predictive versions of new Completion-UI sources.
-  (let ((name (plist-get args :name))
-	predictive-name)
-    ;; construct source name
-    (unless name
-      (setq name (completion-ui--construct-source-name completion-function)))
-    (setq predictive-name (intern (concat "predictive-" (symbol-name name))))
+;; (defun predictive--register-source (function-name completion-function &rest args)
+;;   ;; Hook function for `define-completion-at-point-functions' which
+;;   ;; auto-generates predictive versions of new Completion-UI sources.
+;;   (let ((name (plist-get args :name))
+;; 	predictive-name capf-name)
+;;     ;; construct source name
+;;     (unless name
+;;       (setq name (completion-ui--construct-source-name completion-function)))
+;;     (setq predictive-name (intern (concat "predictive-" (symbol-name name)))
+;;           capf-name (intern (concat predictive-name "-completion-at-point")))
 
-    ;; if source already sets :sort-by-frequency or explicitly disables
-    ;; predictive support, don't generate predictive variant
-    (if (or (plist-get args :no-predictive)
-	    (plist-get args :sort-by-frequency))
-	;; load frequency data for source if it collects source-specific
-	;; data and predictive support isn't disabled
-	(unless (or (plist-get args :no-predictive)
-		    (eq (plist-get args :sort-by-frequency) 'global))
-	  (predictive-load-source-frequency-data name nil 'noerror))
+;;     ;; if source already sets :sort-by-frequency or explicitly disables
+;;     ;; predictive support, don't generate predictive variant
+;;     (if (or (plist-get args :no-predictive)
+;; 	    (plist-get args :sort-by-frequency))
+;; 	;; load frequency data for source if it collects source-specific
+;; 	;; data and predictive support isn't disabled
+;; 	(unless (or (plist-get args :no-predictive)
+;; 		    (eq (plist-get args :sort-by-frequency) 'global))
+;; 	  (predictive-load-source-frequency-data name nil 'noerror))
 
-      ;; otherwise, generate predictive variant of source
-      (plist-put args :name predictive-name)
-      (plist-put args :sort-by-frequency 'source)
-      (plist-put args :no-predictive t)
-      (eval `(completion-ui-register-source ,completion-function ,@args))
-      ;; load frequency data for predictive source
-      (predictive-load-source-frequency-data predictive-name nil 'noerror)
-      ;; add predictive variant to predictive-mode's list of source
-      ;; definitions under *original* source's name
-      (let ((existing (assq name predictive-completion-ui-source-definitions))
-	    (def (assq predictive-name completion-ui-source-definitions)))
-	(if existing
-	    (setcdr existing (cdr def))
-	  (push (cons name (cdr def))
-		predictive-completion-ui-source-definitions)))
-      )))
+;;       ;; otherwise, generate predictive variant of source
+;;       (plist-put args :name predictive-name)
+;;       (plist-put args :sort-by-frequency 'source)
+;;       (plist-put args :no-predictive t)
+;;       (eval `(define-completion-at-point-function ,completion-function ,@args))
+;;       ;; load frequency data for predictive source
+;;       (predictive-load-source-frequency-data predictive-name nil 'noerror)
+;;       ;; add predictive variant to predictive-mode's list of source
+;;       ;; definitions under *original* source's name
+;;       (let ((existing (assq name predictive-completion-ui-source-definitions))
+;; 	    (def (assq predictive-name completion-ui-source-definitions)))
+;; 	(if existing
+;; 	    (setcdr existing (cdr def))
+;; 	  (push (cons name (cdr def))
+;; 		predictive-completion-ui-source-definitions)))
+;;       )))
 
 
 
 ;; install hook to construct predictive versions of Completion-UI sources
-(add-hook 'completion-ui-register-source-functions
-	  'predictive--register-source)
+;; (add-hook 'define-completion-at-point-function-functions
+;; 	  'predictive--register-source)
 
 ;; load global frequency data from file
 (predictive-load-source-frequency-data 0 nil 'noerror)
-
-;; now we can finally load the pre-defined Completion-UI sources
-(require 'completion-ui-sources)
 
 
 
@@ -3057,22 +3032,22 @@ without asking for confirmation."
 ;;; ===============================================================
 ;;;         Register main predictive Completion-UI source
 
-(completion-ui-register-source
- predictive-complete
- :name predictive
- :completion-args 2
- :accept-functions (lambda (prefix completion &optional arg)
-		     (predictive-auto-learn completion)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (when arg (predictive-auto-learn prefix))
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :menu predictive-menu-function
- :browser predictive-browser-function
- :word-thing predictive-word-thing
- :no-predictive t)
+(define-completion-at-point-function predictive-completion-at-point
+  predictive-complete
+  :name predictive
+  :completion-args 2
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (predictive-auto-learn completion)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (when arg (predictive-auto-learn prefix))
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :menu predictive-menu-function
+  :browser predictive-browser-function
+  :word-thing predictive-word-thing
+  :no-predictive t)
 
 
 

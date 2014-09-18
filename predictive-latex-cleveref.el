@@ -44,41 +44,72 @@
 (defvar predictive-latex-cleveref-restore-label-definition nil)
 
 
+
+
+;;;=========================================================
+;;;     Cleveref `auto-completion-at-point-functions'
+
 ;; derive cleveref-style label completion source from standard label source
-(completion-ui-register-derived-source
- predictive-latex-cleveref-label predictive-latex-label
- :syntax-alist
-     ((?w . (predictive-latex-cleveref-label-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?_ . (predictive-latex-cleveref-label-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?. . (predictive-latex-cleveref-label-resolve-behaviour
-	     predictive-latex-word-completion-behaviour))
-      (?  . (predictive-latex-whitespace-resolve-behaviour none))
-      (t  . (reject none)))
- :override-syntax-alist
-     ((?: . ((lambda ()
-	       (predictive-latex-completion-add-till-regexp ":"))
-	     predictive-latex-word-completion-behaviour))
-      (?_ . ((lambda ()
-	       (predictive-latex-completion-add-till-regexp "\\W"))
-	     predictive-latex-word-completion-behaviour))
-      (?, . (predictive-latex-punctuation-resolve-behaviour none))
-      (?} . (predictive-latex-punctuation-resolve-behaviour none)))
- :word-thing predictive-latex-cleveref-label-word
- :no-auto-completion t
- :no-predictive t
- :no-command t)
+(define-completion-at-point-function
+  predictive-latex-cleveref-label-completion-at-point
+  predictive-complete
+  :name predictive-latex-label   ; inherit customization
+  :type label
+  :completion-args 2
+  :other-args (predictive-latex-label-dict)
+  :word-thing 'predictive-latex-cleveref-label-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (looking-back
+			(concat predictive-latex-odd-backslash-regexp
+			 "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
+			 "\\|\\(?:name\\|label\\)[cC]ref\\)"
+			 predictive-latex-brace-group-regexp)
+			(line-beginning-position)))
+  :syntax-alist
+   ((?w . (add predictive-latex-word-completion-behaviour
+	       predictive-latex-cleveref-smart-wthin-braces-insert-behaviour))
+    (?_ . (add predictive-latex-word-completion-behaviour
+	       predictive-latex-cleveref-smart-wthin-braces-insert-behaviour))
+    (?. . (add predictive-latex-word-completion-behaviour
+	       predictive-latex-cleveref-smart-wthin-braces-insert-behaviour))
+    (?  . (predictive-latex-whitespace-resolve-behaviour none))
+    (t  . (reject none)))
+  :override-syntax-alist
+   ((?: . ((lambda ()
+	     (predictive-latex-completion-add-till-regexp ":"))
+	   predictive-latex-word-completion-behaviour))
+    (?_ . ((lambda ()
+	     (predictive-latex-completion-add-till-regexp "\\W"))
+	   predictive-latex-word-completion-behaviour))
+    (?, . (predictive-latex-punctuation-resolve-behaviour none))
+    (?} . (predictive-latex-punctuation-resolve-behaviour none)))
+  :no-auto-completion t
+  :no-predictive t
+  :no-command t)
 
 
-(defun predictive-latex-cleveref-label-resolve-behaviour ()
-  (predictive-latex-smart-within-braces-resolve-behaviour "\\([,}]\\)"))
+(defun predictive-latex-cleveref-label-no-completion-at-point ()
+  "Function used in `completion-at-point-functions'
+to disable completion within a \"\\label\" argument."
+  (when (looking-back
+	 (concat predictive-latex-odd-backslash-regexp
+		 "label\\(?:\\[.*?\\]\\)?"
+		 predictive-latex-brace-group-regexp)
+	 (line-beginning-position))
+    t))
 
+
+
+
+;;;============================================================
+;;;                       Setup function
 
 (defun predictive-latex-setup-cleveref (&optional arg)
   ;; With positive ARG, load cleveref package support. With negative ARG,
   ;; unload it.
   (cond
+   
    ;; --- load cleveref support ---
    ((> arg 0)
     ;; add new browser sub-menu definition
@@ -86,24 +117,21 @@
 	   (list (cons "\\\\[cC]ref\\(range\\|\\)"
 		       'predictive-latex-label-dict)))
 
-    ;; add completion source regexps
-    (setcdr auto-completion-source-regexps
-	    (nconc
-	     ;; label with optarg
-	     (list
-	      `(,(concat predictive-latex-odd-backslash-regexp
-			 "label\\(?:\\[.*?\\]\\)?"
-			 predictive-latex-brace-group-regexp)
-		nil looking-at 1)
-	      ;; \cref and \vref
-	      `(,(concat predictive-latex-odd-backslash-regexp
-			 "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
-			 "\\|\\(?:name\\|label\\)[cC]ref\\)"
-			 predictive-latex-brace-group-regexp)
-		predictive-latex-cleveref-label looking-at 1))
-	     (cdr auto-completion-source-regexps)))
+    ;; add new `auto-completion-at-point-functions' function
+    (predictive-latex-insert-after
+     auto-completion-at-point-functions
+     'predictive-latex-label-completion-at-point
+     'predictive-latex-cleveref-label-completion-at-point)
 
-    ;; \label with optional argument replaces normal \label definition
+    ;; replace label completion-disabling `auto-completion-at-point-functions'
+    ;; function
+    ;; FIXME: assumes 'predictive-latex-label-no-completion is never first
+    ;; element of `auto-completion-at-point-functions'
+    (setcar (memq 'predictive-latex-label-no-completion-at-point
+		  auto-completion-at-point-functions)
+	    'predictive-latex-cleveref-label-no-completion-at-point)
+
+    ;; cleveref auto-overlay definition replaces standard label definition
     (setq predictive-latex-cleveref-restore-label-definition
 	  (auto-overlay-unload-definition 'predictive 'label))
     (auto-overlay-load-definition
@@ -115,6 +143,7 @@
 	(auto-dict . predictive-latex-label-dict)))
      t))
 
+
    ;; --- unload cleveref support ---
    ((< arg 0)
     ;; remove browser sub-menu definition
@@ -123,28 +152,28 @@
 	   "\\\\[cC]ref\\(range\\|\\)"
 	   predictive-latex-browser-submenu-alist))
 
-    ;; remove completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "\\label\\(?:\\[.*?\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "\\(?:[cCvV]ref\\(?:\\|range\\)\\*?"
-		   "\\|\\(?:name\\|label\\)[cC]ref\\)"
-		   predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
-
     ;; unload cleveref auto-overlay definition
     (auto-overlay-load-definition
      'predictive predictive-latex-cleveref-restore-label-definition)
     (kill-local-variable 'predictive-latex-cleveref-restore-label-definition)
-    )))
+
+    ;; restore label completion-disabling `auto-completion-at-point-functions'
+    ;; function
+    (setcar (memq 'predictive-latex-label-no-completion
+		  auto-completion-at-point-functions)
+	    'predictive-latex-cleveref-label-no-completion)
+
+    ;; remove `auto-completion-at-point-functions' function
+    (setq auto-completion-at-point-functions
+	  (delq 'predictive-latex-cleveref-label-completion-at-point
+		auto-completion-at-point-functions)))
+   ))
 
 
+
+
+;;;=============================================================
+;;;               Miscelaneous utility functions
 
 (defun predictive-latex-cleveref-label-forward-word (&optional n)
   ;; going backwards...
@@ -181,6 +210,11 @@
 ;;; 	    (when (= (char-before) ?,) (backward-char))
 ;;; 	  (goto-char (point-max)))))
     ))
+
+
+(defun predictive-latex-cleveref-smart-within-braces-insert-behaviour ()
+  (predictive-latex-smart-within-braces-insert-behaviour "\\([,}]\\)"))
+
 
 
 (provide 'predictive-latex-cleveref)

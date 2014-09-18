@@ -36,27 +36,36 @@
 
 
 ;; define LaTeX colour completion source
-(completion-ui-register-source
- predictive-complete
- :name predictive-latex-color
- :completion-args 2
- :other-args (dict-latex-colours)
- :accept-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-accept-functions
-					 prefix completion arg))
- :reject-functions (lambda (prefix completion &optional arg)
-		     (run-hook-with-args 'predictive-reject-functions
-					 prefix completion arg))
- :syntax-alist ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
-		       predictive-latex-word-completion-behaviour)))
- :override-syntax-alist
-     ((?} . (predictive-latex-punctuation-resolve-behaviour none)))
- :word-thing predictive-latex-word
- :menu predictive-latex-construct-browser-menu
- :browser predictive-latex-construct-browser-function
- :no-auto-completion t
- :no-command t
- :no-predictive t)
+(define-completion-at-point-function
+  predictive-latex-color-completion-at-point
+  predictive-complete
+  :name predictive-latex-color    ; use different name here to avoid
+  :type color                     ; predictive-latex customizations
+  :completion-args 2              ; overriding :syntax-alist
+  :other-args (dict-latex-colours)
+  :word-thing 'predictive-latex-word
+  :allow-empty-prefix t
+  :activate-function (lambda ()
+		       (looking-back
+			(concat predictive-latex-odd-backslash-regexp
+				"\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
+				predictive-latex-brace-group-regexp)
+			(line-beginning-position)))
+  :accept-functions (lambda (prefix completion &optional arg)
+		      (run-hook-with-args 'predictive-accept-functions
+					  prefix completion arg))
+  :reject-functions (lambda (prefix completion &optional arg)
+		      (run-hook-with-args 'predictive-reject-functions
+					  prefix completion arg))
+  :syntax-alist ((?w . (predictive-latex-smart-within-braces-resolve-behaviour
+			predictive-latex-word-completion-behaviour)))
+  :override-syntax-alist
+      ((?} . (predictive-latex-punctuation-resolve-behaviour none)))
+  :menu predictive-latex-construct-browser-menu
+  :browser predictive-latex-construct-browser-function
+  :no-auto-completion t
+  :no-command t
+  :no-predictive t)
 
 
 
@@ -68,18 +77,16 @@
    ((> arg 0)
     ;; load colour dictionary
     (predictive-load-dict 'dict-latex-colours)
+
     ;; add new browser sub-menu definition
     (nconc predictive-latex-browser-submenu-alist
 	   (list (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)))
-    ;; add completion source regexps
-    (nconc
-     auto-completion-source-regexps
-     ;; color commands
-     (list
-      `(,(concat predictive-latex-odd-backslash-regexp
-		 "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
-		 predictive-latex-brace-group-regexp)
-	predictive-latex-color looking-at 1))))
+
+    ;; add new `auto-completion-at-point-functions' function
+    (predictive-latex-insert-after
+     auto-completion-at-point-functions
+     'predictive-latex-text-completion-at-point
+     'predictive-latex-color-completion-at-point))
 
    ;; --- unload color support ---
    ((< arg 0)
@@ -88,16 +95,22 @@
 	  (predictive-assoc-delete-all
 	   "\\\\\\(text\\|page\\|\\)color"
 	   predictive-latex-browser-submenu-alist))
-    ;; remove auto-completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "\\(?:\\|text\\|page\\)color\\(?:\\[.*?\\]\\)?"
-		   predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
+
     ;; unload colour dictionary
-    (predictive-unload-dict 'dict-latex-colours))
+    (predictive-unload-dict 'dict-latex-colours)
+
+    ;; remove `auto-completion-at-point-functions' function
+    (setq auto-completion-at-point-functions
+	  (delq 'predictive-latex-color-completion-at-point
+		auto-completion-at-point-functions)))
    ))
+
+
+;; FIXME: We could define a color predictive-auto-dict overlay so new colour
+;;        definitions are automatically added to a local color
+;;        dictionary. (Could even extend `predictive-latex-jump-to-definition'
+;;        to work for colors, though this would take more coding.) Might not
+;;        be worth it just for colours, though.
 
 
 (provide 'predictive-latex-color)

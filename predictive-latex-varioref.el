@@ -51,18 +51,18 @@
 	     ("\\\\fullref" . predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (make-local-variable 'auto-completion-source-regexps)
-    (nconc
-     auto-completion-source-regexps
-     ;; \vref etc.
-     `((,(concat predictive-latex-odd-backslash-regexp
-		 "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
-		 predictive-latex-brace-group-regexp)
-	predictive-latex-label looking-at 1)
-       ;; \fullref
-       (,(concat predictive-latex-odd-backslash-regexp
-		 "fullref" predictive-latex-brace-group-regexp)
-	predictive-latex-label looking-at 1))))
+    (make-local-variable 'predictive-latex-label-regexps)
+    (setq predictive-latex-label-regexps
+	  (append predictive-latex-label-regexps
+		  (list
+		   ;; \vref etc.
+		   (concat predictive-latex-odd-backslash-regexp
+			   "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
+			   predictive-latex-brace-group-regexp)
+		   ;; \fullref
+		   (concat predictive-latex-odd-backslash-regexp
+			   "fullref"
+			   predictive-latex-brace-group-regexp)))))
 
    ;; --- unload varioref support ---
    ((< arg 0)
@@ -76,18 +76,16 @@
 	   "\\\\fullref" predictive-latex-browser-submenu-alist))
 
     ;; remove completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		      "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
-		      predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		      "fullref" predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
-    )))
+    (setq predictive-latex-label-regexps
+	  (delete (concat predictive-latex-odd-backslash-regexp
+			  "[vV]\\(?:\\|page\\)ref\\(?:\\|range\\)\\*?"
+			  predictive-latex-brace-group-regexp)
+		  predictive-latex-label-regexps))
+    (setq predictive-latex-label-regexps
+	  (delete (concat predictive-latex-odd-backslash-regexp
+			  "fullref" predictive-latex-brace-group-regexp)
+		  predictive-latex-label-regexps)))
+   ))
 
 
 (provide 'predictive-latex-varioref)

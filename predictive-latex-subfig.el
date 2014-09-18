@@ -49,13 +49,11 @@
 	   '(("\\\\subref" . predictive-latex-label-dict)))
 
     ;; add completion source regexps
-    (make-local-variable 'auto-completion-source-regexps)
-    (nconc
-     auto-completion-source-regexps
-     ;; \subref
-     `((,(concat predictive-latex-odd-backslash-regexp
-		 "subref" predictive-latex-brace-group-regexp)
-	predictive-latex-label looking-at 1))))
+    (make-local-variable 'predictive-latex-label-regexps)
+    (setq predictive-latex-label-regexps
+	  (append predictive-latex-label-regexps
+		  (concat predictive-latex-odd-backslash-regexp
+			  "subref" predictive-latex-brace-group-regexp))))
 
    ;; --- unload subfig support ---
    ((< arg 0)
@@ -65,11 +63,10 @@
 	   predictive-latex-browser-submenu-alist))
 
     ;; remove completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "subref" predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps)))
+    (setq predictive-latex-label-regexps
+	  (delete (concat predictive-latex-odd-backslash-regexp
+			  "subref" predictive-latex-brace-group-regexp)
+		  predictive-latex-label-regexps)))
    ))
 
 

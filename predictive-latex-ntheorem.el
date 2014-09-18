@@ -43,13 +43,12 @@
    ;; --- load ntheorem support ---
    ((> arg 0)
     ;; add completion source regexp
-    (make-local-variable 'auto-completion-source-regexps)
-    (nconc
-     auto-completion-source-regexps
-     ;; \thref etc.
-     `((,(concat predictive-latex-odd-backslash-regexp
-		 "thref" predictive-latex-brace-group-regexp)
-	predictive-latex-label looking-at 1)))
+    (make-local-variable 'predictive-latex-label-regexps)
+    (setq predictive-latex-label-regexps
+	  (append predictive-latex-label-regexps
+		  (list (concat predictive-latex-odd-backslash-regexp
+				"thref"
+				predictive-latex-brace-group-regexp))))
 
     ;; load \newshadedtheorem and \newframedtheorem auto-overlay definitions
     (auto-overlay-load-definition
@@ -68,11 +67,10 @@
    ;; --- unload ntheorem support ---
    ((< arg 0)
     ;; remove completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "thref" predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps))
+    (setq predictive-latex-label-regexps
+    	  (delete (concat predictive-latex-odd-backslash-regexp
+			  "thref" predictive-latex-brace-group-regexp)
+		  predictive-latex-label-regexps))
 
     ;; unload auto-overlay definitions
     (auto-overlay-unload-definition 'predictive 'newshadedtheorem)

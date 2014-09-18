@@ -31,10 +31,21 @@
 (require 'predictive-latex)
 
 ;; register package setup function
-(predictive-assoc-delete-all "graphicx" predictive-latex-usepackage-functions)
+(predictive-assoc-delete-all
+ "graphicx" predictive-latex-usepackage-functions)
 (push '("graphicx" . predictive-latex-setup-graphicx)
       predictive-latex-usepackage-functions)
 
+
+(defun predictive-latex-graphicx-no-completion-at-point ()
+  "Function used in `completion-at-point-functions'
+to disable completion within a \"\\includegraphics\" argument."
+  (when (looking-back
+	 (concat predictive-latex-odd-backslash-regexp
+		 "includegraphics\\(?:\\[.*?\\]\\)"
+		 predictive-latex-brace-group-regexp)
+	 (line-beginning-position))
+    t))
 
 
 (defun predictive-latex-setup-graphicx (arg)
@@ -43,26 +54,17 @@
   (cond
    ;; --- load graphicx support ---
    ((> arg 0)
-    ;; add completion source regexps
-    (make-local-variable 'auto-completion-source-regexps)
-    (nconc
-     auto-completion-source-regexps
-     ;; label with optarg
-     `((,(concat predictive-latex-odd-backslash-regexp
-		 "includegraphics\\(?:\\[.*?\\]\\)"
-		 predictive-latex-brace-group-regexp)
-	nil looking-at 1))
-     ))
+    (setq auto-completion-at-point-functions
+	  (predictive-latex-insert-before
+	   auto-completion-at-point-functions
+	   'predictive-latex-completion-at-point
+	   'predictive-latex-graphicx-no-completion-at-point)))
 
    ;; --- unload graphicx support ---
    ((< arg 0)
-    ;; remove completion source regexps
-    (setq auto-completion-source-regexps
-	  (predictive-assoc-delete-all
-	   (concat predictive-latex-odd-backslash-regexp
-		   "includegraphics\\(?:\\[.*?\\]\\)"
-		   predictive-latex-brace-group-regexp)
-	   auto-completion-source-regexps)))
+    (setq auto-completion-at-point-functions
+	  (delq 'predictive-latex-graphicx-completion-at-point
+		auto-completion-at-point-functions)))
    ))
 
 
