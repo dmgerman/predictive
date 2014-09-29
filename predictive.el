@@ -1415,9 +1415,7 @@ also `predictive-dump-dict-to-file'."
 
 (defun predictive-dump-dict-to-file (dict &optional filename overwrite)
   "Dump words and their associated weights
-from dictionary DICT to a text file FILENAME. If BUFFER exists,
-data will be appended to the end of it. Otherwise, a new buffer
-will be created.
+from dictionary DICT to a text file FILENAME.
 
 If OVERWRITE is non-nil, FILENAME will be overwritten *without*
 prompting if it already exists. Interactively, OVERWRITE is set
