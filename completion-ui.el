@@ -1102,166 +1102,166 @@ used if the current Emacs version lacks command remapping support."
   ;;       completions are correctly dealt with even if `auto-completion-mode'
   ;;       is disabled.
 
-  ;; if we can remap commands, remap `self-insert-command' to
-  ;; `completion-self-insert'
-  (if (fboundp 'command-remapping)
-      (progn
-        (setq completion-overlay-map (make-sparse-keymap))
-        (define-key completion-overlay-map [remap self-insert-command]
-          'completion-self-insert))
-    ;; otherwise, create a great big keymap and rebind all printable
-    ;; characters to `completion-self-insert' manually
-    (setq completion-overlay-map (make-keymap))
-    (completion--bind-printable-chars completion-overlay-map
-				     'completion-self-insert))
+  (let ((map (if (fboundp 'command-remapping)
+		 (make-sparse-keymap) (make-keymap))))
+    ;; if we can remap commands, remap `self-insert-command' to
+    ;; `completion-self-insert'
+    (if (fboundp 'command-remapping)
+	(define-key map [remap self-insert-command] 'completion-self-insert)
 
-  ;; M-<tab> and M-/ cycle word at point
-  (define-key completion-overlay-map [M-tab] 'completion-cycle)
-  (define-key completion-overlay-map "\M-/" 'completion-cycle)
-  ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
-  (define-key completion-overlay-map "\M-?" 'completion-cycle-backwards)
-  (define-key completion-overlay-map [(meta shift iso-lefttab)]
-    'completion-cycle-backwards)
-  ;; C-RET accepts, C-DEL and C-q reject
-  (define-key completion-overlay-map [(control return)] 'completion-accept)
-  (define-key completion-overlay-map [(control backspace)] 'completion-reject)
-  (define-key completion-overlay-map "\C-q" 'completion-reject)
-  ;; <tab> does traditional tab-completion
-  (define-key completion-overlay-map "\t" 'completion-tab-complete)
-  ;; C-<tab> scoots ahead
-  (define-key completion-overlay-map [(control tab)]
-    'completion-extend-prefix)
-  ;; C-<space> abandons (C-<space> produces C-@ in terminals)
-  (define-key completion-overlay-map [?\C- ] 'completion-reject)
-  (define-key completion-overlay-map "\C-@" 'completion-reject)
-  ;; ;; remap the deletion commands
-  (completion--remap-delete-commands completion-overlay-map)
-  )
+      ;; otherwise, create a great big keymap and rebind all printable
+      ;; characters to `completion-self-insert' manually
+      (setq map (make-keymap))
+      (completion--bind-printable-chars map 'completion-self-insert))
+
+    ;; M-<tab> and M-/ cycle word at point
+    (define-key map [M-tab] 'completion-cycle)
+    (define-key map "\M-/" 'completion-cycle)
+    ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
+    (define-key map "\M-?" 'completion-cycle-backwards)
+    (define-key map [(meta shift iso-lefttab)]
+      'completion-cycle-backwards)
+    ;; C-RET accepts, C-DEL and C-q reject
+    (define-key map [(control return)] 'completion-accept)
+    (define-key map [(control backspace)] 'completion-reject)
+    (define-key map "\C-q" 'completion-reject)
+    ;; <tab> does traditional tab-completion
+    (define-key map "\t" 'completion-tab-complete)
+    ;; C-<tab> scoots ahead
+    (define-key map [(control tab)] 'completion-extend-prefix)
+    ;; C-<space> abandons (C-<space> produces C-@ in terminals)
+    (define-key map [?\C- ] 'completion-reject)
+    (define-key map "\C-@" 'completion-reject)
+    ;; ;; remap the deletion commands
+    (completion--remap-delete-commands map)
+
+    (setq completion-overlay-map map)))
 
 
 ;; Set the default bindings for the keymap assigned to the completion overlays
 ;; in `auto-completion-mode', if it hasn't been defined already (most likely
 ;; in an init file).
 (unless auto-completion-overlay-map
-  ;; inherit all keybindings from completion-overlay-map, then add
-  ;; auto-completion specific ones below
-  (setq auto-completion-overlay-map (make-sparse-keymap))
-  (set-keymap-parent auto-completion-overlay-map completion-overlay-map)
+  (let ((map (make-sparse-keymap)))
+    ;; inherit all keybindings from completion-overlay-map, then add
+    ;; auto-completion specific ones below
+    (set-keymap-parent map completion-overlay-map)
 
-  ;; ;; M-<space> abandons and inserts a space
-  ;; (define-key auto-completion-overlay-map "\M- "
-  ;;   (lambda (&optional arg)
-  ;;     "Reject any current provisional completion and insert a space."
-  ;;     (interactive "P")
-  ;;     (completion-reject arg)
-  ;;     (insert " ")))
+    ;; ;; M-<space> abandons and inserts a space
+    ;; (define-key map "\M- "
+    ;;   (lambda (&optional arg)
+    ;;     "Reject any current provisional completion and insert a space."
+    ;;     (interactive "P")
+    ;;     (completion-reject arg)
+    ;;     (insert " ")))
 
-  ;; Note: the only reason we don't use
-  ;;       `completion-define-word-constituent-binding' here is that the
-  ;;       lambda expressions it creates wouldn't be byte-compiled. Anywhere
-  ;;       else, `completion-define-word-constituent-binding' should be used.
+    ;; Note: The only reason we don't use
+    ;;       `completion-define-word-constituent-binding' here is that the
+    ;;       lambda expressions it creates wouldn't be byte-compiled. Anywhere
+    ;;       else, `completion-define-word-constituent-binding' should be
+    ;;       used.
 
-  ;; M-<space> inserts a space as a word-constituent
-  (define-key auto-completion-overlay-map [?\M- ]
-    (lambda ()
-      "Insert a space as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?\  ?w t)))
+    ;; M-<space> inserts a space as a word-constituent
+    (define-key map [?\M- ]
+      (lambda ()
+	"Insert a space as though it were a word-constituent."
+	(interactive)
+	(auto-completion-self-insert ?\  ?w t)))
 
-  ;; M-. inserts "." as a word-constituent
-  (define-key auto-completion-overlay-map "\M-."
-    (lambda ()
-      "Insert \".\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?. ?w t)))
+    ;; M-. inserts "." as a word-constituent
+    (define-key map "\M-."
+      (lambda ()
+	"Insert \".\" as though it were a word-constituent."
+	(interactive)
+	(auto-completion-self-insert ?. ?w t)))
 
-  ;; M-- inserts "-" as a word-constituent
-  (define-key auto-completion-overlay-map "\M--"
-    (lambda ()
-      "Insert \"-\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?- ?w t)))
+    ;; M-- inserts "-" as a word-constituent
+    (define-key map "\M--"
+      (lambda ()
+	"Insert \"-\" as though it were a word-constituent."
+	(interactive)
+	(auto-completion-self-insert ?- ?w t)))
 
-  ;; M-\ inserts "\" as a word-constituent
-  (define-key auto-completion-overlay-map "\M-\\"
-    (lambda ()
-      "Insert \"\\\" as though it were a word-constituent."
-      (interactive)
-      (auto-completion-self-insert ?\\ ?w t)))
+    ;; M-\ inserts "\" as a word-constituent
+    (define-key map "\M-\\"
+      (lambda ()
+	"Insert \"\\\" as though it were a word-constituent."
+	(interactive)
+	(auto-completion-self-insert ?\\ ?w t)))
 
-;;;   ;; M-/ inserts "/" as a word-constituent
-;;;   (define-key auto-completion-overlay-map "\M-/"
-;;;     (lambda ()
-;;;       "Insert \"/\" as though it were a word-constituent."
-;;;       (interactive)
-;;;       (auto-completion-self-insert ?/ ?w t)))
+    ;;   ;; M-/ inserts "/" as a word-constituent
+    ;;   (define-key map "\M-/"
+    ;;     (lambda ()
+    ;;       "Insert \"/\" as though it were a word-constituent."
+    ;;       (interactive)
+    ;;       (auto-completion-self-insert ?/ ?w t)))
 
-  ;; ;; M-( inserts "(" as a word-constituent
-  ;; (define-key auto-completion-overlay-map "\M-("
-  ;;   (lambda ()
-  ;;     "Insert \"(\" as though it were a word-constituent."
-  ;;     (interactive)
-  ;;     (auto-completion-self-insert ?\( ?w t)))
+    ;; ;; M-( inserts "(" as a word-constituent
+    ;; (define-key map "\M-("
+    ;;   (lambda ()
+    ;;     "Insert \"(\" as though it were a word-constituent."
+    ;;     (interactive)
+    ;;     (auto-completion-self-insert ?\( ?w t)))
 
-  ;; ;; M-( inserts ")" as a word-constituent
-  ;; (define-key auto-completion-overlay-map "\M-)"
-  ;;   (lambda ()
-  ;;     "Insert \")\" as though it were a word-constituent."
-  ;;     (interactive)
-  ;;     (auto-completion-self-insert ?\) ?w t)))
+    ;; ;; M-( inserts ")" as a word-constituent
+    ;; (define-key map "\M-)"
+    ;;   (lambda ()
+    ;;     "Insert \")\" as though it were a word-constituent."
+    ;;     (interactive)
+    ;;     (auto-completion-self-insert ?\) ?w t)))
 
-  ;; ;; M-{ inserts "{" as a word-constituent
-  ;; (define-key auto-completion-overlay-map "\M-{"
-  ;;   (lambda ()
-  ;;     "Insert \"{\" as though it were a word-constituent."
-  ;;     (interactive)
-  ;;     (auto-completion-self-insert ?{ ?w t)))
+    ;; ;; M-{ inserts "{" as a word-constituent
+    ;; (define-key map "\M-{"
+    ;;   (lambda ()
+    ;;     "Insert \"{\" as though it were a word-constituent."
+    ;;     (interactive)
+    ;;     (auto-completion-self-insert ?{ ?w t)))
 
-  ;; ;; M-} inserts "}" as a word-constituent
-  ;; (define-key auto-completion-overlay-map "\M-}"
-  ;;   (lambda ()
-  ;;     "Insert \"}\" as though it were a word-constituent."
-  ;;     (interactive)
-  ;;     (auto-completion-self-insert ?} ?w t)))
+    ;; ;; M-} inserts "}" as a word-constituent
+    ;; (define-key map "\M-}"
+    ;;   (lambda ()
+    ;;     "Insert \"}\" as though it were a word-constituent."
+    ;;     (interactive)
+    ;;     (auto-completion-self-insert ?} ?w t)))
 
-  ;; if we can remap commands, remap `self-insert-command'
-  (if (fboundp 'command-remapping)
-      (define-key auto-completion-overlay-map
-	[remap self-insert-command]
-	'auto-completion-self-insert)
-    ;; otherwise, rebind all printable characters to
-    ;; `auto-completion-self-insert' manually
-    (completion--bind-printable-chars
-     auto-completion-overlay-map
-     'auto-completion-self-insert))
-  )
+    ;; if we can remap commands, remap `self-insert-command'
+    (if (fboundp 'command-remapping)
+	(define-key map [remap self-insert-command]
+	  'auto-completion-self-insert)
+      ;; otherwise, rebind all printable characters to
+      ;; `auto-completion-self-insert' manually
+      (completion--bind-printable-chars
+       map 'auto-completion-self-insert))
+
+    (setq auto-completion-overlay-map map)))
 
 
 
 ;; Set the default bindings for the keymap assigned to the completion overlays
 (unless completion-auto-update-overlay-map
-  ;; inherit all keybindings from completion-overlay-map, then add
-  ;; completion-auto-update specific ones below
-  (setq completion-auto-update-overlay-map (make-sparse-keymap))
-  (set-keymap-parent completion-auto-update-overlay-map
-		     completion-overlay-map)
-  ;; if we can remap commands, remap `self-insert-command'
-  (if (fboundp 'command-remapping)
-      (define-key completion-auto-update-overlay-map
-	[remap self-insert-command]
-	'completion-auto-update-self-insert)
-    ;; otherwise, rebind all printable characters to
-    ;; `auto-completion-self-insert' manually
-    (completion--bind-printable-chars
-     completion-auto-update-overlay-map
-     'completion-auto-update-self-insert))
-  ;; bind dummy events used after backwards-delete
-  (define-key completion-auto-update-overlay-map
-    (vector 'completion-dummy-update-event)
-    'completion--update-after-backward-delete)
-  (define-key completion-auto-update-overlay-map
-    (vector 'completion-dummy-activate-event)
-    'completion--activate-after-backward-delete))
+  (let ((map (make-sparse-keymap)))
+    ;; inherit all keybindings from completion-overlay-map, then add
+    ;; completion-auto-update specific ones below
+    (set-keymap-parent map completion-overlay-map)
+    ;; if we can remap commands, remap `self-insert-command'
+    (if (fboundp 'command-remapping)
+	(define-key map
+	  [remap self-insert-command]
+	  'completion-auto-update-self-insert)
+      ;; otherwise, rebind all printable characters to
+      ;; `auto-completion-self-insert' manually
+      (completion--bind-printable-chars
+       map 'completion-auto-update-self-insert))
+
+    ;; bind dummy events used after backwards-delete
+    (define-key map
+      (vector 'completion-dummy-update-event)
+      'completion--update-after-backward-delete)
+    (define-key map
+      (vector 'completion-dummy-activate-event)
+      'completion--activate-after-backward-delete)
+
+    (setq completion-auto-update-overlay-map map)))
 
 
 
@@ -1273,49 +1273,48 @@ used if the current Emacs version lacks command remapping support."
   ;; half decently and doesn't support command remapping, we're going to
   ;; have to bind all printable characters in this keymap, so we might as
   ;; well create a full keymap
-  (if (and (<= emacs-major-version 21)
-           (not (fboundp 'command-remapping)))
-      (setq completion-map (make-keymap))
-    (setq completion-map (make-sparse-keymap)))
+  (let ((map (if (fboundp 'command-remapping)
+		 (make-sparse-keymap)
+	       (make-keymap))))
 
-  ;; ;; M-<tab> and M-/ cycle or complete word at point
-  ;; (define-key completion-map [M-tab] 'complete-or-cycle-word-at-point)
-  ;; (define-key completion-map "\M-/" 'complete-or-cycle-word-at-point)
-  ;; ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
-  ;; (define-key completion-map [(meta shift iso-lefttab)]
-  ;;   'complete-or-cycle-backwards-word-at-point)
-  ;; (define-key completion-map "\M-?"
-  ;;   'complete-or-cycle-backwards-word-at-point)
+    ;; ;; M-<tab> and M-/ cycle or complete word at point
+    ;; (define-key map [M-tab] 'complete-or-cycle-word-at-point)
+    ;; (define-key map "\M-/" 'complete-or-cycle-word-at-point)
+    ;; ;; M-<shift>-<tab> and M-? (usually M-<shift>-/) cycle backwards
+    ;; (define-key map [(meta shift iso-lefttab)]
+    ;;   'complete-or-cycle-backwards-word-at-point)
+    ;; (define-key map "\M-?"
+    ;;   'complete-or-cycle-backwards-word-at-point)
 
-  ;; RET deals with any pending completion candidate, then runs
-  ;; whatever is usually bound to RET.
-  ;; Note: although this uses `completion--run-if-within-overlay', it is
-  ;;       not a hack to work-around poor overlay keybinding
-  ;;       support. Rather, we are using it to run
-  ;;       `completion--resolve-current' and then run the normal RET
-  ;;       keybinding. We bind it here instead of in the overlay keymap
-  ;;       because it's easier to disable this keymap.
-  (dolist (key '("\r" "\n" [return]))
-    (define-key completion-map key 'completion-resolve-then-run-command))
+    ;; RET deals with any pending completion candidate, then runs
+    ;; whatever is usually bound to RET.
+    ;; Note: although this uses `completion--run-if-within-overlay', it is not
+    ;;       a hack to work-around poor overlay keybinding support. Rather, we
+    ;;       are using it to run `completion--resolve-current' and then run
+    ;;       the normal RET keybinding. We bind it here instead of in the
+    ;;       overlay keymap because it's easier to disable this keymap.
+    (dolist (key '("\r" "\n" [return]))
+      (define-key map key 'completion-resolve-then-run-command))
 
   ;; remap the deletion commands
-  (completion--remap-delete-commands completion-map)
+  (completion--remap-delete-commands map)
 
   ;; remap `fill-paragraph', or rebind M-q if we can't remap
   (if (fboundp 'command-remapping)
-      (define-key completion-map [remap fill-paragraph]
+      (define-key map [remap fill-paragraph]
 	'completion-fill-paragraph)
-    (define-key completion-map "\M-q" 'completion-fill-paragraph))
+    (define-key map "\M-q" 'completion-fill-paragraph))
 
   ;; if we can remap commands, remap `self-insert-command' to
   ;; `completion-self-insert'
   (if (fboundp 'command-remapping)
-      (define-key completion-map [remap self-insert-command]
+      (define-key map [remap self-insert-command]
 	'completion-self-insert)
     ;; otherwise, rebind all printable characters to
     ;; `completion-self-insert' manually
-    (completion--bind-printable-chars completion-map 'completion-self-insert))
-  )
+    (completion--bind-printable-chars map 'completion-self-insert))
+
+  (setq completion-map map)))
 
 
 ;; make sure completion-map is associated with `completion-ui--activated' in
@@ -1333,41 +1332,44 @@ used if the current Emacs version lacks command remapping support."
 ;; already (most likely in an init file). This keymap is active when
 ;; `auto-completion-mode' is enabled.
 (unless auto-completion-map
-  ;; if we can remap commands, remap `self-insert-command' and
-  ;; `mouse-yank-at-click'
-  (if (fboundp 'command-remapping)
-      (progn
-        (setq auto-completion-map (make-sparse-keymap))
-        (define-key auto-completion-map [remap self-insert-command]
-          'auto-completion-self-insert)
-	(define-key auto-completion-map [remap mouse-yank-at-click]
-	  'auto-completion-mouse-yank-at-click))
-    ;; otherwise, create a great big keymap where all printable characters run
-    ;; `auto-completion-self-insert', which decides what to do based on the
-    ;; character's syntax
-    (setq auto-completion-map (make-keymap))
-    (completion--bind-printable-chars auto-completion-map
-                                     'auto-completion-self-insert)
-    (define-key auto-completion-map [mouse-2]
-      'auto-completion-mouse-yank-at-click)
-    (define-key auto-completion-map [left-fringe mouse-2]
-      'auto-completion-mouse-yank-at-click)
-    (define-key auto-completion-map [right-fringe mouse-2]
-      'auto-completion-mouse-yank-at-click))
-  ;; remap the deletion commands
-  (completion--remap-delete-commands auto-completion-map)
-  ;; remap `fill-paragraph', or rebind M-q if we can't remap
-  (if (fboundp 'command-remapping)
-      (define-key auto-completion-map [remap fill-paragraph]
-	'completion-fill-paragraph)
-    (define-key auto-completion-map "\M-q" 'completion-fill-paragraph))
-  ;; bind dummy events used after backwards-delete
-  (define-key auto-completion-map
-    (vector 'completion-dummy-update-event)
-    'completion--update-after-backward-delete)
-  (define-key auto-completion-map
-    (vector 'completion-dummy-activate-event)
-    'completion--activate-after-backward-delete))
+  (let (map)
+    ;; if we can remap commands, remap `self-insert-command' and
+    ;; `mouse-yank-at-click'
+    (if (fboundp 'command-remapping)
+	(progn
+	  (setq map (make-sparse-keymap))
+	  (define-key map [remap self-insert-command]
+	    'auto-completion-self-insert)
+	  (define-key map [remap mouse-yank-at-click]
+	    'auto-completion-mouse-yank-at-click))
+      ;; otherwise, create a great big keymap where all printable characters
+      ;; run `auto-completion-self-insert', which decides what to do based on
+      ;; the character's syntax
+      (setq map (make-keymap))
+      (completion--bind-printable-chars map 'auto-completion-self-insert)
+      (define-key map [mouse-2]
+	'auto-completion-mouse-yank-at-click)
+      (define-key map [left-fringe mouse-2]
+	'auto-completion-mouse-yank-at-click)
+      (define-key map [right-fringe mouse-2]
+	'auto-completion-mouse-yank-at-click))
+
+    ;; remap the deletion commands
+    (completion--remap-delete-commands map)
+    ;; remap `fill-paragraph', or rebind M-q if we can't remap
+    (if (fboundp 'command-remapping)
+	(define-key map [remap fill-paragraph]
+	  'completion-fill-paragraph)
+      (define-key map "\M-q" 'completion-fill-paragraph))
+    ;; bind dummy events used after backwards-delete
+    (define-key map
+      (vector 'completion-dummy-update-event)
+      'completion--update-after-backward-delete)
+    (define-key map
+      (vector 'completion-dummy-activate-event)
+      'completion--activate-after-backward-delete)
+
+    (setq auto-completion-map map)))
 
 
 
