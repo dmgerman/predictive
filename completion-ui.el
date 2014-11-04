@@ -1301,9 +1301,11 @@ used if the current Emacs version lacks command remapping support."
 
   ;; remap `fill-paragraph', or rebind M-q if we can't remap
   (if (fboundp 'command-remapping)
-      (define-key map [remap fill-paragraph]
-	'completion-fill-paragraph)
-    (define-key map "\M-q" 'completion-fill-paragraph))
+      (progn
+	(define-key map [remap fill-paragraph] 'completion-fill-paragraph)
+	(define-key map [remap yank] 'completion-yank))
+    (define-key map "\M-q" 'completion-fill-paragraph)
+    (define-key map "\C-y" 'completion-yank))
 
   ;; if we can remap commands, remap `self-insert-command' to
   ;; `completion-self-insert'
@@ -3782,7 +3784,7 @@ Added to `before-change-functions' hook."
 (defun completion-fill-paragraph (&optional justify region)
   "Fill paragraph at or after point.
 This command first sorts out any provisional completions, before
-calling `fill-paragraph', passing any argument straight through."
+calling `fill-paragraph', passing any arguments straight through."
   ;; interactive spec copied from `fill-paragraph'
   (interactive (progn
 		 (barf-if-buffer-read-only)
@@ -3794,6 +3796,15 @@ calling `fill-paragraph', passing any argument straight through."
 
 ;;; ============================================================
 ;;;                      Yank Commands
+
+(defun completion-yank (&optional arg)
+  "Reinsert (\"paste\") the last stretch of killed text.
+This command first sorts out any provisional completions, before
+calling `yank', passing any argument straight through."
+  (interactive "*P")
+  (completion-ui-resolve-old)
+  (yank arg))
+
 
 (defun auto-completion-mouse-yank-at-click (click arg)
   "Insert the last stretch of killed text at the position clicked on.
@@ -4221,6 +4232,7 @@ If there is a provisional completion at point after deleting, it
 is rejected."
   (interactive (list (point) (mark)))
   (completion-delete 'kill-region beg end))
+
 
 
 
