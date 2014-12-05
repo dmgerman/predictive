@@ -45,15 +45,14 @@
    ((> arg 0)
     ;; add new browser sub-menu definition
     (make-local-variable 'predictive-latex-browser-submenu-alist)
-    (nconc predictive-latex-browser-submenu-alist
-	   '(("\\\\subref" . predictive-latex-label-dict)))
+    (push '("\\\\subref" . predictive-latex-label-dict)
+	  predictive-latex-browser-submenu-alist)
 
     ;; add completion source regexps
     (make-local-variable 'predictive-latex-label-regexps)
-    (setq predictive-latex-label-regexps
-	  (append predictive-latex-label-regexps
-		  (concat predictive-latex-odd-backslash-regexp
-			  "subref" predictive-latex-brace-group-regexp))))
+    (push (concat predictive-latex-odd-backslash-regexp
+		  "subref" predictive-latex-brace-group-regexp)
+	   predictive-latex-label-regexps))
 
    ;; --- unload subfig support ---
    ((< arg 0)

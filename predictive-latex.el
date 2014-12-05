@@ -175,15 +175,6 @@ strings become the sub-menu entries.")
 (make-variable-buffer-local 'predictive-latex-browser-submenu-alist)
 
 
-(defvar predictive-latex-math-environments nil
-  "List of LaTeX math environments.
-
-Used by `predictive-latex-math-environment' to determine whether
-within a LaTeX math environment.")
-
-(make-variable-buffer-local 'predictive-latex-math-environments)
-
-
 ;; set up 'predictive-latex-word to be a `thing-at-point' symbol
 (put 'predictive-latex-word 'forward-op 'predictive-latex-forward-word)
 ;; set up 'predictive-latex-label-word to be a `thing-at-point' symbol
@@ -304,7 +295,7 @@ within a LaTeX math environment.")
 
 
 ;;;=========================================================
-;;;           Register LaTeX Completion-UI sources
+;;;      LaTeX `auto-completion-at-point-functions'
 
 (define-completion-at-point-function
   predictive-latex-completion-at-point
@@ -457,11 +448,9 @@ appropriate in LaTeX buffers."
   :no-predictive t)
 
 
-(defvar predictive-latex-label-regexps
-  (list (concat predictive-latex-odd-backslash-regexp
-		"\\(page\\)?ref"
-		predictive-latex-brace-group-regexp))
+(defvar predictive-latex-label-regexps nil
   "List of regexps that activate predictive-label completion.")
+(make-variable-buffer-local 'predictive-latex-label-regexps)
 
 
 (define-completion-at-point-function
@@ -641,7 +630,7 @@ to be sure of correctly changing the value of a list `foo'."
 
 
 ;;;=========================================================
-;;;                  The setup function
+;;;                    Setup function
 
 (defun predictive-setup-latex (arg)
   "With a positive ARG, set up predictive mode for LaTeX.
@@ -664,38 +653,13 @@ function automatically when predictive mode is enabled in
       ;; `predictive-latex-after-save')
       (predictive-setup-save-local-state 'predictive-latex-previous-filename)
       (setq predictive-latex-previous-filename (buffer-file-name))
-      ;; set custom function for determining auto-completion source
-      (predictive-setup-save-local-state 'auto-completion-at-point-functions)
-      (set (make-local-variable 'auto-completion-at-point-functions)
-	   (list 'predictive-latex-env-completion-at-point
-		 'predictive-latex-label-completion-at-point
-		 'predictive-latex-label-no-completion-at-point
-		 'predictive-latex-text-completion-at-point
-		 'predictive-latex-math-completion-at-point
-		 'predictive-latex-preamble-completion-at-point
-		 'predictive-latex-docclass-completion-at-point
-		 'predictive-latex-bibstyle-completion-at-point
-		 ;; 'predictive-latex-legacy-completion-at-point
-		 'predictive-latex-completion-at-point))
-      ;; configure syntax-related settings
-      (predictive-latex-load-syntax)
       ;; consider \ as start of a word
       (predictive-setup-save-local-state 'words-include-excapes)
       (set (make-local-variable 'words-include-escapes) nil)
-      ;; set initial list of LaTeX math environments
-      (predictive-setup-save-local-state 'predictive-latex-math-environments)
-      (setq predictive-latex-math-environments
-	    '("equation" "displaymath" "equation*" "align" "align*"
-	      "gather" "gather*" "multline" "multine*" "alignat" "alignat*"
-	      "flalign" "flalign*"))
-      ;; set initial browser submenu definitions
-      (predictive-setup-save-local-state
-       'predictive-latex-browser-submenu-alist)
-      (setq predictive-latex-browser-submenu-alist
-	   '(("\\\\begin" . dict-latex-env)
-	     ("\\\\documentclass" . dict-latex-docclass)
-	     ("\\\\bibliographystyle" . dict-latex-bibstyle)
-	     ("\\\\\\(eq\\|\\)ref" . predictive-latex-label-dict)))
+      ;; configure Completion-UI syntax behaviour
+      (predictive-latex-load-syntax-behaviour)
+      ;; `auto-completion-at-point-functions' will be set appropriately below
+      (make-local-variable 'auto-completion-at-point-functions)
 
       (cond
        ;; If we're not the `TeX-master', visit the TeX master buffer, enable
@@ -710,26 +674,54 @@ function automatically when predictive mode is enabled in
 	(auto-overlay-start 'predictive nil
 			    predictive-local-auxiliary-file-directory
 			    'no-regexp-check)
-;;	  (set-buffer-modified-p restore-modified))
+;;	(set-buffer-modified-p restore-modified))
 	)
+
 
        ;; If we're the `TeX-master', set up LaTeX auto-completion source and
        ;; auto-overlay regexps.
-       ;; FIXME: should we handle null TeX-master case differently?
+       ;; FIXME: should we handle non t cases differently?
        (t
+	;; set custom function for determining auto-completion source
+	(predictive-setup-save-local-state
+	 'auto-completion-at-point-functions)
+	(set (make-local-variable 'auto-completion-at-point-functions)
+	     (list 'predictive-latex-env-completion-at-point
+		   'predictive-latex-label-completion-at-point
+		   'predictive-latex-label-no-completion-at-point
+		   'predictive-latex-text-completion-at-point
+		   'predictive-latex-math-completion-at-point
+		   'predictive-latex-preamble-completion-at-point
+		   'predictive-latex-docclass-completion-at-point
+		   'predictive-latex-bibstyle-completion-at-point
+		   ;; 'predictive-latex-legacy-completion-at-point
+		   'predictive-latex-completion-at-point))
+	;; set initial label regexps
+	(predictive-setup-save-local-state 'predictive-latex-label-regexps)
+	(setq predictive-latex-label-regexps
+	        (list (concat predictive-latex-odd-backslash-regexp
+		"\\(page\\)?ref"
+		predictive-latex-brace-group-regexp)))
+	;; set initial browser submenu definitions
+	(predictive-setup-save-local-state
+	 'predictive-latex-browser-submenu-alist)
+	(setq predictive-latex-browser-submenu-alist
+	      '(("\\\\begin" . dict-latex-env)
+		("\\\\documentclass" . dict-latex-docclass)
+		("\\\\bibliographystyle" . dict-latex-bibstyle)
+		("\\\\\\(eq\\|\\)ref" . predictive-latex-label-dict)))
+	;; load LaTeX dictionaries
 	(predictive-latex-load-dicts)
-	;; (predictive-latex-load-regexps)
 	;; load latex auto-overlay regexps
 	(auto-overlay-unload-set 'predictive)
 	(predictive-latex-load-auto-overlay-definitions)
-	;; Note: we skip the check that regexp definitions haven't changed if
-	;;       there's a file of saved overlay data to use, since
+	;; Note: skip check that regexp definitions haven't changed, since
 	;;       definitions won't match if packages load additional regexps
 ;;	(let ((restore-modified (buffer-modified-p)))
 	(auto-overlay-start 'predictive nil
 			    predictive-local-auxiliary-file-directory
 			    'no-regexp-check)
-;;	  (set-buffer-modified-p restore-modified))
+;;	(set-buffer-modified-p restore-modified))
 	))
       t))  ; indicate successful setup
 
@@ -747,7 +739,7 @@ function automatically when predictive mode is enabled in
 	;; need to filter it out
 	(unless (eq buff (current-buffer))
 	  (with-current-buffer buff (predictive-mode -1)))))
-    ;; stop predictive auto overlays
+    ;; stop auto overlays
     (auto-overlay-stop 'predictive nil
 		       (when (buffer-file-name)
 			 predictive-local-auxiliary-file-directory))
@@ -985,7 +977,7 @@ function automatically when predictive mode is enabled in
   )
 
 
-(defun predictive-latex-load-syntax ()
+(defun predictive-latex-load-syntax-behaviour ()
   "Configure the `predictive-mode' LaTeX syntax behaviour."
   ;; get behaviours defined in `auto-completion-syntax-alist'
   (destructuring-bind (word-resolve word-complete word-insert
@@ -1003,11 +995,12 @@ function automatically when predictive mode is enabled in
 
 (defun predictive-latex-inherit-from-TeX-master ()
   ;; inherit predictive-latex settings from `TeX-master'
-  (let (filename buff label-regexps browser-submenu
+  (let (filename buff a-capf label-regexps browser-submenu
 	used-dicts main-dict aux-dict
 	latex-dict math-dict preamble-dict env-dict
 	label-dict local-latex-dict local-math-dict
 	local-env-dict local-section-dict)
+    ;; get values from `TeX-master'
     (setq filename (concat (file-name-sans-extension
 			    (expand-file-name TeX-master)) ".tex"))
     (unless (file-exists-p filename) (throw 'load-fail nil))
@@ -1015,7 +1008,8 @@ function automatically when predictive mode is enabled in
       (find-file filename)
       (turn-on-predictive-mode)
       (setq buff (current-buffer)
-	    label-regexps     predictive-latex-label-regexps
+	    a-capf             auto-completion-at-point-functions
+	    label-regexps      predictive-latex-label-regexps
 	    used-dicts         predictive-used-dict-list
 	    main-dict          predictive-buffer-dict
 	    aux-dict           predictive-auxiliary-dict
@@ -1029,13 +1023,12 @@ function automatically when predictive mode is enabled in
 	    local-env-dict     predictive-latex-local-env-dict
 	    local-section-dict predictive-latex-section-dict
 	    browser-submenu    predictive-latex-browser-submenu-alist))
+    ;; share auto-overlay regexps
     (auto-overlay-share-regexp-set 'predictive buff)
-
-    (predictive-setup-save-local-state 'predictive-latex-label-regexps)
-    (set (make-local-variable 'predictive-latex-label-regexps)
-	 label-regexps)
-
+    ;; save restore state
     (predictive-setup-save-local-state
+     'auto-completion-at-point-functions
+     'predictive-latex-label-regexps
      'predictive-used-dict-list
      'predictive-buffer-dict
      'predictive-auxiliary-dict
@@ -1049,18 +1042,21 @@ function automatically when predictive mode is enabled in
      'predictive-latex-local-env-dict
      'predictive-latex-section-dict
      'predictive-latex-browser-submenu-alist)
-    (setq predictive-used-dict-list         used-dicts
-	  predictive-buffer-dict            main-dict
-	  predictive-auxiliary-dict         aux-dict
-	  predictive-latex-dict             latex-dict
-	  predictive-latex-math-dict        math-dict
-	  predictive-latex-preamble-dict    preamble-dict
-	  predictive-latex-env-dict         env-dict
-	  predictive-latex-label-dict       label-dict
-	  predictive-latex-local-latex-dict local-latex-dict
-	  predictive-latex-local-math-dict local-math-dict
-	  predictive-latex-local-env-dict   local-env-dict
-	  predictive-latex-section-dict     local-section-dict
+    ;; set variables to `TeX-master' values
+    (setq auto-completion-at-point-functions     a-capf
+	  predictive-latex-label-regexps         label-regexps
+	  predictive-used-dict-list              used-dicts
+	  predictive-buffer-dict                 main-dict
+	  predictive-auxiliary-dict              aux-dict
+	  predictive-latex-dict                  latex-dict
+	  predictive-latex-math-dict             math-dict
+	  predictive-latex-preamble-dict         preamble-dict
+	  predictive-latex-env-dict              env-dict
+	  predictive-latex-label-dict            label-dict
+	  predictive-latex-local-latex-dict      local-latex-dict
+	  predictive-latex-local-math-dict       local-math-dict
+	  predictive-latex-local-env-dict        local-env-dict
+	  predictive-latex-section-dict          local-section-dict
 	  predictive-latex-browser-submenu-alist browser-submenu)))
 
 

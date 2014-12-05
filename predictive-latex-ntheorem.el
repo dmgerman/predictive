@@ -44,11 +44,9 @@
    ((> arg 0)
     ;; add completion source regexp
     (make-local-variable 'predictive-latex-label-regexps)
-    (setq predictive-latex-label-regexps
-	  (append predictive-latex-label-regexps
-		  (list (concat predictive-latex-odd-backslash-regexp
-				"thref"
-				predictive-latex-brace-group-regexp))))
+    (push (concat predictive-latex-odd-backslash-regexp
+		  "thref" predictive-latex-brace-group-regexp)
+	  predictive-latex-label-regexps)
 
     ;; load \newshadedtheorem and \newframedtheorem auto-overlay definitions
     (auto-overlay-load-definition
