@@ -5,7 +5,7 @@
 ;; Copyright (C) 2007, 2010, 2012 Toby Cubitt
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.1
+;; Version: 0.3
 ;; Keywords: point, mode line
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -36,20 +36,9 @@
 
 
 ;; add point display to mode-line construct
-(let ((linenum-format (assq 'line-number-mode mode-line-position)))
-  (setq mode-line-position
-	(assq-delete-all 'line-number-mode mode-line-position))
-  (setq mode-line-position
-	(append mode-line-position
-		`((show-point-mode
-		   (line-number-mode
-		    ((column-number-mode
-		      (20 (" (%l,%c)" (:eval (format "(%d)" (point)))))
-		      (15 (" L%l"     (:eval (format "(%d)" (point)))))))
-		    ((column-number-mode
-		      (15 (" C%c"     (:eval (format "(%d)" (point)))))
-		      (10 (:eval (format "(%d") (point))))))
-		   ,linenum-format)))))
+(add-to-list 'mode-line-position
+	     '(show-point-mode (5 (:eval (format "(%d)" (point)))))
+	     'append)
 
 
 (define-minor-mode show-point-mode
