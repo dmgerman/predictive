@@ -60,7 +60,8 @@ predictive-user-manual: predictive-user-manual.info.gz \
 	                predictive-user-manual-html.tar.gz \
                         predictive-user-manual.txt.gz \
                         predictive-user-manual.ps.gz \
-                        predictive-user-manual.pdf
+                        predictive-user-manual.pdf \
+                        predictive-user-manual-dir
 
 
 
@@ -79,7 +80,8 @@ auto-overlay-manual: auto-overlay-manual.info.gz \
                      auto-overlay-manual.txt.gz \
                      auto-overlay-manual.ps.gz \
                      auto-overlay-manual.pdf \
-                     auto-overlay-manual-src.tar.gz
+                     auto-overlay-manual-src.tar.gz \
+                     auto-overlay-manual-dir
 
 auto-overlay-manual-src.tar.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
 	tar -cvzf $@ $(dir $<)/auto-overlays.texinfo \
@@ -104,7 +106,6 @@ auto-overlay-manual.pdf: auto-overlay-manual.texinfo auto-overlays.texinfo
 
 auto-overlay-manual/html/index.html: auto-overlay-manual.texinfo \
                                      auto-overlays.texinfo
-	echo foo $@ $<
 	makeinfo --html $< -o $(dir $@)
 
 auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
@@ -125,6 +126,9 @@ auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
 #       so that directory search can find it
 %.info.gz: %.info
 	gzip -f $< -c > $@
+
+%-dir: %.info.gz
+	install-info $< $(dir $<)dir
 
 %.txt: %.texinfo
 	makeinfo --plaintext $< > $@

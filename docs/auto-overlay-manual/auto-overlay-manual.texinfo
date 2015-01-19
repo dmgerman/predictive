@@ -9,6 +9,12 @@
 @c %**end of header
 
 
+@dircategory Emacs
+@direntry
+* auto-overlays (auto-overlay-manual).  Automatic regexp-delimited overlays
+@end direntry
+
+
 @copying
 This manual describes the Emacs Auto-Overlays package, version 0.10
 @c --version--
@@ -140,5 +146,4 @@ Copying this Manual
 
 @c  Local Variables:
 @c  mode: texinfo
-@c  mode: predictive
 @c  End:
