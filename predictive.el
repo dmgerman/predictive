@@ -772,7 +772,7 @@ Return modified alist."
   "Return non-nil if WORD is found by `lookup-words', nil otherwise.
 Potentially useful as a `predictive-auto-add-filter' (hence the
 ignored second argument)."
-  (member word (lookup-words word)))
+  (member word (ispell-lookup-words word)))
 
 
 (defun predictive-ispell-word-p (word &optional ignored)
@@ -1053,29 +1053,29 @@ function automatically when predictive mode is enabled in
   t)  ; return t to indicate successful setup
 
 
-(defun predictive-setup-elisp (arg)
-  "With a positive ARG, set up predictive mode for Emacs lisp.
-With a negative ARG, undo these changes.
+;; (defun predictive-setup-elisp (arg)
+;;   "With a positive ARG, set up predictive mode for Emacs lisp.
+;; With a negative ARG, undo these changes.
 
-The default setting of `predictive-major-mode-alist' calls this
-function automatically when predictive mode is enabled in
-`emacs-lisp-mode' and any mode derived from it (such as
-`lisp-interaction-mode') ."
-  (cond
-   ;; enabling
-   ((> arg 0)
-    (predictive-setup-save-local-state 'auto-completion-at-point-functions)
-    ;; make predictive elisp completion the default auto-completion source
-    (set (make-local-variable 'auto-completion-at-point-functions)
-	 '(predictive-elisp))
-    ;; use predictive completion in comments and strings
-    (set (make-local-variable 'auto-completion-source-faces)
-	 '((font-lock-comment-face . predictive)
-	   (font-lock-string-face . predictive)
-	   (font-lock-doc-face . predictive))))
-   ;; disabling
-   ((< arg 0) (predictive-setup-restore-local-state)))
-  t)  ; return t to indicate successful setup
+;; The default setting of `predictive-major-mode-alist' calls this
+;; function automatically when predictive mode is enabled in
+;; `emacs-lisp-mode' and any mode derived from it (such as
+;; `lisp-interaction-mode') ."
+;;   (cond
+;;    ;; enabling
+;;    ((> arg 0)
+;;     (predictive-setup-save-local-state 'auto-completion-at-point-functions)
+;;     ;; make predictive elisp completion the default auto-completion source
+;;     (set (make-local-variable 'auto-completion-at-point-functions)
+;; 	 '(predictive-elisp))
+;;     ;; use predictive completion in comments and strings
+;;     (set (make-local-variable 'auto-completion-source-faces)
+;; 	 '((font-lock-comment-face . predictive)
+;; 	   (font-lock-string-face . predictive)
+;; 	   (font-lock-doc-face . predictive))))
+;;    ;; disabling
+;;    ((< arg 0) (predictive-setup-restore-local-state)))
+;;   t)  ; return t to indicate successful setup
 
 
 
@@ -2126,7 +2126,7 @@ prefix argument."
 	       (setq word (downcase word)))
 	  ;; call the current auto-completion source's accept functions
 	  (completion-ui-run-accept-functions
-	   (completion-ui-accept-functions-at-point) word word arg)
+	   (completion-ui-source-at-point) word word arg)
 	  (when (> (- (/ (float (point)) (point-max)) percent) 0.0001)
 	    (setq percent (/ (float (point)) (point-max)))
 	    (message "Learning words...(%s%%)"
@@ -3041,7 +3041,9 @@ without asking for confirmation."
 		      (run-hook-with-args 'predictive-accept-functions
 					  prefix completion arg))
   :reject-functions (lambda (prefix completion &optional arg)
-		      (when arg (predictive-auto-learn prefix))
+		      (when arg
+			(predictive-add-to-dict (predictive-current-dict)
+						prefix))
 		      (run-hook-with-args 'predictive-reject-functions
 					  prefix completion arg))
   :menu predictive-menu-function

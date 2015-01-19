@@ -2288,14 +2288,14 @@ the functions called from the
 
 
 (defsubst completion-ui-source-accept-functions (source)
-  ;; return :accept-functions property stored in property list or
-  ;; overlay SOURCE
+  ;; return :accept-functions property stored in SOURCE property list or
+  ;; overlay
   (completion-ui-source-get-prop source :accept-functions))
 
 
 (defsubst completion-ui-source-reject-functions (source)
-  ;; return :reject-functions property stored in property list or
-  ;; overlay SOURCE
+  ;; return :reject-functions property stored in SOURCE property list or
+  ;; overlay
   (completion-ui-source-get-prop source :reject-functions))
 
 
@@ -2320,8 +2320,7 @@ the functions called from the
 
 
 (defun completion-ui-source-syntax-alist (source)
-  ;; return :syntax-alist property stored in property list or
-  ;; overlay SOURCE
+  ;; return :syntax-alist property stored in SOURCE property list or overlay
   (let ((syntax-alist (completion-ui-source-get-prop
 		       source :syntax-alist)))
     ;; evaluate result until we get a value
@@ -2333,8 +2332,8 @@ the functions called from the
 
 
 (defun completion-ui-source-override-syntax-alist (source)
-  ;; return :override-syntax-alist property stored in property list or
-  ;; overlay SOURCE
+  ;; return :override-syntax-alist property stored SOURCE in property list or
+  ;; overlay
   (let ((override-alist (completion-ui-source-get-prop
 			 source :override-syntax-alist)))
     ;; evaluate result until we get a value
@@ -4389,8 +4388,8 @@ sequence in a keymap."
 
 
 (defun completion-ui-source-at-point ()
-  "Return best guess for accept-functions at point, according to
-current `completion-at-point-functions' or
+  "Return best guess for source at point, according to current
+`completion-at-point-functions' or
 `auto-completion-at-point-functions'."
   (or (completion-ui-overlay-at-point)
       (pcase (run-hook-wrapped
