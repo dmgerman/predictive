@@ -1424,7 +1424,7 @@ accordingly. The @var{start} argument should be a match overlay
 corresponding either to the unique regexp if only one is needed for that
 overlay class, or to a start regexp if the overlay class uses separate
 start and end regexps. The @var{end} argument should then be a match
-overlay corresponding to an end regexp in such a class
+overlay corresponding to an end regexp in the same class
 (@pxref{Overview}). You're responsible for enforcing this; no check is
 made.
 
