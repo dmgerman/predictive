@@ -1,5 +1,4 @@
-
-;;; predictive.el --- predictive completion minor mode
+;;; predictive.el --- Predictive completion minor mode
 
 
 ;; Copyright (C) 2004-2014 Toby Cubitt
@@ -7,6 +6,7 @@
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.24
 ;; Version: 0.20
+;; Package-Requires: (dict-tree "0.12.8") (auto-overlays "0.10.8") (completion-ui "0.12") (timerfunctions "0.0")
 ;; Keywords: convenience, abbrev, tex, predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -47,17 +47,9 @@
 (eval-when-compile (require 'cl))
 (require 'dict-tree)
 (require 'auto-overlays)
+(require 'completion-ui)
 (require 'timerfunctions)
 
-;; Don't load pre-defined Completion-UI sources yet (we load them later).
-;; Note: We don't want to load the sources before we've installed our hook
-;;       function for auto-generating predictive versions of Completion-UI
-;;       sources. But we need to load the rest of Completion-UI, in order to
-;;       before we can define many of the predictive-mode functions (not least
-;;       that hook function!).
-(let ((completion-ui-inhibit-load-sources t))
-  (require 'completion-ui))
-(eval-when-compile (require 'completion-ui))
 
 
 

@@ -1,5 +1,4 @@
-
-;;; auto-overlays.el --- automatic regexp-delimited overlays for emacs
+;;; auto-overlays.el --- Automatic regexp-delimited overlays
 
 
 ;; Copyright (C) 2005-2010, 2012-2013 Toby Cubitt

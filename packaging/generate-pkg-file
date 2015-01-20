@@ -1,0 +1,19 @@
+#!/bin/bash
+
+
+VERSION=$(sed -n '/Package-Version: / { s/.*Package-Version: \([0-9.]\+\).*/\1/g ; P }' "$1")
+[ -n "$VERSION" ] || VERSION=$(sed -n '/Version: / { s/.*Version: \([0-9.]\+\).*/\1/g ; P }' "$1")
+echo Version: $VERSION
+
+REQUIRES=$(sed -n '/Package-Requires: / { s/.*Package-Requires: \((.*)\).*/\1/g ; P }' "$1")
+echo Requires: $REQUIRES
+
+DESC=$(sed -n '/;;;[[:space:]]\+'${1##*/}'[[:space:]]--- / { s/.* --- \(.*\)[[:space:]]*\($\|-\*-.*-\*-.*\)/\1/g ; P }' "$1")
+echo Description: $DESC
+
+
+OUTFILE=${1%.el}-pkg.el
+OUTFILE=${OUTFILE##*/}
+
+echo '(define-package "'${VERSION}'" "'${DESC}'" '${REQUIRES}')' > "$OUTFILE"
+echo generated $OUTFILE

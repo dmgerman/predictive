@@ -1,5 +1,4 @@
-
-;;; completion-ui.el --- in-buffer completion user interface
+;;; completion-ui.el --- In-buffer completion user interface
 
 
 ;; Copyright (C) 2006-2014 Toby Cubitt
@@ -7,6 +6,7 @@
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.12
 ;; Version: 0.12
+;; Package-Requires: ((auto-overlays "10.8"))
 ;; Keywords: convenience, extenions, abbrev, completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
 

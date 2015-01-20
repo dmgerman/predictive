@@ -1,0 +1,1 @@
+../../predictive-latex-ntheorem.el
