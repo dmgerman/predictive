@@ -2,7 +2,6 @@
 all: predictive-user-manual auto-overlay-manual #predictive-programmer-manual
 
 
-DIR=~/programming/predictive/docs
 WEB=~/www.dr-qubit.org/htdocs/predictive
 USERDIR=predictive-user-manual
 PROGDIR=predictive-programmer-manual
@@ -10,29 +9,33 @@ AUTOODIR=auto-overlay-manual
 
 
 VPATH=$(USERDIR):$(PROGDIR):$(AUTOODIR)
-GPATH=$(USERDIR):$(PROGDIR):$(AUTOODIR)
+#GPATH=$(USERDIR):$(PROGDIR):$(AUTOODIR)
 
 
-test:
-	echo $(DIR)
 
 clean:
-#	[[ -d $(DIR)/$(USERDIR) ]] && rm -r $(DIR)/$(USERDIR)
-#	[[ -d $(DIR)/$(PROGDIR) ]] && rm -r $(DIR)/$(PROGDIR)
-# 	if [[ -d $(DIR)/html ]]; then rm -r $(DIR)/html; fi
-# 	if [[ -f $(DIR)/predictive.pdf ]]; then rm $(DIR)/predictive.pdf; fi
-# 	if [[ -f $(DIR)/predictive.dvi ]]; then rm $(DIR)/predictive.dvi; fi
-# 	if [[ -f $(DIR)/predictive.ps ]]; then rm $(DIR)/predictive.ps; fi
-# 	if [[ -f $(DIR)/predictive.ps.gz ]]; then\
-# 	  rm $(DIR)/predictive.ps.gz; fi
-# 	if [[ -f $(DIR)/predictive.info ]]; then rm $(DIR)/predictive.info; fi
-# 	if [[ -f $(DIR)/predictive.info.gz ]]; then\
-# 	  rm $(DIR)/predictive.info.gz;	fi
-# 	if [[ -f $(DIR)/predictive.txt ]]; then rm $(DIR)/predictive.txt; fi
-# 	if [[ -f $(DIR)/predictive.txt.gz ]]; then\
-# 	  rm $(DIR)/predictive.txt.gz; fi
-# 	if [[ -f $(DIR)/predictive-html-docs.tar.gz ]]; then\
-# 	  rm $(DIR)/predictive-html-docs.tar.gz; fi
+	rm -f $(USERDIR)/predictive-user-manual.info.gz
+	rm -f $(USERDIR)/predictive-user-manual.info
+	rm -rf $(USERDIR)/html/
+	rm -f $(USERDIR)/predictive-user-manual-html.tar.gz
+	rm -f $(USERDIR)/predictive-user-manual.txt
+	rm -f $(USERDIR)/predictive-user-manual.txt.gz
+	rm -f $(USERDIR)/predictive-user-manual.dvi
+	rm -f $(USERDIR)/predictive-user-manual.ps.gz
+	rm -f $(USERDIR)/predictive-user-manual.pdf
+	rm -f $(USERDIR)/dir
+	rm -f $(AUTOODIR)/auto-overlay-manual.info.gz
+	rm -f $(AUTOODIR)/auto-overlay-manual.info
+	rm -rf $(AUTOODIR)/html/
+	rm -f $(AUTOODIR)/auto-overlay-manual-html.tar.gz
+	rm -f $(AUTOODIR)/auto-overlay-manual.txt
+	rm -f $(AUTOODIR)/auto-overlay-manual.txt.gz
+	rm -f $(AUTOODIR)/auto-overlay-manual.dvi
+	rm -f $(AUTOODIR)/auto-overlay-manual.ps.gz
+	rm -f $(AUTOODIR)/auto-overlay-manual.pdf
+	rm -f $(AUTOODIR)/dir
+	rm -f $(AUTOODIR)/auto-overlay-manual-src.tar.gz
+
 
 
 install:
@@ -55,63 +58,61 @@ install:
 
 
 
-predictive-user-manual: predictive-user-manual.info.gz \
-                        $(USERDIR)/html/index.html \
-	                predictive-user-manual-html.tar.gz \
-                        predictive-user-manual.txt.gz \
-                        predictive-user-manual.ps.gz \
-                        predictive-user-manual.pdf \
-                        predictive-user-manual-dir
+predictive-user-manual: $(USERDIR)/predictive-user-manual.info.gz \
+	                $(USERDIR)/predictive-user-manual-html.tar.gz \
+                        $(USERDIR)/predictive-user-manual.txt.gz \
+                        $(USERDIR)/predictive-user-manual.ps.gz \
+                        $(USERDIR)/predictive-user-manual.pdf \
+                        $(USERDIR)/dir
+
+$(USERDIR)/predictive-user-manual-html.tar.gz: $(USERDIR)/html/index.html
+	cd $(dir $@); pwd; tar -cvzf $(notdir $@) html
 
 
 
-predictive-programmer-manual: predictive-prog-manual.info.gz \
-                              $(PROGDIR)/html/index.html \
-	                      predictive-programmer-manual-html.tar.gz \
-                              predictive-programmer-manual.txt.gz \
-                              predictive-programmer-manual.ps.gz \
-                              predictive-programmer-manual.pdf
+# predictive-programmer-manual: predictive-prog-manual.info.gz \
+#                               $(PROGDIR)/html/index.html \
+# 	                      predictive-programmer-manual-html.tar.gz \
+#                               predictive-programmer-manual.txt.gz \
+#                               predictive-programmer-manual.ps.gz \
+#                               predictive-programmer-manual.pdf
 
 
 
-auto-overlay-manual: auto-overlay-manual.info.gz \
-                     $(AUTOODIR)/html/index.html \
-	             auto-overlay-manual-html.tar.gz \
-                     auto-overlay-manual.txt.gz \
-                     auto-overlay-manual.ps.gz \
-                     auto-overlay-manual.pdf \
-                     auto-overlay-manual-src.tar.gz \
-                     auto-overlay-manual-dir
+auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
+	             $(AUTOODIR)/auto-overlay-manual-html.tar.gz \
+                     $(AUTOODIR)/auto-overlay-manual.txt.gz \
+                     $(AUTOODIR)/auto-overlay-manual.ps.gz \
+                     $(AUTOODIR)/auto-overlay-manual.pdf \
+                     $(AUTOODIR)/auto-overlay-manual-src.tar.gz \
+                     $(AUTOODIR)/dir
 
-auto-overlay-manual-src.tar.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual-src.tar.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
 	tar -cvzf $@ $(dir $<)/auto-overlays.texinfo \
 	  $(dir $<)/auto-overlay-manual.texinfo
 
+$(AUTOODIR)/auto-overlay-manual-html.tar.gz: $(AUTOODIR)/html/index.html
+	cd $(dir $@); pwd; tar -cvzf $(notdir $@) html
+
 # have to override some implicit rules to add auto-overlays.texinfo dependency
 
-auto-overlay-manual.info: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual.info: auto-overlay-manual.texinfo auto-overlays.texinfo
 	makeinfo $< -o $@
 
-auto-overlay-manual.txt: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual.txt: auto-overlay-manual.texinfo auto-overlays.texinfo
 	makeinfo --plaintext $< > $@
 
-auto-overlay-manual.txt.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual.txt.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
 	makeinfo --plaintext $< | gzip -c > $@
 
-auto-overlay-manual.dvi: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual.dvi: auto-overlay-manual.texinfo auto-overlays.texinfo
 	texi2dvi -c -o $@ $<
 
-auto-overlay-manual.pdf: auto-overlay-manual.texinfo auto-overlays.texinfo
+$(AUTOODIR)/auto-overlay-manual.pdf: auto-overlay-manual.texinfo auto-overlays.texinfo
 	texi2dvi --pdf -c -o $@ $<
 
-auto-overlay-manual/html/index.html: auto-overlay-manual.texinfo \
-                                     auto-overlays.texinfo
+$(AUTOODIR)/html/index.html: auto-overlay-manual.texinfo auto-overlays.texinfo
 	makeinfo --html $< -o $(dir $@)
-
-auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
-                                 auto-overlays.texinfo \
-                                 auto-overlay-manual/html/index.html
-	cd $(dir $<); pwd; tar -cvzf $(notdir $@) html
 
 
 
@@ -120,6 +121,8 @@ auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
 
 %.info: %.texinfo
 	makeinfo $< -o $@
+# keep .info files for ELPA packaging
+.PRECIOUS: %.info
 
 # Note: to work correctly, this either requires the directory to be included
 #       in the target or the target to already exist in the correct directory
@@ -127,7 +130,7 @@ auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
 %.info.gz: %.info
 	gzip -f $< -c > $@
 
-%-dir: %.info.gz
+%/dir: %.info.gz
 	install-info $< $(dir $<)dir
 
 %.txt: %.texinfo
@@ -151,6 +154,5 @@ auto-overlay-manual-html.tar.gz: auto-overlay-manual.texinfo \
 %/html/index.html: %.texinfo
 	makeinfo --html $< -o $(dir $@)
 
-%-html.tar.gz: %.texinfo html/index.html
-	echo bar $@ $<
-	cd $(dir $<); pwd; tar -cvzf $(notdir $@) html
+# %-html.tar.gz: %/html/index.html
+# 	cd $(dir $<); pwd; tar -cvzf $(notdir $@) html
