@@ -1,15 +1,16 @@
 ;;; auto-overlays.el --- Automatic regexp-delimited overlays
 
 
-;; Copyright (C) 2005-2010, 2012-2013 Toby Cubitt
+;; Copyright (C) 2005-2015  Free Software Foundation, Inc
 
+;; Version: 0.10.8
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Package-Version: 0.10.8
-;; Version: 0.9.11
-;; Keywords: extensions, matching, faces, overlays
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Keywords: extensions
 ;; URL: http://www.dr-qubit.org/emacs.php
+;; Repository: http://www.dr-qubit.org/git/predictive.git
 
-;; This file is NOT part of the Emacs.
+;; This file is part of the Emacs.
 ;;
 ;; This file is free software: you can redistribute it and/or modify it under
 ;; the terms of the GNU General Public License as published by the Free

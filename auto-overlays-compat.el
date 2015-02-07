@@ -1,8 +1,7 @@
-
 ;;; auto-overlays-compat.el --- compatability functions for auto-overlays package
 
 
-;; Copyright (C) 2006, 2012 Toby Cubitt
+;; Copyright (C) 2005-2015  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Version: 0.3.2

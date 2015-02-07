@@ -1,14 +1,15 @@
 ;;; completion-ui.el --- In-buffer completion user interface
 
 
-;; Copyright (C) 2006-2014 Toby Cubitt
+;; Copyright (C) 2006-2015  Free Software Foundation, Inc
 
-;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Package-Version: 0.12
 ;; Version: 0.12
 ;; Package-Requires: ((auto-overlays "10.8"))
-;; Keywords: convenience, extenions, abbrev, completion, ui, user interface
+;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Keywords: convenience, abbrev, completion, ui, user interface
 ;; URL: http://www.dr-qubit.org/emacs.php
+;; Repository: http://www.dr-qubit.org/git/predictive.git
 
 ;; This file is NOT part of Emacs.
 ;;

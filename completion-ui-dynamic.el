@@ -1,13 +1,13 @@
+;;; completion-ui-dynamic.el --- dynamic user-interface for Completion-UI
 
-;;; completion-ui-tooltip.el --- dynamic user-interface for Completion-UI
 
-
-;; Copyright (C) 2009-2010, 2012 Toby Cubitt
+;; Copyright (C) 2006-2015  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.5
-;; Keywords: completion, user interface, dynamic, hippie
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
+;; Repository: http://www.dr-qubit.org/git/predictive.git
 
 ;; This file is NOT part of Emacs.
 ;;

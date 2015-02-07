@@ -1,13 +1,13 @@
-
 ;;; completion-ui-popup-tip.el --- popup-tip user-interface for Completion-UI
 
 
-;; Copyright (C) 2012 Toby Cubitt
+;; Copyright (C) 2006-2015  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.1.2
-;; Keywords: completion, user interface, popup-tip
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
+;; Keywords: completion, user interface, tooltip
 ;; URL: http://www.dr-qubit.org/emacs.php
+;; Repository: http://www.dr-qubit.org/git/predictive.git
 
 ;; This file is NOT part of Emacs.
 ;;

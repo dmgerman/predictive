@@ -1,15 +1,14 @@
-
 ;;; auto-overlay-common.el --- general overlay functions
 
 
-;; Copyright (C) 2006-2007, 2012 Toby Cubitt
+;; Copyright (C) 2005-2015  Free Software Foundation, Inc
 
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
-;; Version: 0.2.1
-;; Keywords: automatic, overlays
+;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; URL: http://www.dr-qubit.org/emacs.php
+;; Repository: http://www.dr-qubit.org/git/predictive.git
 
-;; This file is NOT part of the Emacs.
+;; This file is part of the Emacs.
 ;;
 ;; This file is free software: you can redistribute it and/or modify it under
 ;; the terms of the GNU General Public License as published by the Free
