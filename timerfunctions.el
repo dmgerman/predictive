@@ -20,7 +20,7 @@
   "http://gnufans.net/~deego/emacspub/timerfunctions")
 
 
-
+(eval-when-compile (require 'cl))
 (defvar timerfunctions-version "1.4.3")
 
 
@@ -463,5 +463,6 @@ TIMEDOUTVAR is the variable that times out."
 	 with-timeout-value))))
 
 
+(provide 'timerfunctions)
 
 ;;; timerfunctions.el ends here
