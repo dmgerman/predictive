@@ -784,6 +784,8 @@ SYNTAX."
       (progn
         (define-key map [remap delete-char]
           'completion-delete-char)
+        (define-key map [remap delete-forward-char]
+          'completion-delete-char)
         (define-key map [remap backward-delete-char]
           'completion-backward-delete-char)
         (define-key map [remap delete-backward-char]
