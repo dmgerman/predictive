@@ -59,6 +59,7 @@ install:
 
 
 predictive-user-manual: $(USERDIR)/predictive-user-manual.info.gz \
+	                $(USERDIR)/predictive-user-manual.info \
 	                $(USERDIR)/predictive-user-manual-html.tar.gz \
                         $(USERDIR)/predictive-user-manual.txt.gz \
                         $(USERDIR)/predictive-user-manual.ps.gz \
@@ -80,39 +81,15 @@ $(USERDIR)/predictive-user-manual-html.tar.gz: $(USERDIR)/html/index.html
 
 
 auto-overlay-manual: $(AUTOODIR)/auto-overlay-manual.info.gz \
+	             $(AUTOODIR)/auto-overlay-manual.info \
 	             $(AUTOODIR)/auto-overlay-manual-html.tar.gz \
                      $(AUTOODIR)/auto-overlay-manual.txt.gz \
                      $(AUTOODIR)/auto-overlay-manual.ps.gz \
                      $(AUTOODIR)/auto-overlay-manual.pdf \
-                     $(AUTOODIR)/auto-overlay-manual-src.tar.gz \
                      $(AUTOODIR)/dir
-
-$(AUTOODIR)/auto-overlay-manual-src.tar.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
-	tar -cvzf $@ $(dir $<)/auto-overlays.texinfo \
-	  $(dir $<)/auto-overlay-manual.texinfo
 
 $(AUTOODIR)/auto-overlay-manual-html.tar.gz: $(AUTOODIR)/html/index.html
 	cd $(dir $@); pwd; tar -cvzf $(notdir $@) html
-
-# have to override some implicit rules to add auto-overlays.texinfo dependency
-
-$(AUTOODIR)/auto-overlay-manual.info: auto-overlay-manual.texinfo auto-overlays.texinfo
-	makeinfo $< -o $@
-
-$(AUTOODIR)/auto-overlay-manual.txt: auto-overlay-manual.texinfo auto-overlays.texinfo
-	makeinfo --plaintext $< > $@
-
-$(AUTOODIR)/auto-overlay-manual.txt.gz: auto-overlay-manual.texinfo auto-overlays.texinfo
-	makeinfo --plaintext $< | gzip -c > $@
-
-$(AUTOODIR)/auto-overlay-manual.dvi: auto-overlay-manual.texinfo auto-overlays.texinfo
-	texi2dvi -c -o $@ $<
-
-$(AUTOODIR)/auto-overlay-manual.pdf: auto-overlay-manual.texinfo auto-overlays.texinfo
-	texi2dvi --pdf -c -o $@ $<
-
-$(AUTOODIR)/html/index.html: auto-overlay-manual.texinfo auto-overlays.texinfo
-	makeinfo --html $< -o $(dir $@)
 
 
 
