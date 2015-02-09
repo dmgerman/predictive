@@ -16,10 +16,10 @@
 
 
 @copying
-This manual describes the Emacs Auto-Overlays package, version 0.10.8
+This manual describes the Emacs Auto-Overlays package, version 0.10.9
 @c --version--
 
-Copyright @copyright{} 2007-2015 Toby Cubitt
+Copyright @copyright{} 2007-2015 Free Software Foundation, Inc
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -34,7 +34,7 @@ Documentation License".
 
 @titlepage
 @title Emacs Auto-Overlays Manual
-@subtitle Version 0.10.8
+@subtitle Version 0.10.9
 @c --version--
 @author Toby Cubitt
 
