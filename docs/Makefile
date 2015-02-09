@@ -107,7 +107,9 @@ $(AUTOODIR)/auto-overlay-manual-html.tar.gz: $(AUTOODIR)/html/index.html
 %.info.gz: %.info
 	gzip -f $< -c > $@
 
+# Note: need to rm dir file otherwise install-info just adds new entry to it
 %/dir: %.info.gz
+	rm -f $@
 	install-info $< $(dir $<)dir
 
 %.txt: %.texinfo

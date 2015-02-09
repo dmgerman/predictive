@@ -3,7 +3,7 @@
 
 ;; Copyright (C) 2005-2015  Free Software Foundation, Inc
 
-;; Version: 0.10.8
+;; Version: 0.10.9
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Maintainer: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Keywords: extensions

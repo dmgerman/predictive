@@ -10,7 +10,7 @@
 
 @dircategory Emacs
 @direntry
-* Predictive: (predictive-user-manual). Predictive text completion package for Emacs.
+* Predictive-mode: (predictive-user-manual). Predictive text completion package for Emacs.
 @end direntry
 
 
