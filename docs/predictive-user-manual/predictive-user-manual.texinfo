@@ -220,10 +220,9 @@ and let predictive mode recompile them automatically when the
 dictionaries are saved. (However, see @pxref{Upgrading from very old
 versions}.)
 
-In principle, simply deleting the compiled dictionary files may be
-sufficient even when upgrading predictive mode. However, backing up your
-dictionaries by dumping them to plain-text files, as described above, is
-still a very good idea (just to be on the safe side!).
+Backing up your dictionaries from time to time by dumping them to
+plain-text files, as described above, is a very good idea even when not
+upgrading anything. (Just to be on the safe side!)
 
 
 
