@@ -222,11 +222,8 @@
 	  (dictree-create dictname file
 			  predictive-dict-autosave nil
 			  '< '+ 'predictive-dict-rank-function
-			  nil nil nil
-			  nil predictive-completion-speed
-			  nil predictive-completion-speed
-			  nil nil nil nil
-			  'predictive-auto-dict-plist-savefun nil))
+			  'time predictive-completion-speed nil
+			  'predictive-auto-dict-plist-savefun))
 	(predictive-load-dict dictname)
 	(symbol-value dictname)))  ; return the dictionary
 
@@ -235,11 +232,8 @@
      (t
       (dictree-create nil nil nil nil
 		      '< '+ 'predictive-dict-rank-function
-		      nil nil nil
-		      nil predictive-completion-speed
-		      nil predictive-completion-speed
-		      nil nil nil nil
-		      'predictive-auto-dict-plist-savefun nil))
+		      'time predictive-completion-speed nil
+		      'predictive-auto-dict-plist-savefun))
      )))
 
 

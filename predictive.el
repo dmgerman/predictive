@@ -1302,8 +1302,8 @@ respectively."
 
       ;; create the new dictionary
       (setq dict (dictree-create dictname file autosave nil
-				 '< '+ 'predictive-dict-rank-function nil nil
-				 nil nil complete-speed nil complete-speed))
+				 '< '+ 'predictive-dict-rank-function
+				 'time complete-speed))
       ;; populate it
       (if (null populate)
 	  (when (called-interactively-p 'interactive)
@@ -1370,8 +1370,8 @@ The other arguments are as for `predictive-create-dict'."
     (or autosave (setq autosave autosave predictive-dict-autosave))
 
     ;; create and return the new dictionary
-    (dictree-create-meta-dict dictlist name filename autosave nil
-			      '+ nil nil nil nil speed)))
+    (dictree-create-meta-dict dictlist name filename autosave nil '+
+			      'time speed)))
 
 
 
@@ -2728,9 +2728,8 @@ meta-dictionary will be based, instead of
       (setq buffer-dict
 	    (dictree-create (predictive-buffer-local-dict-name)
 			    filename (when filename t) nil
-			    '< insfun rankfun nil
-			    nil nil nil predictive-completion-speed
-			    nil predictive-completion-speed)))
+			    '< insfun rankfun
+			    'time predictive-completion-speed)))
 
 
     ;; ----- meta-dictionary -----
@@ -2778,8 +2777,8 @@ meta-dictionary will be based, instead of
 			       (if (dictree-p dic) dic (symbol-value dic)))
 			     dict-list))
 	     (predictive-buffer-local-meta-dict-name)
-	     filename (when filename t) nil combfun nil nil
-	     nil nil predictive-completion-speed)))
+	     filename (when filename t) nil combfun
+	     'time predictive-completion-speed)))
 
     ;; set buffer's dictionary to the meta-dictionary
     (setq predictive-buffer-dict (predictive-buffer-local-meta-dict-name))
@@ -3030,7 +3029,7 @@ without asking for confirmation."
 
 
 ;;; ===============================================================
-;;;         Register main predictive Completion-UI source
+;;;       Define predictive completion-at-point function
 
 (define-completion-at-point-function predictive-completion-at-point
   predictive-complete
