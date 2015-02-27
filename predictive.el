@@ -1234,8 +1234,8 @@ See also `predictive-dict-compilation'."
 
 
 (defun predictive-create-dict
-  (&optional dictname file populate autosave speed no-prefixes)
-  "Create a new predictive mode dictionary called DICTNAME.
+  (&optional name file populate autosave speed no-prefixes)
+  "Create a new predictive mode dictionary called NAME.
 
 The optional argument FILE specifies a file to associate with the
 dictionary. The dictionary will be saved to this file by default
@@ -1258,7 +1258,7 @@ Prefix relationships are automatically defined if
 `predictive-auto-define-prefixes' is enabled, unless NO-PREFIXES
 is non-nil.
 
-Interactively, DICTNAME and FILE are read from the
+Interactively, NAME and FILE are read from the
 minibuffer. SPEED and AUTOSAVE use the defaults provided by
 `predictive-completion-speed' and `predictive-dict-autosave'
 respectively."
@@ -1275,47 +1275,60 @@ respectively."
   (unless (or (null populate) (file-regular-p populate))
     (setq populate nil)
     (message "File %s does not exist; creating empty dictionary" populate))
-  (and dictname (symbolp dictname) (setq dictname (symbol-name dictname)))
+  (and name (symbolp name) (setq name (symbol-name name)))
 
   ;; confirm if overwriting existing dict, then unload existing one
   ;; (Note: the condition-case is there to work around bug in intern-soft. It
   ;;        should return nil when the symbol isn't interned, but seems to
   ;;        return the symbol instead in some Emacs versions)
-  (when (or (null dictname)
+  (when (or (null name)
 	    (and (null (dictree-p (condition-case nil
-				      (symbol-value (intern-soft dictname))
+				      (symbol-value (intern-soft name))
 				    (void-variable nil))))
-		 (setq dictname (intern dictname)))
+		 (setq name (intern name)))
 	    (and (or (null (called-interactively-p 'any))
 		     (and (y-or-n-p
 			   (format (concat
 				    "Dictionary %s already exists. Replace "
 				    "it? (you'll be prompted to save any "
 				    "unsaved changes first) ")
-				   dictname))
-			  (dictree-unload (symbol-value (intern-soft dictname)))))
-		 (setq dictname (intern dictname))))
+				   name))
+			  (dictree-unload (symbol-value (intern-soft name)))))
+		 (setq name (intern name))))
 
     (let (dict
 	  (complete-speed (if speed speed predictive-completion-speed))
 	  (autosave (if autosave (eq autosave t) predictive-dict-autosave)))
 
       ;; create the new dictionary
-      (setq dict (dictree-create dictname file autosave nil
+      (setq dict (dictree-create name file autosave nil
 				 '< '+ 'predictive-dict-rank-function
 				 'time complete-speed))
-      ;; populate it
       (if (null populate)
 	  (when (called-interactively-p 'interactive)
-	    (message "Created dictionary %s" dictname))
+	    (message "Created dictionary %s" name))
+
+	;; populate dictionary
 	(dictree-populate-from-file dict populate nil nil
 				    (lambda (data) (or data 0)))
+
 	;; define prefixes when `predictive-auto-define-prefixes' is enabled
 	(when (and predictive-auto-define-prefixes (not no-prefixes))
 	  (predictive-define-all-prefixes dict nil nil 'interactive))
+
+	;; pre-populate caches for single-letter prefixes
+	(message "Pre-populating caches in %s..." name)
+	(dotimes (i 26)
+	  (message "Pre-populating caches in %s...(%d of 26)" name (1+ i))
+	  (predictive-complete (char-to-string (+ i 97))
+			       (completion-ui-get-value-for-source
+				'predictive completion-max-candidates)
+			       dict))
+	(message "Pre-populating caches in %s...done" name)
+
 	(when (called-interactively-p 'interactive)
 	  (message "Created dictionary %s and populated it from file %s"
-		   dictname populate)))
+		   name populate)))
 
       ;; return the new dictionary
       dict)))
@@ -1367,11 +1380,24 @@ The other arguments are as for `predictive-create-dict'."
 		     (setq name (intern name)))))
 
     (or speed (setq speed predictive-completion-speed))
-    (or autosave (setq autosave autosave predictive-dict-autosave))
+    (or autosave (setq autosave predictive-dict-autosave))
 
-    ;; create and return the new dictionary
-    (dictree-create-meta-dict dictlist name filename autosave nil '+
-			      'time speed)))
+    ;; create the new meta-dictionary
+    (let ((dict (dictree-create-meta-dict dictlist name filename autosave nil
+					  '+ 'time speed)))
+      ;; pre-populate caches for single-letter prefixes
+      ;;(message "Pre-populating caches in %s..." name)
+      (dotimes (i 26)
+	;;(message "Pre-populating caches in %s...(%d of 26)" name (1+ i))
+	(predictive-complete (char-to-string (+ i 97))
+			     (completion-ui-get-value-for-source
+			      'predictive completion-max-candidates)
+			     dict))
+      ;;(message "Pre-populating caches in %s...done" name)
+
+      ;; return the new meta-dictionary
+      dict)))
+
 
 
 
