@@ -196,13 +196,15 @@ cauliflower will start growing out of your ears."
 
 
 
-(defun completion--highlight-prefix-alterations (prefix cmpl pos len)
+(defun completion--highlight-prefix-alterations (prefix cmpl pos pfxlen)
   "Highlight altered characters in PREFIX.
-CMPL is the current dynamic completion, and POS is the position
-of the end of PREFIX in the buffer."
-  (let ((p-len (length prefix)))
+PREFIX is the string that was completed, CMPL is the current
+dynamic completion, POS is the position of the end of the prefix
+part, and PFXLEN is the length of the prefix actually inserted in
+the buffer."
+  (let ((len (length prefix)))
     ;; compare characters of prefix and highlight differences
-    (dotimes (i (min len p-len))
+    (dotimes (i (min pfxlen len))
       (unless (eq (aref cmpl i) (aref prefix i))
 	(put-text-property
 	 (+ pos i) (+ pos i 1)
@@ -210,9 +212,10 @@ of the end of PREFIX in the buffer."
 	 'completion-dynamic-prefix-alterations-face)))
     ;; if prefix length has been altered, highlight all the remaining altered
     ;; prefix
-    (when (< len p-len)
+    (when (/= len pfxlen)
       (put-text-property
-       (+ pos len) (+ pos p-len)
+       (+ pos (min len pfxlen))
+       (+ pos (min len pfxlen) (- (length cmpl) (max len pfxlen)))
        (if font-lock-mode 'font-lock-face 'face)
        'completion-dynamic-prefix-alterations-face))))
 

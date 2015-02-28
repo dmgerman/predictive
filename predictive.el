@@ -261,6 +261,39 @@ typing \"a\" would only find \"and\"."
   :type 'boolean)
 
 
+(defcustom predictive-fuzzy-completion nil
+  "Whether to use fuzzy completion to allow for typos when completing.
+
+An integer value specifies a fixed number of typos to
+tolerate. Predictive mode will then find completions not just of
+the string you typed, but also of all strings within that many
+typos of the typed string.
+
+A floating-point value specifies a fixed *rate* of
+typos. Predictive mode will find completions of all strings with
+that fraction of typos.
+
+More precisely, the number of typos is measured by Lewenstein
+distance (a.k.a. edit distance). For an integer value, predictive
+mode will find completions of all strings within Lewenstein
+distance of the typed string equal to the specified
+value. Whereas for a floating-point value, predictive mode will
+find completions of all strings within Lewenstein distance given
+by the specified fraction multiplied by the length of the typed
+string."
+  :group 'predictive
+  :type '(choice (const :tag "disabled" nil)
+		 (integer :tag "number of typos")
+		 (float :tag "typo rate"
+			:validate (lambda (widget)
+				    (if (and (> (widget-value widget) 0)
+					     (< (widget-value widget) 1))
+					(widget-put widget :error nil)
+				      (widget-put widget :error "Typo rate\
+ must be between 0 and 1")
+				      widget)))))
+
+
 (defcustom predictive-equivalent-characters '(" -")
   "List of characters to be treated as equivalent.
 Each element of the list should be a string, and all characters
@@ -805,6 +838,41 @@ disabling `predictive-use-auto-learn-cache'."
     ;; return t if word is correct
     ;;(when (null poss) (message "Error in ispell process"))
     (or (eq poss t) (stringp poss))))
+
+
+;; wrap filter for `dictree-regexp-search' to ignore regexp match data
+(if (trie-lexical-binding-p)
+    (defun predictive--wrap-regexp-filter (filter)
+      (lambda (key data)
+	;; if car of argument contains a key+group list rather than a straight
+	;; key, remove group list
+	;; FIXME: the test for straight key, below, will fail if the key is a
+	;;        list, and the first element of the key is itself a list
+	;;        (there might be no easy way to fully fix this...)
+	(unless (or (atom (car key))
+		    (and (listp (car key)) (not (sequencep (caar key)))))
+	  (setq key (car key)))
+	(funcall filter key data)))
+  (defun predictive--wrap-regexp-filter (filter)
+    `(lambda (key data)
+       ;; if car of argument contains a key+group list rather than a straight
+       ;; key, remove group list
+       ;; FIXME: the test for straight key, below, will fail if the key is a
+       ;;        list, and the first element of the key is itself a list
+       ;;        (there might be no easy way to fully fix this...)
+       (unless (or (atom (car key))
+		   (and (listp (car key)) (not (sequencep (caar key)))))
+	 (setq key (car key)))
+       (,filter key data))))
+
+
+;; wrap filter for `dictree-fuzzy-complete' to ignore distance data
+(if (trie-lexical-binding-p)
+    (defun predictive--wrap-fuzzy-complete-filter (filter)
+      (lambda (key data) (funcall filter (nth 0 key) data)))
+  (defun predictive--wrap-fuzzy-complete-filter (filter)
+    `(lambda (key data) (,filter (nth 0 key) data))))
+
 
 
 
@@ -2210,7 +2278,7 @@ prefix argument."
 completion candidates, ordered by their weighting.
 
 If MAXNUM is null, all possible completion candidates are
-returned in alphabetical order, rather than by weight.
+returned, in alphabetical order rather than by weight.
 
 If `predictive-ignore-initial-caps' is enabled and the first
 character of PREFIX is capitalized, also search for completions
@@ -2220,7 +2288,7 @@ DICT specifies the dictionary (or list of dictionaries) to
 complete from. The default is to call `predictive-current-dict'
 to determine which dictionary to use."
 
-  (let (pfx filter completions)
+  (let (pfx dist filter completions)
     ;; get dictionary
     (if (not dict)
 	(setq dict (predictive-current-dict))
@@ -2243,27 +2311,108 @@ to determine which dictionary to use."
     (when dict
       ;; expand prefix
       (setq pfx (predictive-expand-prefix prefix))
-      ;; if expanded prefix is a regexp, do a regexp search, using RESULTFUN
-      ;; argument of `dictree-regexp-search' to ditch word weights and convert
-      ;; regexp group data into prefix length
-      (if (eq (car pfx) 'regexp)
-	  (setq completions
-	  	(dictree-regexp-search
-	  	 dict (cdr pfx) (if maxnum t nil) maxnum nil nil filter
-	  	 (unless predictive-auto-correction-no-completion
-	  	   (lambda (key data)
-	  	     (cons (car key)
-	  		   (- (cdr (cadr key)) (car (cadr key))))))))
 
-	;; otherwise, complete the prefix
-	(setq completions
-	      (dictree-complete dict (cdr pfx) (if maxnum t nil) maxnum
-				nil nil filter (lambda (key data) key))))
+      ;; if auto-correcting rather than completing, try regexp search and
+      ;; fuzzy match
+      (if predictive-auto-correction-no-completion
+	  (or
+	   ;; if expanded prefix is a regexp, do a regexp search, using
+	   ;; RESULTFUN argument of `dictree-regexp-search' to ditch word
+	   ;; weights and convert regexp group data into prefix length
+	   (and (plist-get pfx :regexp)
+		(setq completions
+		      (dictree-regexp-search
+		       dict (plist-get pfx :regexp)
+		       (if maxnum t nil) maxnum nil nil filter)))
+	   ;; if using fuzzy-completion, look for fuzzy matches, using
+	   ;; RESULTFUN argument of `dictree-fuzzy-match' to ditch distance
+	   ;; and word weights and keep only prefix length data
+	   (and predictive-fuzzy-completion
+		(> (setq dist (if (integerp predictive-fuzzy-completion)
+				  predictive-fuzzy-completion
+				(round (* predictive-fuzzy-completion
+					  (length (plist-get pfx :prefix))))))
+		   0)
+		(setq completions
+		      (dictree-fuzzy-match
+		       dict (plist-get pfx :prefix) dist
+		       (when maxnum
+			 (lambda (a b)
+			   (cond  ; rank by dist first, then by weight
+			    ((< (cdar a) (cdar b)) t)
+			    ((> (cdar a) (cdar b)) nil)
+			    (t (predictive-dict-rank-function a b)))))
+		       maxnum nil nil
+		       (if filter
+			   (lambda (key data)
+			     (setq key (car key))  ; ignore distance data
+			     (and (= (aref key (1- (length key)))
+				     (aref (plist-get pfx :prefix)
+					   (1- (length
+						(plist-get pfx :prefix)))))
+				  (funcall filter key data)))
+			 (lambda (key data)
+			   (setq key (car key))  ; ignore distance data
+			   (= (aref key (1- (length key)))
+			      (aref (plist-get pfx :prefix)
+				    (1- (length (plist-get pfx :prefix)))))))
+		       (lambda (key data)
+			 (cons (car key) (length (car key))))))))
+
+
+	;; if completing, try regexp completion, fuzzy completion, and regular
+	;; completion
+	(or
+	 ;; if expanded prefix is a regexp, do a regexp search, using
+	 ;; RESULTFUN argument of `dictree-regexp-search' to ditch word
+	 ;; weights and convert regexp group data into prefix length
+	 (and (plist-get pfx :regexp)
+	      (setq completions
+		    (dictree-regexp-search
+		     dict (plist-get pfx :regexp)
+		     (if maxnum t nil) maxnum nil nil
+		     (when filter (predictive--wrap-regexp-filter filter))
+		     (lambda (key data)
+		       (cons (car key)
+			     (- (cdr (cadr key)) (car (cadr key))))))))
+
+	 ;; if using fuzzy-completion, do so, using RESULTFUN argument of
+	 ;; `dictree-fuzzy-complete' to ditch distance and keep only prefix
+	 ;; length data
+	 (and predictive-fuzzy-completion
+	      (> (setq dist (if (integerp predictive-fuzzy-completion)
+				predictive-fuzzy-completion
+			      (round (* predictive-fuzzy-completion
+					(length (plist-get pfx :prefix))))))
+		 0)
+	      (setq completions
+		    (dictree-fuzzy-complete
+		     dict (plist-get pfx :prefix) dist
+		     (when maxnum
+		       (lambda (a b)
+			 (cond  ; rank by dist first, then by weight
+			  ((< (nth 1 (car a)) (nth 1 (car b))) t)
+			  ((> (nth 1 (car a)) (nth 1 (car b))) nil)
+			  (t (predictive-dict-rank-function a b)))))
+		     maxnum nil nil
+		     (when filter
+		       (predictive--wrap-fuzzy-complete-filter filter))
+		     (lambda (key data) (cons (nth 0 key) (nth 2 key))))))
+
+	 ;; otherwise, complete the prefix
+	 (setq completions
+	       (dictree-complete
+		dict (plist-get pfx :prefix)
+		(if maxnum t nil) maxnum nil nil filter
+		(lambda (key data) key)))
+	 ))
+
+
       ;; sort out capitalization of completions
       (and predictive-ignore-initial-caps
 	   (predictive-capitalized-p prefix)
 	   (setq completions
-		 (mapcar (if (eq (car pfx) 'regexp)
+		 (mapcar (if (plist-get pfx :regexp)
 			     (lambda (cmpl)
 			       (cons
 				(concat
@@ -2281,7 +2430,8 @@ to determine which dictionary to use."
 
 (defun predictive-expand-prefix (prefix)
   ;; Return expanded list of prefixes to complete, based on settings of
-  ;; `predictive-ignore-initial-caps' and `predictive-prefix-expansions'
+  ;; `predictive-ignore-initial-caps', `predictive-prefix-expansions' and
+  ;; `predictive-equivalent-characters'
 
   ;; if there are no prefix expansions...
   (if (and (null predictive-prefix-expansions)
@@ -2371,17 +2521,18 @@ to determine which dictionary to use."
 	   )))
 
       ;; return expanded (or otherwise) prefix
-      (if predictive-auto-correction-no-completion
-	  (cons 'regexp expanded-prefix)
-	(if expanded-flag
-	    (cons 'regexp (concat "\\(" expanded-prefix "\\).*"))
-	  (if (and predictive-ignore-initial-caps
-		   (predictive-capitalized-p prefix))
-	      (cons 'complete
-		    (list prefix
-			  (concat (vector (downcase (aref prefix 0)))
-				  (substring prefix 1))))
-	    (cons 'complete prefix)))))))
+      (when expanded-flag
+	(unless predictive-auto-correction-no-completion
+	  (setq expanded-prefix (concat "\\(" expanded-prefix "\\).*"))))
+
+      (nconc (list :prefix
+		   (if (and predictive-ignore-initial-caps
+			    (predictive-capitalized-p prefix))
+		       (list prefix
+			     (concat (vector (downcase (aref prefix 0)))
+				     (substring prefix 1)))
+		     prefix))
+	     (when expanded-flag (list :regexp expanded-prefix))))))
 
 
 
