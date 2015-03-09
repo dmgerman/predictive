@@ -64,7 +64,7 @@
 
 (defcustom predictive-major-mode-alist
   '((text-mode . predictive-setup-text)
-    (emacs-lisp-mode . predictive-setup-elisp)
+    ;;(emacs-lisp-mode . predictive-setup-elisp)
     (LaTeX-mode . predictive-setup-latex)
     (latex-mode . predictive-setup-latex)
     (texinfo-mode . predictive-setup-texinfo)
@@ -3042,7 +3042,7 @@ without asking for confirmation."
 					  prefix completion arg))
   :reject-functions (lambda (prefix completion &optional arg)
 		      (when arg
-			(predictive-add-to-dict (predictive-current-dict)
+			(predictive-add-to-dict (car (predictive-current-dict))
 						prefix))
 		      (run-hook-with-args 'predictive-reject-functions
 					  prefix completion arg))
