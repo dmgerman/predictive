@@ -6,7 +6,7 @@
 ;; Author: Toby Cubitt <toby-predictive@dr-qubit.org>
 ;; Package-Version: 0.24
 ;; Version: 0.20
-;; Package-Requires: (dict-tree "0.12.8") (auto-overlays "0.10.8") (completion-ui "0.12") (timerfunctions "0.0")
+;; Package-Requires: (dict-tree "0.13") (auto-overlays "0.10.8") (completion-ui "0.12") (timerfunctions "0.0")
 ;; Keywords: convenience, abbrev, tex, predictive, completion
 ;; URL: http://www.dr-qubit.org/emacs.php
 
@@ -1565,8 +1565,9 @@ WEIGHT is specified by the prefix argument."
     ;; if adding a new word, and we're automatically defining prefixes...
     (when defpref
       ;; define new word to be a prefix of all its completions
-      (dolist (cmpl (cdr (dictree-complete dict word nil nil nil nil nil
-					   (lambda (key data) key))))
+      (dolist (cmpl (cdr (dictree-complete dict word nil nil nil nil
+					   (lambda (key data) key)
+					   'no-cache)))
 	(predictive-define-prefix dict cmpl word))
       ;; define all prefixes of new word (note: `predictive-define-prefix'
       ;; does nothing if prefix isn't in dict, so no need to check that here)
@@ -1877,8 +1878,8 @@ INTERACTIVE is non-nil."
 	     ;; find completions of word, dropping first which is always the
 	     ;; word itself
 	     (setq completion-list
-		   (cdr (dictree-complete dict string nil nil nil nil nil
-					  (lambda (key data) key))))
+		   (cdr (dictree-complete dict string nil nil nil nil
+					  (lambda (key data) key) 'no-cache)))
 	     ;; define the word to  be a prefix for all its completions
 	     (dolist (cmpl completion-list)
 	       (predictive-define-prefix dict cmpl word))
@@ -2323,7 +2324,11 @@ to determine which dictionary to use."
 		(setq completions
 		      (dictree-regexp-search
 		       dict (plist-get pfx :regexp)
-		       (if maxnum t nil) maxnum nil nil filter)))
+		       (if maxnum t nil) maxnum nil
+		       (when filter (predictive--wrap-regexp-filter filter))
+		       (lambda (key data)
+			 (cons (car key)
+			       (- (cdr (cadr key)) (car (cadr key))))))))
 	   ;; if using fuzzy-completion, look for fuzzy matches, using
 	   ;; RESULTFUN argument of `dictree-fuzzy-match' to ditch distance
 	   ;; and word weights and keep only prefix length data
@@ -2342,7 +2347,7 @@ to determine which dictionary to use."
 			    ((< (cdar a) (cdar b)) t)
 			    ((> (cdar a) (cdar b)) nil)
 			    (t (predictive-dict-rank-function a b)))))
-		       maxnum nil nil
+		       maxnum nil
 		       (if filter
 			   (lambda (key data)
 			     (setq key (car key))  ; ignore distance data
@@ -2370,7 +2375,7 @@ to determine which dictionary to use."
 	      (setq completions
 		    (dictree-regexp-search
 		     dict (plist-get pfx :regexp)
-		     (if maxnum t nil) maxnum nil nil
+		     (if maxnum t nil) maxnum nil
 		     (when filter (predictive--wrap-regexp-filter filter))
 		     (lambda (key data)
 		       (cons (car key)
@@ -2394,17 +2399,16 @@ to determine which dictionary to use."
 			  ((< (nth 1 (car a)) (nth 1 (car b))) t)
 			  ((> (nth 1 (car a)) (nth 1 (car b))) nil)
 			  (t (predictive-dict-rank-function a b)))))
-		     maxnum nil nil
+		     maxnum nil
 		     (when filter
 		       (predictive--wrap-fuzzy-complete-filter filter))
 		     (lambda (key data) (cons (nth 0 key) (nth 2 key))))))
 
 	 ;; otherwise, complete the prefix
 	 (setq completions
-	       (dictree-complete
-		dict (plist-get pfx :prefix)
-		(if maxnum t nil) maxnum nil nil filter
-		(lambda (key data) key)))
+	       (dictree-complete dict (plist-get pfx :prefix)
+				 (if maxnum t nil) maxnum nil filter
+				 (lambda (key data) key)))
 	 ))
 
 
