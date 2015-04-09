@@ -4,35 +4,37 @@
 "\\BigBra" 0
 "\\BigExpect" 0
 "\\BigKet" 0
-"\\BigMatnorm" 0
+"\\BigNorm" 0
 "\\BigOrder" 0
 "\\BiggAbs" 0
 "\\BiggBra" 0
 "\\BiggExpect" 0
 "\\BiggKet" 0
-"\\BiggMatnorm" 0
+"\\BiggNorm" 0
 "\\BiggOrder" 0
 "\\Bra" 0
 "\\BraKet" 0 (:prefixes ("\\Bra"))
 "\\Braket" 0 (:prefixes ("\\Bra"))
 "\\C" 0
-"\\Comm" 0
+"\\Comm" 0 (:prefixes ("\\C"))
 "\\E" 0
-"\\Expect" 0
+"\\Expect" 0 (:prefixes ("\\E"))
 "\\F" 0
+"\\Frnorm" 0
 "\\HS" 0
+"\\HSnorm" 0
 "\\Ket" 0
 "\\Ketbra" 0 (:prefixes ("\\Ket"))
-"\\Matnorm" 0
-"\\MatnormF" 0 (:prefixes ("\\Matnorm"))
-"\\MatnormHS" 0 (:prefixes ("\\Matnorm"))
-"\\MatnormTr" 0 (:prefixes ("\\Matnorm"))
 "\\N" 0
+"\\Norm" 0
 "\\Order" 0
+"\\PP" 0
+"\\Pnorm" 0
 "\\Proj" 0
 "\\Q" 0
 "\\R" 0
 "\\Span" 0
+"\\Tracenorm" 0
 "\\U" 0
 "\\WLOG" 0
 "\\Wlog" 0
@@ -43,13 +45,13 @@
 "\\bigBra" 0
 "\\bigExpect" 0
 "\\bigKet" 0
-"\\bigMatnorm" 0
+"\\bigNorm" 0
 "\\bigOrder" 0
 "\\biggAbs" 0
 "\\biggBra" 0
 "\\biggExpect" 0
 "\\biggKet" 0
-"\\biggMatnorm" 0
+"\\biggNorm" 0
 "\\biggOrder" 0
 "\\bra" 0
 "\\braket" 0 (:prefixes ("\\bra"))
@@ -62,23 +64,24 @@
 "\\ebit" 0
 "\\expect" 0
 "\\expectation" 0
+"\\frnorm" 0
 "\\hc" 0
+"\\hsnorm" 0
 "\\id" 0
 "\\identity" 0
 "\\imag" 0
 "\\ket" 0
 "\\ketbra" 0 (:prefixes ("\\ket"))
+"\\linspan" 0
 "\\mathclap" 0
 "\\mathllap" 0
 "\\mathrlap" 0
-"\\matnorm" 0
-"\\matnormF" 0 (:prefixes ("\\matnorm"))
-"\\matnormHS" 0 (:prefixes ("\\matnorm"))
-"\\matnormTr" 0 (:prefixes ("\\matnorm"))
+"\\norm" 0
 "\\order" 0
 "\\ox" 0
 "\\partition" 0
 "\\pfaf" 0
+"\\pnorm" 0
 "\\prj" 0
 "\\prob" 0
 "\\proj" 0
@@ -87,4 +90,4 @@
 "\\schmidt" 0
 "\\sgn" 0
 "\\tr" 0
-"\\vspan" 0
+"\\tracenorm" 0
