@@ -76,11 +76,10 @@
 	      (and (eq use-hotkeys 'auto-show)
 		   (overlay-get overlay 'auto-show)))
 	  (if (< i (length completion-hotkey-list))
-	      (setq cmpl
-		    (concat
-		     (format "(%s) "
-			     (key-description
-			      (vector (nth i completion-hotkey-list)))) cmpl))
+	      (let ((key (nth i completion-hotkey-list)))
+		(unless (vectorp key) (setq key (vector key)))
+		(setq cmpl
+		      (concat (format "(%s) " (key-description key)) cmpl)))
 	    (setq cmpl (concat "() " cmpl))))
       (setq text (concat text cmpl "  ")))
 
