@@ -223,6 +223,7 @@
 			  predictive-dict-autosave nil
 			  '< '+ 'predictive-dict-rank-function
 			  'time predictive-completion-speed nil
+			  nil nil nil nil
 			  'predictive-auto-dict-plist-savefun))
 	(predictive-load-dict dictname)
 	(symbol-value dictname)))  ; return the dictionary
@@ -233,6 +234,7 @@
       (dictree-create nil nil nil nil
 		      '< '+ 'predictive-dict-rank-function
 		      'time predictive-completion-speed nil
+		      nil nil nil nil
 		      'predictive-auto-dict-plist-savefun))
      )))
 
