@@ -83,10 +83,11 @@
 	   (list (cons "\\\\\\(text\\|page\\|\\)color" 'dict-latex-colours)))
 
     ;; add new `auto-completion-at-point-functions' function
-    (predictive-latex-insert-after
-     auto-completion-at-point-functions
-     'predictive-latex-text-completion-at-point
-     'predictive-latex-color-completion-at-point))
+    (setq auto-completion-at-point-functions
+	  (predictive-latex-insert-after
+	   auto-completion-at-point-functions
+	   'predictive-latex-text-completion-at-point
+	   'predictive-latex-color-completion-at-point)))
 
    ;; --- unload color support ---
    ((< arg 0)

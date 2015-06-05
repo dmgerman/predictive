@@ -620,13 +620,15 @@ to be sure of correctly changing the value of a list `foo'."
   (let ((tail (memq elt list)))
     (when tail
       (setcdr tail (cons (car tail) (cdr tail)))
-      (setcar tail newelt))))
+      (setcar tail newelt)))
+  list)
 
 
 (defun predictive-latex-insert-after (list elt newelt)
   "Destructively insert ELT after MATCH in LIST."
   (let ((tail (memq elt list)))
-    (when tail (setcdr tail (cons newelt (cdr tail))))))
+    (when tail (setcdr tail (cons newelt (cdr tail)))))
+  list)
 
 
 

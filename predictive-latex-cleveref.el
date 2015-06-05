@@ -109,7 +109,7 @@ to disable completion within a \"\\label\" argument."
   ;; With positive ARG, load cleveref package support. With negative ARG,
   ;; unload it.
   (cond
-   
+
    ;; --- load cleveref support ---
    ((> arg 0)
     ;; add new browser sub-menu definition
@@ -118,10 +118,11 @@ to disable completion within a \"\\label\" argument."
 		       'predictive-latex-label-dict)))
 
     ;; add new `auto-completion-at-point-functions' function
-    (predictive-latex-insert-after
-     auto-completion-at-point-functions
-     'predictive-latex-label-completion-at-point
-     'predictive-latex-cleveref-label-completion-at-point)
+    (setq auto-completion-at-point-functions
+	  (predictive-latex-insert-after
+	   auto-completion-at-point-functions
+	   'predictive-latex-label-completion-at-point
+	   'predictive-latex-cleveref-label-completion-at-point))
 
     ;; replace label completion-disabling `auto-completion-at-point-functions'
     ;; function
