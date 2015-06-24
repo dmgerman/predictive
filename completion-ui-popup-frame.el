@@ -485,10 +485,12 @@ methods. Toggling will show all possible completions."
 		      (if (stringp cmpl) (length cmpl) (length (car cmpl))))
 		    completions))))
 	 (lines nil)
-	 str)
+	 str key)
     (dotimes (i (length completions))
       (setq str (nth i completions))
       (unless (stringp str) (setq str (car str)))
+      (setq key (nth i completion-hotkey-list))
+      (unless (vectorp key) (setq key (vector key)))
       (setq lines
             (append lines
                     (list
@@ -499,9 +501,7 @@ methods. Toggling will show all possible completions."
                       ;; add hotkey for current completion, if any
                       (if (and hotkeys
                                (< i (length completion-hotkey-list)))
-                          (format " (%s)"
-                                  (key-description
-                                   (vector (nth i completion-hotkey-list))))
+                          (format " (%s)" (key-description key))
                         ""))))))
     lines))  ; return pop-up frame lines
 

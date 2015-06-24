@@ -287,7 +287,7 @@ INTERACTIVE is supplied, pretend we were called interactively."
 	 (prefix (overlay-get overlay 'prefix))
 	 (completions (overlay-get overlay 'completions))
 	 (num (overlay-get overlay 'completion-num))
-	 (text "") str
+	 (text "") str key
          (maxlen (if (null completions) 0
                    (apply 'max (mapcar (lambda (cmpl)
 					 (if (stringp cmpl)
@@ -303,11 +303,9 @@ INTERACTIVE is supplied, pretend we were called interactively."
       ;; if using hotkeys and one is assigned to current completion,
       ;; show it next to completion text
       (when (and hotkeys (< i (length completion-hotkey-list)))
-        (setq str
-              (concat str " "
-                      (format "(%s)"
-                              (key-description
-                               (vector (nth i completion-hotkey-list)))))))
+        (setq key (nth i completion-hotkey-list))
+	(unless (vectorp key) (setq key (vector key)))
+	(setq str (concat str " " (format "(%s)" (key-description key)))))
       ;; if current completion is the inserted dynamic completion, use
       ;; `completion-highlight-face' to highlight it
       (when (and num (= i num))
